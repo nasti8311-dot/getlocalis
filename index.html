@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bukarest Erlebnisse & Unterkunft | Exklusive Touren, Spa, Action & Apartments</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<!-- EmailJS SDK -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<!-- Stripe SDK -->
+<script src="https://js.stripe.com/v3/"></script>
+<script type="text/javascript">
+(function() {
+    emailjs.init("Q_tJ6LhJkeMcVE0U4");
+})();
+</script>
+<style>
+.hero-bg {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=1920') center/cover no-repeat;
+}
+.StripeElement {
+    background-color: white;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+}
+.StripeElement--focus {
+    border-color: #D97706;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+}
+</style>
+</head>
+<body class="bg-[#FBF9F5] text-gray-800 font-sans flex flex-col min-h-screen selection:bg-amber-500 selection:text-white">
+<!-- Header Navigation -->
+<header class="bg-[#FBF9F5]/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-amber-900/10">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-20">
+<div class="flex items-center space-x-3 cursor-pointer" onclick="showView('home-view')">
+<div class="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-white shadow-md">
+<i class="fa-solid fa-compass text-xl"></i>
+</div>
+<span class="text-2xl font-black tracking-tight text-gray-900">Bukarest<span class="text-amber-600">Erlebnisse</span></span>
+</div>
+<div class="flex items-center space-x-4">
+<nav class="hidden md:flex space-x-6 font-medium text-sm text-gray-700">
+<a href="#" onclick="showView('home-view'); return false;" class="hover:text-amber-600 transition-colors" data-i18n="nav_home">Startseite</a>
+<a href="#" onclick="showCategory('accommodation'); return false;" class="hover:text-amber-600 transition-colors" data-i18n="nav_accommodation">Unterkunft</a>
+<a href="#" onclick="showCategory('packages'); return false;" class="text-amber-700 font-bold hover:text-amber-800 transition-colors" data-i18n="nav_packages">JGA & Pakete</a>
+<a href="#" onclick="openModal('impressum-modal'); return false;" class="hover:text-amber-600 transition-colors" data-i18n="nav_imprint">Impressum</a>
+<a href="#" onclick="openModal('privacy-modal'); return false;" class="hover:text-amber-600 transition-colors" data-i18n="nav_privacy">Datenschutz</a>
+</nav>
+<!-- Currency Switcher -->
+<select id="currency-select" onchange="changeCurrency(this.value)" class="bg-white border border-amber-900/20 text-gray-700 font-medium text-sm py-1.5 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-600 cursor-pointer shadow-sm">
+<option value="EUR">€ EUR</option>
+<option value="RON">lei RON</option>
+</select>
+<!-- Language Switcher -->
+<select id="lang-select" onchange="changeLanguage(this.value)" class="bg-white border border-amber-900/20 text-gray-700 font-semibold text-sm py-1.5 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-600 cursor-pointer shadow-sm">
+<option value="de">DE</option>
+<option value="en">EN</option>
+<option value="ro">RO</option>
+</select>
+</div>
+</div>
+</header>
+
+<!-- Main Content Area -->
+<main class="flex-grow">
+<!-- VIEW 1: HOME -->
+<div id="home-view" class="view-section">
+<section class="hero-bg text-white py-24 px-4 text-center">
+<div class="max-w-3xl mx-auto">
+<h1 class="text-4xl md:text-6xl font-black mb-4 tracking-tight" data-i18n="hero_title">Entdecke das authentische Bukarest</h1>
+<p class="text-lg md:text-xl mb-8 text-gray-200 font-normal" data-i18n="hero_subtitle">Von unserem zentralen Apartment über historische Stadtführungen bis hin zu Wellness & VIP-Erlebnissen.</p>
+</div>
+</section>
+
+<!-- Categories Grid -->
+<section class="max-w-7xl mx-auto px-4 py-16">
+<div class="flex justify-between items-end mb-10">
+<div>
+<span class="text-amber-700 font-bold uppercase tracking-wider text-xs" data-i18n="cat_badge">Kategorien entdecken</span>
+<h2 class="text-3xl font-black text-gray-900 mt-1" data-i18n="cat_heading">Wähle deine Erlebniswelt</h2>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Category 0: Accommodation -->
+<div onclick="showCategory('accommodation')" class="group relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border-2 border-amber-500 overflow-hidden cursor-pointer flex flex-col">
+<div class="h-52 overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=600" alt="Accommodation" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+<span class="absolute top-4 left-4 z-20 bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">Top Unterkunft</span>
+<span class="absolute bottom-4 left-4 z-20 text-white font-bold text-xl drop-shadow" data-i18n="c0_title">Unsere Unterkunft (Casa Unirii)</span>
+</div>
+<div class="p-6 flex flex-col flex-grow justify-between">
+<p class="text-gray-600 text-sm mb-4" data-i18n="c0_desc">Zentrales 95m² Apartment mit 3 Schlafzimmern, 2 Bädern & Hof.</p>
+<span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+<span data-i18n="explore_btn">Angebote ansehen</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+</span>
+</div>
+</div>
+<!-- Category 1: Sightseeing -->
+<div onclick="showCategory('sightseeing')" class="group relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden cursor-pointer flex flex-col">
+<div class="h-52 overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=600" alt="Sightseeing" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+<span class="absolute bottom-4 left-4 z-20 text-white font-bold text-xl drop-shadow" data-i18n="c1_title">Sightseeing & Touren</span>
+</div>
+<div class="p-6 flex flex-col flex-grow justify-between">
+<p class="text-gray-600 text-sm mb-4" data-i18n="c1_desc">Altstadtführungen, Schloss Bran (Dracula) Ausflüge & Kultur.</p>
+<span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+<span data-i18n="explore_btn">Angebote ansehen</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+</span>
+</div>
+</div>
+<!-- Category 2: Wellness -->
+<div onclick="showCategory('wellness')" class="group relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden cursor-pointer flex flex-col">
+<div class="h-52 overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=600" alt="Wellness" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+<span class="absolute bottom-4 left-4 z-20 text-white font-bold text-xl drop-shadow" data-i18n="c2_title">Wellness & Beauty</span>
+</div>
+<div class="p-6 flex flex-col flex-grow justify-between">
+<p class="text-gray-600 text-sm mb-4" data-i18n="c2_desc">Therme VIP-Eintritt, Luxus-Spas, High-End Kosmetik & Maniküre.</p>
+<span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+<span data-i18n="explore_btn">Angebote ansehen</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+</span>
+</div>
+</div>
+<!-- Category 3: Action -->
+<div onclick="showCategory('action')" class="group relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden cursor-pointer flex flex-col">
+<div class="h-52 overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1563770660941-20978e870e26?q=80&w=600" alt="Action" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+<span class="absolute bottom-4 left-4 z-20 text-white font-bold text-xl drop-shadow" data-i18n="c3_title">Action & Adrenalin</span>
+</div>
+<div class="p-6 flex flex-col flex-grow justify-between">
+<p class="text-gray-600 text-sm mb-4" data-i18n="c3_desc">Schießstand mit echten Waffen, Go-Kart Grand Prix & Escape Rooms.</p>
+<span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+<span data-i18n="explore_btn">Angebote ansehen</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+</span>
+</div>
+</div>
+<!-- Category 4: VIP -->
+<div onclick="showCategory('vip')" class="group relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden cursor-pointer flex flex-col">
+<div class="h-52 overflow-hidden relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600" alt="VIP" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+<span class="absolute bottom-4 left-4 z-20 text-white font-bold text-xl drop-shadow" data-i18n="c4_title">VIP & Limousinen</span>
+</div>
+<div class="p-6 flex flex-col flex-grow justify-between">
+<p class="text-gray-600 text-sm mb-4" data-i18n="c4_desc">Stretch-Limo mit Sekt, Flughafentransfers & VIP-Clubnächte.</p>
+<span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+<span data-i18n="explore_btn">Angebote ansehen</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+</span>
+</div>
+</div>
+<!-- Category 5: Packages -->
+<div onclick="showCategory('packages')" class="group relative bg-gradient-to-br from-amber-600 to-amber-700 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 text-white flex flex-col justify-between p-8 cursor-pointer">
+<div>
+<span class="bg-white/20 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="all_in_one">Komplettpaket</span>
+<h3 class="text-2xl font-black mt-4 mb-2" data-i18n="c6_title">JGA & Ganztages-Pakete</h3>
+<p class="text-amber-100 text-sm mb-6" data-i18n="c6_desc">Perfekt für Gruppen: Der ultimative JGA, Mädels-Tag & Geburtstag.</p>
+</div>
+<span class="font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+<span data-i18n="explore_btn">Angebote ansehen</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+</span>
+</div>
+</div>
+</section>
+</div>
+
+<!-- VIEW 2: CATEGORY LIST -->
+<div id="category-view" class="view-section max-w-7xl mx-auto px-4 py-12 hidden">
+<button onclick="showView('home-view')" class="mb-6 text-amber-700 font-semibold hover:underline flex items-center text-sm cursor-pointer">
+<i class="fa-solid fa-arrow-left mr-2"></i> <span data-i18n="back_to_categories">Zurück zur Übersicht</span>
+</button>
+<div class="mb-8 border-b border-amber-900/10 pb-6">
+<h1 id="category-title" class="text-3xl md:text-4xl font-black text-gray-900"></h1>
+<p id="category-subtitle" class="text-gray-600 mt-1"></p>
+</div>
+<div id="category-items-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8"></div>
+</div>
+
+<!-- VIEW 3: DETAIL PAGE -->
+<div id="detail-view" class="view-section max-w-5xl mx-auto px-4 py-12 hidden">
+<button onclick="goBackToCategory()" class="mb-6 text-amber-700 font-semibold hover:underline flex items-center text-sm cursor-pointer">
+<i class="fa-solid fa-arrow-left mr-2"></i> <span data-i18n="back_to_list">Zurück zur Auswahl</span>
+</button>
+<div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-amber-900/10">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-gray-100">
+<img id="detail-img" src="" alt="Tour Image" class="w-full h-80 object-cover rounded-2xl">
+<div class="grid grid-cols-2 gap-2 h-80">
+<img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=400" class="w-full h-full object-cover rounded-2xl">
+<img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=400" class="w-full h-full object-cover rounded-2xl">
+</div>
+</div>
+<div class="p-8">
+<div class="flex flex-col md:flex-row justify-between md:items-center mb-6 border-b border-amber-900/10 pb-6">
+<div>
+<span id="detail-badge" class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide inline-block mb-3"></span>
+<h1 id="detail-title" class="text-3xl font-black text-gray-900 mb-2"></h1>
+<p class="text-gray-500 flex items-center text-sm"><i class="fa-solid fa-clock text-amber-600 mr-2"></i> <span id="detail-duration"></span></p>
+</div>
+<div class="mt-4 md:mt-0 text-left md:text-right">
+<span id="price-prefix" class="text-xs text-gray-500 block"></span>
+<span id="detail-price" class="text-3xl font-black text-amber-600"></span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="md:col-span-2 space-y-6">
+<div>
+<h3 class="text-xl font-bold mb-3 text-gray-900" data-i18n="detail_about">Über dieses Erlebnis</h3>
+<p id="detail-description" class="text-gray-700 leading-relaxed text-sm md:text-base"></p>
+</div>
+<div>
+<h3 class="text-xl font-bold mb-3 text-gray-900" data-i18n="detail_highlights">Highlights</h3>
+<ul id="detail-highlights" class="space-y-2 text-gray-700 text-sm"></ul>
+</div>
+</div>
+<div class="bg-[#FBF9F5] p-6 rounded-2xl border border-amber-900/10 flex flex-col justify-between h-fit space-y-6">
+<div class="space-y-4">
+<h4 class="font-bold text-gray-900 border-b border-amber-900/10 pb-2 text-sm" data-i18n="detail_included_title">Inklusivleistungen:</h4>
+<div class="text-xs space-y-2.5 text-gray-700">
+<p><i class="fa-solid fa-check text-green-600 mr-2"></i> <span id="inc-item-1">Professionelle Betreuung / Guide</span></p>
+<p><i class="fa-solid fa-check text-green-600 mr-2"></i> <span id="inc-item-2">Tickets / Reservierung inklusive</span></p>
+<p><i class="fa-solid fa-check text-green-600 mr-2"></i> <span data-i18n="inc_cancel">Kostenlose Stornierung (24h vorher)</span></p>
+</div>
+</div>
+<button id="detail-book-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md hover:shadow-lg text-center cursor-pointer">
+<span data-i18n="btn_book">Jetzt buchen</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- VIEW 4: CHECKOUT -->
+<div id="checkout-view" class="view-section max-w-4xl mx-auto px-4 py-12 hidden">
+<button onclick="showView('detail-view')" class="mb-6 text-amber-700 font-semibold hover:underline flex items-center text-sm cursor-pointer">
+<i class="fa-solid fa-arrow-left mr-2"></i> <span data-i18n="btn_back">Zurück</span>
+</button>
+<div class="bg-white p-8 rounded-3xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 border border-amber-900/10">
+<div>
+<h2 class="text-2xl font-black mb-6" data-i18n="checkout_heading">Deine Buchung</h2>
+<form id="booking-form" onsubmit="processBooking(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-bold uppercase text-gray-600 mb-1" data-i18n="lbl_selected_tour">Ausgewähltes Erlebnis / Unterkunft</label>
+<input type="text" id="selected-tour-display" readonly class="w-full bg-[#FBF9F5] border border-gray-200 rounded-xl p-3 font-semibold text-gray-800 text-sm">
+</div>
+<div>
+<label class="block text-xs font-bold uppercase text-gray-600 mb-1" data-i18n="lbl_name">Vor- und Nachname *</label>
+<input type="text" id="customer-name" required placeholder="Max Mustermann" class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-600 focus:outline-none">
+</div>
+<div>
+<label class="block text-xs font-bold uppercase text-gray-600 mb-1" data-i18n="lbl_email">E-Mail-Adresse *</label>
+<input type="email" id="customer-email" required placeholder="max@beispiel.de" class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-600 focus:outline-none">
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase text-gray-600 mb-1" data-i18n="lbl_date">Check-in Datum *</label>
+<input type="text" id="booking-date" required placeholder="Datum wählen..." class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-600 focus:outline-none">
+</div>
+<div>
+<label class="block text-xs font-bold uppercase text-gray-600 mb-1" data-i18n="lbl_guests">Personen / Gäste *</label>
+<input type="number" id="guest-count" min="1" max="6" value="2" onchange="updateTotal()" required class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-600 focus:outline-none">
+</div>
+</div>
+<!-- Stripe Card Element -->
+<div class="pt-4 border-t border-gray-100">
+<label class="block text-xs font-bold uppercase text-gray-600 mb-2" data-i18n="lbl_card">Kredit- / Debitkarte *</label>
+<div id="card-element"></div>
+<div id="card-errors" class="text-red-500 text-xs mt-2" role="alert"></div>
+</div>
+<button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all text-base mt-4 flex items-center justify-center shadow-md cursor-pointer">
+<i class="fa-solid fa-lock mr-2"></i> <span data-i18n="btn_pay">Kostenpflichtig buchen</span>
+</button>
+</form>
+</div>
+<div class="bg-[#FBF9F5] p-6 rounded-2xl flex flex-col justify-between border border-amber-900/10">
+<div>
+<h3 class="text-lg font-bold mb-4" data-i18n="summary_heading">Zusammenfassung</h3>
+<div class="flex justify-between py-2 text-sm border-b border-amber-900/10">
+<span data-i18n="sum_price_person">Basis / Nacht:</span>
+<span id="single-price">0 €</span>
+</div>
+<div class="flex justify-between py-2 text-sm border-b border-amber-900/10">
+<span data-i18n="sum_guests">Gäste:</span>
+<span id="summary-guests">2</span>
+</div>
+<div class="flex justify-between py-4 text-xl font-black text-amber-700">
+<span data-i18n="sum_total">Gesamtsumme:</span>
+<span id="total-price">0 €</span>
+</div>
+</div>
+<div class="text-xs text-gray-600 space-y-2 mt-6">
+<p><i class="fa-solid fa-shield-halved mr-1 text-amber-600"></i> <span data-i18n="feat_stripe">Sichere SSL-Zahlung via Stripe.</span></p>
+<p><i class="fa-solid fa-envelope mr-1 text-amber-600"></i> <span data-i18n="feat_confirm">Sofortige Bestätigung per E-Mail.</span></p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- VIEW 5: SUCCESS -->
+<div id="success-view" class="view-section max-w-xl mx-auto px-4 py-20 text-center hidden">
+<div class="bg-white p-8 rounded-3xl shadow-sm border-t-4 border-green-600 border-x border-b border-amber-900/10">
+<i class="fa-solid fa-circle-check text-6xl text-green-600 mb-4"></i>
+<h2 class="text-3xl font-black mb-2" data-i18n="success_title">Buchung erfolgreich!</h2>
+<p class="text-gray-600 mb-6 text-sm" data-i18n="success_desc">Wir haben dir alle Details und Check-in-Infos an deine E-Mail-Adresse geschickt.</p>
+<div class="bg-[#FBF9F5] p-4 rounded-2xl mb-6 text-left space-y-2 text-xs border border-amber-900/10">
+<p><strong data-i18n="lbl_id">Buchungs-ID:</strong> <span id="conf-id"></span></p>
+<p><strong data-i18n="lbl_tour">Objekt / Erlebnis:</strong> <span id="conf-tour"></span></p>
+<p><strong data-i18n="lbl_date">Datum:</strong> <span id="conf-date"></span></p>
+<p><strong>E-Mail:</strong> <span id="conf-email"></span></p>
+</div>
+<button onclick="showView('home-view')" data-i18n="btn_home" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-xl transition-all text-sm shadow-md cursor-pointer">Zur Startseite</button>
+</div>
+</div>
+</main>
+
+<!-- Modal: Impressum -->
+<div id="impressum-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+<div class="bg-white max-w-2xl w-full p-8 rounded-3xl max-h-[80vh] overflow-y-auto relative shadow-2xl border border-amber-900/10">
+<button onclick="closeModal('impressum-modal')" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold cursor-pointer">&times;</button>
+<h2 class="text-2xl font-black mb-6 text-gray-900" data-i18n="imp_title_head">Impressum</h2>
+<div id="impressum-content" class="space-y-4 text-sm text-gray-600 leading-relaxed"></div>
+</div>
+</div>
+
+<!-- Modal: Datenschutz (Vollständige DSGVO-konforme Version) -->
+<div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+<div class="bg-white max-w-2xl w-full p-8 rounded-3xl max-h-[80vh] overflow-y-auto relative shadow-2xl border border-amber-900/10">
+<button onclick="closeModal('privacy-modal')" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700 text-2xl font-bold cursor-pointer">&times;</button>
+<h2 class="text-2xl font-black mb-6 text-gray-900" data-i18n="priv_title_head">Datenschutzerklärung</h2>
+<div id="privacy-content" class="space-y-4 text-sm text-gray-600 leading-relaxed">
+    <p><strong>1. Datenschutz auf einen Blick</strong><br>Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert, wenn Sie unsere Website besuchen. Personenbezogene Daten sind alle Daten, mit denen Sie persönlich identifiziert werden können.</p>
+    <p><strong>2. Verantwortliche Stelle</strong><br>Verantwortlich für die Datenverarbeitung auf dieser Website im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:<br>
+    Bukarest Erlebnisse S.R.L.<br>Strada Lipscani Nr. 10, Bucureşti, România<br>E-Mail: kontakt@bukarest-erlebnisse.de</p>
+    <p><strong>3. Datenerfassung auf unserer Website</strong><br>Wenn Sie über unsere Website eine Buchung vornehmen, erheben wir personenbezogene Daten (Vor- und Nachname, E-Mail-Adresse, Check-in-Datum, Gästeanzahl). Diese Daten werden ausschließlich zur Durchführung und Abwicklung des Vertrages gemäß Art. 6 Abs. 1 lit. b DSGVO verarbeitet.</p>
+    <p><strong>4. Zahlungsabwicklung via Stripe</strong><br>Zur Abwicklung von Kreditkartenzahlungen nutzen wir den Zahlungsdienstleister Stripe Payments Europe, Ltd. Wenn Sie per Kreditkarte zahlen, werden Ihre Zahlungsdaten direkt von Stripe verarbeitet. Weitere Informationen zum Datenschutz bei Stripe finden Sie unter: <a href="https://stripe.com/de/privacy" target="_blank" class="text-amber-600 underline">https://stripe.com/de/privacy</a>.</p>
+    <p><strong>5. E-Mail-Versand via EmailJS</strong><br>Für den Versand von Buchungsbestätigungen nutzen wir den Dienst EmailJS. Ihre Formulardaten werden hierbei zur Übermittlung der Bestätigungs-E-Mail verarbeitet.</p>
+    <p><strong>6. Ihre Rechte</strong><br>Sie haben jederzeit das Recht auf unentgeltliche Auskunft über Ihre gespeicherten personenbezogenen Daten, deren Herkunft und Empfänger und den Zweck der Datenverarbeitung sowie ein Recht auf Berichtigung oder Löschung dieser Daten.</p>
+</div>
+</div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-gray-400 py-10 mt-16 border-t border-gray-800">
+<div class="max-w-7xl mx-auto px-4 text-center space-y-4 text-sm">
+<div class="flex justify-center space-x-6">
+<a href="#" onclick="showView('home-view'); return false;" class="hover:text-amber-500 transition-colors" data-i18n="nav_home">Startseite</a>
+<a href="#" onclick="openModal('impressum-modal'); return false;" class="hover:text-amber-500 transition-colors" data-i18n="nav_imprint">Impressum</a>
+<a href="#" onclick="openModal('privacy-modal'); return false;" class="hover:text-amber-500 transition-colors" data-i18n="nav_privacy">Datenschutz</a>
+</div>
+<p class="text-xs text-gray-500">&copy; 2026 Bukarest Erlebnisse & Unterkunft. All rights reserved.</p>
+</div>
+</footer>
+
+<!-- Flatpickr Script -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/de.js"></script>
+
+<!-- JavaScript Database & Logic -->
+<script>
+let currentLang = 'de';
+let currentCurrency = 'EUR';
+let currencyRates = { EUR: 1, RON: 4.97 };
+let currentCategoryKey = '';
+let currentTourKey = '';
+let currentPriceEUR = 0;
+let datePickerInstance = null;
+
+const i18n = {
+    de: {
+        nav_home: "Startseite",
+        nav_accommodation: "Unterkunft",
+        nav_packages: "JGA & Pakete",
+        nav_imprint: "Impressum",
+        nav_privacy: "Datenschutz",
+        hero_title: "Entdecke das authentische Bukarest",
+        hero_subtitle: "Von unserem zentralen Apartment über historische Stadtführungen bis hin zu Wellness & VIP-Erlebnissen.",
+        cat_badge: "Kategorien entdecken",
+        cat_heading: "Wähle deine Erlebniswelt",
+        explore_btn: "Angebote ansehen",
+        all_in_one: "Komplettpaket",
+        back_to_categories: "Zurück zur Übersicht",
+        back_to_list: "Zurück zur Auswahl",
+        per_person: "pro Nacht",
+        from_price: "ab",
+        btn_book: "Jetzt buchen",
+        btn_back: "Zurück",
+        checkout_heading: "Deine Buchung",
+        lbl_selected_tour: "Ausgewähltes Objekt",
+        lbl_name: "Vor- und Nachname *",
+        lbl_email: "E-Mail-Adresse *",
+        lbl_date: "Anreise-Datum *",
+        lbl_guests: "Gäste *",
+        lbl_card: "Kredit- / Debitkarte *",
+        btn_pay: "Kostenpflichtig buchen",
+        summary_heading: "Zusammenfassung",
+        sum_price_person: "Preis pro Nacht:",
+        sum_guests: "Anzahl Gäste:",
+        sum_total: "Gesamtsumme:",
+        feat_stripe: "Sichere SSL-Zahlung via Stripe.",
+        feat_confirm: "Sofortige E-Mail-Bestätigung.",
+        success_title: "Buchung erfolgreich!",
+        success_desc: "Wir haben dir das Ticket und alle Details per E-Mail zugeschickt.",
+        lbl_id: "Buchungs-ID:",
+        lbl_tour: "Objekt / Erlebnis:",
+        btn_home: "Zur Startseite",
+        detail_about: "Über diese Unterkunft",
+        detail_highlights: "Ausstattung & Merkmale",
+        detail_included_title: "Was enthalten ist:",
+        inc_cancel: "Kostenfreie Stornierung",
+        c0_title: "Unsere Unterkunft (Casa Unirii)",
+        c0_desc: "Zentrales 95m² Apartment mit 3 Schlafzimmern, 2 Bädern & Hof.",
+        c1_title: "Sightseeing & Touren",
+        c1_desc: "Altstadt-Führungen, Schloss Bran & Tagestouren.",
+        c2_title: "Wellness & Beauty",
+        c2_desc: "Therme VIP-Tageskarte, Luxus-Spa & Kosmetik.",
+        c3_title: "Action & Adrenalin",
+        c3_desc: "Schießstand mit scharfen Waffen, Go-Kart & Escape Rooms.",
+        c4_title: "VIP & Limousinen",
+        c4_desc: "Stretch-Limousine mit Sekt & Flughafentransfer.",
+        c5_title: "Food & Weinverkostung",
+        c5_desc: "Kulinarische Touren & rumänische Weinproben.",
+        c6_title: "JGA & Ganztages-Pakete",
+        c6_desc: "Rundum-sorglos-Pakete für Gruppen, JGA & Geburtstage.",
+        imp_title_head: "Impressum",
+        priv_title_head: "Datenschutzerklärung",
+        impressumHtml: `<p><strong>Angaben gemäß § 5 TMG:</strong><br>Bukarest Erlebnisse S.R.L.<br>Strada Lipscani Nr. 10<br>Bucureşti, România</p><p><strong>Kontakt:</strong><br>E-Mail: kontakt@bukarest-erlebnisse.de</p>`,
+        privacyHtml: document.getElementById('privacy-content').innerHTML
+    },
+    en: {
+        nav_home: "Home",
+        nav_accommodation: "Accommodation",
+        nav_packages: "Stag & Packages",
+        nav_imprint: "Imprint",
+        nav_privacy: "Privacy Policy",
+        hero_title: "Discover Authentic Bucharest",
+        hero_subtitle: "From our central apartment to historical walking tours and wellness experiences.",
+        cat_badge: "Explore Categories",
+        cat_heading: "Choose your experience",
+        explore_btn: "View offers",
+        all_in_one: "All-In-One",
+        back_to_categories: "Back to categories",
+        back_to_list: "Back to selection",
+        per_person: "per night",
+        from_price: "from",
+        btn_book: "Book Now",
+        btn_back: "Back",
+        checkout_heading: "Your Booking",
+        lbl_selected_tour: "Selected Property",
+        lbl_name: "Full Name *",
+        lbl_email: "Email Address *",
+        lbl_date: "Check-in Date *",
+        lbl_guests: "Guests *",
+        lbl_card: "Credit / Debit Card *",
+        btn_pay: "Pay & Book Now",
+        summary_heading: "Booking Summary",
+        sum_price_person: "Price per night:",
+        sum_guests: "Number of guests:",
+        sum_total: "Total Amount:",
+        feat_stripe: "Secure SSL payment via Stripe.",
+        feat_confirm: "Instant email confirmation.",
+        success_title: "Booking Confirmed!",
+        success_desc: "We have sent your details to your email.",
+        lbl_id: "Booking ID:",
+        lbl_tour: "Property / Experience:",
+        btn_home: "Back to Homepage",
+        detail_about: "About this accommodation",
+        detail_highlights: "Amenities & Features",
+        detail_included_title: "What's included:",
+        inc_cancel: "Free cancellation",
+        c0_title: "Our Apartment (Casa Unirii)",
+        c0_desc: "Central 95m² apartment with 3 bedrooms, 2 baths & courtyard.",
+        c1_title: "Sightseeing & Tours",
+        c1_desc: "Old Town history walks, Bran Castle & Transylvania trips.",
+        c2_title: "Wellness & Beauty",
+        c2_desc: "Therme VIP pass, luxury spa & beauty treatments.",
+        c3_title: "Action & Adrenalin",
+        c3_desc: "Real firearm shooting range, Go-Kart & Escape Rooms.",
+        c4_title: "VIP & Limousines",
+        c4_desc: "Stretch limo rental with champagne & airport transfers.",
+        c5_title: "Food & Wine Tasting",
+        c5_desc: "Food walking tours & premium Romanian wine tastings.",
+        c6_title: "Stag & Full-Day Packages",
+        c6_desc: "Complete packages for groups, stag parties & birthdays.",
+        imp_title_head: "Imprint",
+        priv_title_head: "Privacy Policy",
+        impressumHtml: `<p><strong>Company Information:</strong><br>Bukarest Erlebnisse S.R.L.</p>`,
+        privacyHtml: document.getElementById('privacy-content').innerHTML
+    },
+    ro: {
+        nav_home: "Acasă",
+        nav_accommodation: "Cazare",
+        nav_packages: "Pachete & JGA",
+        nav_imprint: "Mențiuni Legale",
+        nav_privacy: "Confidențialitate",
+        hero_title: "Descoperă Bucureștiul Autentic",
+        hero_subtitle: "De la apartamentul nostru central până la tururi istorice și experiențe VIP.",
+        cat_badge: "Categorii",
+        cat_heading: "Alege experiența ta",
+        explore_btn: "Vezi oferte",
+        all_in_one: "Totul inclus",
+        back_to_categories: "Înapoi la categorii",
+        back_to_list: "Înapoi la selecţie",
+        per_person: "pe noapte",
+        from_price: "de la",
+        btn_book: "Rezervă acum",
+        btn_back: "Înapoi",
+        checkout_heading: "Rezervarea ta",
+        lbl_selected_tour: "Proprietatea selectată",
+        lbl_name: "Nume și Prenume *",
+        lbl_email: "Adresă de Email *",
+        lbl_date: "Data Check-in *",
+        lbl_guests: "Oaspeți *",
+        lbl_card: "Card de Credit / Debit *",
+        btn_pay: "Plătește și rezervă",
+        summary_heading: "Sumar Rezervare",
+        sum_price_person: "Preț per noapte:",
+        sum_guests: "Număr oaspeți:",
+        sum_total: "Total de plată:",
+        feat_stripe: "Plată securizată prin Stripe.",
+        feat_confirm: "Confirmare imediată pe email.",
+        success_title: "Rezervare confirmată!",
+        success_desc: "Am trimis detaliile pe adresa ta de email.",
+        lbl_id: "ID Rezervare:",
+        lbl_tour: "Proprietate / Experiență:",
+        btn_home: "Înapoi la pagina principală",
+        detail_about: "Despre această cazare",
+        detail_highlights: "Facilități & Dotări",
+        detail_included_title: "Ce este inclus:",
+        inc_cancel: "Anulare gratuită",
+        c0_title: "Cazarea noastră (Casa Unirii)",
+        c0_desc: "Apartament central de 95m² cu 3 dormitoare, 2 băi și curte.",
+        c1_title: "Sightseeing & Tururi",
+        c1_desc: "Tururi istorice în Centrul Vechi, Castelul Bran & Transilvania.",
+        c2_title: "Wellness & Beauty",
+        c2_desc: "Therme VIP-Pass, spa de lux & servicii de frumusețe.",
+        c3_title: "Acțiune & Adrenalină",
+        c3_desc: "Poligon de tragere cu arme reale, Karting & Escape Rooms.",
+        c4_title: "VIP & Limuzine",
+        c4_desc: "Închiriere limuzină cu şampanie & transferuri aeroport.",
+        c5_title: "Gastronomie & Vinuri",
+        c5_desc: "Tururi gastronomice & degustări de vinuri românești.",
+        c6_title: "Pachete Complete & JGA",
+        c6_desc: "Pachete complete pentru grupuri, burlaci și zile de naştere.",
+        imp_title_head: "Mențiuni Legale",
+        priv_title_head: "Politica de Confidențialitate",
+        impressumHtml: `<p><strong>Informații legale:</strong><br>Bukarest Erlebnisse S.R.L.</p>`,
+        privacyHtml: document.getElementById('privacy-content').innerHTML
+    }
+};
+
+const categoriesData = {
+    accommodation: {
+        title: { de: "Unsere Unterkunft in Bukarest", en: "Our Accommodation in Bucharest", ro: "Cazarea noastră din București" },
+        subtitle: { de: "Dein exklusives Zuhause auf Zeit – zentral, modern und mit privatem Innenhof.", en: "Your exclusive home away from home – central, modern, with a courtyard.", ro: "Casa ta departe de casă – central, modern, cu o curte interioară." },
+        items: [
+            {
+                id: 'casa-unirii',
+                badge: { de: "Top Airbnb Inserat", en: "Top Airbnb Listing", ro: "Top Anunț Airbnb" },
+                title: { de: "Casa Unirii | 3BR | 2Bath | Courtyard | 10MinWalktoCenter", en: "Casa Unirii | 3BR | 2Bath | Courtyard | 10MinWalktoCenter", ro: "Casa Unirii | 3BR | 2Bath | Curte | La 10 min de Centru" },
+                price: 95,
+                duration: { de: "Max. 6 Gäste • 3 Schlafzimmer • 2 Bäder", en: "Max 6 guests • 3 bedrooms • 2 baths", ro: "Max 6 oaspeți • 3 dormitoare • 2 băi" },
+                isPackage: false,
+                img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800",
+                desc: {
+                    de: "Willkommen in unserem gemütlichen und stilvollen 95 m² großen Apartment nahe dem Stadtzentrum von Bukarest. Mit 3 Schlafzimmern, 2 Badezimmern, einem geräumigen Wohnbereich und einer voll ausgestatteten Küche ist es perfekt für Familien, Freunde oder Geschäftsreisende. Genießen Sie unseren privaten Innenhof, kostenlose Straßenparkplätze direkt vor dem Haus, Geschäfte gleich um die Ecke und das Stadtzentrum nur 10 Gehminuten entfernt!",
+                    en: "Welcome to our cozy and stylish 95 m² apartment near Bucharest city centre. With 3 bedrooms, 2 bathrooms, a spacious living area and a fully equipped kitchen, it's perfect for families, friends or business travellers. Enjoy our courtyard, free street parking directly in front of the house, shops just around the corner and the city centre only a 10-minute walk away!",
+                    ro: "Bun venit în apartamentul nostru confortabil și elegant de 95 m² situat aproape de centrul Bucureștiului. Cu 3 dormitoare, 2 băi, un living spațios și o bucătărie utilată complet, este ideal pentru familii, prieteni sau călători în interes de afaceri. Bucură-te de curtea interioară, parcare stradală gratuită în față, magazine în apropiere și centrul orașului la doar 10 minute de mers pe jos!"
+                },
+                highlights: {
+                    de: [
+                        "95 m² Wohnfläche für bis zu 6 Gäste",
+                        "3 Schlafzimmer (1x Queen, 2x Einzelbetten, 1x Queen)",
+                        "2 moderne Badezimmer & voll ausgestattete Küche",
+                        "Privater Innenhof & kostenlose Parkplätze",
+                        "Nur 10 Gehminuten ins Stadtzentrum / Unirii",
+                        "Self Check-in mit Schlüsselbox 24/7"
+                    ],
+                    en: [
+                        "95 m² living space for up to 6 guests",
+                        "3 bedrooms (1x queen bed, 2x single beds, 1x queen bed)",
+                        "2 modern bathrooms & fully equipped kitchen",
+                        "Private courtyard & free street parking",
+                        "Only a 10-minute walk to the city centre",
+                        "Self check-in with lockbox 24/7"
+                    ],
+                    ro: [
+                        "Suprafață de 95 m² pentru până la 6 oaspeți",
+                        "3 dormitoare (1x pat queen, 2x paturi de o persoană, 1x pat queen)",
+                        "2 băi moderne & bucătărie complet echipată",
+                        "Curte interioară privată & parcare gratuită",
+                        "La doar 10 minute de mers pe jos de centru",
+                        "Self check-in cu cutie de chei 24/7"
+                    ]
+                }
+            }
+        ]
+    },
+    sightseeing: {
+        title: { de: "Sightseeing & Touren", en: "Sightseeing & Tours", ro: "Sightseeing & Tururi" },
+        subtitle: { de: "Erkunde die Geschichte und Hauptsehenswürdigkeiten der Hauptstadt.", en: "Explore the history and main attractions of the capital.", ro: "Explorează istoria şi atracţiile principale ale capitalei." },
+        items: [
+            {
+                id: 'tour1',
+                badge: { de: "Beliebteste Tour", en: "Most Popular", ro: "Cel mai popular" },
+                title: { de: "Historische Altstadt-Führung", en: "Old Town Historic Walking Tour", ro: "Turul Istoric al Centrului Vechi" },
+                price: 29,
+                duration: { de: "3 Stunden", en: "3 hours", ro: "3 ore" },
+                isPackage: false,
+                img: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
+                desc: {
+                    de: "Entdecke den Charme der Bukarester Altstadt mit einem leidenschaftlichen lokalen Guide und erfahre faszinierende Geschichten.",
+                    en: "Discover the charm of Bucharest Old Town with a passionate local guide. Learn fascinating stories.",
+                    ro: "Descoperă farmecul Centrului Vechi din Bucureşti alături de un ghid local pasionat."
+                },
+                highlights: {
+                    de: ["Unirii-Platz & Parlamentspalast", "Stavropoleos-Kloster", "Historische Karawanserei Manuc"],
+                    en: ["Unirii Square & Parliament Palace", "Stavropoleos Monastery", "Manuc's Inn"],
+                    ro: ["Piaţa Unirii şi Palatul Parlamentului", "Biserica Stavropoleos", "Hanul lui Manuc"]
+                }
+            }
+        ]
+    },
+    wellness: {
+        title: { de: "Wellness & Beauty", en: "Wellness & Beauty", ro: "Wellness & Beauty" },
+        subtitle: { de: "Gönn dir Entspannung auf höchstem Niveau in Bukarest.", en: "Treat yourself to relaxing moments at the highest level.", ro: "Răsfață-te cu momente de relaxare la cel mai înalt nivel." },
+        items: [
+            {
+                id: 'therme',
+                badge: { de: "Top Empfehlung", en: "Top Pick", ro: "Top Recomandare" },
+                title: { de: "Therme Bukarest: VIP Tageskarte", en: "Therme Bucharest: VIP Day Pass", ro: "Therme București: VIP Day Pass" },
+                duration: { de: "Ganztägig", en: "Full Day", ro: "O zi întreagă" },
+                price: 45,
+                isPackage: false,
+                img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=800",
+                desc: {
+                    de: "Genieße Europas größte Wellness-Oase. Voller Zugang zu den Palmen-, Galaxy- und Elysium-Bereichen.",
+                    en: "Enjoy Europe's largest relaxation oasis. Full access to Palm, Galaxy, and Elysium zones.",
+                    ro: "Bucură-te de cea mai mare oază de relaxare din Europa. Acces complet în zonele Palm, Galaxy şi Elysium."
+                },
+                highlights: {
+                    de: ["Bevorzugter Einlass ohne Warten", "Zugang zu allen Zonen", "Über 10 Thermalbecken & Rutschen"],
+                    en: ["Skip-the-line entry", "Access to all zones", "Over 10 thermal pools"],
+                    ro: ["Intrare fără rând la coadă", "Acces în toate zonele", "Peste 10 piscine termale"]
+                }
+            }
+        ]
+    },
+    action: {
+        title: { de: "Action & Adrenalin", en: "Action & Adrenalin", ro: "Acțiune & Adrenalină" },
+        subtitle: { de: "Spannende Erlebnisse für Adrenalin-Junkies und Gruppen.", en: "Thrilling experiences for action lovers and groups.", ro: "Experiențe palpitante pentru iubitorii de acțiune." },
+        items: [
+            {
+                id: 'shooting',
+                badge: { de: "Beliebt", en: "Popular", ro: "Popular" },
+                title: { de: "Schießstand mit echten Waffen", en: "Real Firearm Shooting Experience", ro: "Experiență în Poligonul de Tragere" },
+                duration: { de: "1,5 Stunden", en: "1.5 hours", ro: "1.5 ore" },
+                price: 69,
+                isPackage: false,
+                img: "https://images.unsplash.com/photo-1595590424283-b8f17842773f?q=80&w=800",
+                desc: {
+                    de: "Schieße mit echten Schusswaffen unter strenger Anleitung professioneller Instruktoren.",
+                    en: "Shoot real firearms under the strict guidance of professional instructors.",
+                    ro: "Trage cu arme de foc reale sub îndrumarea strictă a instructorilor profesioniști."
+                },
+                highlights: {
+                    de: ["Vollständiges Sicherheitstraining", "Paket mit 50 scharfen Schuss", "Erinnerungszertifikat"],
+                    en: ["Complete safety briefing", "Package with 50 live rounds", "Souvenir certificate"],
+                    ro: ["Instructaj de siguranță complet", "Pachet cu 50 de muniții", "Certificat suvenir"]
+                }
+            }
+        ]
+    },
+    vip: {
+        title: { de: "VIP & Limousinen", en: "VIP & Limousines", ro: "VIP & Limuzine" },
+        subtitle: { de: "Erlebe exklusive Limousinen-Fahrten und VIP-Services.", en: "Treat yourself to exclusive limousine services & VIP transfers.", ro: "Răsfață-te cu servicii exclusiviste de limuzină și transferuri VIP." },
+        items: [
+            {
+                id: 'limo',
+                badge: { de: "VIP Luxus", en: "VIP Luxury", ro: "VIP Luxury" },
+                title: { de: "Stretch-Limousinen Nacht-Tour", en: "Stretch Limo Night City Tour", ro: "Tur de Noapte în Limuzină Stretch" },
+                duration: { de: "2 Stunden", en: "2 hours", ro: "2 ore" },
+                price: 180,
+                isPackage: false,
+                img: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800",
+                desc: {
+                    de: "Eine spektakuläre Fahrt durch die Stadt in einer 9 Meter langen Luxus-Stretchlimousine inklusive Sekt.",
+                    en: "A spectacular city ride in a 9-meter luxury stretch limousine including champagne.",
+                    ro: "O plimbare spectaculoasă prin oraș într-o limuzină de lux lungă de 9 metri."
+                },
+                highlights: {
+                    de: ["9-Meter-Stretchlimousine", "2 Flaschen Champagner inklusive", "Fotostopp am Parlamentspalast"],
+                    en: ["9-meter luxury stretch limo", "2 bottles of champagne included", "Photo stop at Parliament Palace"],
+                    ro: ["Limuzină de lux", "2 sticle de şampanie", "Oprire poze Parlament"]
+                }
+            }
+        ]
+    },
+    packages: {
+        title: { de: "JGA & Ganztages-Pakete", en: "Stag & Full-Day Packages", ro: "Pachete Complete & JGA" },
+        subtitle: { de: "Rundum-sorglos-Pakete für Gruppen, Junggesellenabschiede und Events.", en: "Complete packages for groups: everything organized from A to Z.", ro: "Pachete complete pentru grupuri: totul organizat de la A la Z." },
+        items: [
+            {
+                id: 'pkg-stag',
+                badge: { de: "Top JGA Paket", en: "Top Stag Party", ro: "Top JGA" },
+                title: { de: "Das ultimative JGA-Paket (Männer)", en: "The Ultimate Stag Party Weekend Package", ro: "Pachetul Complet JGA (Bărbați)" },
+                duration: { de: "Ganztägig", en: "Full Day", ro: "Ziua întreagă" },
+                price: 149,
+                isPackage: true,
+                img: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=800",
+                desc: {
+                    de: "Das ultimative JGA-Paket: Limousinen-Transfer, Schießstand-Session, Go-Kart-Rennen und VIP-Club-Eintritt.",
+                    en: "The ultimate stag package: limousine airport transfer, shooting range session, go-karting, and VIP club entry.",
+                    ro: "Pachetul suprem pentru burlaci: transfer cu limuzina, poligon, karting și club VIP."
+                },
+                highlights: {
+                    de: ["Limousine mit Champagner", "Schießstand", "VIP-Club-Eintritt"],
+                    en: ["Limo with champagne", "Shooting range", "VIP club entry"],
+                    ro: ["Limuzină cu şampanie", "Poligon tragere", "Club VIP"]
+                }
+            }
+        ]
+    }
+};
+
+function changeLanguage(lang) {
+    currentLang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang] && i18n[lang][key]) {
+            el.innerText = i18n[lang][key];
+        }
+    });
+    document.getElementById('impressum-content').innerHTML = i18n[lang].impressumHtml;
+    if (currentTourKey) {
+        openTourDetail(currentCategoryKey, currentTourKey);
+    }
+}
+
+function changeCurrency(curr) {
+    currentCurrency = curr;
+    updateTotal();
+    if (currentPriceEUR > 0) {
+        renderDetailPrice();
+    }
+}
+
+function renderDetailPrice() {
+    let converted = currentPriceEUR * currencyRates[currentCurrency];
+    let symbol = currentCurrency === 'EUR' ? '€' : 'lei';
+    const item = categoriesData[currentCategoryKey].items.find(i => i.id === currentTourKey);
+    if (item && item.isPackage) {
+        document.getElementById('price-prefix').innerText = i18n[currentLang].from_price;
+        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + '/' + i18n[currentLang].per_person;
+    } else if(currentCategoryKey === 'accommodation') {
+        document.getElementById('price-prefix').innerText = i18n[currentLang].from_price;
+        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + ' / ' + i18n[currentLang].per_person;
+    } else {
+        document.getElementById('price-prefix').innerText = i18n[currentLang].per_person;
+        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol;
+    }
+}
+
+function showView(viewId) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+    document.getElementById(viewId).classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+
+function showCategory(catKey) {
+    currentCategoryKey = catKey;
+    const cat = categoriesData[catKey];
+    document.getElementById('category-title').innerText = cat.title[currentLang];
+    document.getElementById('category-subtitle').innerText = cat.subtitle[currentLang];
+    const grid = document.getElementById('category-items-grid');
+    grid.innerHTML = '';
+    
+    cat.items.forEach(item => {
+        let convertedPrice = Math.round(item.price * currencyRates[currentCurrency]);
+        let currSymbol = currentCurrency === 'EUR' ? '€' : 'lei';
+        let priceDisplay = (catKey === 'accommodation') ? `${i18n[currentLang].from_price} ${convertedPrice} ${currSymbol} / Nacht` : (item.isPackage ? `${i18n[currentLang].from_price} ${convertedPrice} ${currSymbol}` : `${convertedPrice} ${currSymbol}`);
+        
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden flex flex-col";
+        card.innerHTML = `
+            <div class="h-48 overflow-hidden relative">
+                <img src="${item.img}" alt="${item.title[currentLang]}" class="w-full h-full object-cover">
+                <span class="absolute top-4 left-4 bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">${item.badge[currentLang]}</span>
+            </div>
+            <div class="p-6 flex flex-col flex-grow justify-between">
+                <div>
+                    <h3 class="text-xl font-black mb-2 text-gray-900">${item.title[currentLang]}</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-2">${item.desc[currentLang]}</p>
+                </div>
+                <div class="flex justify-between items-center border-t border-amber-900/10 pt-4 mt-2">
+                    <div>
+                        <span class="text-2xl font-black text-amber-600">${priceDisplay}</span>
+                    </div>
+                    <button onclick="openTourDetail('${catKey}', '${item.id}')" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-sm cursor-pointer">
+                        ${i18n[currentLang].explore_btn}
+                    </button>
+                </div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+    showView('category-view');
+}
+
+function openTourDetail(catKey, itemId) {
+    currentCategoryKey = catKey;
+    currentTourKey = itemId;
+    const item = categoriesData[catKey].items.find(i => i.id === itemId);
+    currentPriceEUR = item.price;
+    
+    document.getElementById('detail-img').src = item.img;
+    document.getElementById('detail-badge').innerText = item.badge[currentLang];
+    document.getElementById('detail-title').innerText = item.title[currentLang];
+    document.getElementById('detail-duration').innerText = item.duration[currentLang];
+    document.getElementById('detail-description').innerText = item.desc[currentLang];
+    
+    if(catKey === 'accommodation') {
+        document.getElementById('inc-item-1').innerText = "Schlüsselbox-Self-Check-in 24/7";
+        document.getElementById('inc-item-2').innerText = "WLAN, Handtücher & Bettwäsche inklusive";
+    } else {
+        document.getElementById('inc-item-1').innerText = "Professionelle Betreuung / Guide";
+        document.getElementById('inc-item-2').innerText = "Tickets / Reservierung inklusive";
+    }
+
+    renderDetailPrice();
+    
+    const highlightsList = document.getElementById('detail-highlights');
+    highlightsList.innerHTML = '';
+    item.highlights[currentLang].forEach(h => {
+        const li = document.createElement('li');
+        li.className = "flex items-center text-sm";
+        li.innerHTML = `<i class="fa-solid fa-check text-amber-600 mr-2"></i> ${h}`;
+        highlightsList.appendChild(li);
+    });
+    
+    document.getElementById('detail-book-btn').onclick = function() {
+        openCheckout(item);
+    };
+    showView('detail-view');
+}
+
+function goBackToCategory() {
+    showCategory(currentCategoryKey);
+}
+
+function openCheckout(item) {
+    document.getElementById('selected-tour-display').value = item.title[currentLang];
+    if(currentCategoryKey === 'accommodation') {
+        document.getElementById('guest-count').max = 6;
+        document.getElementById('guest-count').value = 2;
+    }
+    updateTotal();
+    showView('checkout-view');
+}
+
+function updateTotal() {
+    const guests = parseInt(document.getElementById('guest-count').value) || 1;
+    let converted = currentPriceEUR * currencyRates[currentCurrency];
+    const total = converted;
+    let symbol = currentCurrency === 'EUR' ? '€' : 'lei';
+    document.getElementById('summary-guests').innerText = guests;
+    document.getElementById('single-price').innerText = Math.round(converted) + ' ' + symbol;
+    document.getElementById('total-price').innerText = Math.round(total) + ' ' + symbol;
+}
+
+let stripe, cardElement;
+window.addEventListener('load', function() {
+    stripe = Stripe('pk_test_51UFDThRs1xxVBJZ4em97qKJQTW6eVdj2Z3UzjQgbuUFk2nbeqCawCo44ac62suqWEGA7bVHrqc7FTcio1ir2882100MtFtYEIZ');
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+        style: {
+            base: { fontSize: '15px', color: '#32325d', '::placeholder': { color: '#aab7c4' } },
+            invalid: { color: '#fa755a' }
+        }
+    });
+    cardElement.mount('#card-element');
+
+    // Flatpickr Kalender-Initialisierung mit deutscher Sprache & Sperrzeiten-Option
+    datePickerInstance = flatpickr("#booking-date", {
+        locale: "de",
+        minDate: "today",
+        dateFormat: "Y-m-d",
+        // HIER kannst du nicht verfügbare Termine blockieren:
+        disable: [
+            // "2026-10-15", // Einzelner Tag blockiert
+            // { from: "2026-11-01", to: "2026-11-05" } // Zeitraum blockiert
+        ]
+    });
+
+    changeLanguage('de');
+});
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+async function processBooking(event) {
+    event.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> ...';
+    
+    const name = document.getElementById('customer-name').value;
+    const email = document.getElementById('customer-email').value;
+    const date = document.getElementById('booking-date').value;
+    const guests = document.getElementById('guest-count').value;
+    const tour = document.getElementById('selected-tour-display').value;
+    const total = document.getElementById('total-price').innerText;
+    const bookingId = 'BUK-' + Math.floor(100000 + Math.random() * 900000);
+    
+    const { token, error } = await stripe.createToken(cardElement, { name: name });
+    if (error) {
+        document.getElementById('card-errors').textContent = error.message;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> ' + i18n[currentLang].btn_pay;
+        return;
+    }
+    
+    const templateParams = {
+        user_name: name,
+        user_email: email,
+        tour_title: tour,
+        booking_date: date,
+        guests: guests,
+        total_price: total,
+        booking_id: bookingId
+    };
+    
+    emailjs.send('service_0fqphlf', 'template_x2mmo2p', templateParams)
+        .then(function() {
+            document.getElementById('conf-id').innerText = bookingId;
+            document.getElementById('conf-tour').innerText = tour;
+            document.getElementById('conf-date').innerText = date;
+            document.getElementById('conf-email').innerText = email;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> ' + i18n[currentLang].btn_pay;
+            document.getElementById('booking-form').reset();
+            cardElement.clear();
+            showView('success-view');
+        }, function(err) {
+            alert('Fehler bei der Übertragung: ' + JSON.stringify(err));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> ' + i18n[currentLang].btn_pay;
+        });
+}
+</script>
+</body>
+</html>
