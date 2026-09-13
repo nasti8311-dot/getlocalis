@@ -889,9 +889,9 @@ window.addEventListener('load', function() {
     });
     cardElement.mount('#card-element');
 
-    // Flatpickr Kalender-Initialisierung mit deutscher Sprache & Sperrzeiten-Option
+    // Flatpickr Kalender-Initialisierung (Bereichs-Modus & Sperrzeiten)
     datePickerInstance = flatpickr("#booking-date", {
-        mode: "range",        // <--- Genau hier einfügen!
+        mode: "range",
         locale: "de",
         minDate: "today",
         dateFormat: "Y-m-d",
@@ -900,19 +900,6 @@ window.addEventListener('load', function() {
             { from: "2026-10-15", to: "2026-10-17" },
             { from: "2026-10-25", to: "2030-12-31" }
         ]
-    });
-        locale: "de",
-        minDate: "today",
-        dateFormat: "Y-m-d",
-        // HIER kannst du nicht verfügbare Termine blockieren:
-        disable: [
-    // 1. Alles bis zum 12.10.2026 sperren
-    { from: "2026-01-01", to: "2026-10-12" },
-    // 2. Zeitraum vom 15.10.2026 bis 17.10.2026 sperren
-    { from: "2026-10-15", to: "2026-10-17" },
-    // 3. Alles ab dem 25.10.2026 komplett für die Zukunft sperren
-    { from: "2026-10-25", to: "2030-12-31" }
-]
     });
 
     changeLanguage('de');
