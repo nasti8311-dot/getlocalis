@@ -758,15 +758,22 @@ function renderDetailPrice() {
     let converted = currentPriceEUR * currencyRates[currentCurrency];
     let symbol = currentCurrency === 'EUR' ? '€' : 'lei';
     const item = categoriesData[currentCategoryKey].items.find(i => i.id === currentTourKey);
-    if (item && item.isPackage) {
-        document.getElementById('price-prefix').innerText = i18n[currentLang].from_price;
-        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + '/' + i18n[currentLang].per_person;
-    } else if(currentCategoryKey === 'accommodation') {
+    
+    if (currentCategoryKey === 'accommodation') {
         document.getElementById('price-prefix').innerText = i18n[currentLang].from_price;
         document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + ' / ' + i18n[currentLang].per_person;
-    } else {
-        document.getElementById('price-prefix').innerText = i18n[currentLang].per_person;
+        const labelEl = document.getElementById('summary-label-price');
+        if(labelEl) labelEl.innerText = i18n[currentLang].sum_price_person;
+    } else if (item && item.isPackage) {
+        document.getElementById('price-prefix').innerText = i18n[currentLang].from_price;
         document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol;
+        const labelEl = document.getElementById('summary-label-price');
+        if(labelEl) labelEl.innerText = "Preis pro Person:";
+    } else {
+        document.getElementById('price-prefix').innerText = "";
+        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + ' / Person';
+        const labelEl = document.getElementById('summary-label-price');
+        if(labelEl) labelEl.innerText = "Preis pro Person:";
     }
 }
 
@@ -787,7 +794,7 @@ function showCategory(catKey) {
     cat.items.forEach(item => {
         let convertedPrice = Math.round(item.price * currencyRates[currentCurrency]);
         let currSymbol = currentCurrency === 'EUR' ? '€' : 'lei';
-        let priceDisplay = (catKey === 'accommodation') ? `${i18n[currentLang].from_price} ${convertedPrice} ${currSymbol} / Nacht` : (item.isPackage ? `${i18n[currentLang].from_price} ${convertedPrice} ${currSymbol}` : `${convertedPrice} ${currSymbol}`);
+        let priceDisplay = (catKey === 'accommodation') ? `${i18n[currentLang].from_price} ${convertedPrice} ${currSymbol} / Nacht` : (item.isPackage ? `${i18n[currentLang].from_price} ${convertedPrice} ${currSymbol}` : `${convertedPrice} ${currSymbol} / Person`);
         
         const card = document.createElement('div');
         card.className = "bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden flex flex-col";
@@ -862,6 +869,9 @@ function openCheckout(item) {
     if(currentCategoryKey === 'accommodation') {
         document.getElementById('guest-count').max = 6;
         document.getElementById('guest-count').value = 2;
+    } else {
+        document.getElementById('guest-count').max = 50;
+        document.getElementById('guest-count').value = 2;
     }
     updateTotal();
     showView('checkout-view');
@@ -870,8 +880,23 @@ function openCheckout(item) {
 function updateTotal() {
     const guests = parseInt(document.getElementById('guest-count').value) || 1;
     let converted = currentPriceEUR * currencyRates[currentCurrency];
-    const total = converted;
     let symbol = currentCurrency === 'EUR' ? '€' : 'lei';
+    let total = 0;
+
+    if (currentCategoryKey === 'accommodation') {
+        let nights = 1;
+        if (datePickerInstance && datePickerInstance.selectedDates.length === 2) {
+            const startDate = datePickerInstance.selectedDates[0];
+            const endDate = datePickerInstance.selectedDates[1];
+            const diffTime = Math.abs(endDate - startDate);
+            nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (nights === 0) nights = 1;
+        }
+        total = converted * nights;
+    } else {
+        total = converted * guests;
+    }
+
     document.getElementById('summary-guests').innerText = guests;
     document.getElementById('single-price').innerText = Math.round(converted) + ' ' + symbol;
     document.getElementById('total-price').innerText = Math.round(total) + ' ' + symbol;
@@ -889,7 +914,7 @@ window.addEventListener('load', function() {
     });
     cardElement.mount('#card-element');
 
-    // Flatpickr Kalender-Initialisierung (Bereichs-Modus & Sperrzeiten)
+    // Flatpickr Kalender-Initialisierung mit automatischer Neuberechnung beim Ändern des Datums
     datePickerInstance = flatpickr("#booking-date", {
         mode: "range",
         locale: "de",
@@ -899,7 +924,10 @@ window.addEventListener('load', function() {
             { from: "2026-01-01", to: "2026-10-12" },
             { from: "2026-10-15", to: "2026-10-17" },
             { from: "2026-10-25", to: "2030-12-31" }
-        ]
+        ],
+        onChange: function(selectedDates, dateStr, instance) {
+            updateTotal();
+        }
     });
 
     changeLanguage('de');
