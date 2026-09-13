@@ -761,7 +761,7 @@ function renderDetailPrice() {
     
     if (currentCategoryKey === 'accommodation') {
         document.getElementById('price-prefix').innerText = i18n[currentLang].from_price;
-        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + ' / ' + i18n[currentLang].per_person;
+        document.getElementById('detail-price').innerText = Math.round(converted) + ' ' + symbol + ' / Nacht';
         const labelEl = document.getElementById('summary-label-price');
         if(labelEl) labelEl.innerText = i18n[currentLang].sum_price_person;
     } else if (item && item.isPackage) {
@@ -866,13 +866,45 @@ function goBackToCategory() {
 
 function openCheckout(item) {
     document.getElementById('selected-tour-display').value = item.title[currentLang];
-    if(currentCategoryKey === 'accommodation') {
+    
+    if (datePickerInstance) {
+        datePickerInstance.destroy();
+    }
+
+    if (currentCategoryKey === 'accommodation') {
         document.getElementById('guest-count').max = 6;
         document.getElementById('guest-count').value = 2;
+        
+        datePickerInstance = flatpickr("#booking-date", {
+            mode: "range",
+            locale: "de",
+            minDate: "today",
+            dateFormat: "Y-m-d",
+            disable: [
+                { from: "2026-01-01", to: "2026-10-12" },
+                { from: "2026-10-15", to: "2026-10-17" },
+                { from: "2026-10-25", to: "2030-12-31" }
+            ],
+            onChange: function(selectedDates, dateStr, instance) {
+                updateTotal();
+            }
+        });
     } else {
         document.getElementById('guest-count').max = 50;
         document.getElementById('guest-count').value = 2;
+        
+        datePickerInstance = flatpickr("#booking-date", {
+            mode: "single",
+            locale: "de",
+            minDate: "today",
+            dateFormat: "Y-m-d",
+            disable: [], 
+            onChange: function(selectedDates, dateStr, instance) {
+                updateTotal();
+            }
+        });
     }
+
     updateTotal();
     showView('checkout-view');
 }
@@ -888,13 +920,18 @@ function updateTotal() {
         if (datePickerInstance && datePickerInstance.selectedDates.length === 2) {
             const startDate = datePickerInstance.selectedDates[0];
             const endDate = datePickerInstance.selectedDates[1];
-            const diffTime = Math.abs(endDate - startDate);
-            nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            if (nights === 0) nights = 1;
+            const diffTime = endDate - startDate;
+            nights = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            if (nights < 1) nights = 1;
         }
         total = converted * nights;
+        
+        const labelEl = document.getElementById('summary-label-price');
+        if(labelEl) labelEl.innerText = `Preis (${nights} ${nights === 1 ? 'Nacht' : 'Nächte'}):`;
     } else {
         total = converted * guests;
+        const labelEl = document.getElementById('summary-label-price');
+        if(labelEl) labelEl.innerText = i18n[currentLang].sum_price_person;
     }
 
     document.getElementById('summary-guests').innerText = guests;
@@ -913,22 +950,6 @@ window.addEventListener('load', function() {
         }
     });
     cardElement.mount('#card-element');
-
-    // Flatpickr Kalender-Initialisierung mit automatischer Neuberechnung beim Ändern des Datums
-    datePickerInstance = flatpickr("#booking-date", {
-        mode: "range",
-        locale: "de",
-        minDate: "today",
-        dateFormat: "Y-m-d",
-        disable: [
-            { from: "2026-01-01", to: "2026-10-12" },
-            { from: "2026-10-15", to: "2026-10-17" },
-            { from: "2026-10-25", to: "2030-12-31" }
-        ],
-        onChange: function(selectedDates, dateStr, instance) {
-            updateTotal();
-        }
-    });
 
     changeLanguage('de');
 });
