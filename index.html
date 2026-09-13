@@ -891,6 +891,16 @@ window.addEventListener('load', function() {
 
     // Flatpickr Kalender-Initialisierung mit deutscher Sprache & Sperrzeiten-Option
     datePickerInstance = flatpickr("#booking-date", {
+        mode: "range",        // <--- Genau hier einfügen!
+        locale: "de",
+        minDate: "today",
+        dateFormat: "Y-m-d",
+        disable: [
+            { from: "2026-01-01", to: "2026-10-12" },
+            { from: "2026-10-15", to: "2026-10-17" },
+            { from: "2026-10-25", to: "2030-12-31" }
+        ]
+    });
         locale: "de",
         minDate: "today",
         dateFormat: "Y-m-d",
