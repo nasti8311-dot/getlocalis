@@ -896,9 +896,17 @@ window.addEventListener('load', function() {
         dateFormat: "Y-m-d",
         // HIER kannst du nicht verfügbare Termine blockieren:
         disable: [
-            "2026-10-09",
-    "2026-10-10"
-        ]
+    // 1. Alles bis zum 12.10.2026 sperren
+    function(date) {
+        return date <= new Date(2026, 9, 12); // Monat 9 = Oktober
+    },
+    // 2. Bestimmten Zeitraum vom 15.10.2026 bis 17.10.2026 sperren
+    { from: "2026-10-15", to: "2026-10-17" },
+    // 3. Alles ab dem 25.10.2026 für die Zukunft sperren
+    function(date) {
+        return date >= new Date(2026, 9, 25);
+    }
+]
     });
 
     changeLanguage('de');
