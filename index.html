@@ -409,6 +409,7 @@ let selectedTourTime = '';
 let selectedDetailDate = '';
 
 // Datenbank mit allen Produkten (inkl. Bike-Tour mit Uhrzeiten & Multi-Bilder)
+// Datenbank mit allen Produkten (inkl. Unterkunft, Sightseeing, Bike-Tour mit Uhrzeiten & Multi-Bilder)
 const categoriesData = {
     accommodation: {
         title: { de: "Unsere Unterkunft (Casa Unirii)", en: "Our Accommodation (Casa Unirii)", ro: "Cazarea Noastră (Casa Unirii)" },
@@ -428,7 +429,7 @@ const categoriesData = {
                     "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=400"
                 ],
                 desc: {
-                    de: "Genieße deinen Aufenthalt in unserem zentral gelegenen 95m² Apartment. Mit 3 gemütlichen Schlafzimmern, 2 modernen Bädern, einer voll ausgestatteten Küche und einem ruhigen privaten Hof bietet es den perfekten Rückzugsort.",
+                    de: "Genieße deinen Aufenthalt in unserem zentral gelegenen 95m² Apartment. Mit 3 gemütlichen Schlafzimmern, 2 modernen Bädern, einer voll ausgestatteten Küche und einem ruhigen privaten Hof bietet er den perfekten Rückzugsort.",
                     en: "Enjoy your stay in our centrally located 95m² apartment. Featuring 3 cozy bedrooms, 2 modern bathrooms, a fully equipped kitchen, and a quiet private courtyard.",
                     ro: "Bucură-te de șederea ta în apartamentul nostru central de 95m², cu 3 dormitoare, 2 băi și curte privată."
                 },
@@ -440,7 +441,6 @@ const categoriesData = {
             }
         ]
     },
-    const tourData = {
     sightseeing: {
         title: { de: "Sightseeing & Touren", en: "Sightseeing & Tours", ro: "Sightseeing & Tururi" },
         subtitle: { de: "Erkunde die Geschichte und Hauptsehenswürdigkeiten der Hauptstadt.", en: "Explore the history and main attractions of the capital.", ro: "Explorează istoria şi atracţiile principale ale capitalei." },
@@ -494,38 +494,8 @@ const categoriesData = {
                 }
             }
         ]
-    }, // <--- WICHTIG: Dieses Komma trennt "sightseeing" von der nächsten Kategorie!
-
-    // Hier kannst du die nächste Kategorie (z.B. accommodation, wellness etc.) einfügen:
-    // accommodation: { ... }
-};
-            {
-                id: 'tour1',
-                badge: { de: "Beliebteste Tour", en: "Most Popular", ro: "Cel mai popular" },
-                title: { de: "Historische Altstadt-Führung", en: "Old Town Historic Walking Tour", ro: "Turul Istoric al Centrului Vechi" },
-                price: 29,
-                duration: { de: "3 Stunden", en: "3 hours", ro: "3 ore" },
-                isPackage: false,
-                availableTimes: ["10:00", "15:00"],
-                img: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
-                images: [
-                    "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
-                    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=400",
-                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=400"
-                ],
-                desc: {
-                    de: "Entdecke den Charme der Bukarester Altstadt mit einem leidenschaftlichen lokalen Guide und erfahre faszinierende Geschichten.",
-                    en: "Discover the charm of Bucharest Old Town with a passionate local guide. Learn fascinating stories.",
-                    ro: "Descoperă farmecul Centrului Vechi din Bucureşti alături de un ghid local pasionat."
-                },
-                highlights: {
-                    de: ["Unirii-Platz & Parlamentspalast", "Stavropoleos-Kloster", "Historische Karawanserei Manuc"],
-                    en: ["Unirii Square & Parliament Palace", "Stavropoleos Monastery", "Manuc's Inn"],
-                    ro: ["Piaţa Unirii şi Palatul Parlamentului", "Biserica Stavropoleos", "Hanul lui Manuc"]
-                }
-            }
-        ]
     }
+};
     wellness: {
         title: { de: "Wellness & Beauty", en: "Wellness & Beauty", ro: "Wellness & Frumusețe" },
         subtitle: { de: "Entspannung pur in Europas größter Wellness-Therme.", en: "Pure relaxation in Europe's largest wellness spa.", ro: "Relaxare pură în cel mai mare spa din Europa." },
