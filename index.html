@@ -615,6 +615,28 @@ const categoriesData = {
         title: { de: "Sightseeing & Touren", en: "Sightseeing & Tours", ro: "Sightseeing & Tururi" },
         subtitle: { de: "Erkunde die Geschichte und Hauptsehenswürdigkeiten der Hauptstadt.", en: "Explore the history and main attractions of the capital.", ro: "Explorează istoria şi atracţiile principale ale capitalei." },
         items: [
+            <!-- Produktkarte: Half-Day Bike Tour -->
+<div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
+    <div>
+        <img src="https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=800&q=80" alt="Bucharest Half-Day Bike Tour" class="w-full h-52 object-cover">
+        <div class="p-6">
+            <span class="text-xs font-semibold uppercase tracking-wider text-amber-600 bg-amber-50 px-3 py-1 rounded-full">Sightseeing & Tours</span>
+            <h3 class="text-xl font-bold text-gray-900 mt-3 mb-2">Bucharest Half-Day Bike Tour (3-3.5 Std.)</h3>
+            <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                Erlebe Bukarest auf zwei Rädern! Entdecke die Altstadt, beeindruckende Architektur, den Parlamentspalast, den Calea Victoriei Boulevard und den historischen Cismigiu-Park. Inklusive fachkundigem Guide, Leihfahrrad und Helm.
+            </p>
+        </div>
+    </div>
+    <div class="p-6 pt-0 flex items-center justify-between border-t border-gray-50 mt-4">
+        <div>
+            <span class="text-xs text-gray-500 block">Preis pro Person</span>
+            <span class="text-2xl font-extrabold text-gray-900">35 €</span>
+        </div>
+        <button onclick="openCheckout('bike-half-day-tour-bucharest')" class="bg-amber-600 hover:bg-amber-700 text-white font-medium px-5 py-2.5 rounded-xl transition-colors text-sm shadow-sm">
+            Jetzt buchen
+        </button>
+    </div>
+</div>
             {
                 id: 'tour1',
                 badge: { de: "Beliebteste Tour", en: "Most Popular", ro: "Cel mai popular" },
