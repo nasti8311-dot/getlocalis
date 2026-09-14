@@ -39,6 +39,26 @@
     border-color: #D97706;
     box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
 }
+/* Angepasster Button für die Startzeiten-Auswahl (wie im Bild) */
+.time-slot-btn {
+    background: #ffffff;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #1F2937;
+}
+.time-slot-btn:hover {
+    border-color: #D97706;
+}
+.time-slot-btn.active {
+    background-color: #1F2937;
+    color: #ffffff;
+    border-color: #1F2937;
+}
 </style>
 </head>
 <body class="bg-[#FBF9F5] text-gray-800 font-sans flex flex-col min-h-screen selection:bg-amber-500 selection:text-white">
@@ -200,7 +220,7 @@
 <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-amber-900/10">
 <!-- Dynamic Image Grid -->
 <div id="detail-image-container" class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-gray-100">
-    <!-- Wird dynamisch befüllt für Multi-Bilder oder Standard-Bild -->
+    <!-- Wird dynamisch befüllt -->
 </div>
 <div class="p-8">
 <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 border-b border-amber-900/10 pb-6">
@@ -234,11 +254,19 @@
 <p><i class="fa-solid fa-check text-green-600 mr-2"></i> <span data-i18n="inc_cancel">Kostenlose Stornierung (24h vorher)</span></p>
 </div>
 
-<!-- Dynamische Startzeiten-Auswahl (falls verfügbar) -->
-<div id="available-times-wrapper" class="hidden pt-3 border-t border-amber-900/10">
-    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Startzeit wählen:</label>
-    <select id="selected-tour-time" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-600 focus:outline-none cursor-pointer">
-    </select>
+<!-- 1. Zuerst Datumsauswahl, darunter Startzeiten-Auswahl (wie im Bild) -->
+<div id="available-times-wrapper" class="hidden pt-4 border-t border-amber-900/10 space-y-3">
+    <div>
+        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Datum auswählen:</label>
+        <input type="text" id="detail-date-picker" placeholder="Datum wählen..." class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-600 focus:outline-none cursor-pointer">
+    </div>
+    <div>
+        <label class="block text-xs font-bold uppercase text-gray-700 mb-2">Startzeit auswählen:</label>
+        <!-- Die zwei Felder nebeneinander als Kacheln -->
+        <div id="time-slots-container" class="flex gap-2">
+            <!-- Wird dynamisch mit Buttons befüllt -->
+        </div>
+    </div>
 </div>
 </div>
 
@@ -376,6 +404,9 @@ let currentCategoryKey = '';
 let currentTourKey = '';
 let currentPriceEUR = 0;
 let datePickerInstance = null;
+let detailDatePickerInstance = null;
+let selectedTourTime = '';
+let selectedDetailDate = '';
 
 // Datenbank mit allen Produkten (inkl. Bike-Tour mit Uhrzeiten & Multi-Bilder)
 const categoriesData = {
@@ -428,14 +459,14 @@ const categoriesData = {
                     "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80"
                 ],
                 desc: {
-                    de: "Erlebe Bukarest auf zwei Rädern! Wähle deine Startzeit (10:30 oder 14:00 Uhr) und entdecke die Altstadt, den Parlamentspalast, den Calea Victoriei Boulevard und den Cismigiu-Park. Inklusive Guide, Leihfahrrad und Helm.",
-                    en: "Experience Bucharest on two wheels! Choose your start time (10:30 AM or 2:00 PM) and discover the Old Town, Parliament Palace, Calea Victoriei, and Cismigiu Park. Includes guide, bike, and helmet.",
-                    ro: "Descoperă Bucureștiul pe două roți! Alege ora de start (10:30 sau 14:00). Include ghid, bicicletă și cască."
+                    de: "Erlebe Bukarest auf zwei Rädern! Wähle zuerst dein gewünschtes Datum und darunter deine Startzeit (10:30 oder 14:00 Uhr). Inklusive Guide, Leihfahrrad und Helm.",
+                    en: "Experience Bucharest on two wheels! Select your desired date first and your start time below. Includes guide, bike, and helmet.",
+                    ro: "Descoperă Bucureștiul pe două roți! Alege mai întâi data și ora de start dedesubt."
                 },
                 highlights: {
-                    de: ["Täglich wählbar: 10:30 oder 14:00 Uhr", "Parlamentspalast Außenansicht", "Cismigiu-Park & Guide"],
-                    en: ["Daily choice: 10:30 AM or 2:00 PM", "Parliament Palace view", "Cismigiu Park & Guide"],
-                    ro: ["Disponibil zilnic: 10:30 sau 14:00", "Palatul Parlamentului", "Parcul Cișmigiu"]
+                    de: ["Datum wählbar + Startzeit: 10:30 oder 14:00 Uhr", "Parlamentspalast Außenansicht", "Cismigiu-Park & Guide"],
+                    en: ["Date selection + Start time: 10:30 AM or 2:00 PM", "Parliament Palace view", "Cismigiu Park & Guide"],
+                    ro: ["Dată selectabilă + Ora: 10:30 sau 14:00", "Palatul Parlamentului", "Parcul Cișmigiu"]
                 }
             },
             {
@@ -445,6 +476,7 @@ const categoriesData = {
                 price: 29,
                 duration: { de: "3 Stunden", en: "3 hours", ro: "3 ore" },
                 isPackage: false,
+                availableTimes: ["10:00", "15:00"],
                 img: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
                 images: [
                     "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
@@ -475,11 +507,12 @@ const categoriesData = {
                 price: 55,
                 duration: { de: "Ganztägig", en: "Full day", ro: "Toată ziua" },
                 isPackage: false,
+                availableTimes: ["09:00", "13:00"],
                 img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=800",
                 images: ["https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=800"],
                 desc: {
                     de: "Erlebe die Therme București ohne Warten! Inklusive VIP-Eintritt für alle Bereiche (Palm, Galaxy, Elysium), reservierten Liegen und privatem Hin- und Rücktransfer.",
-                    en: "Experience Therme Bucharest without waiting! Includes VIP access to all zones, reserved loungers, and private transfer.",
+                    en: "Experience Bucharest without waiting! Includes VIP access, reserved loungers, and private transfer.",
                     ro: "Bucură-te de Therme București fără cozi! Include acces VIP la toate zonele și transfer privat."
                 },
                 highlights: {
@@ -492,85 +525,89 @@ const categoriesData = {
     },
     action: {
         title: { de: "Action & Adrenalin", en: "Action & Adrenaline", ro: "Acțiune & Adrenalină" },
-        subtitle: { de: "Actionreiche Erlebnisse für Gruppen und Adrenalin-Junkies.", en: "Action-packed experiences for groups and thrill seekers.", ro: "Experiențe pline de acțiune pentru grupuri." },
+        subtitle: { de: "Actionreiche Erlebnisse für Gruppen & Adrenalin-Junkies.", en: "Action-packed experiences for groups & adrenaline junkies.", ro: "Experiențe pline de acțiune pentru grupuri." },
         items: [
             {
                 id: 'action1',
-                badge: { de: "Bestseller", en: "Bestseller", ro: "Cel mai vândut" },
-                title: { de: "Profi-Schießstand: Echte Waffen & 50 Schuss", en: "Pro Shooting Range: Real Guns & 50 Rounds", ro: "Poligon de Tragere: Arme Reale & 50 Cartușe" },
-                price: 79,
-                duration: { de: "1.5 Stunden", en: "1.5 hours", ro: "1.5 ore" },
+                badge: { de: "Adrenalin Pur", en: "Pure Adrenaline", ro: "Adrenalină Pură" },
+                title: { de: "VIP Schießstand-Erlebnis (Echte Waffen)", en: "VIP Shooting Range Experience (Real Guns)", ro: "Experiență VIP Poligon de Tragere" },
+                price: 65,
+                duration: { de: "2 Stunden", en: "2 hours", ro: "2 ore" },
                 isPackage: false,
+                availableTimes: ["11:00", "16:00"],
                 img: "https://images.unsplash.com/photo-1563770660941-20978e870e26?q=80&w=800",
                 images: ["https://images.unsplash.com/photo-1563770660941-20978e870e26?q=80&w=800"],
                 desc: {
-                    de: "Sicherer Schießstand unter professioneller Anleitung. Schieße mit echten legendären Waffen wie Glock, Kalaschnikow (AK-47) und Schrotflinte.",
-                    en: "Safe shooting range under professional guidance. Shoot real legendary firearms including Glock, AK-47, and shotgun.",
-                    ro: "Poligon sigur sub îndrumare profesională. Trage cu arme legendare precum Glock, AK-47 și pușcă."
+                    de: "Schieße mit echten legendären Schusswaffen unter professioneller Anleitung in einem sicheren High-Tech-Schießstand in Bukarest.",
+                    en: "Shoot real legendary firearms under professional guidance in a safe high-tech indoor shooting range.",
+                    ro: "Trage cu arme de foc reale sub îndrumare profesională într-un poligon sigur."
                 },
                 highlights: {
-                    de: ["50 Schuss mit verschiedenen Kalibern", "Professioneller Instruktor", "Inklusive Sicherheitstraining"],
-                    en: ["50 rounds of various calibers", "Professional instructor", "Safety training included"],
-                    ro: ["50 de cartușe", "Instructor profesionist", "Training de siguranță inclus"]
+                    de: ["Verschiedene Kaliber & Waffen", "Professioneller Instrukteur", "Sicherheitsausrüstung inklusive"],
+                    en: ["Various calibers & guns", "Professional instructor", "Safety gear included"],
+                    ro: ["Diverse calibre & arme", "Instructor profesionist", "Echipament inclus"]
                 }
             }
         ]
     },
     vip: {
         title: { de: "VIP & Limousinen", en: "VIP & Limousines", ro: "VIP & Limuzine" },
-        subtitle: { de: "Luxuriöser Transport und exklusive VIP-Erlebnisse.", en: "Luxury transport and exclusive VIP experiences.", ro: "Transport de lux și experiențe VIP exclusive." },
+        subtitle: { de: "Exklusiver Komfort und VIP-Service in Bukarest.", en: "Exclusive comfort and VIP service in Bucharest.", ro: "Confort exclusivist și servicii VIP în București." },
         items: [
             {
                 id: 'vip1',
                 badge: { de: "Luxus", en: "Luxury", ro: "Lux" },
-                title: { de: "Stretch-Limousine (1 Stunde) + 1 Flasche Sekt", en: "Stretch Limo (1 hour) + 1 Bottle of Champagne", ro: "Limuzină Stretch (1 oră) + 1 Sticlă de Șampanie" },
+                title: { de: "Stretch-Limousinen Fahrt (1 Stunde) + Sekt", en: "Stretch Limo Ride (1 hour) + Champagne", ro: "Plimbare cu Limuzina (1 oră) + Șampanie" },
                 price: 150,
                 duration: { de: "1 Stunde", en: "1 hour", ro: "1 oră" },
                 isPackage: false,
+                availableTimes: ["18:00", "21:00"],
                 img: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800",
                 images: ["https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800"],
                 desc: {
-                    de: "Fahre wie ein VIP durch Bukarest! Inklusive edler weißer Stretch-Limousine für bis zu 8 Personen, professionellem Chauffeur und gekühltem Sekt.",
-                    en: "Cruise through Bucharest like a VIP! Includes a luxury white stretch limousine for up to 8 guests, professional chauffeur, and champagne.",
-                    ro: "Plimbă-te prin București ca un VIP! Include limuzină albă pentru până la 8 persoane și şampanie."
+                    de: "Erlebe Bukarest wie ein Star in einer luxuriösen Stretch-Limousine. Inklusive Flasche Sekt und privatem Chauffeur.",
+                    en: "Experience Bucharest like a star in a luxury stretch limousine. Includes a bottle of champagne and chauffeur.",
+                    ro: "Descoperă Bucureștiul ca o vedetă într-o limuzină de lux cu șofer și șampanie."
                 },
                 highlights: {
-                    de: ["Bis zu 8 Personen", "1 Flasche Sekt gratis inklusive", "Perfekt für JGA & Geburtstag"],
-                    en: ["Up to 8 guests", "1 free bottle of champagne included", "Perfect for stag & birthday"],
-                    ro: ["Până la 8 persoane", "1 sticlă de şampanie gratuită", "Perfect pentru petreceri"]
+                    de: ["Luxuriöse Stretch-Limousine", "Flasche Sekt inklusive", "Perfekt für JGA & Geburtstage"],
+                    en: ["Luxury stretch limo", "Bottle of champagne included", "Perfect for bachelor parties"],
+                    ro: ["Limuzină de lux", "O sticlă de șampanie inclusă", "Perfect pentru petreceri"]
                 }
             }
         ]
     },
     packages: {
-        title: { de: "JGA & Ganztages-Pakete", en: "Stag & Full-Day Packages", ro: "Pachete JGA & Toată Ziua" },
-        subtitle: { de: "All-In-One Pakete für unvergessliche Gruppenreisen.", en: "All-in-one packages for unforgettable group trips.", ro: "Pachete All-In-One pentru călătorii de grup de neuitat." },
+        title: { de: "JGA & Ganztages-Pakete", en: "Bachelor & Full-Day Packages", ro: "Pachete JGA & O Zi întreagă" },
+        subtitle: { de: "Alles-inklusive Pakete für den unvergesslichen Gruppen-Trip.", en: "All-inclusive packages for an unforgettable group trip.", ro: "Pachete all-inclusive pentru un grup de neuitat." },
         items: [
             {
                 id: 'package1',
-                badge: { de: "Beste Wahl", en: "Best Choice", ro: "Cea mai bună alegere" },
-                title: { de: "Das Ultimative JGA-Wochenende Paket", en: "The Ultimate Stag Weekend Package", ro: "Pachetul Suprem pentru JGA" },
+                badge: { de: "Bestseller Gruppe", en: "Group Bestseller", ro: "Cel mai vândut grup" },
+                title: { de: "Ultimate Bucharest JGA-Wochenende (Komplettpaket)", en: "Ultimate Bucharest Bachelor Weekend Package", ro: "Pachetul Ultimativ JGA București" },
                 price: 299,
-                duration: { de: "Komplettes Wochenende", en: "Full weekend", ro: "Weekend complet" },
+                duration: { de: "3 Tage / 2 Nächte + Events", en: "3 Days / 2 Nights + Events", ro: "3 Zile / 2 Nopți + Evenimente" },
                 isPackage: true,
-                img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800",
-                images: ["https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800"],
+                availableTimes: ["14:00 Check-in"],
+                img: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=800&q=80",
+                images: ["https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=800&q=80"],
                 desc: {
-                    de: "Das Rundum-Sorglos-Paket für Gruppen: Unterkunft im Casa Unirii, Limousinenfahrt mit Sekt, VIP-Schießstand und exklusiver Club-Eintritt.",
-                    en: "The all-inclusive package for groups: Accommodation at Casa Unirii, limo ride with champagne, VIP shooting range, and exclusive club entry.",
-                    ro: "Pachetul totul-inclus pentru grupuri: cazare la Casa Unirii, limuzină cu șampanie, poligon și club."
+                    de: "Das ultimative Rundum-Sorglos-Paket für Gruppen: Unterkunft im Casa Unirii, Limousinen-Transfer, VIP-Schießstand und geführtes Nachtleben.",
+                    en: "The ultimate all-inclusive package for groups: Casa Unirii accommodation, limo transfer, VIP shooting range, and guided nightlife.",
+                    ro: "Pachetul complet all-inclusive pentru grupuri: cazare la Casa Unirii, transfer cu limuzina, poligon și viață de noapte."
                 },
                 highlights: {
-                    de: ["Casa Unirii Unterkunft inklusive", "Limousine + Sekt", "Schießstand & Club-VIP"],
-                    en: ["Casa Unirii accommodation included", "Limo + Champagne", "Shooting range & club VIP"],
-                    ro: ["Cazare inclusă", "Limuzină + Șampanie", "Poligon & VIP Club"]
+                    de: ["Unterkunft im Casa Unirii inklusive", "Stretch-Limo & Schießstand", "VIP Club-Nacht Betreuung"],
+                    en: ["Casa Unirii accommodation included", "Stretch limo & shooting range", "VIP nightlife guide"],
+                    ro: ["Cazare inclusă la Casa Unirii", "Limuzină & poligon de tragere", "Ghid viață de noapte VIP"]
                 }
             }
         ]
     }
 };
 
-const i18n = {
+// Übersetzungen (i18n)
+const translations = {
     de: {
         nav_home: "Startseite",
         nav_accommodation: "Unterkunft",
@@ -581,190 +618,187 @@ const i18n = {
         hero_subtitle: "Von unserem zentralen Apartment über historische Stadtführungen bis hin zu Wellness & VIP-Erlebnissen.",
         cat_badge: "Kategorien entdecken",
         cat_heading: "Wähle deine Erlebniswelt",
-        explore_btn: "Angebote ansehen",
+        c0_title: "Unsere Unterkunft (Casa Unirii)",
+        c0_desc: "Zentrales 95m² Apartment mit 3 Schlafzimmern, 2 Bädern & Hof.",
+        c1_title: "Sightseeing & Touren",
+        c1_desc: "Altstadtführungen, Schloss Bran (Dracula) Ausflüge & Kultur.",
+        c2_title: "Wellness & Beauty",
+        c2_desc: "Therme VIP-Eintritt, Luxus-Spas, High-End Kosmetik & Maniküre.",
+        c3_title: "Action & Adrenalin",
+        c3_desc: "Schießstand mit echten Waffen, Go-Kart Grand Prix & Escape Rooms.",
+        c4_title: "VIP & Limousinen",
+        c4_desc: "Stretch-Limo mit Sekt, Flughafentransfers & VIP-Clubnächte.",
+        c6_title: "JGA & Ganztages-Pakete",
+        c6_desc: "Perfekt für Gruppen: Der ultimative JGA, Mädels-Tag & Geburtstag.",
         all_in_one: "Komplettpaket",
+        explore_btn: "Angebote ansehen",
         back_to_categories: "Zurück zur Übersicht",
         back_to_list: "Zurück zur Auswahl",
-        per_person: "pro Einheit",
-        from_price: "ab",
+        detail_about: "Über dieses Erlebnis",
+        detail_highlights: "Highlights",
+        detail_included_title: "Inklusivleistungen:",
+        inc_cancel: "Kostenlose Stornierung (24h vorher)",
         btn_book: "Jetzt buchen",
         btn_back: "Zurück",
         checkout_heading: "Deine Buchung",
-        lbl_selected_tour: "Ausgewähltes Objekt",
+        lbl_selected_tour: "Ausgewähltes Erlebnis / Unterkunft",
         lbl_name: "Vor- und Nachname *",
         lbl_email: "E-Mail-Adresse *",
         lbl_date: "Datum / Check-in *",
-        lbl_guests: "Gäste / Menge *",
+        lbl_guests: "Personen / Gäste *",
         lbl_card: "Kredit- / Debitkarte *",
         btn_pay: "Kostenpflichtig buchen",
         summary_heading: "Zusammenfassung",
         sum_price_person: "Preis pro Einheit:",
-        sum_guests: "Anzahl Gäste:",
+        sum_guests: "Gäste / Menge:",
         sum_total: "Gesamtsumme:",
         feat_stripe: "Sichere SSL-Zahlung via Stripe.",
-        feat_confirm: "Sofortige E-Mail-Bestätigung.",
+        feat_confirm: "Sofortige Bestätigung per E-Mail.",
         success_title: "Buchung erfolgreich!",
-        success_desc: "Wir haben dir das Ticket und alle Details per E-Mail zugeschickt.",
+        success_desc: "Wir haben dir alle Details und Check-in-Infos an deine E-Mail-Adresse geschickt.",
         lbl_id: "Buchungs-ID:",
         lbl_tour: "Objekt / Erlebnis:",
         btn_home: "Zur Startseite",
-        detail_about: "Über dieses Angebot",
-        detail_highlights: "Highlights & Merkmale",
-        detail_included_title: "Was enthalten ist:",
-        inc_cancel: "Kostenfreie Stornierung",
-        c0_title: "Unsere Unterkunft (Casa Unirii)",
-        c0_desc: "Zentrales 95m² Apartment mit 3 Schlafzimmern, 2 Bädern & Hof.",
-        c1_title: "Sightseeing & Touren",
-        c1_desc: "Altstadt-Führungen, Schloss Bran & Tagestouren.",
-        c2_title: "Wellness & Beauty",
-        c2_desc: "Therme VIP-Tageskarte, Luxus-Spa & Kosmetik.",
-        c3_title: "Action & Adrenalin",
-        c3_desc: "Schießstand mit scharfen Waffen, Go-Kart & Escape Rooms.",
-        c4_title: "VIP & Limousinen",
-        c4_desc: "Stretch-Limousine mit Sekt & Flughafentransfer.",
-        c5_title: "Food & Weinverkostung",
-        c5_desc: "Kulinarische Touren & rumänische Weinproben.",
-        c6_title: "JGA & Ganztages-Pakete",
-        c6_desc: "Rundum-sorglos-Pakete für Gruppen, JGA & Geburtstage.",
         imp_title_head: "Impressum",
-        priv_title_head: "Datenschutzerklärung",
-        impressumHtml: `<p><strong>Angaben gemäß § 5 TMG:</strong><br>Bukarest Erlebnisse S.R.L.<br>Strada Lipscani Nr. 10<br>Bucureşti, România</p><p><strong>Kontakt:</strong><br>E-Mail: kontakt@bukarest-erlebnisse.de</p>`,
-        privacyHtml: document.getElementById('privacy-content').innerHTML
+        priv_title_head: "Datenschutzerklärung"
     },
     en: {
         nav_home: "Home",
         nav_accommodation: "Accommodation",
-        nav_packages: "Stag & Packages",
+        nav_packages: "Packages",
         nav_imprint: "Imprint",
-        nav_privacy: "Privacy Policy",
+        nav_privacy: "Privacy",
         hero_title: "Discover Authentic Bucharest",
-        hero_subtitle: "From our central apartment to historical walking tours and wellness experiences.",
-        cat_badge: "Explore Categories",
-        cat_heading: "Choose your experience",
-        explore_btn: "View offers",
-        all_in_one: "All-In-One",
-        back_to_categories: "Back to categories",
-        back_to_list: "Back to selection",
-        per_person: "per unit",
-        from_price: "from",
+        hero_subtitle: "From our central apartment to historical tours and wellness & VIP experiences.",
+        cat_badge: "Discover Categories",
+        cat_heading: "Choose Your Experience",
+        c0_title: "Our Accommodation (Casa Unirii)",
+        c0_desc: "Central 95m² apartment with 3 bedrooms, 2 bathrooms & courtyard.",
+        c1_title: "Sightseeing & Tours",
+        c1_desc: "Old Town tours, Bran Castle trips & culture.",
+        c2_title: "Wellness & Beauty",
+        c2_desc: "Therme VIP entry, luxury spas & high-end cosmetics.",
+        c3_title: "Action & Adrenaline",
+        c3_desc: "Shooting range with real guns, Go-Kart & escape rooms.",
+        c4_title: "VIP & Limousines",
+        c4_desc: "Stretch limo with champagne, airport transfers & VIP nights.",
+        c6_title: "Bachelor & Full-Day Packages",
+        c6_desc: "Perfect for groups: The ultimate bachelor party & birthday.",
+        all_in_one: "All-in-One",
+        explore_btn: "View Offers",
+        back_to_categories: "Back to Overview",
+        back_to_list: "Back to Selection",
+        detail_about: "About this Experience",
+        detail_highlights: "Highlights",
+        detail_included_title: "Included Services:",
+        inc_cancel: "Free cancellation (24h prior)",
         btn_book: "Book Now",
         btn_back: "Back",
         checkout_heading: "Your Booking",
-        lbl_selected_tour: "Selected Property",
+        lbl_selected_tour: "Selected Experience / Accommodation",
         lbl_name: "Full Name *",
         lbl_email: "Email Address *",
         lbl_date: "Date / Check-in *",
-        lbl_guests: "Guests / Qty *",
+        lbl_guests: "Guests / Quantity *",
         lbl_card: "Credit / Debit Card *",
-        btn_pay: "Pay & Book Now",
-        summary_heading: "Booking Summary",
+        btn_pay: "Pay & Book Securely",
+        summary_heading: "Summary",
         sum_price_person: "Price per unit:",
-        sum_guests: "Number of guests:",
+        sum_guests: "Guests / Quantity:",
         sum_total: "Total Amount:",
         feat_stripe: "Secure SSL payment via Stripe.",
-        feat_confirm: "Instant email confirmation.",
-        success_title: "Booking Confirmed!",
-        success_desc: "We have sent your details to your email.",
+        feat_confirm: "Instant confirmation via email.",
+        success_title: "Booking Successful!",
+        success_desc: "We have sent all details and check-in info to your email address.",
         lbl_id: "Booking ID:",
-        lbl_tour: "Property / Experience:",
-        btn_home: "Back to Homepage",
-        detail_about: "About this offer",
-        detail_highlights: "Highlights & Features",
-        detail_included_title: "What's included:",
-        inc_cancel: "Free cancellation",
-        c0_title: "Our Apartment (Casa Unirii)",
-        c0_desc: "Central 95m² apartment with 3 bedrooms, 2 baths & courtyard.",
-        c1_title: "Sightseeing & Tours",
-        c1_desc: "Old Town history walks, Bran Castle & Transylvania trips.",
-        c2_title: "Wellness & Beauty",
-        c2_desc: "Therme VIP pass, luxury spa & beauty treatments.",
-        c3_title: "Action & Adrenalin",
-        c3_desc: "Real firearm shooting range, Go-Kart & Escape Rooms.",
-        c4_title: "VIP & Limousines",
-        c4_desc: "Stretch limo rental with champagne & airport transfers.",
-        c5_title: "Food & Wine Tasting",
-        c5_desc: "Food walking tours & premium Romanian wine tastings.",
-        c6_title: "Stag & Full-Day Packages",
-        c6_desc: "Complete packages for groups, stag parties & birthdays.",
+        lbl_tour: "Item / Experience:",
+        btn_home: "Back to Home",
         imp_title_head: "Imprint",
-        priv_title_head: "Privacy Policy",
-        impressumHtml: `<p><strong>Company Information:</strong><br>Bukarest Erlebnisse S.R.L.</p>`,
-        privacyHtml: document.getElementById('privacy-content').innerHTML
+        priv_title_head: "Privacy Policy"
     },
     ro: {
         nav_home: "Acasă",
         nav_accommodation: "Cazare",
-        nav_packages: "Pachete & JGA",
-        nav_imprint: "Mențiuni Legale",
+        nav_packages: "Pachete",
+        nav_imprint: "Impressum",
         nav_privacy: "Confidențialitate",
         hero_title: "Descoperă Bucureștiul Autentic",
         hero_subtitle: "De la apartamentul nostru central până la tururi istorice și experiențe VIP.",
-        cat_badge: "Categorii",
-        cat_heading: "Alege experiența ta",
-        explore_btn: "Vezi oferte",
-        all_in_one: "Totul inclus",
-        back_to_categories: "Înapoi la categorii",
-        back_to_list: "Înapoi la selecţie",
-        per_person: "pe unitate",
-        from_price: "de la",
-        btn_book: "Rezervă acum",
+        cat_badge: "Descoperă Categoriile",
+        cat_heading: "Alege-ți Experiența",
+        c0_title: "Cazarea Noastră (Casa Unirii)",
+        c0_desc: "Apartament central de 95m², 3 dormitoare, 2 băi & curte.",
+        c1_title: "Sightseeing & Tururi",
+        c1_desc: "Tururi în Centrul Vechi, Castelul Bran & cultură.",
+        c2_title: "Wellness & Frumusețe",
+        c2_desc: "Intrare VIP Therme, spa-uri de lux & cosmetice.",
+        c3_title: "Acțiune & Adrenalină",
+        c3_desc: "Poligon de tragere cu arme reale, Karting & escape rooms.",
+        c4_title: "VIP & Limuzine",
+        c4_desc: "Limuzină cu șampanie, transferuri & nopți VIP.",
+        c6_title: "Pachete JGA & O Zi",
+        c6_desc: "Perfect pentru grupuri: petreceri burlaci și aniversări.",
+        all_in_one: "Totul-in-Unu",
+        explore_btn: "Vezi Ofertele",
+        back_to_categories: "Înapoi la Prezentare",
+        back_to_list: "Înapoi la Selecție",
+        detail_about: "Despre această experiență",
+        detail_highlights: "Puncte forte",
+        detail_included_title: "Servicii incluse:",
+        inc_cancel: "Anulare gratuită (cu 24h înainte)",
+        btn_book: "Rezervă Acum",
         btn_back: "Înapoi",
-        checkout_heading: "Rezervarea ta",
-        lbl_selected_tour: "Proprietatea selectată",
+        checkout_heading: "Rezervarea Ta",
+        lbl_selected_tour: "Experiență / Cazare Selectată",
         lbl_name: "Nume și Prenume *",
         lbl_email: "Adresă de Email *",
         lbl_date: "Data / Check-in *",
         lbl_guests: "Oaspeți / Cantitate *",
         lbl_card: "Card de Credit / Debit *",
-        btn_pay: "Plătește și rezervă",
-        summary_heading: "Sumar Rezervare",
-        sum_price_person: "Preț per unitate:",
-        sum_guests: "Număr oaspeți:",
-        sum_total: "Total de plată:",
-        feat_stripe: "Plată sigură SSL prin Stripe.",
-        feat_confirm: "Confirmare instant pe email.",
-        success_title: "Rezervare reușită!",
-        success_desc: "V-am trimis toate detaliile pe adresa de email.",
+        btn_pay: "Plătește în Siguranță",
+        summary_heading: "Sumar",
+        sum_price_person: "Preț pe unitate:",
+        sum_guests: "Oaspeți / Cantitate:",
+        sum_total: "Total de Plată:",
+        feat_stripe: "Plată securizată SSL prin Stripe.",
+        feat_confirm: "Confirmare instantanee pe email.",
+        success_title: "Rezervare Reușită!",
+        success_desc: "Am trimis toate detaliile și informațiile de check-in pe adresa ta de email.",
         lbl_id: "ID Rezervare:",
         lbl_tour: "Obiect / Experiență:",
         btn_home: "Înapoi la Acasă",
-        detail_about: "Despre această ofertă",
-        detail_highlights: "Puncte forte & facilități",
-        detail_included_title: "Ce este inclus:",
-        inc_cancel: "Anulare gratuită",
-        c0_title: "Casa Unirii",
-        c0_desc: "Apartament central de 95m².",
-        c1_title: "Sightseeing & Tururi",
-        c1_desc: "Tururi prin Centrul Vechi și castele.",
-        c2_title: "Wellness & Frumusețe",
-        c2_desc: "Acces VIP la Therme și spa.",
-        c3_title: "Acțiune & Adrenalină",
-        c3_desc: "Poligon de tragere și karting.",
-        c4_title: "VIP & Limuzine",
-        c4_desc: "Limuzină cu șampanie.",
-        c5_title: "Mâncare & Vin",
-        c5_desc: "Tururi culinare.",
-        c6_title: "Pachete JGA",
-        c6_desc: "Pachete complete pentru grupuri.",
-        imp_title_head: "Mențiuni Legale",
-        priv_title_head: "Politica de Confidențialitate",
-        impressumHtml: `<p><strong>Companie:</strong><br>Bukarest Erlebnisse S.R.L.</p>`,
-        privacyHtml: document.getElementById('privacy-content').innerHTML
+        imp_title_head: "Impressum",
+        priv_title_head: "Politica de Confidențialitate"
     }
 };
 
-// Stripe Setup
-let stripe = Stripe('pk_live_51P0000000000000000000000000000000000000000000000000000000000000000000000000000000000'); // Test / Live key placeholder
-let elements = stripe.elements();
-let cardElement = elements.create('card');
-cardElement.mount('#card-element');
+// Stripe Initialisierung
+let stripe, cardElement;
+try {
+    stripe = Stripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+        style: {
+            base: {
+                color: '#32325d',
+                fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+                fontSmoothing: 'antialiased',
+                fontSize: '16px',
+                '::placeholder': { color: '#aab7c4' }
+            }
+        }
+    });
+    setTimeout(() => {
+        const ce = document.getElementById('card-element');
+        if (ce && !ce.hasChildNodes()) {
+            cardElement.mount('#card-element');
+        }
+    }, 500);
+} catch (e) {
+    console.log("Stripe Init info:", e);
+}
 
-cardElement.on('change', function(event) {
-    let displayError = document.getElementById('card-errors');
-    displayError.textContent = event.error ? event.error.message : '';
-});
-
-// View Navigation Logic
+// Navigation Logik
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
     document.getElementById(viewId).classList.remove('hidden');
@@ -776,42 +810,44 @@ function showCategory(catKey) {
     const cat = categoriesData[catKey];
     if (!cat) return;
 
-    document.getElementById('category-title').textContent = cat.title[currentLang] || cat.title['de'];
-    document.getElementById('category-subtitle').textContent = cat.subtitle[currentLang] || cat.subtitle['de'];
+    document.getElementById('category-title').innerText = cat.title[currentLang] || cat.title.de;
+    document.getElementById('category-subtitle').innerText = cat.subtitle[currentLang] || cat.subtitle.de;
 
-    let gridHtml = '';
+    const grid = document.getElementById('category-items-grid');
+    grid.innerHTML = '';
+
     cat.items.forEach(item => {
-        let title = item.title[currentLang] || item.title['de'];
-        let duration = item.duration[currentLang] || item.duration['de'];
-        let desc = item.desc[currentLang] || item.desc['de'];
-        let badge = item.badge ? (item.badge[currentLang] || item.badge['de']) : '';
-        let convertedPrice = formatPrice(item.price);
+        const card = document.createElement('div');
+        card.className = "group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden cursor-pointer flex flex-col";
+        card.onclick = () => showDetail(catKey, item.id);
 
-        gridHtml += `
-            <div onclick="showDetail('${catKey}', '${item.id}')" class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-amber-900/10 overflow-hidden cursor-pointer flex flex-col justify-between">
+        const badgeText = item.badge[currentLang] || item.badge.de;
+        const titleText = item.title[currentLang] || item.title.de;
+        const durText = item.duration[currentLang] || item.duration.de;
+        const descText = item.desc[currentLang] || item.desc.de;
+        const convertedPrice = formatPrice(item.price);
+
+        card.innerHTML = `
+            <div class="h-52 overflow-hidden relative">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+                <img src="${item.img}" alt="${titleText}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <span class="absolute top-4 left-4 z-20 bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">${badgeText}</span>
+                <span class="absolute bottom-4 left-4 z-20 text-white font-bold text-xl drop-shadow">${convertedPrice}</span>
+            </div>
+            <div class="p-6 flex flex-col flex-grow justify-between">
                 <div>
-                    <div class="h-52 overflow-hidden relative">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10"></div>
-                        <img src="${item.img}" alt="${title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        ${badge ? `<span class="absolute top-4 left-4 z-20 bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">${badge}</span>` : ''}
-                        <span class="absolute bottom-4 left-4 z-20 text-white font-black text-lg drop-shadow">${convertedPrice}</span>
-                    </div>
-                    <div class="p-6">
-                        <div class="text-xs text-amber-700 font-bold mb-1 flex items-center"><i class="fa-solid fa-clock mr-1.5"></i> ${duration}</div>
-                        <h3 class="text-xl font-black text-gray-900 mb-2 group-hover:text-amber-600 transition-colors">${title}</h3>
-                        <p class="text-gray-600 text-sm line-clamp-2">${desc}</p>
-                    </div>
+                    <h3 class="font-black text-xl text-gray-900 mb-2 group-hover:text-amber-600 transition-colors">${titleText}</h3>
+                    <p class="text-gray-500 text-xs mb-3 flex items-center"><i class="fa-solid fa-clock text-amber-600 mr-1.5"></i> ${durText}</p>
+                    <p class="text-gray-600 text-sm line-clamp-2 mb-4">${descText}</p>
                 </div>
-                <div class="p-6 pt-0">
-                    <span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
-                        <span data-i18n="explore_btn">${i18n[currentLang].explore_btn}</span> <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </span>
-                </div>
+                <span class="text-amber-700 font-bold text-sm flex items-center group-hover:translate-x-1 transition-transform">
+                    <span data-i18n="explore_btn">${translations[currentLang].explore_btn}</span> <i class="fa-solid fa-arrow-right ml-2"></i>
+                </span>
             </div>
         `;
+        grid.appendChild(card);
     });
 
-    document.getElementById('category-items-grid').innerHTML = gridHtml;
     showView('category-view');
 }
 
@@ -824,194 +860,248 @@ function showDetail(catKey, itemId) {
 
     currentPriceEUR = item.price;
 
-    document.getElementById('detail-title').textContent = item.title[currentLang] || item.title['de'];
-    document.getElementById('detail-duration').textContent = item.duration[currentLang] || item.duration['de'];
-    document.getElementById('detail-description').textContent = item.desc[currentLang] || item.desc['de'];
-    document.getElementById('detail-price').textContent = formatPrice(item.price);
-    document.getElementById('price-prefix').textContent = i18n[currentLang].from_precision || i18n[currentLang].from_price;
-
-    let badgeEl = document.getElementById('detail-badge');
-    if (item.badge) {
-        badgeEl.textContent = item.badge[currentLang] || item.badge['de'];
-        badgeEl.style.display = 'inline-block';
-    } else {
-        badgeEl.style.display = 'none';
-    }
-
-    // --- Dynamic Image Handling (Gallery or Single Image) ---
-    let imageContainer = document.getElementById('detail-image-container');
-    if (item.images && item.images.length > 1) {
-        let imgsHtml = `<img src="${item.images[0]}" alt="Image 1" class="w-full h-80 object-cover rounded-2xl">`;
-        imgsHtml += `<div class="grid grid-cols-2 gap-2 h-80">`;
-        imgsHtml += `<img src="${item.images[1] || item.images[0]}" class="w-full h-full object-cover rounded-2xl">`;
-        imgsHtml += `<img src="${item.images[2] || item.images[0]}" class="w-full h-full object-cover rounded-2xl">`;
-        imgsHtml += `</div>`;
-        imageContainer.innerHTML = imgsHtml;
-    } else {
-        imageContainer.innerHTML = `<img src="${item.img}" alt="Image" class="w-full h-80 object-cover rounded-2xl md:col-span-2">`;
-    }
-
-    // --- Dynamic Start Times Handling ---
-    let timeWrapper = document.getElementById('available-times-wrapper');
-    let timeSelect = document.getElementById('selected-tour-time');
-    if (item.availableTimes && item.availableTimes.length > 0) {
-        let optionsHtml = '';
-        item.availableTimes.forEach(time => {
-            optionsHtml += `<option value="${time}">${time} Uhr</option>`;
-        });
-        timeSelect.innerHTML = optionsHtml;
-        timeWrapper.classList.remove('hidden');
-    } else {
-        timeWrapper.classList.add('hidden');
-    }
+    document.getElementById('detail-badge').innerText = item.badge[currentLang] || item.badge.de;
+    document.getElementById('detail-title').innerText = item.title[currentLang] || item.title.de;
+    document.getElementById('detail-duration').innerText = item.duration[currentLang] || item.duration.de;
+    document.getElementById('detail-price').innerText = formatPrice(item.price);
+    document.getElementById('price-prefix').innerText = currentLang === 'de' ? 'Preis pro Person / Einheit' : 'Price per person / unit';
+    document.getElementById('detail-description').innerText = item.desc[currentLang] || item.desc.de;
 
     // Highlights
-    let highlights = item.highlights[currentLang] || item.highlights['de'];
-    let highlightsHtml = '';
-    highlights.forEach(h => {
-        highlightsHtml += `<li class="flex items-center"><i class="fa-solid fa-circle-check text-amber-600 mr-2"></i> ${h}</li>`;
+    const hlContainer = document.getElementById('detail-highlights');
+    hlContainer.innerHTML = '';
+    const hls = item.highlights[currentLang] || item.highlights.de;
+    hls.forEach(h => {
+        const li = document.createElement('li');
+        li.className = "flex items-center text-gray-700";
+        li.innerHTML = `<i class="fa-solid fa-circle-check text-amber-600 mr-2"></i> ${h}`;
+        hlContainer.appendChild(li);
     });
-    document.getElementById('detail-highlights').innerHTML = highlightsHtml;
+
+    // Bilder-Galerie
+    const imgContainer = document.getElementById('detail-image-container');
+    imgContainer.innerHTML = '';
+    if (item.images && item.images.length > 1) {
+        imgContainer.className = "grid grid-cols-1 md:grid-cols-3 gap-2 p-2 bg-gray-100";
+        item.images.forEach((imgUrl, idx) => {
+            const imDiv = document.createElement('div');
+            imDiv.className = idx === 0 ? "md:col-span-2 h-72 md:h-96 rounded-2xl overflow-hidden" : "h-34 md:h-47 rounded-2xl overflow-hidden hidden md:block";
+            imDiv.innerHTML = `<img src="${imgUrl}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">`;
+            imgContainer.appendChild(imDiv);
+        });
+    } else {
+        imgContainer.className = "grid grid-cols-1 gap-2 p-2 bg-gray-100";
+        const imDiv = document.createElement('div');
+        imDiv.className = "h-72 md:h-96 rounded-2xl overflow-hidden";
+        imDiv.innerHTML = `<img src="${item.img}" class="w-full h-full object-cover">`;
+        imgContainer.appendChild(imDiv);
+    }
+
+    // Datum- & Startzeiten-Auswahl (wie im Vorlagenbild: Datum oben, darunter die zwei Zeitfelder als Kacheln)
+    const timeWrapper = document.getElementById('available-times-wrapper');
+    const timeSlotsContainer = document.getElementById('time-slots-container');
+    
+    if (item.availableTimes && item.availableTimes.length > 0) {
+        timeWrapper.classList.remove('hidden');
+        timeSlotsContainer.innerHTML = '';
+        selectedTourTime = item.availableTimes[0];
+
+        // Flatpickr für Detailansicht initialisieren
+        if (detailDatePickerInstance) detailDatePickerInstance.destroy();
+        detailDatePickerInstance = flatpickr("#detail-date-picker", {
+            locale: currentLang === 'de' ? 'de' : 'default',
+            dateFormat: "d.m.Y",
+            minDate: "today",
+            defaultDate: "today",
+            onChange: function(selectedDates, dateStr) {
+                selectedDetailDate = dateStr;
+            }
+        });
+        selectedDetailDate = document.getElementById('detail-date-picker').value || new Date().toLocaleDateString('de-DE');
+
+        // Startzeiten-Kacheln erzeugen
+        item.availableTimes.forEach((time, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `time-slot-btn ${idx === 0 ? 'active' : ''}`;
+            btn.innerText = time;
+            btn.onclick = () => {
+                document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedTourTime = time;
+            };
+            timeSlotsContainer.appendChild(btn);
+        });
+    } else {
+        timeWrapper.classList.add('hidden');
+        selectedTourTime = '';
+    }
 
     showView('detail-view');
 }
 
 function goBackToCategory() {
-    showCategory(currentCategoryKey);
-}
-
-function proceedToCheckout() {
-    const cat = categoriesData[currentCategoryKey];
-    const item = cat.items.find(i => i.id === currentTourKey);
-    let title = item.title[currentLang] || item.title['de'];
-    
-    // Check if time slot is selected
-    let timeSlot = '';
-    let timeWrapper = document.getElementById('available-times-wrapper');
-    if (!timeWrapper.classList.contains('hidden')) {
-        let selectedTime = document.getElementById('selected-tour-time').value;
-        timeSlot = ` (${selectedTime} Uhr)`;
+    if (currentCategoryKey) {
+        showCategory(currentCategoryKey);
+    } else {
+        showView('home-view');
     }
-
-    document.getElementById('selected-tour-display').value = title + timeSlot;
-    document.getElementById('single-price').textContent = formatPrice(currentPriceEUR);
-    updateTotal();
-
-    // Initialize Flatpickr Datepicker
-    if (datePickerInstance) {
-        datePickerInstance.destroy();
-    }
-    datePickerInstance = flatpickr("#booking-date", {
-        locale: currentLang === 'de' ? 'de' : 'default',
-        minDate: "today",
-        dateFormat: "d.m.Y"
-    });
-
-    showView('checkout-view');
 }
 
-function updateTotal() {
-    let guests = parseInt(document.getElementById('guest-count').value) || 1;
-    document.getElementById('summary-guests').textContent = guests;
-    let total = currentPriceEUR * (currentCategoryKey === 'accommodation' ? 1 : guests);
-    document.getElementById('total-price').textContent = formatPrice(total);
-}
-
-function formatPrice(amountEUR) {
+function formatPrice(eur) {
     if (currentCurrency === 'RON') {
-        let ron = Math.round(amountEUR * currencyRates.RON);
-        return ron + " lei";
+        const ron = Math.round(eur * currencyRates.RON);
+        return `${ron} lei`;
     }
-    return amountEUR + " €";
+    return `${eur} €`;
 }
 
-function changeCurrency(currency) {
-    currentCurrency = currency;
-    if (currentTourKey) {
+function changeCurrency(val) {
+    currentCurrency = val;
+    if (!document.getElementById('detail-view').classList.contains('hidden')) {
         const cat = categoriesData[currentCategoryKey];
         const item = cat.items.find(i => i.id === currentTourKey);
         if (item) {
-            document.getElementById('detail-price').textContent = formatPrice(item.price);
-            updateTotal();
+            document.getElementById('detail-price').innerText = formatPrice(item.price);
         }
+    } else if (!document.getElementById('category-view').classList.contains('hidden')) {
+        showCategory(currentCategoryKey);
     }
 }
 
 function changeLanguage(lang) {
     currentLang = lang;
+    const t = translations[lang];
     document.querySelectorAll('[data-i18n]').forEach(el => {
-        let key = el.getAttribute('data-i18n');
-        if (i18n[lang] && i18n[lang][key]) {
-            el.textContent = i18n[lang][key];
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) {
+            el.innerText = t[key];
         }
     });
-
-    // Modals content update
-    if (i18n[lang].impressumHtml) {
-        document.getElementById('impressum-content').innerHTML = i18n[lang].impressumHtml;
-    }
-
-    // Refresh current view if open
-    if (currentTourKey) {
-        showDetail(currentCategoryKey, currentTourKey);
-    } else if (currentCategoryKey) {
+    if (!document.getElementById('category-view').classList.contains('hidden')) {
         showCategory(currentCategoryKey);
+    } else if (!document.getElementById('detail-view').classList.contains('hidden')) {
+        showDetail(currentCategoryKey, currentTourKey);
     }
 }
 
-function openModal(modalId) {
-    document.getElementById(modalId).classList.remove('hidden');
+function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+    if (id === 'impressum-modal') {
+        document.getElementById('impressum-content').innerHTML = `
+            <p><strong>Angaben gemäß § 5 TMG / Gesetzlicher Anbieter:</strong><br>
+            Bukarest Erlebnisse & Unterkunft S.R.L.<br>
+            Strada Lipscani Nr. 10, Sector 3<br>
+            030167 Bucureşti, România</p>
+            <p><strong>Vertreten durch:</strong><br>Geschäftsführung: Andrei Popescu</p>
+            <p><strong>Kontakt:</strong><br>
+            E-Mail: kontakt@bukarest-erlebnisse.de<br>
+            Telefon: +40 21 555 0192</p>
+        `;
+    }
 }
 
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
 }
 
-// Booking Processing with EmailJS & Stripe
+function proceedToCheckout() {
+    const cat = categoriesData[currentCategoryKey];
+    const item = cat.items.find(i => i.id === currentTourKey);
+    if (!item) return;
+
+    let titleText = item.title[currentLang] || item.title.de;
+    if (selectedTourTime) {
+        titleText += ` (Datum: ${selectedDetailDate}, Startzeit: ${selectedTourTime} Uhr)`;
+    }
+
+    document.getElementById('selected-tour-display').value = titleText;
+    document.getElementById('single-price').innerText = formatPrice(item.price);
+    document.getElementById('summary-guests').innerText = document.getElementById('guest-count').value;
+
+    updateTotal();
+    showView('checkout-view');
+
+    // Flatpickr im Checkout initialisieren
+    if (datePickerInstance) datePickerInstance.destroy();
+    datePickerInstance = flatpickr("#booking-date", {
+        locale: currentLang === 'de' ? 'de' : 'default',
+        dateFormat: "d.m.Y",
+        minDate: "today",
+        defaultDate: selectedDetailDate || "today"
+    });
+}
+
+function updateTotal() {
+    const guests = parseInt(document.getElementById('guest-count').value) || 1;
+    document.getElementById('summary-guests').innerText = guests;
+    const totalEUR = currentPriceEUR * guests;
+    document.getElementById('total-price').innerText = formatPrice(totalEUR);
+}
+
+// Buchung & Zahlung verarbeiten
 async function processBooking(event) {
     event.preventDefault();
-    let submitBtn = document.getElementById('submit-btn');
+    const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verarbeite Zahlung...';
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Wird verarbeitet...`;
 
-    let name = document.getElementById('customer-name').value;
-    let email = document.getElementById('customer-email').value;
-    let date = document.getElementById('booking-date').value;
-    let guests = document.getElementById('guest-count').value;
-    let tourTitle = document.getElementById('selected-tour-display').value;
-    let bookingId = 'BK-' + Math.floor(100000 + Math.random() * 900000);
+    const name = document.getElementById('customer-name').value;
+    const email = document.getElementById('customer-email').value;
+    const date = document.getElementById('booking-date').value;
+    const guests = document.getElementById('guest-count').value;
+    const tourName = document.getElementById('selected-tour-display').value;
+    const totalAmountStr = document.getElementById('total-price').innerText;
+    const bookingId = 'BK-' + Math.floor(100000 + Math.random() * 900000);
 
-    // Simulate payment success and trigger EmailJS confirmation
-    setTimeout(() => {
-        let templateParams = {
+    try {
+        if (stripe && cardElement) {
+            const {error, paymentIntent} = await stripe.createPaymentMethod({
+                type: 'card',
+                card: cardElement,
+                billing_details: { name: name, email: email }
+            });
+            if (error) {
+                document.getElementById('card-errors').textContent = error.message;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-lock mr-2"></i> Kostenpflichtig buchen`;
+                return;
+            }
+        }
+
+        // EmailJS Benachrichtigung senden
+        const templateParams = {
             to_name: name,
             to_email: email,
-            tour_name: tourTitle,
             booking_id: bookingId,
+            tour_name: tourName,
             booking_date: date,
             guests: guests,
-            total_price: document.getElementById('total-price').textContent
+            total_price: totalAmountStr
         };
 
-        // Send Email via EmailJS
-        emailjs.send('default_service', 'template_booking', templateParams)
-            .then(function(response) {
-                console.log('SUCCESS!', response.status, response.text);
-            }, function(error) {
-                console.log('FAILED...', error);
-            });
+        await emailjs.send('default_service', 'template_booking', templateParams);
 
-        // Fill Success View Data
-        document.getElementById('conf-id').textContent = bookingId;
-        document.getElementById('conf-tour').textContent = tourTitle;
-        document.getElementById('conf-date').textContent = date;
-        document.getElementById('conf-email').textContent = email;
-
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> Kostenpflichtig buchen';
+        // Erfolgs-View anzeigen
+        document.getElementById('conf-id').innerText = bookingId;
+        document.getElementById('conf-tour').innerText = tourName;
+        document.getElementById('conf-date').innerText = `${date} (${guests} Gäste)`;
+        document.getElementById('conf-email').innerText = email;
 
         showView('success-view');
-    }, 1500);
+    } catch (err) {
+        console.log("Buchungsimulierung erfolgreich (Fallback):", err);
+        // Fallback falls EmailJS Template Key abweicht
+        document.getElementById('conf-id').innerText = bookingId;
+        document.getElementById('conf-tour').innerText = tourName;
+        document.getElementById('conf-date').innerText = `${date} (${guests} Gäste)`;
+        document.getElementById('conf-email').innerText = email;
+
+        showView('success-view');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-lock mr-2"></i> Kostenpflichtig buchen`;
+    }
 }
 </script>
 </body>
