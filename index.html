@@ -5,8 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>FiiViu — Oprește timpul, trăiește momentul.</title>
-    <meta name="description" content="FiiViu – besondere Erlebnisse in Bukarest. Entdecke lokale Momente, Wellness, Nightlife, Abenteuer, VIP-Erlebnisse und individuelle Pakete.">
+    <title>FiiViu – Oprește timpul, trăiește momentul.</title>
+
+    <meta name="description"
+          content="FiiViu – besondere Erlebnisse in Bukarest. Entdecke lokale Geheimtipps, Nightlife, Wellness, Action, VIP-Momente und fertige Pakete.">
 
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,285 +20,211 @@
     <!-- Flatpickr -->
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/de.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
 
     <!-- EmailJS -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <!-- Stripe -->
     <script src="https://js.stripe.com/v3/"></script>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        fii: {
-                            cream: '#F8F6F1',
-                            black: '#151515',
-                            orange: '#E86F2D',
-                            orangeDark: '#C9581D',
-                            sand: '#EDE7DC'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
-                    }
-                }
-            }
-        };
-    </script>
-
     <style>
+        :root {
+            --fiiviu-dark: #111111;
+            --fiiviu-green: #b7ff00;
+            --fiiviu-light: #f5f5f0;
+            --fiiviu-gray: #737373;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         html {
             scroll-behavior: smooth;
         }
 
         body {
-            background: #F8F6F1;
+            margin: 0;
+            background: var(--fiiviu-light);
+            color: var(--fiiviu-dark);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
-        .hero-bg {
+        .fiiviu-gradient {
             background:
-                linear-gradient(
-                    180deg,
-                    rgba(0,0,0,.18) 0%,
-                    rgba(0,0,0,.50) 70%,
-                    rgba(0,0,0,.72) 100%
-                ),
-                url('https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=2000')
-                center/cover no-repeat;
+                radial-gradient(circle at 15% 20%, rgba(183,255,0,.18), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(255,255,255,.08), transparent 30%),
+                #111111;
         }
 
         .glass {
-            background: rgba(255,255,255,.82);
+            background: rgba(255,255,255,.08);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,.12);
         }
 
         .experience-card {
-            transition:
-                transform .35s ease,
-                box-shadow .35s ease;
+            transition: transform .25s ease, box-shadow .25s ease;
         }
 
         .experience-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 22px 50px rgba(0,0,0,.12);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 45px rgba(0,0,0,.12);
         }
 
-        .category-card img {
-            transition: transform .7s ease;
+        .category-card {
+            transition: transform .25s ease, background .25s ease;
         }
 
-        .category-card:hover img {
-            transform: scale(1.07);
+        .category-card:hover {
+            transform: translateY(-4px);
         }
 
-        .time-slot-btn {
-            background: white;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            padding: 11px 18px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all .2s ease;
+        .btn-primary {
+            background: var(--fiiviu-green);
+            color: #111;
+            transition: transform .2s ease, opacity .2s ease;
         }
 
-        .time-slot-btn:hover {
-            border-color: #E86F2D;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            opacity: .9;
         }
 
-        .time-slot-btn.active {
-            background: #151515;
+        .btn-dark {
+            background: #111;
             color: white;
-            border-color: #151515;
+            transition: transform .2s ease, opacity .2s ease;
         }
 
-        .StripeElement {
-            background: white;
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid #E5E7EB;
+        .btn-dark:hover {
+            transform: translateY(-2px);
+            opacity: .9;
         }
 
-        .StripeElement--focus {
-            border-color: #E86F2D;
-            box-shadow: 0 0 0 2px rgba(232,111,45,.16);
+        .hidden-view {
+            display: none !important;
         }
 
-        .fade-up {
-            animation: fadeUp .55s ease both;
+        .product-image {
+            height: 260px;
+            object-fit: cover;
+            width: 100%;
         }
 
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .detail-image {
+            height: 460px;
+            object-fit: cover;
+            width: 100%;
         }
 
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
+        .flatpickr-calendar {
+            border-radius: 16px;
             overflow: hidden;
         }
 
-        .logo-mark {
-            background: linear-gradient(135deg, #E86F2D, #F29A62);
+        .loader {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(0,0,0,.15);
+            border-top-color: #111;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .detail-image {
+                height: 280px;
+            }
+
+            .product-image {
+                height: 220px;
+            }
         }
     </style>
 </head>
 
-<body class="text-fii-black font-sans min-h-screen flex flex-col">
+<body>
 
 <!-- ========================================================= -->
 <!-- HEADER -->
 <!-- ========================================================= -->
 
-<header class="sticky top-0 z-50 bg-[#F8F6F1]/90 backdrop-blur-xl border-b border-black/5">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="h-[76px] flex items-center justify-between">
+<header class="sticky top-0 z-50 bg-[#111]/95 text-white backdrop-blur border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-5">
+        <div class="h-20 flex items-center justify-between">
 
-            <!-- Logo -->
-            <button
-                onclick="showView('home-view')"
-                class="flex items-center gap-3 cursor-pointer">
-
-                <div class="logo-mark w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg">
-                    <i class="fa-solid fa-sparkles"></i>
+            <button onclick="goHome()" class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-[#b7ff00] text-black flex items-center justify-center font-black">
+                    F
                 </div>
 
-                <div class="text-left leading-none">
-                    <div class="text-xl font-black tracking-tight">
-                        Fii<span class="text-fii-orange">Viu</span>
+                <div class="text-left">
+                    <div class="font-black text-xl tracking-tight">
+                        FiiViu
                     </div>
-                    <div class="text-[9px] uppercase tracking-[.2em] text-gray-500 mt-1">
-                        Bucharest Moments
+
+                    <div class="text-[10px] uppercase tracking-[.25em] text-white/50">
+                        Oprește timpul
                     </div>
                 </div>
             </button>
 
-            <!-- Desktop Navigation -->
-            <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-gray-700">
-
-                <a href="#"
-                   onclick="showView('home-view'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_home">
+            <nav class="hidden lg:flex items-center gap-7 text-sm">
+                <button onclick="goHome()" class="hover:text-[#b7ff00]" data-i18n="nav_home">
                     Start
-                </a>
+                </button>
 
-                <a href="#"
-                   onclick="showCategory('explore'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_explore">
+                <button onclick="openCategory('explore')" class="hover:text-[#b7ff00]" data-i18n="nav_explore">
                     Entdecken
-                </a>
+                </button>
 
-                <a href="#"
-                   onclick="showCategory('relax'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_relax">
+                <button onclick="openCategory('relax')" class="hover:text-[#b7ff00]" data-i18n="nav_relax">
                     Relax
-                </a>
+                </button>
 
-                <a href="#"
-                   onclick="showCategory('nightlife'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_nightlife">
+                <button onclick="openCategory('nightlife')" class="hover:text-[#b7ff00]" data-i18n="nav_nightlife">
                     Nightlife
-                </a>
+                </button>
 
-                <a href="#"
-                   onclick="showCategory('adventure'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_adventure">
+                <button onclick="openCategory('adventure')" class="hover:text-[#b7ff00]" data-i18n="nav_adventure">
                     Adventure
-                </a>
+                </button>
 
-                <a href="#"
-                   onclick="showCategory('packages'); return false;"
-                   class="text-fii-orange font-bold"
-                   data-i18n="nav_packages">
+                <button onclick="openCategory('packages')" class="hover:text-[#b7ff00]" data-i18n="nav_packages">
                     Packages
-                </a>
+                </button>
             </nav>
 
-            <!-- Controls -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
 
-                <select
-                    id="currency-select"
-                    onchange="changeCurrency(this.value)"
-                    class="bg-white border border-black/10 text-gray-700 text-xs sm:text-sm font-semibold py-2 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-fii-orange cursor-pointer">
-                    <option value="EUR">€ EUR</option>
-                    <option value="RON">lei RON</option>
-                </select>
-
-                <select
-                    id="lang-select"
-                    onchange="changeLanguage(this.value)"
-                    class="bg-white border border-black/10 text-gray-700 text-xs sm:text-sm font-semibold py-2 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-fii-orange cursor-pointer">
+                <select id="language-select"
+                        onchange="changeLanguage(this.value)"
+                        class="bg-white/10 border border-white/20 rounded-lg px-2 py-2 text-sm outline-none">
                     <option value="de">DE</option>
                     <option value="en">EN</option>
                     <option value="ro">RO</option>
                 </select>
 
-                <button
-                    onclick="toggleMobileMenu()"
-                    class="lg:hidden w-10 h-10 rounded-xl bg-white border border-black/10 flex items-center justify-center">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-            </div>
-        </div>
+                <select id="currency-select"
+                        onchange="changeCurrency(this.value)"
+                        class="bg-white/10 border border-white/20 rounded-lg px-2 py-2 text-sm outline-none">
+                    <option value="EUR">€ EUR</option>
+                    <option value="RON">RON</option>
+                </select>
 
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden lg:hidden pb-5 border-t border-black/5 pt-4">
-            <div class="grid gap-2 text-sm font-semibold">
-
-                <button onclick="mobileNavigate('home-view')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_home">
-                    Start
-                </button>
-
-                <button onclick="mobileCategory('explore')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_explore">
-                    Entdecken
-                </button>
-
-                <button onclick="mobileCategory('relax')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_relax">
-                    Relax
-                </button>
-
-                <button onclick="mobileCategory('nightlife')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_nightlife">
-                    Nightlife
-                </button>
-
-                <button onclick="mobileCategory('adventure')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_adventure">
-                    Adventure
-                </button>
-
-                <button onclick="mobileCategory('packages')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_packages">
-                    Packages
-                </button>
             </div>
         </div>
     </div>
@@ -304,60 +232,47 @@
 
 
 <!-- ========================================================= -->
-<!-- MAIN -->
-<!-- ========================================================= -->
-
-<main class="flex-grow">
-
-
-<!-- ========================================================= -->
 <!-- HOME -->
 <!-- ========================================================= -->
 
-<div id="home-view" class="view-section">
+<main id="home-view">
 
     <!-- HERO -->
-    <section class="hero-bg min-h-[680px] md:min-h-[720px] flex items-end text-white">
+    <section class="fiiviu-gradient text-white">
+        <div class="max-w-7xl mx-auto px-5 py-24 lg:py-32">
 
-        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-20 md:pb-24">
+            <div class="max-w-4xl">
 
-            <div class="max-w-3xl fade-up">
-
-                <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest mb-6">
-                    <span class="w-2 h-2 rounded-full bg-fii-orange"></span>
-                    Bucharest · Romania
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm mb-7">
+                    <span class="w-2 h-2 rounded-full bg-[#b7ff00]"></span>
+                    București · Experiences · Moments
                 </div>
 
-                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[.92] mb-7"
-                    data-i18n="hero_title">
+                <h1 class="text-5xl md:text-7xl font-black tracking-tight leading-[.95]">
                     Oprește timpul.<br>
-                    Trăiește momentul.
+                    <span class="text-[#b7ff00]">Trăiește momentul.</span>
                 </h1>
 
-                <p class="text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed mb-9"
-                   data-i18n="hero_subtitle">
-                    FiiViu bringt dich zu den Momenten, die du später nicht vergessen willst.
-                    Entdecke Bukarest anders.
+                <p class="mt-7 text-xl md:text-2xl text-white/70 max-w-2xl leading-relaxed"
+                   data-i18n="hero_text">
+                    Descoperă Bucureștiul prin experiențe speciale, locuri locale și momente pe care nu le uiți.
                 </p>
 
-                <div class="flex flex-col sm:flex-row gap-3">
+                <div class="mt-9 flex flex-col sm:flex-row gap-3">
 
-                    <button
-                        onclick="scrollToMoments()"
-                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-7 py-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2">
+                    <button onclick="scrollToMoments()"
+                            class="btn-primary px-7 py-4 rounded-xl font-bold">
                         <span data-i18n="hero_cta">
-                            Erlebnisse entdecken
+                            Entdeck Momente
                         </span>
-                        <i class="fa-solid fa-arrow-right"></i>
+                        <i class="fa-solid fa-arrow-down ml-2"></i>
                     </button>
 
-                    <button
-                        onclick="showCategory('packages')"
-                        class="bg-white/10 hover:bg-white/20 border border-white/30 backdrop-blur-md text-white font-bold px-7 py-4 rounded-2xl transition flex items-center justify-center gap-2">
-                        <span data-i18n="hero_package_cta">
-                            Ein fertiges Erlebnis
+                    <button onclick="openCategory('packages')"
+                            class="px-7 py-4 rounded-xl border border-white/20 hover:bg-white/10 font-bold">
+                        <span data-i18n="hero_packages">
+                            Pakete entdecken
                         </span>
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
                     </button>
 
                 </div>
@@ -366,315 +281,210 @@
     </section>
 
 
-    <!-- INTRO -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <!-- CATEGORIES -->
+    <section class="max-w-7xl mx-auto px-5 py-20">
 
-        <div class="max-w-2xl mb-12">
+        <div class="flex items-end justify-between gap-5 mb-10">
+            <div>
+                <p class="text-sm uppercase tracking-[.2em] text-gray-500 font-bold">
+                    FiiViu
+                </p>
 
-            <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
-                  data-i18n="intro_label">
-                FiiViu Moments
-            </span>
-
-            <h2 class="text-4xl md:text-5xl font-black tracking-tight mt-3"
-                data-i18n="intro_title">
-                Nicht einfach etwas unternehmen.
-                Etwas erleben.
-            </h2>
-
-            <p class="text-gray-600 mt-5 leading-relaxed"
-               data-i18n="intro_text">
-                Von kleinen lokalen Entdeckungen bis zu besonderen Tagen:
-                FiiViu kuratiert Erlebnisse, die sich nach Urlaub anfühlen.
-            </p>
+                <h2 class="text-4xl font-black mt-2"
+                    data-i18n="categories_title">
+                    Was willst du erleben?
+                </h2>
+            </div>
         </div>
 
 
-        <!-- CATEGORY GRID -->
-        <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            <!-- Explore -->
-            <div onclick="showCategory('explore')"
-                 class="category-card group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer">
-
-                <img
-                    src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Bucharest">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        01
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_explore">
-                        Explore
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_explore_desc">
-                        Geschichte, Kultur & lokale Geschichten.
-                    </p>
-                </div>
-            </div>
-
-
-            <!-- Relax -->
-            <div onclick="showCategory('relax')"
-                 class="category-card group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer">
-
-                <img
-                    src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Wellness">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        02
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_relax">
-                        Relax
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_relax_desc">
-                        Spa, Therme & Momente zum Abschalten.
-                    </p>
-                </div>
-            </div>
-
-
-            <!-- Nightlife -->
-            <div onclick="showCategory('nightlife')"
-                 class="category-card group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer">
-
-                <img
-                    src="https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Nightlife">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        03
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_nightlife">
-                        Nightlife
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_nightlife_desc">
-                        Drinks, Clubs & besondere Nächte.
-                    </p>
-                </div>
-            </div>
-
-
-            <!-- Adventure -->
-            <div onclick="showCategory('adventure')"
-                 class="category-card group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer">
-
-                <img
-                    src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Adventure">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        04
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_adventure">
-                        Adventure
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_adventure_desc">
-                        Adrenalin, Action & neue Erfahrungen.
-                    </p>
-                </div>
-            </div>
-
-
-            <!-- VIP -->
-            <div onclick="showCategory('vip')"
-                 class="category-card group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer">
-
-                <img
-                    src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="VIP">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        05
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_vip">
-                        VIP
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_vip_desc">
-                        Komfort, Stil & besondere Zugänge.
-                    </p>
-                </div>
-            </div>
-
-
-            <!-- Packages -->
-            <div onclick="showCategory('packages')"
-                 class="group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer bg-fii-black text-white p-8 flex flex-col justify-between">
-
-                <div>
-                    <div class="w-12 h-12 rounded-2xl bg-fii-orange flex items-center justify-center mb-8">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    </div>
-
-                    <span class="text-xs uppercase tracking-[.2em] text-white/50 font-bold">
-                        06
-                    </span>
-
-                    <h3 class="text-3xl font-black mt-3"
-                        data-i18n="cat_packages">
-                        Packages
-                    </h3>
-
-                    <p class="text-white/65 mt-3 text-sm leading-relaxed"
-                       data-i18n="cat_packages_desc">
-                        Fertige Erlebnisse für Gruppen, Couples & besondere Tage.
-                    </p>
+            <button onclick="openCategory('explore')"
+                    class="category-card text-left rounded-3xl bg-white p-7 shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-compass"></i>
                 </div>
 
-                <div class="flex items-center gap-2 font-bold text-fii-orange">
-                    <span data-i18n="discover_packages">
-                        Packages entdecken
-                    </span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                <h3 class="text-2xl font-black mt-6">Explore</h3>
+
+                <p class="text-gray-500 mt-2">
+                    Stadt, Kultur und lokale Geschichten.
+                </p>
+
+                <div class="mt-6 text-sm font-bold">
+                    Entdecken →
                 </div>
-            </div>
+            </button>
+
+
+            <button onclick="openCategory('relax')"
+                    class="category-card text-left rounded-3xl bg-white p-7 shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-green-100 text-green-700 flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-spa"></i>
+                </div>
+
+                <h3 class="text-2xl font-black mt-6">Relax</h3>
+
+                <p class="text-gray-500 mt-2">
+                    Spa, Therme und Wellness-Momente.
+                </p>
+
+                <div class="mt-6 text-sm font-bold">
+                    Entdecken →
+                </div>
+            </button>
+
+
+            <button onclick="openCategory('nightlife')"
+                    class="category-card text-left rounded-3xl bg-white p-7 shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-martini-glass-citrus"></i>
+                </div>
+
+                <h3 class="text-2xl font-black mt-6">Nightlife</h3>
+
+                <p class="text-gray-500 mt-2">
+                    Bars, Clubs und besondere Abende.
+                </p>
+
+                <div class="mt-6 text-sm font-bold">
+                    Entdecken →
+                </div>
+            </button>
+
+
+            <button onclick="openCategory('adventure')"
+                    class="category-card text-left rounded-3xl bg-white p-7 shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+
+                <h3 class="text-2xl font-black mt-6">Adventure</h3>
+
+                <p class="text-gray-500 mt-2">
+                    Action, Geschwindigkeit und Adrenalin.
+                </p>
+
+                <div class="mt-6 text-sm font-bold">
+                    Entdecken →
+                </div>
+            </button>
+
+
+            <button onclick="openCategory('vip')"
+                    class="category-card text-left rounded-3xl bg-white p-7 shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-yellow-100 text-yellow-700 flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+
+                <h3 class="text-2xl font-black mt-6">VIP</h3>
+
+                <p class="text-gray-500 mt-2">
+                    Private Momente und Premium-Erlebnisse.
+                </p>
+
+                <div class="mt-6 text-sm font-bold">
+                    Entdecken →
+                </div>
+            </button>
+
+
+            <button onclick="openCategory('packages')"
+                    class="category-card text-left rounded-3xl bg-[#111] text-white p-7 shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-[#b7ff00] text-black flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+
+                <h3 class="text-2xl font-black mt-6">Packages</h3>
+
+                <p class="text-white/60 mt-2">
+                    Fertige Erlebnisse für Gruppen, Paare und besondere Anlässe.
+                </p>
+
+                <div class="mt-6 text-sm font-bold text-[#b7ff00]">
+                    Entdecken →
+                </div>
+            </button>
 
         </div>
     </section>
 
 
-    <!-- FEATURED MOMENTS -->
-    <section class="bg-white py-20 border-y border-black/5">
+    <!-- MOMENTS -->
+    <section id="moments"
+             class="bg-white py-20">
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-5">
 
-            <div class="flex flex-col md:flex-row justify-between md:items-end gap-5 mb-10">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-5 mb-10">
 
                 <div>
-                    <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
-                          data-i18n="featured_label">
-                        Jetzt entdecken
-                    </span>
+                    <p class="text-sm uppercase tracking-[.2em] text-gray-500 font-bold">
+                        FiiViu Moments
+                    </p>
 
                     <h2 class="text-4xl font-black mt-2"
-                        data-i18n="featured_title">
+                        data-i18n="moments_title">
                         Momente, die bleiben.
                     </h2>
+
+                    <p class="text-gray-500 mt-3 max-w-xl">
+                        Unsere ausgewählten Erlebnisse für dein nächstes Abenteuer in Bukarest.
+                    </p>
                 </div>
 
-                <button
-                    onclick="showCategory('explore')"
-                    class="font-bold text-sm text-fii-orange hover:underline">
-                    <span data-i18n="view_all">
-                        Alle Erlebnisse
-                    </span>
-                    <i class="fa-solid fa-arrow-right ml-1"></i>
+                <button onclick="openCategory('explore')"
+                        class="font-bold">
+                    Alle entdecken →
                 </button>
 
             </div>
 
+
             <div id="featured-grid"
-                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+                 class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
 
         </div>
     </section>
 
 
-    <!-- PHILOSOPHY -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+    <!-- BRAND SECTION -->
+    <section class="max-w-7xl mx-auto px-5 py-24">
 
-        <div class="grid lg:grid-cols-2 gap-14 items-center">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
 
             <div>
-
-                <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]">
-                    FiiViu
-                </span>
-
-                <h2 class="text-4xl md:text-5xl font-black tracking-tight mt-3 leading-tight"
-                    data-i18n="philosophy_title">
-                    Dein Urlaub ist zu kurz,
-                    um ihn mit langweiligen Dingen zu verbringen.
-                </h2>
-
-                <p class="text-gray-600 leading-relaxed mt-6"
-                   data-i18n="philosophy_text">
-                    Wir glauben, dass eine Stadt nicht durch ihre Sehenswürdigkeiten
-                    lebendig wird, sondern durch die Momente, die du dort erlebst.
-                    Deshalb suchen wir Erlebnisse aus, die mehr sind als ein weiterer
-                    Punkt auf deiner To-do-Liste.
+                <p class="text-sm uppercase tracking-[.2em] text-gray-500 font-bold">
+                    Warum FiiViu?
                 </p>
 
-                <div class="mt-8 flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-full bg-fii-orange text-white flex items-center justify-center">
-                        <i class="fa-solid fa-heart"></i>
-                    </div>
+                <h2 class="text-4xl md:text-5xl font-black mt-4 leading-tight">
+                    Nicht nur irgendwo sein.<br>
+                    <span class="text-gray-400">Etwas erleben.</span>
+                </h2>
 
-                    <div>
-                        <div class="font-bold"
-                             data-i18n="philosophy_small">
-                            Weniger planen. Mehr erleben.
-                        </div>
-                        <div class="text-xs text-gray-500">
-                            FiiViu · Bucharest
-                        </div>
-                    </div>
-                </div>
-
+                <p class="text-gray-600 text-lg mt-6 leading-relaxed">
+                    FiiViu verbindet besondere Orte, lokale Erlebnisse und
+                    ausgewählte Aktivitäten in Bukarest. Weniger Suchen.
+                    Mehr erleben.
+                </p>
             </div>
 
-            <div class="relative">
+            <div class="bg-[#111] rounded-[2rem] text-white p-8 md:p-10">
 
-                <img
-                    src="https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?q=85&w=1200"
-                    alt="Bucharest experience"
-                    class="w-full h-[520px] object-cover rounded-[2rem]">
-
-                <div class="absolute -bottom-6 -left-4 md:-left-8 bg-white shadow-2xl rounded-2xl p-5 max-w-xs">
-
-                    <div class="flex gap-3">
-
-                        <div class="w-10 h-10 rounded-xl bg-orange-100 text-fii-orange flex items-center justify-center shrink-0">
-                            <i class="fa-solid fa-location-dot"></i>
-                        </div>
-
-                        <div>
-                            <div class="font-black text-sm"
-                                 data-i18n="local_title">
-                                Made for Bucharest
-                            </div>
-
-                            <div class="text-xs text-gray-500 mt-1"
-                                 data-i18n="local_text">
-                                Kuratiert mit lokalem Blick.
-                            </div>
-                        </div>
-
-                    </div>
-
+                <div class="text-[#b7ff00] text-5xl mb-7">
+                    <i class="fa-solid fa-quote-left"></i>
                 </div>
+
+                <p class="text-2xl md:text-3xl font-bold leading-relaxed">
+                    Oprește timpul, trăiește momentul.
+                </p>
+
+                <p class="text-white/50 mt-5">
+                    Stop time. Live the moment.
+                </p>
 
             </div>
 
@@ -683,582 +493,405 @@
 
 
     <!-- CTA -->
-    <section class="bg-fii-black text-white">
+    <section class="bg-[#111] text-white">
 
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-20 text-center">
+        <div class="max-w-7xl mx-auto px-5 py-20 text-center">
 
-            <span class="text-fii-orange text-xs font-black uppercase tracking-[.2em]">
-                FiiViu
-            </span>
-
-            <h2 class="text-4xl md:text-6xl font-black mt-4"
-                data-i18n="cta_title">
-                Bereit für deinen nächsten Moment?
+            <h2 class="text-4xl md:text-5xl font-black">
+                Dein nächster Moment wartet.
             </h2>
 
-            <p class="text-white/60 max-w-xl mx-auto mt-5"
-               data-i18n="cta_text">
-                Such dir etwas aus, das du morgen noch erzählen wirst.
+            <p class="text-white/60 mt-4 max-w-xl mx-auto">
+                Entdecke Bukarest aus einer anderen Perspektive.
             </p>
 
-            <button
-                onclick="scrollToMoments()"
-                class="mt-8 bg-fii-orange hover:bg-fii-orangeDark px-8 py-4 rounded-2xl font-bold transition">
-                <span data-i18n="cta_button">
-                    Erlebnisse entdecken
-                </span>
+            <button onclick="scrollToMoments()"
+                    class="btn-primary mt-8 px-8 py-4 rounded-xl font-bold">
+                Jetzt entdecken
             </button>
 
         </div>
 
     </section>
 
-</div>
+</main>
 
 
 <!-- ========================================================= -->
 <!-- CATEGORY VIEW -->
 <!-- ========================================================= -->
 
-<div id="category-view"
-     class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+<section id="category-view"
+         class="hidden-view max-w-7xl mx-auto px-5 py-16">
 
-    <button
-        onclick="showView('home-view')"
-        class="mb-8 text-gray-500 hover:text-fii-orange font-semibold text-sm flex items-center gap-2">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span data-i18n="back_home">
-            Zurück zu FiiViu
-        </span>
+    <button onclick="goHome()"
+            class="text-sm font-bold mb-8">
+        ← Zurück
     </button>
 
     <div class="mb-10">
-
-        <span id="category-eyebrow"
-              class="text-fii-orange font-black text-xs uppercase tracking-[.2em]">
-        </span>
-
-        <h1 id="category-title"
-            class="text-4xl md:text-5xl font-black tracking-tight mt-2">
-        </h1>
-
-        <p id="category-subtitle"
-           class="text-gray-600 max-w-2xl mt-4 leading-relaxed">
+        <p id="category-eyebrow"
+           class="text-sm uppercase tracking-[.2em] text-gray-500 font-bold">
         </p>
 
+        <h1 id="category-title"
+            class="text-5xl font-black mt-3">
+        </h1>
+
+        <p id="category-description"
+           class="text-gray-500 text-lg mt-4 max-w-2xl">
+        </p>
     </div>
 
-    <div id="category-items-grid"
-         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+    <div id="category-grid"
+         class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
     </div>
 
-</div>
+</section>
 
 
 <!-- ========================================================= -->
 <!-- DETAIL VIEW -->
 <!-- ========================================================= -->
 
-<div id="detail-view"
-     class="view-section hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<section id="detail-view"
+         class="hidden-view max-w-7xl mx-auto px-5 py-12">
 
-    <button
-        onclick="goBackToCategory()"
-        class="mb-7 text-gray-500 hover:text-fii-orange font-semibold text-sm flex items-center gap-2">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span data-i18n="back_selection">
-            Zurück zur Auswahl
-        </span>
+    <button onclick="goBackFromDetail()"
+            class="text-sm font-bold mb-8">
+        ← Zurück
     </button>
 
+    <div class="grid lg:grid-cols-2 gap-10">
 
-    <div class="bg-white rounded-[2rem] overflow-hidden border border-black/5 shadow-sm">
+        <div>
+            <img id="detail-image"
+                 class="detail-image rounded-3xl shadow-lg"
+                 src=""
+                 alt="">
 
-        <!-- Gallery -->
-        <div id="detail-image-container"
-             class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 bg-gray-100">
+            <div id="detail-thumbnails"
+                 class="grid grid-cols-4 gap-3 mt-3">
+            </div>
         </div>
 
 
-        <div class="p-6 md:p-10">
+        <div>
 
-            <div class="flex flex-col lg:flex-row justify-between gap-7 pb-7 border-b border-black/5">
+            <div class="flex flex-wrap gap-2 mb-4">
 
-                <div>
-
-                    <span id="detail-badge"
-                          class="inline-flex bg-orange-100 text-fii-orange text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wide mb-4">
-                    </span>
-
-                    <h1 id="detail-title"
-                        class="text-3xl md:text-5xl font-black tracking-tight">
-                    </h1>
-
-                    <div class="flex flex-wrap gap-5 text-sm text-gray-500 mt-4">
-
-                        <span class="flex items-center gap-2">
-                            <i class="fa-regular fa-clock text-fii-orange"></i>
-                            <span id="detail-duration"></span>
-                        </span>
-
-                        <span class="flex items-center gap-2">
-                            <i class="fa-solid fa-location-dot text-fii-orange"></i>
-                            București
-                        </span>
-
-                    </div>
-
-                </div>
-
-                <div class="lg:text-right shrink-0">
-
-                    <div id="price-prefix"
-                         class="text-xs text-gray-400 mb-1">
-                        Ab
-                    </div>
-
-                    <div id="detail-price"
-                         class="text-4xl font-black text-fii-orange">
-                    </div>
-
-                    <div class="text-xs text-gray-400 mt-1"
-                         data-i18n="price_note">
-                        pro Person / Einheit
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="grid lg:grid-cols-3 gap-10 mt-9">
-
-                <div class="lg:col-span-2 space-y-9">
-
-                    <div>
-
-                        <h3 class="text-xl font-black mb-3"
-                            data-i18n="about_experience">
-                            Über diesen Moment
-                        </h3>
-
-                        <p id="detail-description"
-                           class="text-gray-600 leading-7 whitespace-pre-line">
-                        </p>
-
-                    </div>
-
-
-                    <div>
-
-                        <h3 class="text-xl font-black mb-4"
-                            data-i18n="highlights">
-                            Highlights
-                        </h3>
-
-                        <ul id="detail-highlights"
-                            class="grid sm:grid-cols-2 gap-3">
-                        </ul>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Booking Box -->
-                <aside class="bg-[#F8F6F1] rounded-2xl border border-black/5 p-6 h-fit">
-
-                    <div class="space-y-5">
-
-                        <div>
-                            <h4 class="font-black mb-4"
-                                data-i18n="choose_moment">
-                                Deinen Moment auswählen
-                            </h4>
-
-                            <div id="available-times-wrapper"
-                                 class="hidden space-y-4">
-
-                                <div>
-
-                                    <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                                           data-i18n="date">
-                                        Datum
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        id="detail-date-picker"
-                                        placeholder="Datum wählen..."
-                                        class="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-fii-orange cursor-pointer">
-
-                                </div>
-
-                                <div>
-
-                                    <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                                           data-i18n="start_time">
-                                        Startzeit
-                                    </label>
-
-                                    <div id="time-slots-container"
-                                         class="flex flex-wrap gap-2">
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                            <div id="no-time-info"
-                                 class="hidden text-sm text-gray-500 bg-white rounded-xl p-4">
-                                <i class="fa-solid fa-calendar-check text-fii-orange mr-2"></i>
-                                Flexible Terminvereinbarung nach Buchung.
-                            </div>
-
-                        </div>
-
-
-                        <div class="border-t border-black/5 pt-5">
-
-                            <div class="flex items-center justify-between mb-3">
-
-                                <span class="text-sm text-gray-500"
-                                      data-i18n="quantity">
-                                    Personen
-                                </span>
-
-                                <input
-                                    type="number"
-                                    id="detail-guest-count"
-                                    min="1"
-                                    max="20"
-                                    value="2"
-                                    onchange="updateDetailPrice()"
-                                    class="w-20 text-center bg-white border border-gray-200 rounded-xl p-2 font-bold">
-
-                            </div>
-
-                            <div class="flex items-center justify-between">
-
-                                <span class="font-bold"
-                                      data-i18n="estimated_total">
-                                    Gesamt
-                                </span>
-
-                                <span id="detail-total-price"
-                                      class="text-xl font-black text-fii-orange">
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <button
-                            id="detail-book-btn"
-                            onclick="proceedToCheckout()"
-                            class="w-full bg-fii-orange hover:bg-fii-orangeDark text-white font-black py-4 rounded-xl transition shadow-lg">
-                            <span data-i18n="book_now">
-                                Jetzt buchen
-                            </span>
-                            <i class="fa-solid fa-arrow-right ml-2"></i>
-                        </button>
-
-                        <div class="text-[11px] text-gray-500 text-center">
-                            <i class="fa-solid fa-shield-halved mr-1"></i>
-                            <span data-i18n="secure_booking">
-                                Sichere Buchungsanfrage
-                            </span>
-                        </div>
-
-                    </div>
-
-                </aside>
-
-            </div>
-
-        </div>
-    </div>
-</div>
-
-
-<!-- ========================================================= -->
-<!-- CHECKOUT -->
-<!-- ========================================================= -->
-
-<div id="checkout-view"
-     class="view-section hidden max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-
-    <button
-        onclick="showView('detail-view')"
-        class="mb-7 text-gray-500 hover:text-fii-orange font-semibold text-sm flex items-center gap-2">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span data-i18n="back">
-            Zurück
-        </span>
-    </button>
-
-
-    <div class="grid lg:grid-cols-5 gap-7">
-
-        <!-- FORM -->
-        <div class="lg:col-span-3 bg-white rounded-[2rem] border border-black/5 p-6 md:p-9">
-
-            <div class="mb-8">
-
-                <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
-                      data-i18n="checkout_label">
-                    Fast da
+                <span id="detail-category"
+                      class="px-3 py-1 rounded-full bg-black text-white text-xs font-bold">
                 </span>
 
-                <h1 class="text-3xl font-black mt-2"
-                    data-i18n="checkout_title">
-                    Deinen Moment buchen
-                </h1>
+            </div>
 
-                <p class="text-gray-500 text-sm mt-2"
-                   data-i18n="checkout_subtitle">
-                    Fülle die Daten aus und sende deine Buchungsanfrage.
-                </p>
+            <h1 id="detail-title"
+                class="text-4xl md:text-5xl font-black leading-tight">
+            </h1>
+
+            <p id="detail-description"
+               class="text-gray-600 text-lg leading-relaxed mt-5">
+            </p>
+
+
+            <div class="mt-8">
+
+                <h3 class="font-black text-xl">
+                    Highlights
+                </h3>
+
+                <ul id="detail-highlights"
+                    class="mt-4 space-y-3">
+                </ul>
 
             </div>
 
 
-            <form id="booking-form"
-                  onsubmit="processBooking(event)"
-                  class="space-y-5">
+            <div class="mt-8">
 
-                <div>
+                <h3 class="font-black text-xl">
+                    Inklusive
+                </h3>
 
-                    <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                           data-i18n="selected_experience">
-                        Erlebnis
-                    </label>
+                <ul id="detail-includes"
+                    class="mt-4 space-y-3">
+                </ul>
 
-                    <input
-                        type="text"
-                        id="selected-tour-display"
-                        readonly
-                        class="w-full bg-[#F8F6F1] border border-gray-200 rounded-xl p-3.5 font-bold text-sm">
-
-                </div>
+            </div>
 
 
-                <div class="grid sm:grid-cols-2 gap-4">
+            <div class="mt-10 p-6 bg-white rounded-3xl shadow-sm">
+
+                <div class="flex items-end justify-between gap-5 mb-6">
 
                     <div>
+                        <div class="text-sm text-gray-500">
+                            Preis
+                        </div>
 
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                               data-i18n="name">
-                            Vor- und Nachname *
-                        </label>
-
-                        <input
-                            type="text"
-                            id="customer-name"
-                            required
-                            placeholder="Max Mustermann"
-                            class="w-full border border-gray-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-fii-orange">
-
+                        <div id="detail-price"
+                             class="text-3xl font-black">
+                        </div>
                     </div>
 
-
-                    <div>
-
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                               data-i18n="email">
-                            E-Mail *
-                        </label>
-
-                        <input
-                            type="email"
-                            id="customer-email"
-                            required
-                            placeholder="max@beispiel.de"
-                            class="w-full border border-gray-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-fii-orange">
-
+                    <div class="text-sm text-gray-500">
+                        pro Person
                     </div>
 
                 </div>
 
 
-                <div class="grid sm:grid-cols-2 gap-4">
+                <div class="space-y-5">
 
                     <div>
-
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                               data-i18n="booking_date">
-                            Datum *
+                        <label class="block text-sm font-bold mb-2">
+                            Datum
                         </label>
 
-                        <input
-                            type="text"
-                            id="booking-date"
-                            required
-                            placeholder="Datum wählen..."
-                            class="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-fii-orange">
+                        <input id="booking-date"
+                               type="text"
+                               class="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black"
+                               placeholder="Datum auswählen">
+                    </div>
 
+
+                    <div id="time-wrapper">
+                        <label class="block text-sm font-bold mb-2">
+                            Uhrzeit
+                        </label>
+
+                        <div id="time-options"
+                             class="grid grid-cols-2 gap-2">
+                        </div>
                     </div>
 
 
                     <div>
-
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                               data-i18n="guests">
-                            Personen *
+                        <label class="block text-sm font-bold mb-2">
+                            Personen
                         </label>
 
-                        <input
-                            type="number"
-                            id="guest-count"
-                            min="1"
-                            max="20"
-                            value="2"
-                            onchange="updateTotal()"
-                            required
-                            class="w-full border border-gray-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-fii-orange">
+                        <div class="flex items-center border border-gray-200 rounded-xl overflow-hidden">
 
+                            <button onclick="changeGuests(-1)"
+                                    class="w-12 h-12 hover:bg-gray-50 text-xl">
+                                −
+                            </button>
+
+                            <div id="guest-count"
+                                 class="flex-1 text-center font-bold">
+                                1
+                            </div>
+
+                            <button onclick="changeGuests(1)"
+                                    class="w-12 h-12 hover:bg-gray-50 text-xl">
+                                +
+                            </button>
+
+                        </div>
                     </div>
+
+
+                    <div class="border-t border-gray-100 pt-5 flex justify-between">
+                        <span class="font-bold">
+                            Gesamt
+                        </span>
+
+                        <span id="booking-total"
+                              class="font-black text-xl">
+                        </span>
+                    </div>
+
+
+                    <button onclick="proceedToCheckout()"
+                            class="btn-dark w-full py-4 rounded-xl font-bold">
+                        Jetzt buchen
+                    </button>
 
                 </div>
 
+            </div>
 
-                <div>
+        </div>
 
-                    <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                           data-i18n="notes">
-                        Nachricht / Wünsche
-                    </label>
+    </div>
 
-                    <textarea
-                        id="customer-notes"
-                        rows="4"
-                        placeholder="Gibt es etwas, das wir wissen sollten?"
-                        class="w-full border border-gray-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-fii-orange"></textarea>
-
-                </div>
+</section>
 
 
-                <!-- Stripe -->
-                <div class="pt-5 border-t border-black/5">
+<!-- ========================================================= -->
+<!-- CHECKOUT VIEW -->
+<!-- ========================================================= -->
 
-                    <label class="block text-xs font-bold uppercase text-gray-500 mb-2"
-                           data-i18n="payment">
-                        Zahlung
-                    </label>
+<section id="checkout-view"
+         class="hidden-view max-w-5xl mx-auto px-5 py-12">
 
-                    <div id="card-element"></div>
+    <button onclick="goBackFromCheckout()"
+            class="text-sm font-bold mb-8">
+        ← Zurück
+    </button>
 
-                    <div id="card-errors"
-                         class="text-red-500 text-xs mt-2"
-                         role="alert">
+    <div class="grid lg:grid-cols-5 gap-8">
+
+        <div class="lg:col-span-3">
+
+            <div class="bg-white rounded-3xl p-7 shadow-sm">
+
+                <h1 class="text-3xl font-black">
+                    Buchung abschließen
+                </h1>
+
+                <p class="text-gray-500 mt-2">
+                    Fast geschafft. Gib bitte deine Daten ein.
+                </p>
+
+
+                <form id="checkout-form"
+                      class="mt-8 space-y-5"
+                      onsubmit="submitBooking(event)">
+
+                    <div>
+                        <label class="block text-sm font-bold mb-2">
+                            Name
+                        </label>
+
+                        <input id="checkout-name"
+                               type="text"
+                               required
+                               autocomplete="name"
+                               class="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black"
+                               placeholder="Vor- und Nachname">
                     </div>
 
-                    <p class="text-[11px] text-gray-400 mt-2"
-                       data-i18n="payment_note">
-                        Die Zahlungsabwicklung erfolgt sicher über Stripe.
+
+                    <div>
+                        <label class="block text-sm font-bold mb-2">
+                            E-Mail
+                        </label>
+
+                        <input id="checkout-email"
+                               type="email"
+                               required
+                               autocomplete="email"
+                               class="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black"
+                               placeholder="name@example.com">
+                    </div>
+
+
+                    <div>
+                        <label class="block text-sm font-bold mb-2">
+                            Telefon
+                        </label>
+
+                        <input id="checkout-phone"
+                               type="tel"
+                               autocomplete="tel"
+                               class="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black"
+                               placeholder="+40 ...">
+                    </div>
+
+
+                    <div>
+                        <label class="block text-sm font-bold mb-2">
+                            Nachricht
+                        </label>
+
+                        <textarea id="checkout-message"
+                                  rows="4"
+                                  class="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black"
+                                  placeholder="Besondere Wünsche?"></textarea>
+                    </div>
+
+
+                    <div class="flex items-start gap-3">
+                        <input id="checkout-consent"
+                               type="checkbox"
+                               required
+                               class="mt-1">
+
+                        <label for="checkout-consent"
+                               class="text-sm text-gray-600">
+                            Ich bestätige meine Angaben und möchte die Buchung absenden.
+                        </label>
+                    </div>
+
+
+                    <button id="booking-submit-button"
+                            type="submit"
+                            class="btn-primary w-full py-4 rounded-xl font-black">
+
+                        <span id="booking-submit-text">
+                            Buchung absenden
+                        </span>
+
+                    </button>
+
+                    <p id="booking-error"
+                       class="hidden text-red-600 text-sm font-medium">
                     </p>
 
-                </div>
+                </form>
 
-
-                <button
-                    type="submit"
-                    id="submit-btn"
-                    class="w-full bg-fii-orange hover:bg-fii-orangeDark text-white font-black py-4 rounded-xl transition shadow-lg">
-                    <i class="fa-solid fa-lock mr-2"></i>
-                    <span data-i18n="pay_book">
-                        Sicher buchen
-                    </span>
-                </button>
-
-            </form>
+            </div>
 
         </div>
 
 
-        <!-- SUMMARY -->
         <div class="lg:col-span-2">
 
-            <div class="bg-fii-black text-white rounded-[2rem] p-7 sticky top-28">
+            <div class="bg-[#111] text-white rounded-3xl p-7 sticky top-28">
 
-                <div class="text-xs uppercase tracking-[.2em] text-white/40 font-bold">
-                    FiiViu
-                </div>
-
-                <h3 class="text-2xl font-black mt-2"
-                    data-i18n="summary">
+                <p class="text-xs uppercase tracking-[.2em] text-white/50">
                     Deine Auswahl
-                </h3>
+                </p>
 
+                <h2 id="checkout-title"
+                    class="text-2xl font-black mt-3">
+                </h2>
 
-                <div class="mt-7 pb-6 border-b border-white/10">
+                <div class="mt-6 space-y-4 text-sm">
 
-                    <div id="checkout-summary-title"
-                         class="font-bold">
-                    </div>
-
-                    <div id="checkout-summary-date"
-                         class="text-sm text-white/55 mt-2">
-                    </div>
-
-                </div>
-
-
-                <div class="py-5 space-y-3 text-sm">
-
-                    <div class="flex justify-between text-white/60">
-                        <span data-i18n="price_per_unit">
-                            Preis
+                    <div class="flex justify-between gap-5">
+                        <span class="text-white/50">
+                            Datum
                         </span>
-                        <span id="single-price">
-                            0 €
+
+                        <span id="checkout-date"
+                              class="font-bold">
                         </span>
                     </div>
 
-                    <div class="flex justify-between text-white/60">
-                        <span data-i18n="quantity_summary">
+                    <div class="flex justify-between gap-5">
+                        <span class="text-white/50">
+                            Uhrzeit
+                        </span>
+
+                        <span id="checkout-time"
+                              class="font-bold">
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between gap-5">
+                        <span class="text-white/50">
                             Personen
                         </span>
-                        <span id="summary-guests">
-                            2
+
+                        <span id="checkout-guests"
+                              class="font-bold">
                         </span>
                     </div>
 
                 </div>
 
-
-                <div class="pt-5 border-t border-white/10 flex justify-between items-center">
-
-                    <span class="font-black"
-                          data-i18n="total">
+                <div class="border-t border-white/10 mt-7 pt-7 flex justify-between">
+                    <span class="font-bold">
                         Gesamt
                     </span>
 
-                    <span id="total-price"
-                          class="text-2xl font-black text-fii-orange">
-                        0 €
+                    <span id="checkout-total"
+                          class="text-2xl font-black text-[#b7ff00]">
                     </span>
-
-                </div>
-
-
-                <div class="mt-7 space-y-3 text-xs text-white/50">
-
-                    <div>
-                        <i class="fa-solid fa-check text-fii-orange mr-2"></i>
-                        <span data-i18n="secure">
-                            Sichere Zahlung
-                        </span>
-                    </div>
-
-                    <div>
-                        <i class="fa-solid fa-check text-fii-orange mr-2"></i>
-                        <span data-i18n="confirmation">
-                            Buchungsbestätigung per E-Mail
-                        </span>
-                    </div>
-
                 </div>
 
             </div>
@@ -1267,118 +900,79 @@
 
     </div>
 
-</div>
+</section>
 
 
 <!-- ========================================================= -->
-<!-- SUCCESS -->
+<!-- SUCCESS VIEW -->
 <!-- ========================================================= -->
 
-<div id="success-view"
-     class="view-section hidden max-w-xl mx-auto px-4 py-24 text-center">
+<section id="success-view"
+         class="hidden-view min-h-[70vh] flex items-center justify-center px-5">
 
-    <div class="bg-white rounded-[2rem] border border-black/5 shadow-xl p-8 md:p-12">
+    <div class="max-w-xl text-center">
 
-        <div class="w-20 h-20 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-6">
-            <i class="fa-solid fa-check text-3xl"></i>
+        <div class="w-20 h-20 rounded-full bg-[#b7ff00] flex items-center justify-center mx-auto text-3xl">
+            <i class="fa-solid fa-check"></i>
         </div>
 
-        <span class="text-fii-orange text-xs font-black uppercase tracking-[.2em]">
-            FiiViu
-        </span>
-
-        <h1 class="text-3xl md:text-4xl font-black mt-3"
-            data-i18n="success_title">
-            Dein Moment ist reserviert.
+        <h1 class="text-5xl font-black mt-8">
+            Buchung erhalten!
         </h1>
 
-        <p class="text-gray-500 mt-4 leading-relaxed"
-           data-i18n="success_text">
-            Wir haben deine Anfrage erhalten und senden dir die Buchungsdetails per E-Mail.
+        <p class="text-gray-500 text-lg mt-5">
+            Danke für deine Buchung bei FiiViu. Eine Bestätigung wurde an deine E-Mail-Adresse gesendet.
         </p>
 
+        <div class="mt-8 bg-white rounded-3xl p-6 shadow-sm">
 
-        <div class="bg-[#F8F6F1] rounded-2xl p-5 text-left mt-8 space-y-3 text-sm">
-
-            <div class="flex justify-between gap-4">
-                <strong data-i18n="booking_id">
-                    Buchungs-ID
-                </strong>
-                <span id="conf-id"></span>
+            <div class="text-sm text-gray-500">
+                Buchungs-ID
             </div>
 
-            <div class="flex justify-between gap-4">
-                <strong data-i18n="experience">
-                    Erlebnis
-                </strong>
-                <span id="conf-tour"
-                      class="text-right">
-                </span>
-            </div>
-
-            <div class="flex justify-between gap-4">
-                <strong data-i18n="date_time">
-                    Datum
-                </strong>
-                <span id="conf-date"
-                      class="text-right">
-                </span>
-            </div>
-
-            <div class="flex justify-between gap-4">
-                <strong>E-Mail</strong>
-                <span id="conf-email"
-                      class="text-right">
-                </span>
+            <div id="success-booking-id"
+                 class="text-2xl font-black mt-2">
             </div>
 
         </div>
 
-
-        <button
-            onclick="showView('home-view')"
-            class="mt-8 bg-fii-orange hover:bg-fii-orangeDark text-white font-black py-3.5 px-7 rounded-xl transition">
-            <span data-i18n="back_home_button">
-                Zurück zu FiiViu
-            </span>
+        <button onclick="goHome()"
+                class="btn-dark mt-8 px-7 py-4 rounded-xl font-bold">
+            Zurück zu FiiViu
         </button>
 
     </div>
 
-</div>
-
-</main>
+</section>
 
 
 <!-- ========================================================= -->
 <!-- FOOTER -->
 <!-- ========================================================= -->
 
-<footer class="bg-fii-black text-white py-12 mt-16">
+<footer class="bg-[#111] text-white mt-20">
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto px-5 py-14">
 
-        <div class="grid md:grid-cols-4 gap-10">
+        <div class="grid md:grid-cols-3 gap-10">
 
-            <div class="md:col-span-2">
+            <div>
 
                 <div class="flex items-center gap-3">
 
-                    <div class="logo-mark w-10 h-10 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-sparkles"></i>
+                    <div class="w-10 h-10 rounded-full bg-[#b7ff00] text-black flex items-center justify-center font-black">
+                        F
                     </div>
 
                     <div class="text-2xl font-black">
-                        Fii<span class="text-fii-orange">Viu</span>
+                        FiiViu
                     </div>
 
                 </div>
 
-                <p class="text-white/45 max-w-md mt-5 leading-relaxed"
-                   data-i18n="footer_text">
+                <p class="text-white/50 mt-5 max-w-sm">
                     Oprește timpul, trăiește momentul.
-                    Besondere Erlebnisse in Bukarest – kuratiert für Menschen,
-                    die mehr aus ihrer Reise machen wollen.
+                    Besondere Erlebnisse in Bukarest.
                 </p>
 
             </div>
@@ -1386,40 +980,34 @@
 
             <div>
 
-                <h4 class="font-bold mb-4"
-                    data-i18n="footer_discover">
+                <h3 class="font-bold mb-4">
                     Entdecken
-                </h4>
+                </h3>
 
-                <div class="space-y-3 text-sm text-white/50">
+                <div class="space-y-3 text-white/60 text-sm">
 
-                    <button onclick="showCategory('explore')"
-                            class="block hover:text-white"
-                            data-i18n="cat_explore">
+                    <button onclick="openCategory('explore')"
+                            class="block hover:text-white">
                         Explore
                     </button>
 
-                    <button onclick="showCategory('relax')"
-                            class="block hover:text-white"
-                            data-i18n="cat_relax">
+                    <button onclick="openCategory('relax')"
+                            class="block hover:text-white">
                         Relax
                     </button>
 
-                    <button onclick="showCategory('nightlife')"
-                            class="block hover:text-white"
-                            data-i18n="cat_nightlife">
+                    <button onclick="openCategory('nightlife')"
+                            class="block hover:text-white">
                         Nightlife
                     </button>
 
-                    <button onclick="showCategory('adventure')"
-                            class="block hover:text-white"
-                            data-i18n="cat_adventure">
+                    <button onclick="openCategory('adventure')"
+                            class="block hover:text-white">
                         Adventure
                     </button>
 
-                    <button onclick="showCategory('packages')"
-                            class="block hover:text-white"
-                            data-i18n="cat_packages">
+                    <button onclick="openCategory('packages')"
+                            class="block hover:text-white">
                         Packages
                     </button>
 
@@ -1430,24 +1018,19 @@
 
             <div>
 
-                <h4 class="font-bold mb-4"
-                    data-i18n="footer_info">
-                    Info
-                </h4>
+                <h3 class="font-bold mb-4">
+                    Rechtliches
+                </h3>
 
-                <div class="space-y-3 text-sm text-white/50">
+                <div class="space-y-3 text-white/60 text-sm">
 
-                    <button
-                        onclick="openModal('impressum-modal')"
-                        class="block hover:text-white"
-                        data-i18n="imprint">
+                    <button onclick="openLegalModal('impressum')"
+                            class="block hover:text-white">
                         Impressum
                     </button>
 
-                    <button
-                        onclick="openModal('privacy-modal')"
-                        class="block hover:text-white"
-                        data-i18n="privacy">
+                    <button onclick="openLegalModal('privacy')"
+                            class="block hover:text-white">
                         Datenschutz
                     </button>
 
@@ -1458,16 +1041,8 @@
         </div>
 
 
-        <div class="border-t border-white/10 mt-10 pt-7 flex flex-col md:flex-row justify-between gap-3 text-xs text-white/35">
-
-            <span>
-                © 2026 FiiViu. All rights reserved.
-            </span>
-
-            <span>
-                București · România
-            </span>
-
+        <div class="border-t border-white/10 mt-12 pt-7 text-sm text-white/40">
+            © <span id="current-year"></span> FiiViu. Alle Rechte vorbehalten.
         </div>
 
     </div>
@@ -1476,280 +1051,208 @@
 
 
 <!-- ========================================================= -->
-<!-- IMPRESSUM MODAL -->
+<!-- LEGAL MODAL -->
 <!-- ========================================================= -->
 
-<div id="impressum-modal"
-     class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] hidden">
+<div id="legal-modal"
+     class="hidden fixed inset-0 z-[100] bg-black/70 p-5 overflow-y-auto">
 
-    <div class="bg-white max-w-2xl w-full rounded-3xl p-8 max-h-[80vh] overflow-y-auto relative">
+    <div class="max-w-2xl mx-auto bg-white rounded-3xl p-7 md:p-10 mt-10">
 
-        <button
-            onclick="closeModal('impressum-modal')"
-            class="absolute top-5 right-5 text-gray-400 hover:text-gray-800 text-2xl">
-            &times;
-        </button>
+        <div class="flex justify-between items-start gap-5">
 
-        <h2 class="text-2xl font-black mb-6">
-            Impressum
-        </h2>
+            <h2 id="legal-title"
+                class="text-3xl font-black">
+            </h2>
 
-        <div class="text-sm text-gray-600 leading-relaxed space-y-5">
+            <button onclick="closeLegalModal()"
+                    class="w-10 h-10 rounded-full bg-gray-100">
+                ×
+            </button>
 
-            <p>
-                <strong>Angaben gemäß den gesetzlichen Vorschriften</strong><br>
-                FiiViu S.R.L.<br>
-                București, România
-            </p>
+        </div>
 
-            <p>
-                <strong>Kontakt</strong><br>
-                E-Mail: kontakt@fiiviu.com
-            </p>
-
-            <p class="text-xs text-gray-400">
-                Bitte vor Veröffentlichung die tatsächlichen Unternehmens-
-                und Kontaktdaten eintragen.
-            </p>
-
+        <div id="legal-content"
+             class="mt-7 text-gray-600 leading-relaxed">
         </div>
 
     </div>
 
 </div>
 
-
-<!-- ========================================================= -->
-<!-- PRIVACY MODAL -->
-<!-- ========================================================= -->
-
-<div id="privacy-modal"
-     class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] hidden">
-
-    <div class="bg-white max-w-2xl w-full rounded-3xl p-8 max-h-[80vh] overflow-y-auto relative">
-
-        <button
-            onclick="closeModal('privacy-modal')"
-            class="absolute top-5 right-5 text-gray-400 hover:text-gray-800 text-2xl">
-            &times;
-        </button>
-
-        <h2 class="text-2xl font-black mb-6">
-            Datenschutzerklärung
-        </h2>
-
-        <div class="text-sm text-gray-600 leading-relaxed space-y-5">
-
-            <p>
-                <strong>1. Allgemeines</strong><br>
-                Der Schutz deiner personenbezogenen Daten ist uns wichtig.
-                Diese Datenschutzerklärung erläutert grundsätzlich,
-                welche Daten bei der Nutzung dieser Website verarbeitet werden.
-            </p>
-
-            <p>
-                <strong>2. Verantwortlicher</strong><br>
-                FiiViu S.R.L.<br>
-                București, România<br>
-                E-Mail: kontakt@fiiviu.com
-            </p>
-
-            <p>
-                <strong>3. Buchungsdaten</strong><br>
-                Im Rahmen einer Buchungsanfrage können unter anderem
-                Name, E-Mail-Adresse, gewünschtes Erlebnis, Datum und
-                Teilnehmerzahl verarbeitet werden.
-            </p>
-
-            <p class="text-xs text-gray-400">
-                Dies ist nur ein Platzhalter und muss vor dem Live-Betrieb
-                rechtlich geprüft und vollständig ausgearbeitet werden.
-            </p>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- ========================================================= -->
-<!-- JAVASCRIPT -->
-<!-- ========================================================= -->
 
 <script>
 
 /* ============================================================
-   CONFIG
-============================================================ */
-
-let currentLang = 'de';
-let currentCurrency = 'EUR';
-
-const currencyRates = {
-    EUR: 1,
-    RON: 4.97
-};
-
-let currentCategoryKey = '';
-let currentTourKey = '';
-
-let currentPriceEUR = 0;
-
-let selectedTourTime = '';
-let selectedDetailDate = '';
-
-let detailDatePickerInstance = null;
-let datePickerInstance = null;
-
-let stripe = null;
-let cardElement = null;
-
-
-/* ============================================================
    EMAILJS
-============================================================ */
+   ============================================================ */
 
-try {
-    emailjs.init("Q_tJ6LhJkeMcVE0U4");
-} catch (error) {
-    console.warn("EmailJS konnte nicht initialisiert werden.", error);
-}
+const EMAILJS_SERVICE_ID = "service_0fqphlf";
+const EMAILJS_TEMPLATE_ID = "template_x2mmo2p";
+const EMAILJS_PUBLIC_KEY = "Q_tJ6LhJkeMcVE0U4";
+
+emailjs.init({
+    publicKey: EMAILJS_PUBLIC_KEY
+});
 
 
 /* ============================================================
    STRIPE
-============================================================ */
+   ============================================================ */
 
-try {
+/*
+   WICHTIG:
+   Dies ist weiterhin nur die Frontend-Vorbereitung.
+   Eine echte Stripe-Zahlung benötigt einen Server/Backend
+   mit PaymentIntent und Secret Key.
 
-    stripe = Stripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
+   Deshalb wird hier bewusst NICHT behauptet,
+   dass bereits eine Zahlung durchgeführt wurde.
+*/
 
-    const elements = stripe.elements();
+const STRIPE_PUBLIC_KEY = "pk_test_REPLACE_WITH_YOUR_STRIPE_PUBLIC_KEY";
 
-    cardElement = elements.create('card', {
-        style: {
-            base: {
-                color: '#222222',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '16px',
-                fontSmoothing: 'antialiased',
-                '::placeholder': {
-                    color: '#9CA3AF'
-                }
-            }
-        }
-    });
+let stripe = null;
 
-} catch (error) {
+if (
+    STRIPE_PUBLIC_KEY &&
+    !STRIPE_PUBLIC_KEY.includes("REPLACE_WITH")
+) {
+    stripe = Stripe(STRIPE_PUBLIC_KEY);
+}
 
-    console.warn("Stripe konnte nicht initialisiert werden.", error);
 
+/* ============================================================
+   STATE
+   ============================================================ */
+
+let currentLang = "de";
+let currentCurrency = "EUR";
+
+let currentCategory = null;
+let currentProduct = null;
+
+let selectedDate = "";
+let selectedTime = "";
+let selectedGuests = 1;
+
+let bookingId = "";
+
+let flatpickrInstance = null;
+
+
+/* ============================================================
+   CURRENCY
+   ============================================================ */
+
+const exchangeRate = 4.97;
+
+function formatPrice(eur) {
+
+    const value = currentCurrency === "RON"
+        ? eur * exchangeRate
+        : eur;
+
+    if (currentCurrency === "RON") {
+        return `${value.toFixed(0)} RON`;
+    }
+
+    return `${value.toFixed(2)} €`;
 }
 
 
 /* ============================================================
    PRODUCT DATABASE
-============================================================ */
+   ============================================================ */
 
 const categoriesData = {
 
     explore: {
-
-        eyebrow: {
-            de: "01 · Explore",
-            en: "01 · Explore",
-            ro: "01 · Explore"
-        },
-
         title: {
-            de: "Bukarest entdecken",
-            en: "Discover Bucharest",
-            ro: "Descoperă Bucureștiul"
+            de: "Explore",
+            en: "Explore",
+            ro: "Explore"
         },
 
-        subtitle: {
-            de: "Geschichte, Architektur und lokale Geschichten – mit einem anderen Blick auf die Stadt.",
-            en: "History, architecture and local stories – experience the city from a different perspective.",
-            ro: "Istorie, arhitectură și povești locale – descoperă orașul dintr-o perspectivă diferită."
+        description: {
+            de: "Entdecke Bukarest zu Fuß, mit dem Fahrrad und aus lokalen Perspektiven.",
+            en: "Discover Bucharest on foot, by bike and through local perspectives.",
+            ro: "Descoperă Bucureștiul pe jos, cu bicicleta și prin perspective locale."
         },
 
-        items: [
+        products: [
 
             {
-                id: "old-town-walk",
-
-                badge: {
-                    de: "Beliebtester Moment",
-                    en: "Most Popular",
-                    ro: "Cel mai popular"
-                },
+                id: "old-town-story",
 
                 title: {
-                    de: "Bukarest Old Town Story Walk",
+                    de: "Bucharest Old Town Story Walk",
                     en: "Bucharest Old Town Story Walk",
-                    ro: "Turul cu povești al Centrului Vechi"
+                    ro: "Bucharest Old Town Story Walk"
+                },
+
+                description: {
+                    de: "Eine entspannte private Tour durch die historische Altstadt mit Geschichten, versteckten Ecken und lokalen Empfehlungen.",
+                    en: "A relaxed private tour through the historic Old Town with stories, hidden corners and local recommendations.",
+                    ro: "Un tur privat relaxat prin Centrul Vechi, cu povești, locuri ascunse și recomandări locale."
                 },
 
                 price: 29,
 
-                duration: {
-                    de: "3 Stunden",
-                    en: "3 hours",
-                    ro: "3 ore"
-                },
-
-                availableTimes: [
-                    "10:00",
-                    "15:00",
-                    "18:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1000",
-
                 images: [
-                    "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1200",
-                    "https://images.unsplash.com/photo-1544986581-efac024faf62?q=85&w=800",
-                    "https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?q=85&w=800"
+                    "https://images.unsplash.com/photo-1564415315949-7a0c5c0f8f8b?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1597009876988-48e1e0d6d1a7?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Eine lokale Reise durch das historische Zentrum von Bukarest. Entdecke versteckte Innenhöfe, alte Handelsstraßen und die Geschichten hinter den bekanntesten Gebäuden.",
-                    en: "A local journey through Bucharest's historic center. Discover hidden courtyards, old trading streets and the stories behind the city's most iconic buildings.",
-                    ro: "O călătorie locală prin centrul istoric al Bucureștiului. Descoperă curți ascunse, străzi comerciale și poveștile din spatele clădirilor emblematice."
-                },
 
                 highlights: {
                     de: [
+                        "Historische Altstadt",
                         "Lokaler Guide",
-                        "Stavropoleos-Kloster",
-                        "Manuc's Inn",
-                        "Geschichten abseits der klassischen Route"
+                        "Versteckte Orte",
+                        "Perfekt für Erstbesucher"
                     ],
                     en: [
+                        "Historic Old Town",
                         "Local guide",
-                        "Stavropoleos Monastery",
-                        "Manuc's Inn",
-                        "Stories beyond the classic route"
+                        "Hidden places",
+                        "Perfect for first-time visitors"
                     ],
                     ro: [
+                        "Centrul Vechi",
                         "Ghid local",
-                        "Mănăstirea Stavropoleos",
-                        "Hanul lui Manuc",
-                        "Povești dincolo de traseul clasic"
+                        "Locuri ascunse",
+                        "Perfect pentru prima vizită"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Private Tour",
+                        "Guide",
+                        "Lokale Empfehlungen"
+                    ],
+                    en: [
+                        "Private tour",
+                        "Guide",
+                        "Local recommendations"
+                    ],
+                    ro: [
+                        "Tur privat",
+                        "Ghid",
+                        "Recomandări locale"
+                    ]
+                },
+
+                times: [
+                    "10:00",
+                    "14:00",
+                    "17:00"
+                ]
             },
 
 
             {
-                id: "bike-bucharest",
-
-                badge: {
-                    de: "Aktiv",
-                    en: "Active",
-                    ro: "Activ"
-                },
+                id: "bike-story",
 
                 title: {
                     de: "Bucharest Bike Story",
@@ -1757,51 +1260,62 @@ const categoriesData = {
                     ro: "Bucharest Bike Story"
                 },
 
-                price: 35,
-
-                duration: {
-                    de: "3–3,5 Stunden",
-                    en: "3–3.5 hours",
-                    ro: "3–3,5 ore"
+                description: {
+                    de: "Erkunde Bukarest mit dem Fahrrad und entdecke bekannte Highlights und weniger bekannte Viertel.",
+                    en: "Explore Bucharest by bike and discover famous highlights and lesser-known neighborhoods.",
+                    ro: "Explorează Bucureștiul cu bicicleta și descoperă atracții cunoscute și cartiere mai puțin explorate."
                 },
 
-                availableTimes: [
-                    "10:30",
-                    "14:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=85&w=1000",
+                price: 39,
 
                 images: [
-                    "https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1529429617124-95b109e86bb8?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Bukarest auf zwei Rädern. Eine aktive Tour durch Geschichte, kommunistische Architektur und die großen Boulevards der Stadt.",
-                    en: "Bucharest on two wheels. An active journey through history, communist architecture and the city's grand boulevards.",
-                    ro: "București pe două roți. O experiență activă prin istorie, arhitectură comunistă și marile bulevarde."
-                },
 
                 highlights: {
                     de: [
-                        "Fahrrad inklusive",
+                        "Fahrradtour durch Bukarest",
                         "Lokaler Guide",
-                        "Parlamentspalast",
-                        "Victoria Avenue"
+                        "Kleine Gruppen",
+                        "Fotostopps"
                     ],
                     en: [
-                        "Bike included",
+                        "Bike tour through Bucharest",
                         "Local guide",
-                        "Palace of Parliament",
-                        "Victoria Avenue"
+                        "Small groups",
+                        "Photo stops"
                     ],
                     ro: [
-                        "Bicicletă inclusă",
+                        "Tur cu bicicleta",
                         "Ghid local",
-                        "Palatul Parlamentului",
-                        "Calea Victoriei"
+                        "Grupuri mici",
+                        "Opriri pentru fotografii"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Fahrrad",
+                        "Guide",
+                        "Sicherheitsausrüstung"
+                    ],
+                    en: [
+                        "Bike",
+                        "Guide",
+                        "Safety equipment"
+                    ],
+                    ro: [
+                        "Bicicletă",
+                        "Ghid",
+                        "Echipament de siguranță"
+                    ]
+                },
+
+                times: [
+                    "10:00",
+                    "15:00"
+                ]
             }
 
         ]
@@ -1810,87 +1324,83 @@ const categoriesData = {
 
     relax: {
 
-        eyebrow: {
-            de: "02 · Relax",
-            en: "02 · Relax",
-            ro: "02 · Relax"
-        },
-
         title: {
-            de: "Zeit für dich",
-            en: "Time for yourself",
-            ro: "Timp pentru tine"
+            de: "Relax",
+            en: "Relax",
+            ro: "Relax"
         },
 
-        subtitle: {
-            de: "Wellness, Wärme und kleine Fluchten vom Alltag.",
-            en: "Wellness, warmth and little escapes from everyday life.",
-            ro: "Wellness, relaxare și mici evadări din rutina zilnică."
+        description: {
+            de: "Spa, Therme und Wellness für einen Tag zum Abschalten.",
+            en: "Spa, thermal baths and wellness for a day to switch off.",
+            ro: "Spa, băi termale și wellness pentru o zi de relaxare."
         },
 
-        items: [
+        products: [
 
             {
-                id: "therme-vip",
-
-                badge: {
-                    de: "FiiViu Favorite",
-                    en: "FiiViu Favorite",
-                    ro: "Favoritul FiiViu"
-                },
+                id: "therme-relax",
 
                 title: {
                     de: "Therme București – Relax Day",
-                    en: "Therme Bucharest – Relax Day",
-                    ro: "Therme București – Zi de Relaxare"
+                    en: "Therme București – Relax Day",
+                    ro: "Therme București – Zi de relaxare"
                 },
 
-                price: 55,
-
-                duration: {
-                    de: "Ganztägig",
-                    en: "Full day",
-                    ro: "Toată ziua"
+                description: {
+                    de: "Ein entspannter Tag in der Therme București mit Zeit für Pools, Sauna und Wellness.",
+                    en: "A relaxing day at Therme București with time for pools, sauna and wellness.",
+                    ro: "O zi relaxantă la Therme București, cu piscine, saună și wellness."
                 },
 
-                availableTimes: [
-                    "09:00",
-                    "11:00",
-                    "13:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1000",
+                price: 49,
 
                 images: [
-                    "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Ein ganzer Tag zum Abschalten. Genieße die Therme, warme Pools, Palmen und eine Auszeit vom Stadttrubel.",
-                    en: "A full day to switch off. Enjoy thermal pools, palm trees and a complete escape from the city.",
-                    ro: "O zi întreagă pentru relaxare. Bucură-te de piscine termale, palmieri și o evadare din agitația orașului."
-                },
 
                 highlights: {
                     de: [
-                        "Therme-Eintritt",
-                        "Palm & Elysium",
-                        "Ganzer Tag Entspannung",
-                        "Perfekt nach Sightseeing"
+                        "Therme București",
+                        "Pools & Relax",
+                        "Sauna",
+                        "Perfekt nach einem langen Tag"
                     ],
                     en: [
-                        "Therme entry",
-                        "Palm & Elysium",
-                        "Full day relaxation",
-                        "Perfect after sightseeing"
+                        "Therme București",
+                        "Pools & relaxation",
+                        "Sauna",
+                        "Perfect after a long day"
                     ],
                     ro: [
-                        "Acces Therme",
-                        "Palm & Elysium",
-                        "O zi întreagă de relaxare",
-                        "Perfect după sightseeing"
+                        "Therme București",
+                        "Piscine și relaxare",
+                        "Saună",
+                        "Perfect după o zi lungă"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Eintritt",
+                        "Reservierungsservice"
+                    ],
+                    en: [
+                        "Entry",
+                        "Reservation service"
+                    ],
+                    ro: [
+                        "Bilet de intrare",
+                        "Serviciu de rezervare"
+                    ]
+                },
+
+                times: [
+                    "09:00",
+                    "12:00",
+                    "15:00"
+                ]
             }
 
         ]
@@ -1899,34 +1409,22 @@ const categoriesData = {
 
     nightlife: {
 
-        eyebrow: {
-            de: "03 · Nightlife",
-            en: "03 · Nightlife",
-            ro: "03 · Nightlife"
-        },
-
         title: {
-            de: "Wenn die Stadt wach wird",
-            en: "When the city comes alive",
-            ro: "Când orașul prinde viață"
+            de: "Nightlife",
+            en: "Nightlife",
+            ro: "Nightlife"
         },
 
-        subtitle: {
-            de: "Drinks, Musik und Nächte, über die man am nächsten Morgen spricht.",
-            en: "Drinks, music and nights you'll still talk about the next morning.",
-            ro: "Cocktailuri, muzică și nopți despre care vei vorbi dimineața."
+        description: {
+            de: "Bukarest bei Nacht – gute Drinks, besondere Locations und ein Abend ohne Stress.",
+            en: "Bucharest after dark – great drinks, special venues and a night without the hassle.",
+            ro: "Bucureștiul după lăsarea serii – cocktailuri, locații speciale și o noapte fără stres."
         },
 
-        items: [
+        products: [
 
             {
                 id: "night-out",
-
-                badge: {
-                    de: "Night Out",
-                    en: "Night Out",
-                    ro: "Night Out"
-                },
 
                 title: {
                     de: "Bucharest Night Out",
@@ -1934,52 +1432,63 @@ const categoriesData = {
                     ro: "Bucharest Night Out"
                 },
 
-                price: 75,
-
-                duration: {
-                    de: "4–5 Stunden",
-                    en: "4–5 hours",
-                    ro: "4–5 ore"
+                description: {
+                    de: "Ein kuratierter Abend mit mehreren Stopps in ausgewählten Bars und Nightlife-Spots.",
+                    en: "A curated evening with several stops at selected bars and nightlife spots.",
+                    ro: "O seară curată cu mai multe opriri în baruri și locații de nightlife selectate."
                 },
 
-                availableTimes: [
-                    "20:00",
-                    "21:00",
-                    "22:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=1000",
+                price: 59,
 
                 images: [
-                    "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Starte mit Drinks und entdecke anschließend einige der spannendsten Nightlife-Spots der Stadt.",
-                    en: "Start with drinks and discover some of the city's most exciting nightlife spots.",
-                    ro: "Începe cu câteva cocktailuri și descoperă apoi locurile de nightlife ale orașului."
-                },
 
                 highlights: {
                     de: [
-                        "Lokale Empfehlungen",
-                        "Welcome Drink",
-                        "Nightlife Route",
+                        "Ausgewählte Bars",
+                        "Lokaler Host",
+                        "Nightlife-Insider-Tipps",
                         "Ideal für Gruppen"
                     ],
                     en: [
-                        "Local recommendations",
-                        "Welcome drink",
-                        "Nightlife route",
-                        "Perfect for groups"
+                        "Selected bars",
+                        "Local host",
+                        "Nightlife insider tips",
+                        "Great for groups"
                     ],
                     ro: [
-                        "Recomandări locale",
-                        "Welcome drink",
-                        "Traseu nightlife",
+                        "Baruri selectate",
+                        "Gazdă locală",
+                        "Recomandări de nightlife",
                         "Ideal pentru grupuri"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Lokaler Host",
+                        "Routenplanung",
+                        "Reservierungsservice"
+                    ],
+                    en: [
+                        "Local host",
+                        "Route planning",
+                        "Reservation service"
+                    ],
+                    ro: [
+                        "Gazdă locală",
+                        "Planificarea traseului",
+                        "Serviciu de rezervare"
+                    ]
+                },
+
+                times: [
+                    "19:00",
+                    "20:00",
+                    "21:00"
+                ]
             }
 
         ]
@@ -1988,34 +1497,22 @@ const categoriesData = {
 
     adventure: {
 
-        eyebrow: {
-            de: "04 · Adventure",
-            en: "04 · Adventure",
-            ro: "04 · Adventure"
-        },
-
         title: {
-            de: "Mehr Adrenalin",
-            en: "More adrenaline",
-            ro: "Mai multă adrenalină"
+            de: "Adventure",
+            en: "Adventure",
+            ro: "Adventure"
         },
 
-        subtitle: {
-            de: "Für alle, die lieber etwas erleben als nur zuschauen.",
-            en: "For people who would rather experience than watch.",
-            ro: "Pentru cei care preferă să trăiască experiența, nu doar să privească."
+        description: {
+            de: "Mehr Adrenalin. Mehr Geschwindigkeit. Mehr Moment.",
+            en: "More adrenaline. More speed. More moment.",
+            ro: "Mai multă adrenalină. Mai multă viteză. Mai mult moment."
         },
 
-        items: [
+        products: [
 
             {
                 id: "kart-grand-prix",
-
-                badge: {
-                    de: "Adrenalin",
-                    en: "Adrenaline",
-                    ro: "Adrenalină"
-                },
 
                 title: {
                     de: "Bucharest Kart Grand Prix",
@@ -2023,52 +1520,64 @@ const categoriesData = {
                     ro: "Bucharest Kart Grand Prix"
                 },
 
+                description: {
+                    de: "Tretet gegeneinander an und erlebt ein echtes Renngefühl auf der Kartbahn.",
+                    en: "Race against each other and experience the thrill of a real karting track.",
+                    ro: "Concurați unul împotriva celuilalt și simțiți adrenalina unei piste de karting."
+                },
+
                 price: 45,
 
-                duration: {
-                    de: "2 Stunden",
-                    en: "2 hours",
-                    ro: "2 ore"
-                },
-
-                availableTimes: [
-                    "12:00",
-                    "15:00",
-                    "18:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?q=85&w=1000",
-
                 images: [
-                    "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1511886929837-354d827aae26?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Rennstrecke, Geschwindigkeit und Wettbewerb. Perfekt für Freunde, Geburtstage und Gruppen.",
-                    en: "Track, speed and competition. Perfect for friends, birthdays and groups.",
-                    ro: "Pistă, viteză și competiție. Perfect pentru prieteni, aniversări și grupuri."
-                },
 
                 highlights: {
                     de: [
-                        "Rennkart",
-                        "Zeitmessung",
-                        "Qualifying & Rennen",
-                        "Ideal für Gruppen"
+                        "Karting",
+                        "Zeitrennen",
+                        "Perfekt für Gruppen",
+                        "Adrenalin pur"
                     ],
                     en: [
-                        "Race kart",
-                        "Timing system",
-                        "Qualifying & race",
-                        "Perfect for groups"
+                        "Karting",
+                        "Timed race",
+                        "Perfect for groups",
+                        "Pure adrenaline"
                     ],
                     ro: [
-                        "Kart de curse",
-                        "Cronometrare",
-                        "Calificări & cursă",
-                        "Ideal pentru grupuri"
+                        "Karting",
+                        "Cursă contra cronometru",
+                        "Perfect pentru grupuri",
+                        "Adrenalină pură"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Kart",
+                        "Helm",
+                        "Rennsession"
+                    ],
+                    en: [
+                        "Kart",
+                        "Helmet",
+                        "Race session"
+                    ],
+                    ro: [
+                        "Kart",
+                        "Cască",
+                        "Sesiune de cursă"
+                    ]
+                },
+
+                times: [
+                    "11:00",
+                    "14:00",
+                    "17:00",
+                    "20:00"
+                ]
             }
 
         ]
@@ -2077,34 +1586,22 @@ const categoriesData = {
 
     vip: {
 
-        eyebrow: {
-            de: "05 · VIP",
-            en: "05 · VIP",
-            ro: "05 · VIP"
-        },
-
         title: {
-            de: "Mach es besonders",
-            en: "Make it special",
-            ro: "Fă-l special"
+            de: "VIP",
+            en: "VIP",
+            ro: "VIP"
         },
 
-        subtitle: {
-            de: "Wenn ein normaler Abend nicht genug ist.",
-            en: "When an ordinary night isn't enough.",
-            ro: "Când o seară obișnuită nu este suficientă."
+        description: {
+            de: "Private Transfers und Premium-Momente für besondere Anlässe.",
+            en: "Private transfers and premium moments for special occasions.",
+            ro: "Transferuri private și momente premium pentru ocazii speciale."
         },
 
-        items: [
+        products: [
 
             {
-                id: "limo-night",
-
-                badge: {
-                    de: "Premium",
-                    en: "Premium",
-                    ro: "Premium"
-                },
+                id: "private-limo",
 
                 title: {
                     de: "Private Limousine Night",
@@ -2112,52 +1609,64 @@ const categoriesData = {
                     ro: "Private Limousine Night"
                 },
 
-                price: 150,
-
-                duration: {
-                    de: "1 Stunde",
-                    en: "1 hour",
-                    ro: "1 oră"
+                description: {
+                    de: "Eine private Limousinenfahrt durch Bukarest für einen besonderen Abend.",
+                    en: "A private limousine ride through Bucharest for a special evening.",
+                    ro: "O plimbare privată cu limuzina prin București pentru o seară specială."
                 },
 
-                availableTimes: [
-                    "18:00",
-                    "20:00",
-                    "22:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1000",
+                price: 149,
 
                 images: [
-                    "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Eine private Limousinenfahrt durch Bukarest. Perfekt für Geburtstage, Couples und besondere Nächte.",
-                    en: "A private limousine ride through Bucharest. Perfect for birthdays, couples and special nights.",
-                    ro: "O plimbare privată cu limuzina prin București. Perfectă pentru aniversări, cupluri și seri speciale."
-                },
 
                 highlights: {
                     de: [
                         "Private Limousine",
-                        "1 Stunde Fahrt",
-                        "Welcome Drink",
-                        "Perfekt für besondere Anlässe"
+                        "Persönlicher Fahrer",
+                        "Flexible Route",
+                        "Perfekt für besondere Abende"
                     ],
                     en: [
                         "Private limousine",
-                        "1 hour ride",
-                        "Welcome drink",
-                        "Perfect for special occasions"
+                        "Personal driver",
+                        "Flexible route",
+                        "Perfect for special evenings"
                     ],
                     ro: [
                         "Limuzină privată",
-                        "1 oră",
-                        "Welcome drink",
-                        "Perfect pentru ocazii speciale"
+                        "Șofer personal",
+                        "Traseu flexibil",
+                        "Perfect pentru seri speciale"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Private Limousine",
+                        "Fahrer",
+                        "Abholung in Bukarest"
+                    ],
+                    en: [
+                        "Private limousine",
+                        "Driver",
+                        "Pickup in Bucharest"
+                    ],
+                    ro: [
+                        "Limuzină privată",
+                        "Șofer",
+                        "Preluare din București"
+                    ]
+                },
+
+                times: [
+                    "19:00",
+                    "20:00",
+                    "21:00",
+                    "22:00"
+                ]
             }
 
         ]
@@ -2166,34 +1675,22 @@ const categoriesData = {
 
     packages: {
 
-        eyebrow: {
-            de: "06 · Packages",
-            en: "06 · Packages",
-            ro: "06 · Pachete"
-        },
-
         title: {
-            de: "Ein Tag. Ein Plan. Viele Momente.",
-            en: "One day. One plan. Many moments.",
-            ro: "O zi. Un plan. Multe momente."
+            de: "Packages",
+            en: "Packages",
+            ro: "Pachete"
         },
 
-        subtitle: {
-            de: "Fertige FiiViu-Pakete für Gruppen, Couples, Geburtstage und besondere Wochenenden.",
-            en: "Ready-made FiiViu packages for groups, couples, birthdays and special weekends.",
-            ro: "Pachete FiiViu pentru grupuri, cupluri, aniversări și weekenduri speciale."
+        description: {
+            de: "Fertig zusammengestellte Erlebnisse für JGA, Paare, Freunde und besondere Tage.",
+            en: "Ready-made experiences for bachelor parties, couples, friends and special days.",
+            ro: "Experiențe complete pentru petreceri, cupluri, prieteni și zile speciale."
         },
 
-        items: [
+        products: [
 
             {
-                id: "bucharest-boys-day",
-
-                badge: {
-                    de: "FiiViu Package",
-                    en: "FiiViu Package",
-                    ro: "Pachet FiiViu"
-                },
+                id: "boys-day",
 
                 title: {
                     de: "Bucharest Boys Day",
@@ -2201,61 +1698,67 @@ const categoriesData = {
                     ro: "Bucharest Boys Day"
                 },
 
-                price: 119,
-
-                duration: {
-                    de: "Ganztägig",
-                    en: "Full day",
-                    ro: "Toată ziua"
+                description: {
+                    de: "Ein kompletter Action-Tag mit Karting, Nightlife und ausgewählten Extras.",
+                    en: "A full action day with karting, nightlife and selected extras.",
+                    ro: "O zi completă de acțiune cu karting, nightlife și extra-uri selectate."
                 },
 
-                availableTimes: [
-                    "10:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?q=85&w=1000",
+                price: 129,
 
                 images: [
-                    "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Ein kompletter FiiViu-Tag für Freunde: aktive Erfahrung, gutes Essen und eine Nacht, die ihr nicht so schnell vergesst.",
-                    en: "A complete FiiViu day for friends: active experiences, great food and a night you won't forget.",
-                    ro: "O zi FiiViu completă pentru prieteni: experiențe active, mâncare bună și o noapte memorabilă."
-                },
 
                 highlights: {
                     de: [
-                        "Aktivität am Tag",
-                        "Lokale Food-Empfehlung",
-                        "Nightlife-Spot",
-                        "Persönliche FiiViu Route"
+                        "Karting",
+                        "Nightlife",
+                        "Gruppen-Erlebnis",
+                        "Einfach buchen"
                     ],
                     en: [
-                        "Day activity",
-                        "Local food recommendation",
-                        "Nightlife spot",
-                        "Personal FiiViu route"
+                        "Karting",
+                        "Nightlife",
+                        "Group experience",
+                        "Easy booking"
                     ],
                     ro: [
-                        "Activitate în timpul zilei",
-                        "Recomandare locală de mâncare",
-                        "Nightlife spot",
-                        "Traseu FiiViu personalizat"
+                        "Karting",
+                        "Nightlife",
+                        "Experiență de grup",
+                        "Rezervare simplă"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Karting Session",
+                        "Nightlife-Planung",
+                        "Lokaler Support"
+                    ],
+                    en: [
+                        "Karting session",
+                        "Nightlife planning",
+                        "Local support"
+                    ],
+                    ro: [
+                        "Sesiune de karting",
+                        "Planificare nightlife",
+                        "Suport local"
+                    ]
+                },
+
+                times: [
+                    "12:00",
+                    "14:00"
+                ]
             },
 
 
             {
-                id: "bucharest-couple-day",
-
-                badge: {
-                    de: "Couples",
-                    en: "Couples",
-                    ro: "Cupluri"
-                },
+                id: "couple-escape",
 
                 title: {
                     de: "Bucharest Couple Escape",
@@ -2263,50 +1766,63 @@ const categoriesData = {
                     ro: "Bucharest Couple Escape"
                 },
 
-                price: 129,
-
-                duration: {
-                    de: "Ganztägig",
-                    en: "Full day",
-                    ro: "Toată ziua"
+                description: {
+                    de: "Ein entspannter Tag für zwei mit Wellness, gutem Essen und einem besonderen Abend.",
+                    en: "A relaxed day for two with wellness, great food and a special evening.",
+                    ro: "O zi relaxantă pentru doi, cu wellness, mâncare bună și o seară specială."
                 },
 
-                availableTimes: [
-                    "10:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=85&w=1000",
+                price: 119,
 
                 images: [
-                    "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=85&w=1200"
+                    "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=1400&q=80",
+                    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80"
                 ],
-
-                desc: {
-                    de: "Ein entspannter Tag für zwei: entdecken, genießen, abschalten und gemeinsam etwas Neues erleben.",
-                    en: "A relaxed day for two: explore, enjoy, switch off and experience something new together.",
-                    ro: "O zi relaxantă pentru doi: descoperă, savurează, relaxează-te și trăiește ceva nou împreună."
-                },
 
                 highlights: {
                     de: [
-                        "Geführte Entdeckung",
-                        "Wellness-Moment",
-                        "Food Recommendation",
-                        "Romantischer Abend"
+                        "Wellness",
+                        "Dinner",
+                        "Private Moment",
+                        "Perfekt für Paare"
                     ],
                     en: [
-                        "Guided discovery",
-                        "Wellness moment",
-                        "Food recommendation",
-                        "Romantic evening"
+                        "Wellness",
+                        "Dinner",
+                        "Private moment",
+                        "Perfect for couples"
                     ],
                     ro: [
-                        "Descoperire ghidată",
-                        "Moment wellness",
-                        "Recomandare culinară",
-                        "Seară romantică"
+                        "Wellness",
+                        "Cină",
+                        "Moment privat",
+                        "Perfect pentru cupluri"
                     ]
-                }
+                },
+
+                includes: {
+                    de: [
+                        "Wellness",
+                        "Reservierungsservice",
+                        "Lokale Empfehlungen"
+                    ],
+                    en: [
+                        "Wellness",
+                        "Reservation service",
+                        "Local recommendations"
+                    ],
+                    ro: [
+                        "Wellness",
+                        "Serviciu de rezervare",
+                        "Recomandări locale"
+                    ]
+                },
+
+                times: [
+                    "11:00",
+                    "13:00",
+                    "15:00"
+                ]
             }
 
         ]
@@ -2317,12 +1833,11 @@ const categoriesData = {
 
 /* ============================================================
    TRANSLATIONS
-============================================================ */
+   ============================================================ */
 
 const translations = {
 
     de: {
-
         nav_home: "Start",
         nav_explore: "Entdecken",
         nav_relax: "Relax",
@@ -2330,95 +1845,15 @@ const translations = {
         nav_adventure: "Adventure",
         nav_packages: "Packages",
 
-        hero_title: "Oprește timpul.<br>Trăiește momentul.",
-        hero_subtitle: "FiiViu bringt dich zu den Momenten, die du später nicht vergessen willst. Entdecke Bukarest anders.",
-        hero_cta: "Erlebnisse entdecken",
-        hero_package_cta: "Ein fertiges Erlebnis",
+        hero_text: "Entdecke Bukarest durch besondere Erlebnisse, lokale Geheimtipps und Momente, die du nicht vergisst.",
+        hero_cta: "Momente entdecken",
+        hero_packages: "Pakete entdecken",
 
-        intro_label: "FiiViu Moments",
-        intro_title: "Nicht einfach etwas unternehmen. Etwas erleben.",
-        intro_text: "Von kleinen lokalen Entdeckungen bis zu besonderen Tagen: FiiViu kuratiert Erlebnisse, die sich nach Urlaub anfühlen.",
-
-        cat_explore: "Explore",
-        cat_explore_desc: "Geschichte, Kultur & lokale Geschichten.",
-        cat_relax: "Relax",
-        cat_relax_desc: "Spa, Therme & Momente zum Abschalten.",
-        cat_nightlife: "Nightlife",
-        cat_nightlife_desc: "Drinks, Clubs & besondere Nächte.",
-        cat_adventure: "Adventure",
-        cat_adventure_desc: "Adrenalin, Action & neue Erfahrungen.",
-        cat_vip: "VIP",
-        cat_vip_desc: "Komfort, Stil & besondere Zugänge.",
-        cat_packages: "Packages",
-        cat_packages_desc: "Fertige Erlebnisse für Gruppen, Couples & besondere Tage.",
-        discover_packages: "Packages entdecken",
-
-        featured_label: "Jetzt entdecken",
-        featured_title: "Momente, die bleiben.",
-        view_all: "Alle Erlebnisse",
-
-        philosophy_title: "Dein Urlaub ist zu kurz, um ihn mit langweiligen Dingen zu verbringen.",
-        philosophy_text: "Wir glauben, dass eine Stadt nicht durch ihre Sehenswürdigkeiten lebendig wird, sondern durch die Momente, die du dort erlebst. Deshalb suchen wir Erlebnisse aus, die mehr sind als ein weiterer Punkt auf deiner To-do-Liste.",
-        philosophy_small: "Weniger planen. Mehr erleben.",
-
-        local_title: "Made for Bucharest",
-        local_text: "Kuratiert mit lokalem Blick.",
-
-        cta_title: "Bereit für deinen nächsten Moment?",
-        cta_text: "Such dir etwas aus, das du morgen noch erzählen wirst.",
-        cta_button: "Erlebnisse entdecken",
-
-        back_home: "Zurück zu FiiViu",
-        back_selection: "Zurück zur Auswahl",
-
-        price_note: "pro Person / Einheit",
-        about_experience: "Über diesen Moment",
-        highlights: "Highlights",
-        choose_moment: "Deinen Moment auswählen",
-        date: "Datum",
-        start_time: "Startzeit",
-        quantity: "Personen",
-        estimated_total: "Gesamt",
-        book_now: "Jetzt buchen",
-        secure_booking: "Sichere Buchungsanfrage",
-
-        checkout_label: "Fast da",
-        checkout_title: "Deinen Moment buchen",
-        checkout_subtitle: "Fülle die Daten aus und sende deine Buchungsanfrage.",
-        selected_experience: "Erlebnis",
-        name: "Vor- und Nachname *",
-        email: "E-Mail *",
-        booking_date: "Datum *",
-        guests: "Personen *",
-        notes: "Nachricht / Wünsche",
-        payment: "Zahlung",
-        payment_note: "Die Zahlungsabwicklung erfolgt sicher über Stripe.",
-        pay_book: "Sicher buchen",
-
-        summary: "Deine Auswahl",
-        price_per_unit: "Preis",
-        quantity_summary: "Personen",
-        total: "Gesamt",
-        secure: "Sichere Zahlung",
-        confirmation: "Buchungsbestätigung per E-Mail",
-
-        success_title: "Dein Moment ist reserviert.",
-        success_text: "Wir haben deine Anfrage erhalten und senden dir die Buchungsdetails per E-Mail.",
-        booking_id: "Buchungs-ID",
-        experience: "Erlebnis",
-        date_time: "Datum",
-        back_home_button: "Zurück zu FiiViu",
-
-        footer_text: "Oprește timpul, trăiește momentul. Besondere Erlebnisse in Bukarest – kuratiert für Menschen, die mehr aus ihrer Reise machen wollen.",
-        footer_discover: "Entdecken",
-        footer_info: "Info",
-        imprint: "Impressum",
-        privacy: "Datenschutz"
+        categories_title: "Was willst du erleben?",
+        moments_title: "Momente, die bleiben."
     },
 
-
     en: {
-
         nav_home: "Home",
         nav_explore: "Explore",
         nav_relax: "Relax",
@@ -2426,95 +1861,15 @@ const translations = {
         nav_adventure: "Adventure",
         nav_packages: "Packages",
 
-        hero_title: "Oprește timpul.<br>Trăiește momentul.",
-        hero_subtitle: "FiiViu takes you to the moments you'll remember long after the trip. Experience Bucharest differently.",
-        hero_cta: "Discover experiences",
-        hero_package_cta: "Find a ready-made experience",
+        hero_text: "Discover Bucharest through special experiences, local secrets and moments you won't forget.",
+        hero_cta: "Discover moments",
+        hero_packages: "Discover packages",
 
-        intro_label: "FiiViu Moments",
-        intro_title: "Don't just do something. Experience something.",
-        intro_text: "From local discoveries to unforgettable days: FiiViu curates experiences that feel like a real holiday.",
-
-        cat_explore: "Explore",
-        cat_explore_desc: "History, culture & local stories.",
-        cat_relax: "Relax",
-        cat_relax_desc: "Spa, thermal baths & time to switch off.",
-        cat_nightlife: "Nightlife",
-        cat_nightlife_desc: "Drinks, clubs & unforgettable nights.",
-        cat_adventure: "Adventure",
-        cat_adventure_desc: "Adrenaline, action & new experiences.",
-        cat_vip: "VIP",
-        cat_vip_desc: "Comfort, style & special access.",
-        cat_packages: "Packages",
-        cat_packages_desc: "Ready-made experiences for groups, couples & special days.",
-        discover_packages: "Discover packages",
-
-        featured_label: "Discover now",
-        featured_title: "Moments that stay with you.",
-        view_all: "All experiences",
-
-        philosophy_title: "Your holiday is too short to spend it doing boring things.",
-        philosophy_text: "We believe a city comes alive through the moments you experience there. That's why we curate experiences that are more than another item on your travel checklist.",
-        philosophy_small: "Less planning. More living.",
-
-        local_title: "Made for Bucharest",
-        local_text: "Curated with a local perspective.",
-
-        cta_title: "Ready for your next moment?",
-        cta_text: "Choose something you'll still be talking about tomorrow.",
-        cta_button: "Discover experiences",
-
-        back_home: "Back to FiiViu",
-        back_selection: "Back to selection",
-
-        price_note: "per person / unit",
-        about_experience: "About this moment",
-        highlights: "Highlights",
-        choose_moment: "Choose your moment",
-        date: "Date",
-        start_time: "Start time",
-        quantity: "People",
-        estimated_total: "Total",
-        book_now: "Book now",
-        secure_booking: "Secure booking request",
-
-        checkout_label: "Almost there",
-        checkout_title: "Book your moment",
-        checkout_subtitle: "Enter your details and send your booking request.",
-        selected_experience: "Experience",
-        name: "Full name *",
-        email: "Email *",
-        booking_date: "Date *",
-        guests: "People *",
-        notes: "Message / requests",
-        payment: "Payment",
-        payment_note: "Payment is securely processed via Stripe.",
-        pay_book: "Book securely",
-
-        summary: "Your selection",
-        price_per_unit: "Price",
-        quantity_summary: "People",
-        total: "Total",
-        secure: "Secure payment",
-        confirmation: "Booking confirmation by email",
-
-        success_title: "Your moment is reserved.",
-        success_text: "We received your request and will send the booking details by email.",
-        booking_id: "Booking ID",
-        experience: "Experience",
-        date_time: "Date",
-        back_home_button: "Back to FiiViu",
-
-        footer_text: "Oprește timpul, trăiește momentul. Special experiences in Bucharest – curated for people who want more from their trip.",
-        footer_discover: "Discover",
-        footer_info: "Info",
-        imprint: "Imprint",
-        privacy: "Privacy"
+        categories_title: "What do you want to experience?",
+        moments_title: "Moments that stay."
     },
 
-
     ro: {
-
         nav_home: "Acasă",
         nav_explore: "Explorează",
         nav_relax: "Relax",
@@ -2522,90 +1877,12 @@ const translations = {
         nav_adventure: "Aventură",
         nav_packages: "Pachete",
 
-        hero_title: "Oprește timpul.<br>Trăiește momentul.",
-        hero_subtitle: "FiiViu te duce către momente pe care le vei ține minte mult timp după vacanță. Descoperă Bucureștiul altfel.",
-        hero_cta: "Descoperă experiențele",
-        hero_package_cta: "Vezi un pachet",
+        hero_text: "Descoperă Bucureștiul prin experiențe speciale, locuri locale și momente pe care nu le uiți.",
+        hero_cta: "Descoperă momente",
+        hero_packages: "Descoperă pachetele",
 
-        intro_label: "FiiViu Moments",
-        intro_title: "Nu doar face ceva. Trăiește ceva.",
-        intro_text: "De la mici descoperiri locale până la zile speciale: FiiViu selectează experiențe care se simt ca o adevărată vacanță.",
-
-        cat_explore: "Explore",
-        cat_explore_desc: "Istorie, cultură și povești locale.",
-        cat_relax: "Relax",
-        cat_relax_desc: "Spa, Therme și momente de relaxare.",
-        cat_nightlife: "Nightlife",
-        cat_nightlife_desc: "Cocktailuri, cluburi și nopți speciale.",
-        cat_adventure: "Adventure",
-        cat_adventure_desc: "Adrenalină, acțiune și experiențe noi.",
-        cat_vip: "VIP",
-        cat_vip_desc: "Confort, stil și acces special.",
-        cat_packages: "Pachete",
-        cat_packages_desc: "Experiențe complete pentru grupuri, cupluri și zile speciale.",
-        discover_packages: "Descoperă pachetele",
-
-        featured_label: "Descoperă acum",
-        featured_title: "Momente care rămân.",
-        view_all: "Toate experiențele",
-
-        philosophy_title: "Vacanța ta este prea scurtă pentru lucruri plictisitoare.",
-        philosophy_text: "Credem că un oraș devine viu prin momentele pe care le trăiești acolo. De aceea selectăm experiențe care sunt mai mult decât un simplu punct pe lista ta.",
-        philosophy_small: "Mai puțină planificare. Mai multă viață.",
-
-        local_title: "Made for Bucharest",
-        local_text: "Selectat cu perspectivă locală.",
-
-        cta_title: "Ești pregătit pentru următorul moment?",
-        cta_text: "Alege ceva despre care vei povesti și mâine.",
-        cta_button: "Descoperă experiențele",
-
-        back_home: "Înapoi la FiiViu",
-        back_selection: "Înapoi la selecție",
-
-        price_note: "per persoană / unitate",
-        about_experience: "Despre acest moment",
-        highlights: "Puncte forte",
-        choose_moment: "Alege momentul",
-        date: "Data",
-        start_time: "Ora",
-        quantity: "Persoane",
-        estimated_total: "Total",
-        book_now: "Rezervă acum",
-        secure_booking: "Rezervare sigură",
-
-        checkout_label: "Aproape gata",
-        checkout_title: "Rezervă momentul",
-        checkout_subtitle: "Completează datele și trimite cererea de rezervare.",
-        selected_experience: "Experiență",
-        name: "Nume complet *",
-        email: "Email *",
-        booking_date: "Data *",
-        guests: "Persoane *",
-        notes: "Mesaj / dorințe",
-        payment: "Plată",
-        payment_note: "Plata este procesată în siguranță prin Stripe.",
-        pay_book: "Rezervă în siguranță",
-
-        summary: "Selecția ta",
-        price_per_unit: "Preț",
-        quantity_summary: "Persoane",
-        total: "Total",
-        secure: "Plată sigură",
-        confirmation: "Confirmare prin email",
-
-        success_title: "Momentul tău este rezervat.",
-        success_text: "Am primit cererea ta și îți vom trimite detaliile rezervării prin email.",
-        booking_id: "ID rezervare",
-        experience: "Experiență",
-        date_time: "Data",
-        back_home_button: "Înapoi la FiiViu",
-
-        footer_text: "Oprește timpul, trăiește momentul. Experiențe speciale în București – selectate pentru cei care vor mai mult de la călătoria lor.",
-        footer_discover: "Descoperă",
-        footer_info: "Info",
-        imprint: "Impressum",
-        privacy: "Confidențialitate"
+        categories_title: "Ce vrei să trăiești?",
+        moments_title: "Momente care rămân."
     }
 
 };
@@ -2613,91 +1890,142 @@ const translations = {
 
 /* ============================================================
    INITIALIZATION
-============================================================ */
+   ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
 
+    document.getElementById("current-year").textContent =
+        new Date().getFullYear();
+
     renderFeatured();
 
-    if (cardElement) {
-
-        setTimeout(() => {
-
-            const cardContainer = document.getElementById("card-element");
-
-            if (cardContainer && !cardContainer.hasChildNodes()) {
-                cardElement.mount("#card-element");
-            }
-
-        }, 300);
-
-    }
+    applyTranslations();
 
 });
 
 
 /* ============================================================
-   VIEW NAVIGATION
-============================================================ */
+   TRANSLATIONS
+   ============================================================ */
 
-function showView(viewId) {
+function applyTranslations() {
 
-    document.querySelectorAll(".view-section")
-        .forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll("[data-i18n]").forEach(element => {
 
-    const target = document.getElementById(viewId);
+        const key = element.dataset.i18n;
 
-    if (target) {
-        target.classList.remove("hidden");
+        if (
+            translations[currentLang] &&
+            translations[currentLang][key]
+        ) {
+            element.textContent =
+                translations[currentLang][key];
+        }
+
+    });
+
+}
+
+
+function changeLanguage(language) {
+
+    currentLang = language;
+
+    applyTranslations();
+
+    if (!document.getElementById("category-view").classList.contains("hidden-view")) {
+
+        if (currentCategory) {
+            renderCategory(currentCategory);
+        }
+
     }
+
+    if (!document.getElementById("detail-view").classList.contains("hidden-view")) {
+
+        if (currentCategory && currentProduct) {
+            renderDetail(currentCategory, currentProduct.id, false);
+        }
+
+    }
+
+    if (!document.getElementById("checkout-view").classList.contains("hidden-view")) {
+        updateCheckoutSummary();
+    }
+
+    renderFeatured();
+}
+
+
+/* ============================================================
+   CURRENCY
+   ============================================================ */
+
+function changeCurrency(currency) {
+
+    currentCurrency = currency;
+
+    if (currentProduct) {
+        updateTotal();
+    }
+
+    updateCheckoutSummary();
+
+    renderFeatured();
+
+}
+
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+
+const allViews = [
+    "home-view",
+    "category-view",
+    "detail-view",
+    "checkout-view",
+    "success-view"
+];
+
+
+function hideAllViews() {
+
+    allViews.forEach(id => {
+
+        document.getElementById(id)
+            .classList.add("hidden-view");
+
+    });
+
+}
+
+
+function goHome() {
+
+    hideAllViews();
+
+    document.getElementById("home-view")
+        .classList.remove("hidden-view");
 
     window.scrollTo({
         top: 0,
         behavior: "smooth"
     });
-}
-
-
-function toggleMobileMenu() {
-
-    document.getElementById("mobile-menu")
-        .classList.toggle("hidden");
-
-}
-
-
-function mobileNavigate(viewId) {
-
-    document.getElementById("mobile-menu").classList.add("hidden");
-
-    showView(viewId);
-
-}
-
-
-function mobileCategory(category) {
-
-    document.getElementById("mobile-menu").classList.add("hidden");
-
-    showCategory(category);
 
 }
 
 
 function scrollToMoments() {
 
-    showView("home-view");
+    goHome();
 
     setTimeout(() => {
 
-        const element = document.getElementById("moments");
-
-        if (element) {
-            element.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
+        document.getElementById("moments")
+            .scrollIntoView({
+                behavior: "smooth"
             });
-        }
 
     }, 100);
 
@@ -2706,851 +2034,736 @@ function scrollToMoments() {
 
 /* ============================================================
    FEATURED
-============================================================ */
+   ============================================================ */
 
 function getFeaturedItems() {
 
-    return [
+    const result = [];
 
-        categoriesData.explore.items[0],
-        categoriesData.relax.items[0],
-        categoriesData.nightlife.items[0]
+    Object.keys(categoriesData).forEach(categoryKey => {
 
-    ];
+        categoriesData[categoryKey].products.forEach(product => {
+
+            if (result.length < 6) {
+
+                result.push({
+                    categoryKey,
+                    product
+                });
+
+            }
+
+        });
+
+    });
+
+    return result;
 
 }
 
 
 function renderFeatured() {
 
-    const container = document.getElementById("featured-grid");
+    const grid = document.getElementById("featured-grid");
 
-    if (!container) return;
+    const featured = getFeaturedItems();
 
-    container.innerHTML = "";
+    grid.innerHTML = featured.map(({ categoryKey, product }) => {
 
-    getFeaturedItems().forEach(item => {
+        return createExperienceCard(product, categoryKey);
 
-        const card = createExperienceCard(
-            item,
-            "explore"
-        );
-
-        container.appendChild(card);
-
-    });
+    }).join("");
 
 }
 
 
 /* ============================================================
    CATEGORY
-============================================================ */
+   ============================================================ */
 
-function showCategory(categoryKey) {
+function openCategory(categoryKey) {
+
+    if (!categoriesData[categoryKey]) {
+        return;
+    }
+
+    currentCategory = categoryKey;
+
+    hideAllViews();
+
+    document.getElementById("category-view")
+        .classList.remove("hidden-view");
+
+    renderCategory(categoryKey);
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+function renderCategory(categoryKey) {
 
     const category = categoriesData[categoryKey];
 
-    if (!category) return;
+    document.getElementById("category-eyebrow")
+        .textContent = "FiiViu";
 
-    currentCategoryKey = categoryKey;
+    document.getElementById("category-title")
+        .textContent = category.title[currentLang];
 
-    document.getElementById("category-eyebrow").innerText =
-        category.eyebrow[currentLang] || category.eyebrow.de;
+    document.getElementById("category-description")
+        .textContent = category.description[currentLang];
 
-    document.getElementById("category-title").innerText =
-        category.title[currentLang] || category.title.de;
+    const grid = document.getElementById("category-grid");
 
-    document.getElementById("category-subtitle").innerText =
-        category.subtitle[currentLang] || category.subtitle.de;
-
-    const grid = document.getElementById("category-items-grid");
-
-    grid.innerHTML = "";
-
-    category.items.forEach(item => {
-
-        const card = createExperienceCard(
-            item,
-            categoryKey
-        );
-
-        grid.appendChild(card);
-
-    });
-
-    showView("category-view");
+    grid.innerHTML = category.products
+        .map(product => createExperienceCard(product, categoryKey))
+        .join("");
 
 }
 
 
 /* ============================================================
    EXPERIENCE CARD
-============================================================ */
+   ============================================================ */
 
-function createExperienceCard(item, categoryKey) {
+function createExperienceCard(product, categoryKey) {
 
-    const card = document.createElement("article");
+    return `
+        <article class="experience-card bg-white rounded-3xl overflow-hidden shadow-sm">
 
-    card.className =
-        "experience-card bg-white rounded-3xl overflow-hidden border border-black/5 cursor-pointer flex flex-col";
+            <button
+                onclick="showDetail('${categoryKey}', '${product.id}')"
+                class="w-full text-left">
 
-    card.onclick = () => {
-        showDetail(categoryKey, item.id);
-    };
+                <img
+                    src="${product.images[0]}"
+                    alt="${escapeHtml(product.title[currentLang])}"
+                    class="product-image">
 
+                <div class="p-6">
 
-    const title =
-        item.title[currentLang] || item.title.de;
+                    <div class="flex items-start justify-between gap-4">
 
-    const badge =
-        item.badge[currentLang] || item.badge.de;
+                        <h3 class="text-xl font-black leading-tight">
+                            ${escapeHtml(product.title[currentLang])}
+                        </h3>
 
-    const duration =
-        item.duration[currentLang] || item.duration.de;
+                        <span class="text-sm font-black whitespace-nowrap">
+                            ${formatPrice(product.price)}
+                        </span>
 
-    const description =
-        item.desc[currentLang] || item.desc.de;
+                    </div>
 
+                    <p class="text-gray-500 mt-3 line-clamp-3">
+                        ${escapeHtml(product.description[currentLang])}
+                    </p>
 
-    card.innerHTML = `
+                    <div class="mt-5 flex items-center justify-between">
 
-        <div class="h-60 overflow-hidden relative">
+                        <span class="text-sm font-bold">
+                            ${currentLang === "en" ? "Discover" :
+                              currentLang === "ro" ? "Descoperă" :
+                              "Entdecken"}
+                        </span>
 
-            <img
-                src="${item.img}"
-                alt="${escapeHtml(title)}"
-                class="w-full h-full object-cover">
+                        <span class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </span>
 
-            <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent"></div>
-
-            <span class="absolute top-4 left-4 bg-white/90 backdrop-blur text-fii-black text-xs font-black px-3 py-1.5 rounded-full">
-                ${escapeHtml(badge)}
-            </span>
-
-            <div class="absolute bottom-5 left-5 right-5 flex justify-between items-end">
-
-                <div class="text-white">
-
-                    <div class="text-xs text-white/70 flex items-center gap-1 mb-1">
-                        <i class="fa-regular fa-clock"></i>
-                        ${escapeHtml(duration)}
                     </div>
 
                 </div>
 
-                <div class="bg-fii-orange text-white font-black px-3 py-1.5 rounded-xl">
-                    ${formatPrice(item.price)}
-                </div>
+            </button>
 
-            </div>
-
-        </div>
-
-
-        <div class="p-6 flex flex-col flex-grow">
-
-            <h3 class="text-xl font-black leading-tight">
-                ${escapeHtml(title)}
-            </h3>
-
-            <p class="text-gray-500 text-sm leading-relaxed mt-3 line-clamp-2">
-                ${escapeHtml(description)}
-            </p>
-
-            <div class="mt-5 pt-4 border-t border-black/5 text-fii-orange font-bold text-sm flex items-center justify-between">
-
-                <span>
-                    ${translations[currentLang].explore_btn || "Entdecken"}
-                </span>
-
-                <i class="fa-solid fa-arrow-right"></i>
-
-            </div>
-
-        </div>
-
+        </article>
     `;
-
-    return card;
 
 }
 
 
 /* ============================================================
    DETAIL
-============================================================ */
+   ============================================================ */
 
-function showDetail(categoryKey, itemId) {
+function showDetail(categoryKey, productId) {
+
+    renderDetail(categoryKey, productId, true);
+
+}
+
+
+function renderDetail(categoryKey, productId, resetSelection = true) {
 
     const category = categoriesData[categoryKey];
 
-    if (!category) return;
-
-    const item = category.items.find(
-        product => product.id === itemId
+    const product = category.products.find(
+        item => item.id === productId
     );
 
-    if (!item) return;
+    if (!product) {
+        return;
+    }
 
-    currentCategoryKey = categoryKey;
-    currentTourKey = itemId;
-    currentPriceEUR = item.price;
+    currentCategory = categoryKey;
+    currentProduct = product;
 
-    selectedTourTime =
-        item.availableTimes?.[0] || "";
+    if (resetSelection) {
 
-    selectedDetailDate = "";
-
-
-    document.getElementById("detail-eyebrow");
-
-    document.getElementById("detail-badge").innerText =
-        item.badge[currentLang] || item.badge.de;
-
-    document.getElementById("detail-title").innerText =
-        item.title[currentLang] || item.title.de;
-
-    document.getElementById("detail-duration").innerText =
-        item.duration[currentLang] || item.duration.de;
-
-    document.getElementById("detail-price").innerText =
-        formatPrice(item.price);
-
-    document.getElementById("detail-description").innerText =
-        item.desc[currentLang] || item.desc.de;
-
-
-    /* Highlights */
-
-    const highlightContainer =
-        document.getElementById("detail-highlights");
-
-    highlightContainer.innerHTML = "";
-
-    const highlights =
-        item.highlights[currentLang] || item.highlights.de;
-
-    highlights.forEach(highlight => {
-
-        const li = document.createElement("li");
-
-        li.className =
-            "bg-[#F8F6F1] rounded-xl p-3 text-sm flex items-start gap-2";
-
-        li.innerHTML = `
-            <i class="fa-solid fa-circle-check text-fii-orange mt-0.5"></i>
-            <span>${escapeHtml(highlight)}</span>
-        `;
-
-        highlightContainer.appendChild(li);
-
-    });
-
-
-    /* Gallery */
-
-    renderDetailGallery(item);
-
-
-    /* Time selection */
-
-    const wrapper =
-        document.getElementById("available-times-wrapper");
-
-    const noTimeInfo =
-        document.getElementById("no-time-info");
-
-    const slots =
-        document.getElementById("time-slots-container");
-
-    slots.innerHTML = "";
-
-    if (item.availableTimes && item.availableTimes.length) {
-
-        wrapper.classList.remove("hidden");
-        noTimeInfo.classList.add("hidden");
-
-        if (detailDatePickerInstance) {
-            detailDatePickerInstance.destroy();
-        }
-
-        detailDatePickerInstance = flatpickr(
-            "#detail-date-picker",
-            {
-                locale: currentLang === "de" ? "de" : "default",
-                dateFormat: "d.m.Y",
-                minDate: "today",
-                defaultDate: "today",
-
-                onChange: function(selectedDates, dateStr) {
-                    selectedDetailDate = dateStr;
-                }
-            }
-        );
-
-        selectedDetailDate =
-            document.getElementById("detail-date-picker").value;
-
-
-        item.availableTimes.forEach((time, index) => {
-
-            const button =
-                document.createElement("button");
-
-            button.type = "button";
-
-            button.className =
-                `time-slot-btn ${index === 0 ? "active" : ""}`;
-
-            button.innerText = time;
-
-            button.onclick = () => {
-
-                document
-                    .querySelectorAll(".time-slot-btn")
-                    .forEach(btn =>
-                        btn.classList.remove("active")
-                    );
-
-                button.classList.add("active");
-
-                selectedTourTime = time;
-
-            };
-
-            slots.appendChild(button);
-
-        });
-
-    } else {
-
-        wrapper.classList.add("hidden");
-        noTimeInfo.classList.remove("hidden");
-
-        selectedTourTime = "";
+        selectedDate = "";
+        selectedTime = product.times?.[0] || "";
+        selectedGuests = 1;
 
     }
 
+    hideAllViews();
 
-    document.getElementById("detail-guest-count").value = 2;
+    document.getElementById("detail-view")
+        .classList.remove("hidden-view");
 
-    updateDetailPrice();
+    document.getElementById("detail-image").src =
+        product.images[0];
 
-    showView("detail-view");
+    document.getElementById("detail-image").alt =
+        product.title[currentLang];
 
-}
+    document.getElementById("detail-category").textContent =
+        category.title[currentLang];
 
+    document.getElementById("detail-title").textContent =
+        product.title[currentLang];
 
-/* ============================================================
-   GALLERY
-============================================================ */
+    document.getElementById("detail-description").textContent =
+        product.description[currentLang];
 
-function renderDetailGallery(item) {
-
-    const container =
-        document.getElementById("detail-image-container");
-
-    container.innerHTML = "";
-
-    const images =
-        item.images && item.images.length
-            ? item.images
-            : [item.img];
+    document.getElementById("detail-price").textContent =
+        formatPrice(product.price);
 
 
-    if (images.length >= 3) {
+    /* thumbnails */
 
-        container.className =
-            "grid grid-cols-1 md:grid-cols-3 gap-2 p-2 bg-gray-100";
+    const thumbnails =
+        document.getElementById("detail-thumbnails");
 
-        images.slice(0, 3).forEach((image, index) => {
+    thumbnails.innerHTML = product.images.map((image, index) => {
 
-            const div =
-                document.createElement("div");
+        return `
+            <button
+                onclick="changeDetailImage('${image}')"
+                class="overflow-hidden rounded-xl">
 
-            div.className =
-                index === 0
-                    ? "md:col-span-2 h-72 md:h-[480px] rounded-2xl overflow-hidden"
-                    : "h-72 md:h-[237px] rounded-2xl overflow-hidden";
-
-            div.innerHTML = `
                 <img
                     src="${image}"
-                    class="w-full h-full object-cover"
+                    class="h-20 w-full object-cover"
                     alt="">
-            `;
-
-            container.appendChild(div);
-
-        });
-
-    } else {
-
-        container.className =
-            "grid grid-cols-1 gap-2 p-2 bg-gray-100";
-
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "h-72 md:h-[480px] rounded-2xl overflow-hidden";
-
-        div.innerHTML = `
-            <img
-                src="${images[0]}"
-                class="w-full h-full object-cover"
-                alt="">
+            </button>
         `;
 
-        container.appendChild(div);
-
-    }
-
-}
+    }).join("");
 
 
-/* ============================================================
-   BACK
-============================================================ */
+    /* highlights */
 
-function goBackToCategory() {
+    document.getElementById("detail-highlights").innerHTML =
+        product.highlights[currentLang]
+            .map(item => `
+                <li class="flex gap-3">
+                    <span class="text-[#79a800]">
+                        <i class="fa-solid fa-check"></i>
+                    </span>
+                    <span>${escapeHtml(item)}</span>
+                </li>
+            `)
+            .join("");
 
-    if (currentCategoryKey) {
-        showCategory(currentCategoryKey);
+
+    /* includes */
+
+    document.getElementById("detail-includes").innerHTML =
+        product.includes[currentLang]
+            .map(item => `
+                <li class="flex gap-3">
+                    <span class="text-[#79a800]">
+                        <i class="fa-solid fa-check"></i>
+                    </span>
+                    <span>${escapeHtml(item)}</span>
+                </li>
+            `)
+            .join("");
+
+
+    /* times */
+
+    const timeWrapper =
+        document.getElementById("time-wrapper");
+
+    const timeOptions =
+        document.getElementById("time-options");
+
+    if (product.times && product.times.length) {
+
+        timeWrapper.classList.remove("hidden");
+
+        timeOptions.innerHTML =
+            product.times.map(time => {
+
+                const active =
+                    selectedTime === time;
+
+                return `
+                    <button
+                        type="button"
+                        onclick="selectTime('${time}')"
+                        class="py-3 rounded-xl border font-bold ${
+                            active
+                                ? "bg-black text-white border-black"
+                                : "border-gray-200 hover:border-black"
+                        }">
+
+                        ${time}
+
+                    </button>
+                `;
+
+            }).join("");
+
     } else {
-        showView("home-view");
-    }
 
-}
+        timeWrapper.classList.add("hidden");
 
-
-/* ============================================================
-   PRICE
-============================================================ */
-
-function formatPrice(eur) {
-
-    if (currentCurrency === "RON") {
-
-        const ron =
-            Math.round(eur * currencyRates.RON);
-
-        return `${ron} lei`;
+        selectedTime = "";
 
     }
 
-    return `${eur} €`;
 
-}
+    /* date picker */
 
+    if (flatpickrInstance) {
 
-function changeCurrency(currency) {
-
-    currentCurrency = currency;
-
-    if (!document.getElementById("category-view").classList.contains("hidden")) {
-
-        showCategory(currentCategoryKey);
+        flatpickrInstance.destroy();
 
     }
 
-    if (!document.getElementById("detail-view").classList.contains("hidden")) {
+    flatpickrInstance =
+        flatpickr("#booking-date", {
 
-        const category =
-            categoriesData[currentCategoryKey];
+            locale: currentLang === "de"
+                ? "de"
+                : "default",
 
-        const item =
-            category.items.find(
-                product => product.id === currentTourKey
-            );
+            minDate: "today",
 
-        if (item) {
+            dateFormat: "Y-m-d",
 
-            document.getElementById("detail-price").innerText =
-                formatPrice(item.price);
+            defaultDate:
+                selectedDate || null,
 
-            updateDetailPrice();
+            onChange: function(selectedDates, dateStr) {
 
-        }
+                selectedDate = dateStr;
 
-    }
-
-    if (!document.getElementById("checkout-view").classList.contains("hidden")) {
-        updateTotal();
-    }
-
-}
-
-
-/* ============================================================
-   DETAIL PRICE
-============================================================ */
-
-function updateDetailPrice() {
-
-    const guests =
-        parseInt(
-            document.getElementById("detail-guest-count").value
-        ) || 1;
-
-    const total =
-        currentPriceEUR * guests;
-
-    document.getElementById("detail-total-price").innerText =
-        formatPrice(total);
-
-}
-
-
-/* ============================================================
-   LANGUAGE
-============================================================ */
-
-function changeLanguage(lang) {
-
-    currentLang = lang;
-
-    document.documentElement.lang = lang;
-
-    const translation =
-        translations[lang];
-
-    document.querySelectorAll("[data-i18n]")
-        .forEach(element => {
-
-            const key =
-                element.getAttribute("data-i18n");
-
-            if (translation[key]) {
-
-                element.innerHTML =
-                    translation[key];
+                updateTotal();
 
             }
 
         });
 
 
-    if (!document.getElementById("category-view").classList.contains("hidden")) {
+    document.getElementById("guest-count")
+        .textContent = selectedGuests;
 
-        showCategory(currentCategoryKey);
+    updateTotal();
 
-    }
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 
-    else if (!document.getElementById("detail-view").classList.contains("hidden")) {
+}
 
-        showDetail(
-            currentCategoryKey,
-            currentTourKey
+
+function changeDetailImage(image) {
+
+    document.getElementById("detail-image").src =
+        image;
+
+}
+
+
+function selectTime(time) {
+
+    selectedTime = time;
+
+    if (currentCategory && currentProduct) {
+
+        renderDetail(
+            currentCategory,
+            currentProduct.id,
+            false
         );
 
     }
 
-    else if (!document.getElementById("home-view").classList.contains("hidden")) {
+}
 
-        renderFeatured();
 
+function changeGuests(amount) {
+
+    selectedGuests += amount;
+
+    if (selectedGuests < 1) {
+        selectedGuests = 1;
     }
+
+    if (selectedGuests > 20) {
+        selectedGuests = 20;
+    }
+
+    document.getElementById("guest-count")
+        .textContent = selectedGuests;
+
+    updateTotal();
+
+}
+
+
+function updateTotal() {
+
+    if (!currentProduct) {
+        return;
+    }
+
+    const total =
+        currentProduct.price * selectedGuests;
+
+    document.getElementById("booking-total")
+        .textContent = formatPrice(total);
 
 }
 
 
 /* ============================================================
    CHECKOUT
-============================================================ */
+   ============================================================ */
 
 function proceedToCheckout() {
 
-    const category =
-        categoriesData[currentCategoryKey];
+    if (!currentProduct) {
+        return;
+    }
 
-    if (!category) return;
+    if (!selectedDate) {
 
-    const item =
-        category.items.find(
-            product => product.id === currentTourKey
+        alert(
+            currentLang === "en"
+                ? "Please select a date."
+                : currentLang === "ro"
+                    ? "Te rugăm să selectezi o dată."
+                    : "Bitte wähle ein Datum aus."
         );
 
-    if (!item) return;
-
-
-    const guests =
-        parseInt(
-            document.getElementById("detail-guest-count").value
-        ) || 1;
-
-
-    let title =
-        item.title[currentLang] || item.title.de;
-
-
-    let dateText =
-        selectedDetailDate || "";
-
-
-    let selectionText = title;
-
-
-    if (dateText) {
-        selectionText += ` · ${dateText}`;
+        return;
     }
 
-    if (selectedTourTime) {
-        selectionText += ` · ${selectedTourTime}`;
-    }
+    if (!selectedTime) {
 
-
-    document.getElementById("selected-tour-display").value =
-        selectionText;
-
-    document.getElementById("checkout-summary-title").innerText =
-        title;
-
-    document.getElementById("checkout-summary-date").innerText =
-        `${dateText}${selectedTourTime ? " · " + selectedTourTime : ""}`;
-
-
-    document.getElementById("guest-count").value =
-        guests;
-
-
-    document.getElementById("single-price").innerText =
-        formatPrice(item.price);
-
-
-    updateTotal();
-
-
-    if (datePickerInstance) {
-        datePickerInstance.destroy();
-    }
-
-
-    datePickerInstance =
-        flatpickr(
-            "#booking-date",
-            {
-                locale: currentLang === "de" ? "de" : "default",
-                dateFormat: "d.m.Y",
-                minDate: "today",
-                defaultDate: selectedDetailDate || "today"
-            }
+        alert(
+            currentLang === "en"
+                ? "Please select a time."
+                : currentLang === "ro"
+                    ? "Te rugăm să selectezi o oră."
+                    : "Bitte wähle eine Uhrzeit aus."
         );
 
+        return;
+    }
 
-    showView("checkout-view");
+    hideAllViews();
+
+    document.getElementById("checkout-view")
+        .classList.remove("hidden-view");
+
+    updateCheckoutSummary();
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+function updateCheckoutSummary() {
+
+    if (!currentProduct) {
+        return;
+    }
+
+    document.getElementById("checkout-title")
+        .textContent =
+        currentProduct.title[currentLang];
+
+    document.getElementById("checkout-date")
+        .textContent =
+        selectedDate || "—";
+
+    document.getElementById("checkout-time")
+        .textContent =
+        selectedTime || "—";
+
+    document.getElementById("checkout-guests")
+        .textContent =
+        selectedGuests;
+
+    document.getElementById("checkout-total")
+        .textContent =
+        formatPrice(
+            currentProduct.price * selectedGuests
+        );
+
+}
+
+
+function goBackFromDetail() {
+
+    if (currentCategory) {
+        openCategory(currentCategory);
+    } else {
+        goHome();
+    }
+
+}
+
+
+function goBackFromCheckout() {
+
+    if (currentCategory && currentProduct) {
+
+        showDetail(
+            currentCategory,
+            currentProduct.id
+        );
+
+    } else {
+
+        goHome();
+
+    }
 
 }
 
 
 /* ============================================================
-   CHECKOUT TOTAL
-============================================================ */
+   BOOKING / EMAILJS
+   ============================================================ */
 
-function updateTotal() {
-
-    const guests =
-        parseInt(
-            document.getElementById("guest-count").value
-        ) || 1;
-
-    const total =
-        currentPriceEUR * guests;
-
-    document.getElementById("summary-guests").innerText =
-        guests;
-
-    document.getElementById("total-price").innerText =
-        formatPrice(total);
-
-}
-
-
-/* ============================================================
-   BOOKING
-============================================================ */
-
-async function processBooking(event) {
+async function submitBooking(event) {
 
     event.preventDefault();
 
+    if (!currentProduct) {
+        return;
+    }
+
     const submitButton =
-        document.getElementById("submit-btn");
+        document.getElementById("booking-submit-button");
 
-    submitButton.disabled = true;
+    const submitText =
+        document.getElementById("booking-submit-text");
 
-    submitButton.innerHTML = `
-        <i class="fa-solid fa-spinner fa-spin mr-2"></i>
-        Wird verarbeitet...
-    `;
+    const errorBox =
+        document.getElementById("booking-error");
+
+
+    errorBox.classList.add("hidden");
+    errorBox.textContent = "";
 
 
     const name =
-        document.getElementById("customer-name").value.trim();
+        document.getElementById("checkout-name")
+            .value.trim();
 
     const email =
-        document.getElementById("customer-email").value.trim();
+        document.getElementById("checkout-email")
+            .value.trim();
 
-    const date =
-        document.getElementById("booking-date").value;
+    const phone =
+        document.getElementById("checkout-phone")
+            .value.trim();
 
-    const guests =
-        document.getElementById("guest-count").value;
-
-    const notes =
-        document.getElementById("customer-notes").value.trim();
-
-    const tourName =
-        document.getElementById("selected-tour-display").value;
-
-    const totalAmount =
-        currentPriceEUR * parseInt(guests);
+    const message =
+        document.getElementById("checkout-message")
+            .value.trim();
 
 
-    const bookingId =
-        "FV-" +
+    if (!name || !email) {
+
+        errorBox.textContent =
+            "Bitte fülle Name und E-Mail aus.";
+
+        errorBox.classList.remove("hidden");
+
+        return;
+    }
+
+
+    /* generate unique booking ID */
+
+    bookingId =
+        "FIIVIU-" +
+        new Date()
+            .toISOString()
+            .replace(/[-:.TZ]/g, "")
+            .slice(0, 14) +
+        "-" +
         Math.floor(
-            100000 +
-            Math.random() * 900000
+            1000 + Math.random() * 9000
         );
+
+
+    const totalPrice =
+        currentProduct.price * selectedGuests;
+
+
+    /*
+       DIE VARIABLEN HIER MÜSSEN EXAKT
+       ZU DEINEM EMAILJS TEMPLATE PASSEN:
+
+       {{user_name}}
+       {{tour_title}}
+       {{booking_date}}
+       {{guests}}
+       {{total_price}}
+       {{booking_id}}
+    */
+
+    const templateParams = {
+
+        user_name: name,
+
+        tour_title:
+            currentProduct.title[currentLang],
+
+        booking_date:
+            selectedDate +
+            (selectedTime
+                ? ` · ${selectedTime}`
+                : ""),
+
+        guests:
+            selectedGuests,
+
+        total_price:
+            currentCurrency === "RON"
+                ? (totalPrice * exchangeRate).toFixed(0)
+                : totalPrice.toFixed(2),
+
+        booking_id:
+            bookingId
+
+    };
+
+
+    /*
+       Extra-Daten werden NICHT benötigt,
+       können aber von EmailJS ignoriert werden.
+    */
+
+    templateParams.user_email = email;
+    templateParams.user_phone = phone;
+    templateParams.message = message;
+
+
+    submitButton.disabled = true;
+
+    submitButton.classList.add(
+        "opacity-70",
+        "cursor-not-allowed"
+    );
+
+    submitText.innerHTML =
+        `<span class="loader mr-2 align-middle"></span> Wird gesendet...`;
 
 
     try {
 
-        /*
-         * WICHTIG:
-         *
-         * Diese Demo erzeugt lediglich eine PaymentMethod.
-         * Für echte Zahlungen muss auf dem Server ein
-         * PaymentIntent erzeugt und anschließend bestätigt werden.
-         *
-         * Wir markieren daher hier nur die Zahlungsmethode.
-         */
-
-        if (stripe && cardElement) {
-
-            const result =
-                await stripe.createPaymentMethod({
-
-                    type: "card",
-
-                    card: cardElement,
-
-                    billing_details: {
-                        name: name,
-                        email: email
-                    }
-
-                });
+        console.log(
+            "FiiViu: Sende EmailJS Anfrage...",
+            templateParams
+        );
 
 
-            if (result.error) {
-
-                document.getElementById("card-errors").textContent =
-                    result.error.message;
-
-                throw new Error(
-                    result.error.message
-                );
-
-            }
-
-        }
-
-
-        /*
-         * EmailJS
-         */
-
-        const templateParams = {
-
-            to_name: name,
-            to_email: email,
-
-            booking_id: bookingId,
-
-            tour_name: tourName,
-
-            booking_date: date,
-
-            guests: guests,
-
-            total_price: formatPrice(totalAmount),
-
-            notes: notes
-
-        };
-
-
-        /*
-         * Nur ausführen, wenn EmailJS eingerichtet ist.
-         *
-         * Bei einer echten Produktivversion sollte hier
-         * NICHT einfach ein Success-Fallback verwendet werden.
-         */
-
-        try {
-
+        const response =
             await emailjs.send(
-                "default_service",
-                "template_booking",
+                EMAILJS_SERVICE_ID,
+                EMAILJS_TEMPLATE_ID,
                 templateParams
             );
 
-        } catch (emailError) {
 
-            console.warn(
-                "EmailJS Fehler:",
-                emailError
-            );
-
-            /*
-             * Die Buchungsbestätigung wird trotzdem angezeigt,
-             * weil die Zahlung in dieser Frontend-Demo ebenfalls
-             * noch nicht serverseitig finalisiert wird.
-             */
-
-        }
+        console.log(
+            "EmailJS erfolgreich:",
+            response.status,
+            response.text
+        );
 
 
-        document.getElementById("conf-id").innerText =
-            bookingId;
+        /*
+           ERST wenn EmailJS erfolgreich war,
+           zeigen wir die Erfolgsseite.
+        */
 
-        document.getElementById("conf-tour").innerText =
-            tourName;
+        document.getElementById("success-booking-id")
+            .textContent = bookingId;
 
-        document.getElementById("conf-date").innerText =
-            `${date} · ${guests} Personen`;
+        hideAllViews();
 
-        document.getElementById("conf-email").innerText =
-            email;
+        document.getElementById("success-view")
+            .classList.remove("hidden-view");
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
 
 
-        showView("success-view");
+        /*
+           Formular zurücksetzen
+        */
+
+        document.getElementById("checkout-form")
+            .reset();
 
 
     } catch (error) {
 
         console.error(
-            "Booking error:",
+            "EmailJS Fehler:",
             error
         );
 
-        document.getElementById("card-errors").textContent =
-            error.message ||
-            "Es ist ein Fehler aufgetreten.";
+
+        errorBox.textContent =
+            "Die Buchungs-E-Mail konnte nicht gesendet werden. Bitte versuche es erneut. Falls der Fehler bleibt, öffne die Browser-Konsole (F12).";
+
+        errorBox.classList.remove("hidden");
+
 
     } finally {
 
         submitButton.disabled = false;
 
-        submitButton.innerHTML = `
-            <i class="fa-solid fa-lock mr-2"></i>
-            <span data-i18n="pay_book">
-                Sicher buchen
-            </span>
-        `;
+        submitButton.classList.remove(
+            "opacity-70",
+            "cursor-not-allowed"
+        );
+
+        submitText.textContent =
+            "Buchung absenden";
 
     }
 
@@ -3558,54 +2771,109 @@ async function processBooking(event) {
 
 
 /* ============================================================
-   MODALS
-============================================================ */
+   LEGAL
+   ============================================================ */
 
-function openModal(id) {
+function openLegalModal(type) {
 
-    document
-        .getElementById(id)
-        .classList.remove("hidden");
+    const modal =
+        document.getElementById("legal-modal");
+
+    const title =
+        document.getElementById("legal-title");
+
+    const content =
+        document.getElementById("legal-content");
+
+
+    if (type === "impressum") {
+
+        title.textContent = "Impressum";
+
+        content.innerHTML = `
+            <p>
+                <strong>FiiViu</strong>
+            </p>
+
+            <p class="mt-4">
+                Diese Angaben sind Platzhalter und müssen vor
+                dem Live-Betrieb durch die tatsächlichen
+                Unternehmens- und Kontaktdaten ersetzt werden.
+            </p>
+
+            <p class="mt-4">
+                Firmenname: FiiViu S.R.L.<br>
+                Sitz: București, România<br>
+                E-Mail: kontakt@fiiviu.com
+            </p>
+
+            <p class="mt-4 text-sm text-gray-500">
+                Bitte vor Veröffentlichung rechtlich prüfen.
+            </p>
+        `;
+
+    } else {
+
+        title.textContent = "Datenschutz";
+
+        content.innerHTML = `
+            <p>
+                FiiViu verarbeitet personenbezogene Daten nur
+                soweit dies für die Bearbeitung einer Anfrage
+                oder Buchung erforderlich ist.
+            </p>
+
+            <p class="mt-4">
+                Dazu können insbesondere Name, E-Mail-Adresse,
+                Telefonnummer und Buchungsdaten gehören.
+            </p>
+
+            <p class="mt-4">
+                Die endgültige Datenschutzerklärung muss vor
+                dem Live-Betrieb an die tatsächlich verwendeten
+                Dienste, insbesondere EmailJS, Stripe,
+                Hosting und Analytics, angepasst werden.
+            </p>
+        `;
+
+    }
+
+
+    modal.classList.remove("hidden");
 
 }
 
 
-function closeModal(id) {
+function closeLegalModal() {
 
-    document
-        .getElementById(id)
+    document.getElementById("legal-modal")
         .classList.add("hidden");
 
 }
 
 
-document.addEventListener("click", event => {
+document.getElementById("legal-modal")
+    .addEventListener("click", function(event) {
 
-    if (event.target.id === "impressum-modal") {
-        closeModal("impressum-modal");
-    }
+        if (event.target === this) {
+            closeLegalModal();
+        }
 
-    if (event.target.id === "privacy-modal") {
-        closeModal("privacy-modal");
-    }
-
-});
+    });
 
 
 /* ============================================================
-   ESCAPE HTML
-============================================================ */
+   SECURITY / HTML ESCAPING
+   ============================================================ */
 
 function escapeHtml(value) {
 
-    if (!value) return "";
-
     return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 
 }
 
