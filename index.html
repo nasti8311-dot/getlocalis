@@ -441,7 +441,6 @@ const categoriesData = {
         ]
     },
     const tourData = {
-    // Hier wurde das Sightseeing-Objekt eingefügt
     sightseeing: {
         title: { de: "Sightseeing & Touren", en: "Sightseeing & Tours", ro: "Sightseeing & Tururi" },
         subtitle: { de: "Erkunde die Geschichte und Hauptsehenswürdigkeiten der Hauptstadt.", en: "Explore the history and main attractions of the capital.", ro: "Explorează istoria şi atracţiile principale ale capitalei." },
@@ -495,7 +494,10 @@ const categoriesData = {
                 }
             }
         ]
-    }
+    }, // <--- WICHTIG: Dieses Komma trennt "sightseeing" von der nächsten Kategorie!
+
+    // Hier kannst du die nächste Kategorie (z.B. accommodation, wellness etc.) einfügen:
+    // accommodation: { ... }
 };
             {
                 id: 'tour1',
