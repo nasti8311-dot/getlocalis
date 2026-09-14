@@ -10,7 +10,9 @@ export async function onRequestPost({ request, env }) {
 
     if (!Number.isInteger(amount) || amount < 50) {
       return new Response(
-        JSON.stringify({ error: "Invalid amount" }),
+        JSON.stringify({
+          error: "Invalid amount"
+        }),
         {
           status: 400,
           headers: {
