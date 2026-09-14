@@ -440,6 +440,8 @@ const categoriesData = {
             }
         ]
     },
+    const tourData = {
+    // Hier wurde das Sightseeing-Objekt eingefügt
     sightseeing: {
         title: { de: "Sightseeing & Touren", en: "Sightseeing & Tours", ro: "Sightseeing & Tururi" },
         subtitle: { de: "Erkunde die Geschichte und Hauptsehenswürdigkeiten der Hauptstadt.", en: "Explore the history and main attractions of the capital.", ro: "Explorează istoria şi atracţiile principale ale capitalei." },
@@ -467,6 +469,37 @@ const categoriesData = {
                     ro: ["Dată selectabilă + Ora: 10:30 sau 14:00", "Palatul Parlamentului", "Parcul Cișmigiu"]
                 }
             },
+            {
+                id: 'tour1',
+                badge: { de: "Beliebteste Tour", en: "Most Popular", ro: "Cel mai popular" },
+                title: { de: "Historische Altstadt-Führung", en: "Old Town Historic Walking Tour", ro: "Turul Istoric al Centrului Vechi" },
+                price: 29,
+                duration: { de: "3 Stunden", en: "3 hours", ro: "3 ore" },
+                isPackage: false,
+                availableTimes: ["10:00", "15:00"],
+                img: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
+                images: [
+                    "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=80&w=800",
+                    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=400",
+                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=400"
+                ],
+                desc: {
+                    de: "Entdecke den Charme der Bukarester Altstadt mit einem leidenschaftlichen lokalen Guide und erfahre faszinierende Geschichten.",
+                    en: "Discover the charm of Bucharest Old Town with a passionate local guide. Learn fascinating stories.",
+                    ro: "Descoperă farmecul Centrului Vechi din Bucureşti alături de un ghid local pasionat."
+                },
+                highlights: {
+                    de: ["Unirii-Platz & Parlamentspalast", "Stavropoleos-Kloster", "Historische Karawanserei Manuc"],
+                    en: ["Unirii Square & Parliament Palace", "Stavropoleos Monastery", "Manuc's Inn"],
+                    ro: ["Piaţa Unirii şi Palatul Parlamentului", "Biserica Stavropoleos", "Hanul lui Manuc"]
+                }
+            }
+        ]
+    }
+
+    // Falls hier noch weitere Kategorien (wie accommodation, wellness etc.) folgen,
+    // einfach ein Komma nach der geschweiften Klammer } von sightseeing setzen und fortfahren.
+};
             {
                 id: 'tour1',
                 badge: { de: "Beliebteste Tour", en: "Most Popular", ro: "Cel mai popular" },
