@@ -1428,7 +1428,12 @@
                         data-i18n="privacy">
                         Datenschutz
                     </button>
-
+<button
+    onclick="openModal('terms-modal')"
+    class="block hover:text-white"
+    data-i18n="terms">
+    AGB & Buchungsbedingungen
+</button>
                 </div>
 
             </div>
@@ -1511,6 +1516,12 @@
             class="absolute top-5 right-5 text-gray-400 hover:text-gray-800 text-2xl">
             &times;
         </button>
+        <button
+    onclick="openModal('terms-modal')"
+    class="block hover:text-white"
+    data-i18n="terms">
+    AGB & Buchungsbedingungen
+</button>
 
         <h2 class="text-2xl font-black mb-6">
             Datenschutzerklärung
@@ -1549,7 +1560,115 @@
     </div>
 
 </div>
+<!-- ========================================================= -->
+<!-- TERMS & BOOKING CONDITIONS MODAL -->
+<!-- ========================================================= -->
 
+<div id="terms-modal"
+     class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] hidden">
+
+    <div class="bg-white max-w-2xl w-full rounded-3xl p-8 max-h-[80vh] overflow-y-auto relative">
+
+        <button
+            onclick="closeModal('terms-modal')"
+            class="absolute top-5 right-5 text-gray-400 hover:text-gray-800 text-2xl">
+            &times;
+        </button>
+
+        <h2 class="text-2xl font-black mb-6">
+            AGB & Buchungsbedingungen
+        </h2>
+
+        <div class="text-sm text-gray-600 leading-relaxed space-y-5">
+
+            <p>
+                <strong>1. Geltungsbereich</strong><br>
+                Diese Buchungsbedingungen gelten für alle Buchungen
+                von Erlebnissen, Touren und Aktivitäten, die über FiiViu
+                angeboten werden.
+            </p>
+
+            <p>
+                <strong>2. Buchung</strong><br>
+                Mit Abschluss des Buchungsvorgangs gibt der Kunde eine
+                verbindliche Buchungsanfrage für das ausgewählte Erlebnis ab.
+                Die Buchung wird nach erfolgreicher Zahlung bestätigt.
+            </p>
+
+            <p>
+                <strong>3. Preise und Zahlung</strong><br>
+                Die auf der Website angegebenen Preise werden in Euro
+                angezeigt. Die Zahlung erfolgt über den auf der Website
+                angebotenen Zahlungsdienstleister.
+            </p>
+
+            <p>
+                <strong>4. Buchungsbestätigung</strong><br>
+                Nach erfolgreicher Zahlung erhält der Kunde eine
+                Bestätigung per E-Mail. Diese enthält insbesondere das
+                gebuchte Erlebnis, Datum, Uhrzeit, Teilnehmerzahl,
+                Gesamtpreis und Buchungs-ID.
+            </p>
+
+            <p>
+                <strong>5. Stornierung</strong><br>
+                Eine kostenlose Stornierung ist bis 24 Stunden vor Beginn
+                des Erlebnisses möglich.
+            </p>
+
+            <p>
+                Bei einer Stornierung innerhalb von 24 Stunden vor Beginn
+                oder bei Nichterscheinen besteht grundsätzlich kein Anspruch
+                auf Rückerstattung.
+            </p>
+
+            <p>
+                <strong>6. Absage des Erlebnisses</strong><br>
+                Sollte ein Erlebnis durch FiiViu oder den jeweiligen
+                Erlebnisanbieter abgesagt werden müssen, erhält der Kunde
+                eine vollständige Rückerstattung oder – sofern verfügbar –
+                die Möglichkeit einer kostenlosen Umbuchung.
+            </p>
+
+            <p>
+                <strong>7. Verspätung und Nichterscheinen</strong><br>
+                Der Kunde ist dafür verantwortlich, rechtzeitig am
+                angegebenen Treffpunkt zu erscheinen. Bei Verspätung oder
+                Nichterscheinen gelten die für das jeweilige Erlebnis
+                angegebenen Bedingungen.
+            </p>
+
+            <p>
+                <strong>8. Anbieter und Erlebnisbedingungen</strong><br>
+                Die konkreten Leistungen und Teilnahmebedingungen können
+                je nach Erlebnis und Anbieter unterschiedlich sein.
+                Maßgeblich sind die Angaben beim jeweiligen Erlebnis.
+            </p>
+
+            <p>
+                <strong>9. Kontakt</strong><br>
+                Bei Fragen zu einer Buchung kann der Kunde FiiViu über
+                die auf der Website angegebenen Kontaktdaten erreichen.
+            </p>
+
+            <p>
+                <strong>10. Betreiber</strong><br>
+                FiiViu S.R.L.<br>
+                București, România
+            </p>
+
+            <p class="text-xs text-gray-400">
+                Diese Buchungsbedingungen sind ein Entwurf und sollten
+                vor dem Live-Betrieb rechtlich geprüft und an die
+                konkreten Leistungen und gesetzlichen Anforderungen
+                angepasst werden.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
 
 <!-- ========================================================= -->
 <!-- JAVASCRIPT -->
