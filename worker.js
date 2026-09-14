@@ -59,20 +59,22 @@ export default {
         }
 
         if (!env.STRIPE_SECRET_KEY) {
-          return new Response(
-            JSON.stringify({
-              error:
-                "Stripe secret not configured"
-            }),
-            {
-              status: 500,
-              headers: {
-                "Content-Type":
-                  "application/json"
-              }
-            }
-          );
-        }
+  return new Response(
+    JSON.stringify({
+      error: "Stripe secret not configured",
+      debug: {
+        hasSecret: false,
+        envKeys: Object.keys(env)
+      }
+    }),
+    {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
+  );
+}
 
         const params =
           new URLSearchParams();
