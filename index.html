@@ -3614,9 +3614,9 @@ async function createPaymentIntent({
 
 const response =
     await fetch(
-        "/api/create-payment-intent?ref=" +
-        encodeURIComponent(partnerRef),
-        {
+    "https://getlocalis.nasti8311.workers.dev/api/create-payment-intent?ref=" +
+    encodeURIComponent(partnerRef),
+    {
             method: "POST",
 
             headers: {
