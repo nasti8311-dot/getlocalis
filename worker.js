@@ -1,3 +1,4 @@
+```js
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -22,8 +23,14 @@ export default {
 
       try {
         const body = await request.json();
-        console.log("FIIVIU PARTNER REF:", body.partnerRef);
+
+        console.log(
+          "FIIVIU PARTNER REF:",
+          body.partnerRef
+        );
+
         const amount = Number(body.amount);
+
         const currency = String(
           body.currency || "eur"
         ).toLowerCase();
@@ -41,9 +48,12 @@ export default {
         );
 
         const partnerRef = String(
-        body.partnerRef || ""
+          body.partnerRef || ""
         );
 
+        /*
+         * Validate amount
+         */
         if (
           !Number.isInteger(amount) ||
           amount < 50
@@ -55,31 +65,32 @@ export default {
             {
               status: 400,
               headers: {
-                "Content-Type":
-                  "application/json"
+                "Content-Type": "application/json"
               }
             }
           );
         }
 
+        /*
+         * Check Stripe secret
+         */
         if (!env.STRIPE_SECRET_KEY) {
-  return new Response(
-    JSON.stringify({
-      error: "Stripe secret not configured",
-      debug: {
-        hasSecret: false,
-        envKeys: Object.keys(env)
-      }
-    }),
-    {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }
-  );
-}
+          return new Response(
+            JSON.stringify({
+              error: "Stripe secret not configured"
+            }),
+            {
+              status: 500,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
 
+        /*
+         * Stripe PaymentIntent parameters
+         */
         const params =
           new URLSearchParams();
 
@@ -109,15 +120,18 @@ export default {
         );
 
         params.set(
-  "metadata[partner_ref]",
-  partnerRef
-);
+          "metadata[partner_ref]",
+          partnerRef
+        );
 
         params.set(
           "automatic_payment_methods[enabled]",
           "true"
         );
 
+        /*
+         * Create Stripe PaymentIntent
+         */
         const stripeResponse =
           await fetch(
             "https://api.stripe.com/v1/payment_intents",
@@ -139,6 +153,9 @@ export default {
         const data =
           await stripeResponse.json();
 
+        /*
+         * Stripe error
+         */
         if (!stripeResponse.ok) {
           return new Response(
             JSON.stringify({
@@ -158,13 +175,19 @@ export default {
           );
         }
 
+        /*
+         * Successful response
+         */
         return new Response(
           JSON.stringify({
             clientSecret:
               data.client_secret,
 
             paymentIntentId:
-              data.id
+              data.id,
+
+            partnerRef:
+              data.metadata?.partner_ref || ""
           }),
           {
             status: 200,
@@ -202,3 +225,4 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+```
