@@ -4,12 +4,9 @@ export default {
     const url = new URL(request.url);
 
     const corsHeaders = {
-      "Access-Control-Allow-Origin":
-        "https://getlocalis.pages.dev",
-      "Access-Control-Allow-Methods":
-        "POST, OPTIONS",
-      "Access-Control-Allow-Headers":
-        "Content-Type"
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
     };
 
     if (request.method === "OPTIONS") {
@@ -19,10 +16,7 @@ export default {
       });
     }
 
-    if (
-      url.pathname ===
-      "/api/create-payment-intent"
-    ) {
+    if (url.pathname === "/api/create-payment-intent") {
 
       if (request.method !== "POST") {
         return new Response(
@@ -32,8 +26,7 @@ export default {
           {
             status: 405,
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
               ...corsHeaders
             }
           }
@@ -42,36 +35,41 @@ export default {
 
       try {
 
-        const body =
-          await request.json();
+        const body = await request.json();
 
-        const amount =
-          Number(body.amount);
+        const amount = Number(body.amount);
 
-        const currency =
-          String(
-            body.currency || "eur"
-          ).toLowerCase();
+        const currency = String(
+          body.currency || "eur"
+        ).toLowerCase();
 
-        const bookingId =
-          String(
-            body.bookingId || ""
-          );
+        const bookingId = String(
+          body.bookingId || ""
+        );
 
-        const tourName =
-          String(
-            body.tourName || ""
-          );
+        const tourName = String(
+          body.tourName || ""
+        );
 
-        const guests =
-          Number(
-            body.guests || 1
-          );
+        const guests = Number(
+          body.guests || 1
+        );
 
-        const partnerRef =
+        /*
+         * Partner-Code:
+         * 1. partnerRef aus dem POST-Body
+         * 2. ref aus der API-URL
+         */
+        const bodyPartnerRef =
           typeof body.partnerRef === "string"
             ? body.partnerRef.trim()
             : "";
+
+        const urlPartnerRef =
+          url.searchParams.get("ref")?.trim() || "";
+
+        const partnerRef =
+          bodyPartnerRef || urlPartnerRef;
 
         if (
           !Number.isInteger(amount) ||
@@ -84,8 +82,7 @@ export default {
             {
               status: 400,
               headers: {
-                "Content-Type":
-                  "application/json",
+                "Content-Type": "application/json",
                 ...corsHeaders
               }
             }
@@ -95,22 +92,19 @@ export default {
         if (!env.STRIPE_SECRET_KEY) {
           return new Response(
             JSON.stringify({
-              error:
-                "Stripe secret not configured"
+              error: "Stripe secret not configured"
             }),
             {
               status: 500,
               headers: {
-                "Content-Type":
-                  "application/json",
+                "Content-Type": "application/json",
                 ...corsHeaders
               }
             }
           );
         }
 
-        const params =
-          new URLSearchParams();
+        const params = new URLSearchParams();
 
         params.set(
           "amount",
@@ -137,6 +131,10 @@ export default {
           String(guests)
         );
 
+        /*
+         * Partner immer an Stripe senden,
+         * sobald einer vorhanden ist.
+         */
         if (partnerRef) {
           params.set(
             "metadata[partner_ref]",
@@ -149,24 +147,20 @@ export default {
           "true"
         );
 
-        const stripeResponse =
-          await fetch(
-            "https://api.stripe.com/v1/payment_intents",
-            {
-              method: "POST",
+        const stripeResponse = await fetch(
+          "https://api.stripe.com/v1/payment_intents",
+          {
+            method: "POST",
+            headers: {
+              "Authorization":
+                "Bearer " + env.STRIPE_SECRET_KEY,
 
-              headers: {
-                "Authorization":
-                  "Bearer " +
-                  env.STRIPE_SECRET_KEY,
-
-                "Content-Type":
-                  "application/x-www-form-urlencoded"
-              },
-
-              body: params
-            }
-          );
+              "Content-Type":
+                "application/x-www-form-urlencoded"
+            },
+            body: params
+          }
+        );
 
         const data =
           await stripeResponse.json();
@@ -179,12 +173,9 @@ export default {
                 "Stripe error"
             }),
             {
-              status:
-                stripeResponse.status,
-
+              status: stripeResponse.status,
               headers: {
-                "Content-Type":
-                  "application/json",
+                "Content-Type": "application/json",
                 ...corsHeaders
               }
             }
@@ -200,15 +191,12 @@ export default {
               data.id,
 
             partnerRef:
-              data.metadata?.partner_ref ||
-              ""
+              data.metadata?.partner_ref || ""
           }),
           {
             status: 200,
-
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
               ...corsHeaders
             }
           }
@@ -224,10 +212,8 @@ export default {
           }),
           {
             status: 500,
-
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
               ...corsHeaders
             }
           }
