@@ -41,8 +41,8 @@ export default {
         );
 
         const partnerRef = String(
-  body.partnerRef || ""
-);
+        body.partnerRef || ""
+        );
 
         if (
           !Number.isInteger(amount) ||
