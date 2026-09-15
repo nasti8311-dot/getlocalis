@@ -6,7 +6,7 @@ export default {
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
     };
 
     if (request.method === "OPTIONS") {
@@ -136,8 +136,6 @@ export default {
 
         let paidCents = 0;
 
-        // D1 is optional until the database binding is created in Cloudflare.
-        // Once DB is connected, recorded payouts are subtracted automatically.
         if (env.DB) {
           const payoutResult = await env.DB.prepare(
             "SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'"
@@ -160,6 +158,69 @@ export default {
           paidCommission: paidCents / 100,
           currency: "eur"
         }, 200, corsHeaders);
+
+      } catch (error) {
+        return json({ error: error?.message || "Server error" }, 500, corsHeaders);
+      }
+    }
+
+    if (url.pathname === "/api/admin/partner-payout") {
+
+      if (request.method !== "POST") {
+        return json({ error: "Method Not Allowed" }, 405, corsHeaders);
+      }
+
+      if (!env.ADMIN_PAYOUT_KEY) {
+        return json({ error: "Payout admin key not configured" }, 500, corsHeaders);
+      }
+
+      const authorization = request.headers.get("Authorization") || "";
+      const expected = "Bearer " + env.ADMIN_PAYOUT_KEY;
+
+      if (authorization !== expected) {
+        return json({ error: "Unauthorized" }, 401, corsHeaders);
+      }
+
+      if (!env.DB) {
+        return json({ error: "D1 database not configured" }, 500, corsHeaders);
+      }
+
+      try {
+        const body = await request.json();
+        const partnerRef = String(body.partnerRef || "").trim();
+        const amountCents = Number(body.amountCents);
+        const payoutDate = String(body.payoutDate || "").trim();
+        const reference = String(body.reference || "").trim();
+
+        if (!partnerRef) {
+          return json({ error: "Partner-Code fehlt" }, 400, corsHeaders);
+        }
+
+        if (!Number.isInteger(amountCents) || amountCents <= 0) {
+          return json({ error: "Invalid payout amount" }, 400, corsHeaders);
+        }
+
+        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payoutDate)) {
+          return json({ error: "Invalid payout date" }, 400, corsHeaders);
+        }
+
+        const result = await env.DB.prepare(
+          "INSERT INTO partner_payouts (partner_ref, amount_cents, payout_date, status, reference) VALUES (?, ?, ?, 'paid', ?)"
+        ).bind(
+          partnerRef,
+          amountCents,
+          payoutDate,
+          reference || null
+        ).run();
+
+        return json({
+          success: true,
+          payoutId: result.meta?.last_row_id || null,
+          partnerRef,
+          amount: amountCents / 100,
+          payoutDate,
+          reference: reference || null
+        }, 201, corsHeaders);
 
       } catch (error) {
         return json({ error: error?.message || "Server error" }, 500, corsHeaders);
