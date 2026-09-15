@@ -22,7 +22,7 @@ export default {
 
       try {
         const body = await request.json();
-
+        console.log("FIIVIU PARTNER REF:", body.partnerRef);
         const amount = Number(body.amount);
         const currency = String(
           body.currency || "eur"
