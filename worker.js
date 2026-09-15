@@ -1,7 +1,7 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
+    const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, PATCH, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
     if (url.pathname === "/api/create-payment-intent") {
@@ -9,9 +9,14 @@ export default {
       try {
         const body=await request.json(); const amount=Number(body.amount); const currency=String(body.currency||"eur").toLowerCase();
         const bookingId=String(body.bookingId||""); const tourName=String(body.tourName||""); const guests=Number(body.guests||1);
-        const bodyPartnerRef=typeof body.partnerRef==="string"?body.partnerRef.trim():""; const urlPartnerRef=url.searchParams.get("ref")?.trim()||""; const partnerRef=bodyPartnerRef||urlPartnerRef;
+        const bodyPartnerRef=typeof body.partnerRef==="string"?body.partnerRef.trim():""; const urlPartnerRef=url.searchParams.get("ref")?.trim()||""; let partnerRef=bodyPartnerRef||urlPartnerRef;
         if(!Number.isInteger(amount)||amount<50)return json({error:"Invalid amount"},400,corsHeaders);
         if(!env.STRIPE_SECRET_KEY)return json({error:"Stripe secret not configured"},500,corsHeaders);
+        if(partnerRef && env.DB){
+          await ensurePartnersTable(env);
+          const partner=await env.DB.prepare("SELECT active FROM partners WHERE partner_ref = ? LIMIT 1").bind(partnerRef).first();
+          if(partner && Number(partner.active)!==1) partnerRef="";
+        }
         const params=new URLSearchParams(); params.set("amount",String(amount)); params.set("currency",currency); params.set("metadata[booking_id]",bookingId); params.set("metadata[tour_name]",tourName); params.set("metadata[guests]",String(guests));
         if(partnerRef)params.set("metadata[partner_ref]",partnerRef); params.set("automatic_payment_methods[enabled]","true");
         const stripeResponse=await fetch("https://api.stripe.com/v1/payment_intents",{method:"POST",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},body:params});
@@ -32,7 +37,7 @@ export default {
       try{
         await ensurePartnersTable(env);
         if(request.method==="GET"){
-          const result=await env.DB.prepare("SELECT id,name,type,partner_ref,contact_name,contact_email,created_at FROM partners ORDER BY created_at DESC, id DESC").all();
+          const result=await env.DB.prepare("SELECT id,name,type,partner_ref,contact_name,contact_email,active,created_at FROM partners ORDER BY created_at DESC, id DESC").all();
           return json({partners:result.results||[]},200,corsHeaders);
         }
         if(request.method==="POST"){
@@ -40,8 +45,18 @@ export default {
           let partnerRef=String(body.partnerRef||"").trim().toUpperCase(); if(!name)return json({error:"Partner-Name fehlt"},400,corsHeaders); if(!partnerRef)partnerRef=await generatePartnerRef(env,name);
           if(!/^[A-Z0-9_-]{3,32}$/.test(partnerRef))return json({error:"Ungültiger Partner-Code"},400,corsHeaders);
           const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(partnerRef).first(); if(existing)return json({error:"Dieser Partner-Code existiert bereits."},409,corsHeaders);
-          const result=await env.DB.prepare("INSERT INTO partners (name,type,partner_ref,contact_name,contact_email) VALUES (?,?,?,?,?)").bind(name,type||"Hotel",partnerRef,contactName||null,contactEmail||null).run();
-          return json({success:true,partner:{id:result.meta?.last_row_id||null,name,type:type||"Hotel",partnerRef,contactName,contactEmail,link:buildPartnerLink(partnerRef),qrUrl:buildQrUrl(partnerRef)}},201,corsHeaders);
+          const result=await env.DB.prepare("INSERT INTO partners (name,type,partner_ref,contact_name,contact_email,active) VALUES (?,?,?,?,?,1)").bind(name,type||"Hotel",partnerRef,contactName||null,contactEmail||null).run();
+          return json({success:true,partner:{id:result.meta?.last_row_id||null,name,type:type||"Hotel",partnerRef,contactName,contactEmail,active:1,link:buildPartnerLink(partnerRef),qrUrl:buildQrUrl(partnerRef)}},201,corsHeaders);
+        }
+        if(request.method==="PATCH"){
+          const body=await request.json(); const id=Number(body.id); if(!Number.isInteger(id)||id<=0)return json({error:"Ungültige Partner-ID"},400,corsHeaders);
+          const current=await env.DB.prepare("SELECT * FROM partners WHERE id = ? LIMIT 1").bind(id).first(); if(!current)return json({error:"Partner nicht gefunden"},404,corsHeaders);
+          const name=String(body.name ?? current.name).trim(); const type=String(body.type ?? current.type).trim(); const contactName=String(body.contactName ?? current.contact_name ?? "").trim(); const contactEmail=String(body.contactEmail ?? current.contact_email ?? "").trim();
+          if(!name)return json({error:"Partner-Name fehlt"},400,corsHeaders);
+          const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
+          await env.DB.prepare("UPDATE partners SET name=?,type=?,contact_name=?,contact_email=?,active=? WHERE id=?").bind(name,type||"Hotel",contactName||null,contactEmail||null,active?1:0,id).run();
+          const updated=await env.DB.prepare("SELECT id,name,type,partner_ref,contact_name,contact_email,active,created_at FROM partners WHERE id = ? LIMIT 1").bind(id).first();
+          return json({success:true,partner:updated},200,corsHeaders);
         }
         return json({error:"Method Not Allowed"},405,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
@@ -65,7 +80,10 @@ export default {
 };
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
-async function ensurePartnersTable(env){await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'Hotel',partner_ref TEXT NOT NULL UNIQUE,contact_name TEXT,contact_email TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run()}
+async function ensurePartnersTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'Hotel',partner_ref TEXT NOT NULL UNIQUE,contact_name TEXT,contact_email TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  try{await env.DB.prepare("ALTER TABLE partners ADD COLUMN active INTEGER NOT NULL DEFAULT 1").run()}catch(e){}
+}
 async function generatePartnerRef(env,name){const base=name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,8)||"PARTNER";for(let i=1;i<1000;i++){const candidate=base.slice(0,12)+String(i).padStart(3,"0");const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(candidate).first();if(!existing)return candidate}throw new Error("Kein freier Partner-Code verfügbar.")}
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
 function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data="+encodeURIComponent(buildPartnerLink(partnerRef))}
