@@ -134,13 +134,30 @@ export default {
 
         const commissionCents = Math.round(revenueCents * 0.03);
 
+        let paidCents = 0;
+
+        // D1 is optional until the database binding is created in Cloudflare.
+        // Once DB is connected, recorded payouts are subtracted automatically.
+        if (env.DB) {
+          const payoutResult = await env.DB.prepare(
+            "SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'"
+          ).bind(partnerRef).first();
+
+          paidCents = Number(payoutResult?.paid_cents || 0);
+        }
+
+        const openCommissionCents = Math.max(
+          commissionCents - paidCents,
+          0
+        );
+
         return json({
           partnerRef,
           bookings: successful.length,
           revenue: revenueCents / 100,
           commission: commissionCents / 100,
-          openCommission: commissionCents / 100,
-          paidCommission: 0,
+          openCommission: openCommissionCents / 100,
+          paidCommission: paidCents / 100,
           currency: "eur"
         }, 200, corsHeaders);
 
