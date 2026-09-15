@@ -152,6 +152,14 @@ export default {
         const stats = await getPartnerStats(env, partnerRef);
         const openCommissionCents = Math.round(stats.openCommission * 100);
 
+        if (openCommissionCents < 0) {
+          return json({
+            error: "Für diesen Partner besteht aktuell ein negativer Provisionssaldo durch Rückerstattungen nach früheren Auszahlungen.",
+            openCommission: stats.openCommission,
+            paidCommission: stats.paidCommission
+          }, 400, corsHeaders);
+        }
+
         if (amountCents > openCommissionCents) {
           return json({
             error: "Auszahlung ist höher als die offene Provision.",
@@ -241,10 +249,10 @@ async function getPartnerStats(env, partnerRef) {
     paidCents = Number(payoutResult?.paid_cents || 0);
   }
 
-  const openCommissionCents = Math.max(
-    commissionCents - paidCents,
-    0
-  );
+  // Wichtig: Nicht auf 0 begrenzen.
+  // Wenn nach einer bereits erfolgten Auszahlung eine Rückerstattung erfolgt,
+  // kann der Partner vorübergehend einen negativen Saldo haben.
+  const openCommissionCents = commissionCents - paidCents;
 
   return {
     partnerRef,
