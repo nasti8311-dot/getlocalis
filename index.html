@@ -3610,16 +3610,10 @@ tourName,
 guests
 }) {
 
-```
+
 console.log(
-    "FIIVIU PAYMENT DATA:",
-    {
-        amount: Math.round(amountEUR * 100),
-        bookingId: bookingId,
-        tourName: tourName,
-        guests: Number(guests),
-        partnerRef: currentPartnerRef
-    }
+    "FIIVIU PARTNER REF:",
+    currentPartnerRef
 );
 
 const response =
@@ -3657,31 +3651,10 @@ if (!response.ok || !data.clientSecret) {
     );
 }
 
-console.log(
-    "FIIVIU WORKER RESPONSE:",
-    data
-);
-
-if (data.partnerRef) {
-
-    alert(
-        "Partner-Tracking erfolgreich!\n\n" +
-        "Partner-ID: " +
-        data.partnerRef
-    );
-
-} else {
-
-    alert(
-        "Partner-Tracking FEHLER!\n\n" +
-        "Der Worker hat keine Partner-ID zurückgegeben."
-    );
-
-}
-
 return data;
 
 }
+
 
 
 
