@@ -3603,43 +3603,42 @@ function updateTotal() {
 ============================================================ */
 
 
+```js
 async function createPaymentIntent({
     amountEUR,
     bookingId,
     tourName,
     guests
 }) {
-```js
-console.log(
-    "FIIVIU PAYMENT DATA:",
-    {
-        amount: Math.round(amountEUR * 100),
-        bookingId: bookingId,
-        tourName: tourName,
-        guests: Number(guests),
-        partnerRef: currentPartnerRef
-    }
-);
 
-const response =
-    await fetch("/api/create-payment-intent", {
-        method: "POST",
-
-        headers: {
-            "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
+    console.log(
+        "FIIVIU PAYMENT DATA:",
+        {
             amount: Math.round(amountEUR * 100),
-            currency: "eur",
             bookingId: bookingId,
             tourName: tourName,
             guests: Number(guests),
             partnerRef: currentPartnerRef
-        })
-    });
-```
+        }
+    );
 
+    const response =
+        await fetch("/api/create-payment-intent", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                amount: Math.round(amountEUR * 100),
+                currency: "eur",
+                bookingId: bookingId,
+                tourName: tourName,
+                guests: Number(guests),
+                partnerRef: currentPartnerRef
+            })
+        });
 
 
     let data = {};
@@ -3663,9 +3662,35 @@ const response =
     }
 
 
+    console.log(
+        "FIIVIU WORKER RESPONSE:",
+        data
+    );
+
+
+    if (data.partnerRef) {
+
+        alert(
+            "Partner-Tracking erfolgreich!\n\n" +
+            "Partner-ID: " +
+            data.partnerRef
+        );
+
+    } else {
+
+        alert(
+            "Partner-Tracking FEHLER!\n\n" +
+            "Der Worker hat keine Partner-ID zurückgegeben."
+        );
+
+    }
+
+
     return data;
 
 }
+```
+
 
 
 /* ============================================================
