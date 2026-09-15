@@ -3604,55 +3604,58 @@ function updateTotal() {
 
 
 async function createPaymentIntent({
-amountEUR,
-bookingId,
-tourName,
-guests
+    amountEUR,
+    bookingId,
+    tourName,
+    guests
 }) {
 
+    const partnerRef =
+        currentPartnerRef ||
+        localStorage.getItem("fiiviu_partner_ref") ||
+        "";
 
-console.log(
-    "FIIVIU PARTNER REF:",
-    currentPartnerRef
-);
-
-const response =
-    await fetch("/api/create-payment-intent", {
-        method: "POST",
-
-        headers: {
-            "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-            amount: Math.round(amountEUR * 100),
-            currency: "eur",
-            bookingId: bookingId,
-            tourName: tourName,
-            guests: Number(guests),
-            partnerRef: currentPartnerRef
-        })
-    });
-
-let data = {};
-
-try {
-    data = await response.json();
-} catch (error) {
-    throw new Error(
-        "Die Antwort vom Zahlungsserver war ungültig."
+    console.log(
+        "FIIVIU PARTNER REF:",
+        partnerRef
     );
-}
 
-if (!response.ok || !data.clientSecret) {
-    throw new Error(
-        data.error ||
-        "PaymentIntent konnte nicht erstellt werden."
-    );
-}
+    const response =
+        await fetch("/api/create-payment-intent", {
+            method: "POST",
 
-return data;
+            headers: {
+                "Content-Type": "application/json"
+            },
 
+            body: JSON.stringify({
+                amount: Math.round(amountEUR * 100),
+                currency: "eur",
+                bookingId: bookingId,
+                tourName: tourName,
+                guests: Number(guests),
+                partnerRef: partnerRef
+            })
+        });
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        throw new Error(
+            "Die Antwort vom Zahlungsserver war ungültig."
+        );
+    }
+
+    if (!response.ok || !data.clientSecret) {
+        throw new Error(
+            data.error ||
+            "PaymentIntent konnte nicht erstellt werden."
+        );
+    }
+
+    return data;
 }
 
 
