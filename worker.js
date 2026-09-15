@@ -1,11 +1,7 @@
-```js
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    /*
-     * Stripe PaymentIntent API
-     */
     if (url.pathname === "/api/create-payment-intent") {
       if (request.method !== "POST") {
         return new Response(
@@ -23,11 +19,6 @@ export default {
 
       try {
         const body = await request.json();
-
-        console.log(
-          "FIIVIU PARTNER REF:",
-          body.partnerRef
-        );
 
         const amount = Number(body.amount);
 
@@ -51,9 +42,6 @@ export default {
           body.partnerRef || ""
         );
 
-        /*
-         * Validate amount
-         */
         if (
           !Number.isInteger(amount) ||
           amount < 50
@@ -71,9 +59,6 @@ export default {
           );
         }
 
-        /*
-         * Check Stripe secret
-         */
         if (!env.STRIPE_SECRET_KEY) {
           return new Response(
             JSON.stringify({
@@ -88,11 +73,7 @@ export default {
           );
         }
 
-        /*
-         * Stripe PaymentIntent parameters
-         */
-        const params =
-          new URLSearchParams();
+        const params = new URLSearchParams();
 
         params.set(
           "amount",
@@ -129,31 +110,23 @@ export default {
           "true"
         );
 
-        /*
-         * Create Stripe PaymentIntent
-         */
-        const stripeResponse =
-          await fetch(
-            "https://api.stripe.com/v1/payment_intents",
-            {
-              method: "POST",
-
-              headers: {
-  "Authorization": "Bearer " + env.STRIPE_SECRET_KEY,
-  "Content-Type":
-    "application/x-www-form-urlencoded"
-},
-
-              body: params
-            }
-          );
+        const stripeResponse = await fetch(
+          "https://api.stripe.com/v1/payment_intents",
+          {
+            method: "POST",
+            headers: {
+              "Authorization":
+                "Bearer " + env.STRIPE_SECRET_KEY,
+              "Content-Type":
+                "application/x-www-form-urlencoded"
+            },
+            body: params
+          }
+        );
 
         const data =
           await stripeResponse.json();
 
-        /*
-         * Stripe error
-         */
         if (!stripeResponse.ok) {
           return new Response(
             JSON.stringify({
@@ -162,9 +135,7 @@ export default {
                 "Stripe error"
             }),
             {
-              status:
-                stripeResponse.status,
-
+              status: stripeResponse.status,
               headers: {
                 "Content-Type":
                   "application/json"
@@ -173,23 +144,17 @@ export default {
           );
         }
 
-        /*
-         * Successful response
-         */
         return new Response(
           JSON.stringify({
             clientSecret:
               data.client_secret,
-
             paymentIntentId:
               data.id,
-
             partnerRef:
               data.metadata?.partner_ref || ""
           }),
           {
             status: 200,
-
             headers: {
               "Content-Type":
                 "application/json"
@@ -206,7 +171,6 @@ export default {
           }),
           {
             status: 500,
-
             headers: {
               "Content-Type":
                 "application/json"
@@ -216,11 +180,6 @@ export default {
       }
     }
 
-    /*
-     * Everything else:
-     * serve the existing website.
-     */
     return env.ASSETS.fetch(request);
   }
 };
-```
