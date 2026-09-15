@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FiiViu Partnerbereich</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#F8F6F1; color:#151515; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <main class="max-w-5xl mx-auto px-5 py-8 md:py-12">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <div class="text-sm font-semibold tracking-widest uppercase text-orange-600">FiiViu</div>
+        <h1 class="text-3xl md:text-4xl font-bold mt-1">Partnerbereich</h1>
+        <p class="text-gray-600 mt-2">Deine Buchungen und deine 3-%-Provision auf einen Blick.</p>
+      </div>
+      <a href="/" class="text-sm font-semibold hover:underline">← FiiViu</a>
+    </div>
+
+    <div id="message" class="rounded-2xl bg-white p-6 shadow-sm mb-6">Lade Partnerdaten …</div>
+
+    <section id="dashboard" class="hidden">
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <div class="text-sm text-gray-500">Partner-Code</div>
+        <div id="partner-ref" class="text-2xl font-bold mt-1"></div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+          <div class="text-sm text-gray-500">Buchungen</div>
+          <div id="bookings" class="text-3xl font-bold mt-2">0</div>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+          <div class="text-sm text-gray-500">Vermittelter Umsatz</div>
+          <div id="revenue" class="text-3xl font-bold mt-2">0,00 €</div>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm">
+          <div class="text-sm text-gray-500">Deine Provision (3 %)</div>
+          <div id="commission" class="text-3xl font-bold mt-2">0,00 €</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm mt-6">
+        <h2 class="font-bold text-lg">Dein Anteil</h2>
+        <p class="text-gray-600 mt-2">Die 3 % Partnerprovision sind Teil der FiiViu-Provision. Der Kunde zahlt keinen Aufpreis.</p>
+        <div class="mt-4 grid sm:grid-cols-3 gap-3 text-sm">
+          <div class="rounded-xl bg-gray-50 p-4"><b>85 %</b><br>Anbieter</div>
+          <div class="rounded-xl bg-gray-50 p-4"><b>3 %</b><br>Partner</div>
+          <div class="rounded-xl bg-gray-50 p-4"><b>12 %</b><br>FiiViu</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const ref = new URLSearchParams(window.location.search).get('ref')?.trim() || '';
+    const message = document.getElementById('message');
+    const dashboard = document.getElementById('dashboard');
+
+    function euro(value) {
+      return new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(Number(value) || 0);
+    }
+
+    async function loadPartner() {
+      if (!ref) {
+        message.textContent = 'Kein Partner-Code angegeben. Öffne den Partnerbereich mit ?ref=DEINCODE.';
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          'https://getlocalis.nasti8311.workers.dev/api/partner-stats?ref=' + encodeURIComponent(ref)
+        );
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || 'Partnerdaten konnten nicht geladen werden.');
+
+        document.getElementById('partner-ref').textContent = data.partnerRef;
+        document.getElementById('bookings').textContent = data.bookings;
+        document.getElementById('revenue').textContent = euro(data.revenue);
+        document.getElementById('commission').textContent = euro(data.commission);
+
+        message.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+      } catch (error) {
+        message.textContent = error.message || 'Partnerdaten konnten nicht geladen werden.';
+      }
+    }
+
+    loadPartner();
+  </script>
+</body>
+</html>
