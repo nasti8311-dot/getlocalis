@@ -1812,33 +1812,26 @@ let currentPartnerRef = '';
 
 function capturePartnerRef() {
 
-    const params = new URLSearchParams(
-        window.location.search
-    );
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
 
-    const ref = params.get('ref');
+    const ref =
+        params.get("ref")?.trim() || "";
 
     if (ref) {
-
-        currentPartnerRef = ref.trim();
-
-        if (currentPartnerRef) {
-            localStorage.setItem(
-                'fiiviu_partner_ref',
-                currentPartnerRef
-            );
-        }
-
-    } else {
-
-        currentPartnerRef =
-            localStorage.getItem(
-                'fiiviu_partner_ref'
-            ) || '';
-
+        localStorage.setItem(
+            "fiiviu_partner_ref",
+            ref
+        );
     }
-}
 
+    currentPartnerRef =
+        localStorage.getItem(
+            "fiiviu_partner_ref"
+        ) || "";
+}
 
 /* ============================================================
    EMAILJS
@@ -3602,7 +3595,7 @@ function updateTotal() {
    STRIPE PAYMENT INTENT
 ============================================================ */
 
-async function createPaymentIntent({
+async function function capturePartnerRef()({
     amountEUR,
     bookingId,
     tourName,
@@ -3610,9 +3603,14 @@ async function createPaymentIntent({
 }) {
 
     const partnerRef =
+    currentPartnerRef ||
+    localStorage.getItem(
+        "fiiviu_partner_ref"
+    ) ||
     new URLSearchParams(
         window.location.search
-    ).get("ref")?.trim() || "";
+    ).get("ref")?.trim() ||
+    "";
 
 const response =
     await fetch(
