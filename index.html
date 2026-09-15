@@ -3620,8 +3620,11 @@ async function createPaymentIntent({
         partnerRef
     );
 
-    const response =
-        await fetch("/api/create-payment-intent", {
+   const response =
+    await fetch(
+        "/api/create-payment-intent?ref=" +
+        encodeURIComponent(partnerRef),
+        {
             method: "POST",
 
             headers: {
