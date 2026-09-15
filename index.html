@@ -3602,6 +3602,7 @@ function updateTotal() {
    STRIPE PAYMENT INTENT
 ============================================================ */
 
+```js
 async function createPaymentIntent({
     amountEUR,
     bookingId,
@@ -3622,7 +3623,8 @@ async function createPaymentIntent({
                 currency: "eur",
                 bookingId: bookingId,
                 tourName: tourName,
-                guests: Number(guests)
+                guests: Number(guests),
+                partnerRef: currentPartnerRef
             })
         });
 
@@ -3651,6 +3653,7 @@ async function createPaymentIntent({
     return data;
 
 }
+```
 
 
 /* ============================================================
