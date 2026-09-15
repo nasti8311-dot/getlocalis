@@ -206,31 +206,28 @@ async function getPartnerStats(env, partnerRef) {
     throw new Error("Stripe secret not configured");
   }
 
-  const query = "metadata['partner_ref']:'" + partnerRef.replace(/'/g, "\\'") + "'";
-  const stripeUrl =
-    "https://api.stripe.com/v1/payment_intents/search?query=" + encodeURIComponent(query) + "&limit=100";
-
-  const stripeResponse = await fetch(stripeUrl, {
-    method: "GET",
-    headers: {
-      "Authorization": "Bearer " + env.STRIPE_SECRET_KEY
-    }
-  });
-
-  const data = await stripeResponse.json();
-
-  if (!stripeResponse.ok) {
-    throw new Error(data?.error?.message || "Stripe error");
-  }
-
-  const successful = (data.data || []).filter(
+  const payments = await searchPartnerPayments(env, partnerRef);
+  const successful = payments.filter(
     payment => payment.status === "succeeded"
   );
 
-  const revenueCents = successful.reduce(
-    (sum, payment) => sum + Number(payment.amount_received || payment.amount || 0),
-    0
-  );
+  let revenueCents = 0;
+
+  for (const payment of successful) {
+    const receivedCents = Number(
+      payment.amount_received || payment.amount || 0
+    );
+
+    const refundedCents = await getSuccessfulRefundAmount(
+      env,
+      payment.id
+    );
+
+    revenueCents += Math.max(
+      receivedCents - refundedCents,
+      0
+    );
+  }
 
   const commissionCents = Math.round(revenueCents * 0.03);
 
@@ -258,6 +255,86 @@ async function getPartnerStats(env, partnerRef) {
     paidCommission: paidCents / 100,
     currency: "eur"
   };
+}
+
+async function searchPartnerPayments(env, partnerRef) {
+  const allPayments = [];
+  let page = "";
+
+  for (let i = 0; i < 100; i++) {
+    const query = "metadata['partner_ref']:'" + partnerRef.replace(/'/g, "\\'") + "'";
+    const stripeUrl =
+      "https://api.stripe.com/v1/payment_intents/search?query=" +
+      encodeURIComponent(query) +
+      "&limit=100" +
+      (page ? "&page=" + encodeURIComponent(page) : "");
+
+    const stripeResponse = await fetch(stripeUrl, {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + env.STRIPE_SECRET_KEY
+      }
+    });
+
+    const data = await stripeResponse.json();
+
+    if (!stripeResponse.ok) {
+      throw new Error(data?.error?.message || "Stripe error");
+    }
+
+    allPayments.push(...(data.data || []));
+
+    if (!data.next_page) {
+      break;
+    }
+
+    page = data.next_page;
+  }
+
+  return allPayments;
+}
+
+async function getSuccessfulRefundAmount(env, paymentIntentId) {
+  let refundedCents = 0;
+  let startingAfter = "";
+
+  for (let i = 0; i < 100; i++) {
+    let stripeUrl =
+      "https://api.stripe.com/v1/refunds?payment_intent=" +
+      encodeURIComponent(paymentIntentId) +
+      "&limit=100";
+
+    if (startingAfter) {
+      stripeUrl += "&starting_after=" + encodeURIComponent(startingAfter);
+    }
+
+    const stripeResponse = await fetch(stripeUrl, {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + env.STRIPE_SECRET_KEY
+      }
+    });
+
+    const data = await stripeResponse.json();
+
+    if (!stripeResponse.ok) {
+      throw new Error(data?.error?.message || "Stripe refund lookup error");
+    }
+
+    for (const refund of data.data || []) {
+      if (refund.status === "succeeded") {
+        refundedCents += Number(refund.amount || 0);
+      }
+    }
+
+    if (!data.has_more || !(data.data || []).length) {
+      break;
+    }
+
+    startingAfter = data.data[data.data.length - 1].id;
+  }
+
+  return refundedCents;
 }
 
 function json(data, status, corsHeaders) {
