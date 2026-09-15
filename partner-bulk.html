@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FiiViu Partner Sammelanlage</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f7f7f7;margin:0;padding:24px;color:#222}
+.wrap{max-width:900px;margin:0 auto;background:#fff;padding:28px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+h1{margin-top:0}.hint{color:#666;line-height:1.5}.row{margin:18px 0}label{display:block;font-weight:700;margin-bottom:8px}input,textarea,button{font:inherit}input,textarea{width:100%;box-sizing:border-box;border:1px solid #ccc;border-radius:8px;padding:11px}textarea{min-height:220px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;background:#111;color:#fff}button.secondary{background:#eee;color:#222}.result{margin-top:22px}.item{padding:12px;border-radius:9px;margin:8px 0;background:#f4f4f4}.ok{border-left:4px solid #278a4b}.error{border-left:4px solid #c0392b}.link{word-break:break-all;color:#555;margin-top:5px;font-size:.92em}.small{font-size:.9em;color:#777}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>FiiViu Partner Sammelanlage</h1>
+<p class="hint">Hier kannst du mehrere Hotels oder Apartments auf einmal anlegen. Eine Zeile pro Partner.</p>
+
+<div class="row">
+<label for="token">Admin-Schlüssel</label>
+<input id="token" type="password" autocomplete="off" placeholder="Admin-Schlüssel">
+</div>
+
+<div class="row">
+<label for="partners">Partner</label>
+<textarea id="partners" placeholder="Hotel Bucharest Central|Hotel|Maria Popescu|maria@example.com|HBC001
+Old Town Apartments|Apartment|||OTA002
+City Hostel|Hostel|||CITY001"></textarea>
+<p class="small">Format: Name | Typ | Kontaktperson | E-Mail | Partner-Code. Kontakt, E-Mail und Code dürfen leer bleiben.</p>
+</div>
+
+<div class="actions">
+<button id="create">Partner anlegen</button>
+<button class="secondary" id="clear" type="button">Leeren</button>
+<a href="/admin.html" style="display:inline-flex;align-items:center;padding:11px 16px;color:#222">← Zur Partnerverwaltung</a>
+</div>
+
+<div id="result" class="result"></div>
+</div>
+<script>
+const WORKER='https://getlocalis.nasti8311.workers.dev';
+const PUBLIC_SITE='https://getlocalis.pages.dev';
+const token=document.getElementById('token');
+const input=document.getElementById('partners');
+const result=document.getElementById('result');
+
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function headers(){return {'Content-Type':'application/json','Authorization':'Bearer '+token.value.trim()};}
+
+async function createPartner(row){
+  const parts=row.split('|').map(x=>x.trim());
+  const [name,type='Sonstiges',contactName='',contactEmail='',partnerRef='']=parts;
+  if(!name) throw new Error('Name fehlt');
+  const r=await fetch(WORKER+'/api/admin/partners',{method:'POST',headers:headers(),body:JSON.stringify({name,type,contactName,contactEmail,partnerRef})});
+  let data={};
+  try{data=await r.json();}catch(e){}
+  if(!r.ok) throw new Error(data.error||'Partner konnte nicht angelegt werden.');
+  return data;
+}
+
+document.getElementById('clear').onclick=()=>{input.value='';result.innerHTML='';};
+
+document.getElementById('create').onclick=async()=>{
+  const rows=input.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!token.value.trim()){result.innerHTML='<div class="item error">Bitte Admin-Schlüssel eingeben.</div>';return;}
+  if(!rows.length){result.innerHTML='<div class="item error">Bitte mindestens einen Partner eingeben.</div>';return;}
+  const button=document.getElementById('create');
+  button.disabled=true;button.textContent='Lege an...';result.innerHTML='';
+  let html='';
+  for(const row of rows){
+    try{
+      const data=await createPartner(row);
+      const p=data.partner||data;
+      const ref=p.partner_ref||p.partnerRef||'';
+      const link=p.link||PUBLIC_SITE+'/?ref='+encodeURIComponent(ref);
+      html+='<div class="item ok"><strong>✓ '+esc(p.name||row.split('|')[0])+'</strong><div class="link">Partner-Code: '+esc(ref)+'</div><div class="link">'+esc(link)+'</div></div>';
+    }catch(e){
+      html+='<div class="item error"><strong>✗ '+esc(row.split('|')[0])+'</strong><div>'+esc(e.message)+'</div></div>';
+    }
+  }
+  result.innerHTML=html;
+  button.disabled=false;button.textContent='Partner anlegen';
+};
+</script>
+</body>
+</html>
