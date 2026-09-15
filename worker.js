@@ -100,64 +100,9 @@ export default {
           return json({ error: "Partner-Code fehlt" }, 400, corsHeaders);
         }
 
-        if (!env.STRIPE_SECRET_KEY) {
-          return json({ error: "Stripe secret not configured" }, 500, corsHeaders);
-        }
+        const stats = await getPartnerStats(env, partnerRef);
 
-        const query = "metadata['partner_ref']:'" + partnerRef.replace(/'/g, "\\'") + "'";
-        const stripeUrl =
-          "https://api.stripe.com/v1/payment_intents/search?query=" + encodeURIComponent(query) + "&limit=100";
-
-        const stripeResponse = await fetch(stripeUrl, {
-          method: "GET",
-          headers: {
-            "Authorization": "Bearer " + env.STRIPE_SECRET_KEY
-          }
-        });
-
-        const data = await stripeResponse.json();
-
-        if (!stripeResponse.ok) {
-          return json({
-            error: data?.error?.message || "Stripe error"
-          }, stripeResponse.status, corsHeaders);
-        }
-
-        const successful = (data.data || []).filter(
-          payment => payment.status === "succeeded"
-        );
-
-        const revenueCents = successful.reduce(
-          (sum, payment) => sum + Number(payment.amount_received || payment.amount || 0),
-          0
-        );
-
-        const commissionCents = Math.round(revenueCents * 0.03);
-
-        let paidCents = 0;
-
-        if (env.DB) {
-          const payoutResult = await env.DB.prepare(
-            "SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'"
-          ).bind(partnerRef).first();
-
-          paidCents = Number(payoutResult?.paid_cents || 0);
-        }
-
-        const openCommissionCents = Math.max(
-          commissionCents - paidCents,
-          0
-        );
-
-        return json({
-          partnerRef,
-          bookings: successful.length,
-          revenue: revenueCents / 100,
-          commission: commissionCents / 100,
-          openCommission: openCommissionCents / 100,
-          paidCommission: paidCents / 100,
-          currency: "eur"
-        }, 200, corsHeaders);
+        return json(stats, 200, corsHeaders);
 
       } catch (error) {
         return json({ error: error?.message || "Server error" }, 500, corsHeaders);
@@ -200,8 +145,29 @@ export default {
           return json({ error: "Invalid payout amount" }, 400, corsHeaders);
         }
 
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(payoutDate)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(payoutDate)) {
           return json({ error: "Invalid payout date" }, 400, corsHeaders);
+        }
+
+        const stats = await getPartnerStats(env, partnerRef);
+        const openCommissionCents = Math.round(stats.openCommission * 100);
+
+        if (amountCents > openCommissionCents) {
+          return json({
+            error: "Auszahlung ist höher als die offene Provision.",
+            openCommission: stats.openCommission,
+            requestedAmount: amountCents / 100
+          }, 400, corsHeaders);
+        }
+
+        if (reference) {
+          const existing = await env.DB.prepare(
+            "SELECT id FROM partner_payouts WHERE partner_ref = ? AND reference = ? LIMIT 1"
+          ).bind(partnerRef, reference).first();
+
+          if (existing) {
+            return json({ error: "Diese Auszahlungsreferenz existiert bereits." }, 409, corsHeaders);
+          }
         }
 
         const result = await env.DB.prepare(
@@ -213,13 +179,17 @@ export default {
           reference || null
         ).run();
 
+        const updatedStats = await getPartnerStats(env, partnerRef);
+
         return json({
           success: true,
           payoutId: result.meta?.last_row_id || null,
           partnerRef,
           amount: amountCents / 100,
           payoutDate,
-          reference: reference || null
+          reference: reference || null,
+          openCommission: updatedStats.openCommission,
+          paidCommission: updatedStats.paidCommission
         }, 201, corsHeaders);
 
       } catch (error) {
@@ -230,6 +200,65 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+
+async function getPartnerStats(env, partnerRef) {
+  if (!env.STRIPE_SECRET_KEY) {
+    throw new Error("Stripe secret not configured");
+  }
+
+  const query = "metadata['partner_ref']:'" + partnerRef.replace(/'/g, "\\'") + "'";
+  const stripeUrl =
+    "https://api.stripe.com/v1/payment_intents/search?query=" + encodeURIComponent(query) + "&limit=100";
+
+  const stripeResponse = await fetch(stripeUrl, {
+    method: "GET",
+    headers: {
+      "Authorization": "Bearer " + env.STRIPE_SECRET_KEY
+    }
+  });
+
+  const data = await stripeResponse.json();
+
+  if (!stripeResponse.ok) {
+    throw new Error(data?.error?.message || "Stripe error");
+  }
+
+  const successful = (data.data || []).filter(
+    payment => payment.status === "succeeded"
+  );
+
+  const revenueCents = successful.reduce(
+    (sum, payment) => sum + Number(payment.amount_received || payment.amount || 0),
+    0
+  );
+
+  const commissionCents = Math.round(revenueCents * 0.03);
+
+  let paidCents = 0;
+
+  if (env.DB) {
+    const payoutResult = await env.DB.prepare(
+      "SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'"
+    ).bind(partnerRef).first();
+
+    paidCents = Number(payoutResult?.paid_cents || 0);
+  }
+
+  const openCommissionCents = Math.max(
+    commissionCents - paidCents,
+    0
+  );
+
+  return {
+    partnerRef,
+    bookings: successful.length,
+    revenue: revenueCents / 100,
+    commission: commissionCents / 100,
+    openCommission: openCommissionCents / 100,
+    paidCommission: paidCents / 100,
+    currency: "eur"
+  };
+}
 
 function json(data, status, corsHeaders) {
   return new Response(JSON.stringify(data), {
