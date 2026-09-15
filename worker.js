@@ -40,6 +40,10 @@ export default {
           body.guests || 1
         );
 
+        const partnerRef = String(
+  body.partnerRef || ""
+);
+
         if (
           !Number.isInteger(amount) ||
           amount < 50
@@ -103,6 +107,11 @@ export default {
           "metadata[guests]",
           String(guests)
         );
+
+        params.set(
+  "metadata[partner_ref]",
+  partnerRef
+);
 
         params.set(
           "automatic_payment_methods[enabled]",
