@@ -3609,7 +3609,7 @@ async function createPaymentIntent({
     tourName,
     guests
 }) {
-
+console.log("FIIVIU PARTNER REF:", currentPartnerRef);
     const response =
         await fetch("/api/create-payment-intent", {
             method: "POST",
