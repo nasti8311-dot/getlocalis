@@ -10,5 +10,12 @@
       "/api/*"
     ],
     "not_found_handling": "single-page-application"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fiiviu-payouts",
+      "database_id": "c445e0ff-8013-4e20-988b-71b019c41db7"
+    }
+  ]
 }
