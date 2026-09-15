@@ -132,11 +132,15 @@ export default {
           0
         );
 
+        const commissionCents = Math.round(revenueCents * 0.03);
+
         return json({
           partnerRef,
           bookings: successful.length,
           revenue: revenueCents / 100,
-          commission: revenueCents * 0.03 / 100,
+          commission: commissionCents / 100,
+          openCommission: commissionCents / 100,
+          paidCommission: 0,
           currency: "eur"
         }, 200, corsHeaders);
 
