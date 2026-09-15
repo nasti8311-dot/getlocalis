@@ -3610,17 +3610,11 @@ async function createPaymentIntent({
 }) {
 
     const partnerRef =
-        new URLSearchParams(window.location.search).get("ref") ||
-        localStorage.getItem("fiiviu_partner_ref") ||
-        currentPartnerRef ||
-        "";
+    new URLSearchParams(
+        window.location.search
+    ).get("ref")?.trim() || "";
 
-    console.log(
-        "FIIVIU PARTNER REF:",
-        partnerRef
-    );
-
-   const response =
+const response =
     await fetch(
         "/api/create-payment-intent?ref=" +
         encodeURIComponent(partnerRef),
