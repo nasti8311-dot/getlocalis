@@ -1804,6 +1804,41 @@ let datePickerInstance = null;
 let stripe = null;
 let cardElement = null;
 
+// =========================================================
+// FIIVIU PARTNER TRACKING
+// =========================================================
+
+let currentPartnerRef = '';
+
+function capturePartnerRef() {
+
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+    const ref = params.get('ref');
+
+    if (ref) {
+
+        currentPartnerRef = ref.trim();
+
+        if (currentPartnerRef) {
+            localStorage.setItem(
+                'fiiviu_partner_ref',
+                currentPartnerRef
+            );
+        }
+
+    } else {
+
+        currentPartnerRef =
+            localStorage.getItem(
+                'fiiviu_partner_ref'
+            ) || '';
+
+    }
+}
+
 
 /* ============================================================
    EMAILJS
@@ -2808,6 +2843,8 @@ const translations = {
 ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
+    
+    capturePartnerRef();
 
     renderFeatured();
 
