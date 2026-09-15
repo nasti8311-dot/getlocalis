@@ -139,12 +139,10 @@ export default {
               method: "POST",
 
               headers: {
-                "Authorization":
-                  `Bearer ${env.STRIPE_SECRET_KEY}`,
-
-                "Content-Type":
-                  "application/x-www-form-urlencoded"
-              },
+  "Authorization": "Bearer " + env.STRIPE_SECRET_KEY,
+  "Content-Type":
+    "application/x-www-form-urlencoded"
+},
 
               body: params
             }
