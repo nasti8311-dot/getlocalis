@@ -3602,7 +3602,6 @@ function updateTotal() {
    STRIPE PAYMENT INTENT
 ============================================================ */
 
-
 async function createPaymentIntent({
     amountEUR,
     bookingId,
@@ -3611,8 +3610,9 @@ async function createPaymentIntent({
 }) {
 
     const partnerRef =
-        currentPartnerRef ||
+        new URLSearchParams(window.location.search).get("ref") ||
         localStorage.getItem("fiiviu_partner_ref") ||
+        currentPartnerRef ||
         "";
 
     console.log(
@@ -3657,7 +3657,6 @@ async function createPaymentIntent({
 
     return data;
 }
-
 
 
 
