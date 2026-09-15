@@ -3604,91 +3604,86 @@ function updateTotal() {
 
 
 async function createPaymentIntent({
-    amountEUR,
-    bookingId,
-    tourName,
-    guests
+amountEUR,
+bookingId,
+tourName,
+guests
 }) {
 
-    console.log(
-        "FIIVIU PAYMENT DATA:",
-        {
+```
+console.log(
+    "FIIVIU PAYMENT DATA:",
+    {
+        amount: Math.round(amountEUR * 100),
+        bookingId: bookingId,
+        tourName: tourName,
+        guests: Number(guests),
+        partnerRef: currentPartnerRef
+    }
+);
+
+const response =
+    await fetch("/api/create-payment-intent", {
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
             amount: Math.round(amountEUR * 100),
+            currency: "eur",
             bookingId: bookingId,
             tourName: tourName,
             guests: Number(guests),
             partnerRef: currentPartnerRef
-        }
+        })
+    });
+
+let data = {};
+
+try {
+    data = await response.json();
+} catch (error) {
+    throw new Error(
+        "Die Antwort vom Zahlungsserver war ungültig."
+    );
+}
+
+if (!response.ok || !data.clientSecret) {
+    throw new Error(
+        data.error ||
+        "PaymentIntent konnte nicht erstellt werden."
+    );
+}
+
+console.log(
+    "FIIVIU WORKER RESPONSE:",
+    data
+);
+
+if (data.partnerRef) {
+
+    alert(
+        "Partner-Tracking erfolgreich!\n\n" +
+        "Partner-ID: " +
+        data.partnerRef
     );
 
-    const response =
-        await fetch("/api/create-payment-intent", {
-            method: "POST",
+} else {
 
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                amount: Math.round(amountEUR * 100),
-                currency: "eur",
-                bookingId: bookingId,
-                tourName: tourName,
-                guests: Number(guests),
-                partnerRef: currentPartnerRef
-            })
-        });
-
-
-    let data = {};
-
-    try {
-        data = await response.json();
-    } catch (error) {
-        throw new Error(
-            "Die Antwort vom Zahlungsserver war ungültig."
-        );
-    }
-
-
-    if (!response.ok || !data.clientSecret) {
-
-        throw new Error(
-            data.error ||
-            "PaymentIntent konnte nicht erstellt werden."
-        );
-
-    }
-
-
-    console.log(
-        "FIIVIU WORKER RESPONSE:",
-        data
+    alert(
+        "Partner-Tracking FEHLER!\n\n" +
+        "Der Worker hat keine Partner-ID zurückgegeben."
     );
-
-
-    if (data.partnerRef) {
-
-        alert(
-            "Partner-Tracking erfolgreich!\n\n" +
-            "Partner-ID: " +
-            data.partnerRef
-        );
-
-    } else {
-
-        alert(
-            "Partner-Tracking FEHLER!\n\n" +
-            "Der Worker hat keine Partner-ID zurückgegeben."
-        );
-
-    }
-
-
-    return data;
 
 }
-```
+
+return data;
+
+
+}
+
 
 
 
