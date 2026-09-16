@@ -25,7 +25,7 @@ export async function handleStripeWebhook(request, env) {
       await createBookingSettlement(env, event);
     } else if (event.type === "payment_intent.payment_failed") {
       await recordPaymentIntentEvent(env, event);
-    } else if (event.type === "charge.refunded" || event.type === "charge.refund.updated") {
+    } else if (event.type === "charge.refunded" || event.type === "charge.refund.updated" || event.type === "refund.created" || event.type === "refund.updated") {
       await recordRefundEvent(env, event);
     }
     if (env.DB) await env.DB.prepare("INSERT INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(event_id) DO NOTHING").bind(event.id, event.type).run();
@@ -48,12 +48,14 @@ async function recordRefundEvent(env, event) {
   if (!env.DB) return;
   await ensureStripeRefundEventsTable(env);
   const object = event.data?.object || {};
-  const chargeId = String(object.id || "").trim();
+  const isChargeEvent = event.type === "charge.refunded" || event.type === "charge.refund.updated";
+  const chargeId = isChargeEvent ? String(object.id || "").trim() : String(object.charge || "").trim();
   const paymentIntentId = String(object.payment_intent || "").trim();
   const refundId = event.type === "charge.refunded" ? `charge_refund_${chargeId}` : String(object.id || "").trim();
   const amount = event.type === "charge.refunded" ? Number(object.amount_refunded || 0) : Number(object.amount || 0);
+  const status = String(object.status || (event.type === "charge.refunded" ? "succeeded" : "")).trim();
   if (!refundId || !paymentIntentId || !Number.isInteger(amount) || amount <= 0) throw new Error("Refund event is missing a valid payment intent or amount");
-  await env.DB.prepare(`INSERT INTO stripe_refund_events (refund_id,payment_intent_id,charge_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(refund_id) DO UPDATE SET amount=excluded.amount,status=excluded.status,event_type=excluded.event_type`).bind(refundId,paymentIntentId,chargeId,amount,String(object.status || "succeeded"),event.type).run();
+  await env.DB.prepare(`INSERT INTO stripe_refund_events (refund_id,payment_intent_id,charge_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(refund_id) DO UPDATE SET amount=excluded.amount,status=excluded.status,event_type=excluded.event_type,charge_id=excluded.charge_id`).bind(refundId,paymentIntentId,chargeId || null,amount,status,event.type).run();
   await applyRefundToSettlement(env, paymentIntentId);
 }
 
