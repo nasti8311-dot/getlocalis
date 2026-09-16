@@ -92,11 +92,11 @@ export default {
         if(!partner)return json({error:"Partner nicht gefunden"},404,corsHeaders);
         if(Number(partner.active)!==1)return json({error:"Dieser Partner ist deaktiviert."},400,corsHeaders);
         const stats=await getPartnerStats(env,bodyPartnerRef); const openCommissionCents=Math.round(stats.openCommission*100);
-        if(openCommissionCents<0)return json({error:"Für diesen Partner besteht aktuell ein negativer Provisionssaldo durch Rückerstattungen nach früheren Auszahlungen.",openCommission:stats.openCommission,paidCommission:stats.paidCommission},400,corsHeaders);
-        if(amountCents>openCommissionCents)return json({error:"Auszahlung ist höher als die offene Provision.",openCommission:stats.openCommission,requestedAmount:amountCents/100},400,corsHeaders);
+        if(openCommissionCents<0)return json({error:"Für diesen Partner besteht aktuell ein negativer Provisionssaldo durch Rückerstattungen nach früheren Auszahlungen.",openCommission:stats.openCommission,paidCommission:stats.paidCommission,pendingCommission:stats.pendingCommission},400,corsHeaders);
+        if(amountCents>openCommissionCents)return json({error:"Auszahlung ist höher als die aktuell auszahlbare Provision.",openCommission:stats.openCommission,pendingCommission:stats.pendingCommission,requestedAmount:amountCents/100},400,corsHeaders);
         if(reference){const existing=await env.DB.prepare("SELECT id FROM partner_payouts WHERE partner_ref = ? AND reference = ? LIMIT 1").bind(bodyPartnerRef,reference).first();if(existing)return json({error:"Diese Auszahlungsreferenz existiert bereits."},409,corsHeaders)}
         const result=await env.DB.prepare("INSERT INTO partner_payouts (partner_ref,amount_cents,payout_date,status,reference) VALUES (?,?,?,'paid',?)").bind(bodyPartnerRef,amountCents,payoutDate,reference||null).run(); const updatedStats=await getPartnerStats(env,bodyPartnerRef);
-        return json({success:true,payoutId:result.meta?.last_row_id||null,partnerRef:bodyPartnerRef,amount:amountCents/100,payoutDate,reference:reference||null,openCommission:updatedStats.openCommission,paidCommission:updatedStats.paidCommission},201,corsHeaders);
+        return json({success:true,payoutId:result.meta?.last_row_id||null,partnerRef:bodyPartnerRef,amount:amountCents/100,payoutDate,reference:reference||null,openCommission:updatedStats.openCommission,pendingCommission:updatedStats.pendingCommission,paidCommission:updatedStats.paidCommission},201,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
     return env.ASSETS.fetch(request);
@@ -123,17 +123,24 @@ async function generatePartnerRef(env,name){const base=name.normalize("NFD").rep
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
 function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data="+encodeURIComponent(buildPartnerLink(partnerRef))}
 
+function getPartnerHoldDays(env){const value=Number(env.PARTNER_COMMISSION_HOLD_DAYS??14);return Number.isFinite(value)?Math.max(0,Math.min(Math.floor(value),90)):14}
 async function getPartnerStats(env,partnerRef){
   if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
   const payments=await searchPartnerPayments(env,partnerRef);
   const successful=payments.filter(payment=>payment.status==="succeeded");
+  const holdDays=getPartnerHoldDays(env);
+  const cutoff=Math.floor(Date.now()/1000)-(holdDays*86400);
   let revenueCents=0;
+  let availableCommissionCents=0;
+  let pendingCommissionCents=0;
   const bookingDetails=[];
   for(const payment of successful){
     const receivedCents=Number(payment.amount_received||payment.amount||0);
     const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
     const netCents=Math.max(receivedCents-refundedCents,0);
+    const bookingCommissionCents=Math.round(netCents*0.03);
     revenueCents+=netCents;
+    if(Number(payment.created||0)<=cutoff)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
     bookingDetails.push({
       paymentIntentId:payment.id,
       bookingId:payment.metadata?.booking_id||payment.id,
@@ -142,7 +149,9 @@ async function getPartnerStats(env,partnerRef){
       amount:receivedCents/100,
       refunded:refundedCents/100,
       netAmount:netCents/100,
-      commission:Math.round(netCents*0.03)/100,
+      commission:bookingCommissionCents/100,
+      commissionStatus:Number(payment.created||0)<=cutoff?"available":"pending",
+      commissionAvailableAt:new Date((Number(payment.created||0)+(holdDays*86400))*1000).toISOString(),
       currency:String(payment.currency||"eur").toLowerCase(),
       created:Number(payment.created||0)
     });
@@ -155,8 +164,8 @@ async function getPartnerStats(env,partnerRef){
     const payoutResult=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'").bind(partnerRef).first();
     paidCents=Number(payoutResult?.paid_cents||0);
   }
-  const openCommissionCents=commissionCents-paidCents;
-  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,paidCommission:paidCents/100,currency:"eur",bookingDetails};
+  const openCommissionCents=availableCommissionCents-paidCents;
+  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,currency:"eur",bookingDetails};
 }
 async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
 async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
