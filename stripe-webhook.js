@@ -36,11 +36,10 @@ export async function handleStripeWebhook(request, env) {
 
   if (!event?.id || !event?.type) return webhookError("Invalid Stripe event", 400);
 
-  // Stripe may retry the same event. Store the event ID before processing so
-  // the same event is not applied twice. If DB is not configured we still
-  // acknowledge the event, but no durable idempotency is available.
   if (env.DB) {
     await ensureStripeWebhookEventsTable(env);
+    await ensureBookingSettlementsTable(env);
+
     const existing = await env.DB
       .prepare("SELECT event_id FROM stripe_webhook_events WHERE event_id = ? LIMIT 1")
       .bind(event.id)
@@ -56,18 +55,12 @@ export async function handleStripeWebhook(request, env) {
       .run();
   }
 
-  // These events are deliberately handled without changing booking state yet.
-  // The current worker already derives partner statistics from PaymentIntents.
-  // This webhook gives us a verified, idempotent integration point for the
-  // later provider-settlement/Connect-transfer logic.
   switch (event.type) {
     case "payment_intent.succeeded":
     case "payment_intent.payment_failed":
       await recordPaymentIntentEvent(env, event);
       break;
     default:
-      // Stripe can send additional events when the endpoint is expanded later.
-      // Acknowledge them rather than returning 4xx and causing retries.
       break;
   }
 
@@ -129,6 +122,28 @@ async function ensureStripePaymentEventsTable(env) {
   await env.DB.prepare(
     "CREATE INDEX IF NOT EXISTS idx_stripe_payment_events_booking ON stripe_payment_events(booking_id)"
   ).run();
+}
+
+async function ensureBookingSettlementsTable(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS booking_settlements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      booking_id TEXT NOT NULL UNIQUE,
+      payment_intent_id TEXT UNIQUE,
+      total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),
+      provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),
+      fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),
+      partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),
+      partner_ref TEXT,
+      settlement_status TEXT NOT NULL DEFAULT 'pending' CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref)
+    )
+  `).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_payment_intent ON booking_settlements(payment_intent_id)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
 }
 
 async function verifyStripeSignature(payload, header, secret, toleranceSeconds) {
