@@ -5,10 +5,23 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
   if (!env.DB) return json({ error: 'D1 database not configured' }, 500, corsHeaders);
   try {
     await ensureProvidersTable(env);
+
+    if (url.pathname === '/api/admin/providers/onboarding-link') {
+      if (request.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405, corsHeaders);
+      const accountId = String(url.searchParams.get('account') || '').trim();
+      if (!accountId) return json({ error: 'Stripe account missing' }, 400, corsHeaders);
+      const provider = await env.DB.prepare('SELECT id,stripe_account_id FROM providers WHERE stripe_account_id = ? LIMIT 1').bind(accountId).first();
+      if (!provider) return json({ error: 'Provider not found' }, 404, corsHeaders);
+      const onboarding = await createAccountLink(env, accountId, env.ADMIN_URL || url.origin, provider.id);
+      if (!onboarding.ok) return json({ error: onboarding.data?.error?.message || 'Stripe onboarding link creation failed' }, onboarding.status, corsHeaders);
+      return json({ success: true, onboardingUrl: onboarding.data.url }, 200, corsHeaders);
+    }
+
     if (request.method === 'GET') {
       const result = await env.DB.prepare(`SELECT id,legal_name,display_name,contact_email,phone,cui,vat_number,stripe_account_id,stripe_onboarding_status,stripe_payouts_enabled,status,created_at,updated_at FROM providers ORDER BY created_at DESC,id DESC`).all();
       return json({ providers: result.results || [] }, 200, corsHeaders);
     }
+
     if (request.method === 'POST') {
       const body = await request.json();
       const legalName = String(body.legalName || '').trim();
@@ -36,7 +49,7 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
       const result = await env.DB.prepare(`INSERT INTO providers (legal_name,display_name,contact_email,phone,address,cui,vat_number,stripe_account_id,stripe_onboarding_status,status) VALUES (?,?,?,?,?,?,?,?,'created','pending')`)
         .bind(legalName, displayName, contactEmail, phone || null, address || null, cui || null, vatNumber || null, accountId).run();
       const providerId = result.meta?.last_row_id || null;
-      const onboarding = await createAccountLink(env, accountId, url.origin, providerId);
+      const onboarding = await createAccountLink(env, accountId, env.ADMIN_URL || url.origin, providerId);
       if (!onboarding.ok) return json({ error: onboarding.data?.error?.message || 'Stripe onboarding link creation failed', providerId, stripeAccountId: accountId }, onboarding.status, corsHeaders);
 
       return json({ success: true, providerId, stripeAccountId: accountId, onboardingUrl: onboarding.data.url }, 201, corsHeaders);
@@ -50,8 +63,8 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
 async function createAccountLink(env, accountId, origin, providerId) {
   const params = new URLSearchParams();
   params.set('account', accountId);
-  params.set('refresh_url', `${origin}/?stripe_connect=refresh&provider_id=${encodeURIComponent(providerId || '')}`);
-  params.set('return_url', `${origin}/?stripe_connect=return&provider_id=${encodeURIComponent(providerId || '')}`);
+  params.set('refresh_url', `${origin}/admin.html?stripe_connect=refresh&provider_id=${encodeURIComponent(providerId || '')}`);
+  params.set('return_url', `${origin}/admin.html?stripe_connect=return&provider_id=${encodeURIComponent(providerId || '')}`);
   params.set('type', 'account_onboarding');
   return stripeRequest(env, '/v1/account_links', 'POST', params);
 }
