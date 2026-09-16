@@ -16,10 +16,11 @@
     <div id="message" class="rounded-2xl bg-white p-6 shadow-sm mb-6">Se încarcă datele partenerului …</div>
     <section id="dashboard" class="hidden">
       <div class="bg-white rounded-2xl p-5 shadow-sm mb-6"><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div>
-      <div class="grid md:grid-cols-4 gap-4">
+      <div class="grid md:grid-cols-5 gap-4">
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Rezervări</div><div id="bookings" class="text-3xl font-bold mt-2">0</div></div>
-        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Valoarea rezervărilor intermediate</div><div id="revenue" class="text-3xl font-bold mt-2">0,00 €</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Valoarea rezervărilor</div><div id="revenue" class="text-3xl font-bold mt-2">0,00 €</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Comision disponibil</div><div id="open-commission" class="text-3xl font-bold mt-2">0,00 €</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">În așteptare</div><div id="pending-commission" class="text-3xl font-bold mt-2">0,00 €</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Plătit</div><div id="paid-commission" class="text-3xl font-bold mt-2">0,00 €</div></div>
       </div>
 
@@ -29,7 +30,7 @@
         <div id="no-bookings" class="hidden rounded-xl bg-gray-50 p-5 text-sm text-gray-600">Nu există încă rezervări reușite prin acest cod de partener.</div>
       </div>
 
-      <div class="bg-white rounded-2xl p-6 shadow-sm mt-6"><h2 class="font-bold text-lg">Comisionul tău</h2><p class="text-gray-600 mt-2">Primești un comision de 3% pentru fiecare rezervare intermediată cu succes. Clientul nu plătește nimic în plus.</p><div class="mt-4 rounded-xl bg-gray-50 p-4 text-sm"><b>Plată</b><br>Comisioanele disponibile vor fi luate în calcul pentru următoarea plată.</div></div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm mt-6"><h2 class="font-bold text-lg">Comisionul tău</h2><p class="text-gray-600 mt-2">Primești un comision de 3% pentru fiecare rezervare intermediată cu succes. Pentru protecție în cazul anulărilor, comisionul este disponibil pentru plată după 14 zile.</p><div class="mt-4 rounded-xl bg-gray-50 p-4 text-sm"><b>Plată</b><br>Comisioanele disponibile pot fi plătite după expirarea perioadei de așteptare. Comisioanele aflate în așteptare nu pot fi încă plătite.</div></div>
     </section>
   </main>
   <script>
@@ -38,6 +39,7 @@
     const dashboard=document.getElementById('dashboard');
     function euro(value){return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(value)||0)}
     function date(value){if(!value)return '—';return new Intl.DateTimeFormat('ro-RO',{dateStyle:'medium',timeStyle:'short'}).format(new Date(Number(value)*1000))}
+    function dateIso(value){if(!value)return '—';return new Intl.DateTimeFormat('ro-RO',{dateStyle:'medium'}).format(new Date(value))}
     function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[char]))}
     function renderBookings(bookings){
       const list=document.getElementById('booking-list');
@@ -49,10 +51,13 @@
         const refunded=Number(booking.refunded)||0;
         const net=Number(booking.netAmount)||0;
         const guests=Number(booking.guests)||1;
+        const commissionStatus=booking.commissionStatus==='available'
+          ? '<span class="text-green-700">Disponibil pentru plată</span>'
+          : '<span class="text-gray-500">În așteptare până la '+escapeHtml(dateIso(booking.commissionAvailableAt))+'</span>';
         return `<div class="border border-gray-100 rounded-2xl p-4 md:p-5">
           <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
             <div class="min-w-0"><div class="font-semibold truncate">${escapeHtml(booking.tourName||'Rezervare')}</div><div class="text-sm text-gray-500 mt-1">${escapeHtml(booking.bookingId||booking.paymentIntentId||'')} · ${date(booking.created)}</div><div class="text-sm text-gray-500 mt-1">${guests} ${guests===1?'oaspete':'oaspeți'}</div></div>
-            <div class="text-left md:text-right"><div class="font-bold">${euro(net)}</div><div class="text-sm text-gray-500">Comision: <span class="font-semibold text-gray-900">${euro(booking.commission)}</span></div></div>
+            <div class="text-left md:text-right"><div class="font-bold">${euro(net)}</div><div class="text-sm text-gray-500">Comision: <span class="font-semibold text-gray-900">${euro(booking.commission)}</span></div><div class="text-xs mt-1">${commissionStatus}</div></div>
           </div>
           ${refunded>0?`<div class="mt-3 text-xs text-gray-500">Rambursat: ${euro(refunded)} · suma inițială: ${euro(booking.amount)}</div>`:''}
         </div>`;
@@ -68,6 +73,7 @@
         document.getElementById('bookings').textContent=data.bookings;
         document.getElementById('revenue').textContent=euro(data.revenue);
         document.getElementById('open-commission').textContent=euro(data.openCommission);
+        document.getElementById('pending-commission').textContent=euro(data.pendingCommission);
         document.getElementById('paid-commission').textContent=euro(data.paidCommission);
         renderBookings(Array.isArray(data.bookingDetails)?data.bookingDetails:[]);
         message.classList.add('hidden');
