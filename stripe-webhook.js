@@ -48,20 +48,30 @@ export async function handleStripeWebhook(request, env) {
     if (existing) {
       return webhookJson({ received: true, duplicate: true });
     }
-
-    await env.DB
-      .prepare("INSERT INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP)")
-      .bind(event.id, event.type)
-      .run();
   }
 
-  switch (event.type) {
-    case "payment_intent.succeeded":
-    case "payment_intent.payment_failed":
-      await recordPaymentIntentEvent(env, event);
-      break;
-    default:
-      break;
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded":
+        await recordPaymentIntentEvent(env, event);
+        await createBookingSettlement(env, event);
+        break;
+      case "payment_intent.payment_failed":
+        await recordPaymentIntentEvent(env, event);
+        break;
+      default:
+        break;
+    }
+
+    if (env.DB) {
+      await env.DB
+        .prepare("INSERT INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(event_id) DO NOTHING")
+        .bind(event.id, event.type)
+        .run();
+    }
+  } catch (error) {
+    console.error("Stripe webhook processing failed", error);
+    return webhookError(error?.message || "Webhook processing failed", 500);
   }
 
   return webhookJson({ received: true });
@@ -89,6 +99,144 @@ async function recordPaymentIntentEvent(env, event) {
     paymentIntent.currency || null,
     paymentIntent.status || null
   ).run();
+}
+
+async function createBookingSettlement(env, event) {
+  if (!env.DB) return;
+
+  await ensureBookingSettlementsTable(env);
+  const paymentIntent = event.data?.object || {};
+  const metadata = paymentIntent.metadata || {};
+  const totalAmountCents = Number(paymentIntent.amount_received || paymentIntent.amount || 0);
+  const bookingId = String(metadata.booking_id || paymentIntent.id || "").trim();
+  const paymentIntentId = String(paymentIntent.id || "").trim();
+  const currency = String(paymentIntent.currency || "eur").toLowerCase();
+
+  if (!bookingId || !paymentIntentId || !Number.isInteger(totalAmountCents) || totalAmountCents <= 0) {
+    throw new Error("PaymentIntent is missing a valid booking or amount");
+  }
+
+  const existing = await env.DB
+    .prepare("SELECT id,provider_transfer_id,settlement_status FROM booking_settlements WHERE booking_id = ? OR payment_intent_id = ? LIMIT 1")
+    .bind(bookingId, paymentIntentId)
+    .first();
+
+  if (existing?.provider_transfer_id || existing?.settlement_status === "transferred") return;
+
+  let partnerRef = typeof metadata.partner_ref === "string" ? metadata.partner_ref.trim() : "";
+  if (partnerRef) {
+    const partner = await env.DB
+      .prepare("SELECT partner_ref FROM partners WHERE partner_ref = ? AND active = 1 LIMIT 1")
+      .bind(partnerRef)
+      .first();
+    if (!partner) partnerRef = "";
+  }
+
+  const partnerAmountCents = partnerRef ? Math.round(totalAmountCents * 0.03) : 0;
+  const fiiviuAmountCents = partnerRef
+    ? Math.round(totalAmountCents * 0.12)
+    : Math.round(totalAmountCents * 0.15);
+  const providerAmountCents = totalAmountCents - fiiviuAmountCents - partnerAmountCents;
+
+  if (providerAmountCents < 0) throw new Error("Settlement amounts exceed payment amount");
+
+  const providerConnectAccountId = String(env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID || "").trim();
+  let settlementStatus = providerConnectAccountId ? "ready" : "pending";
+  let providerTransferId = existing?.provider_transfer_id || null;
+
+  if (providerConnectAccountId) {
+    if (!/^acct_[A-Za-z0-9]+$/.test(providerConnectAccountId)) {
+      throw new Error("Invalid STRIPE_PROVIDER_CONNECT_ACCOUNT_ID");
+    }
+
+    const transfer = await createProviderTransfer(env, {
+      amountCents: providerAmountCents,
+      currency,
+      destination: providerConnectAccountId,
+      bookingId,
+      paymentIntentId
+    });
+    providerTransferId = transfer.id;
+    settlementStatus = "transferred";
+  }
+
+  if (existing?.id) {
+    await env.DB.prepare(`
+      UPDATE booking_settlements
+      SET payment_intent_id = ?,
+          total_amount_cents = ?,
+          provider_amount_cents = ?,
+          fiiviu_amount_cents = ?,
+          partner_amount_cents = ?,
+          partner_ref = ?,
+          provider_transfer_id = ?,
+          settlement_status = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      paymentIntentId,
+      totalAmountCents,
+      providerAmountCents,
+      fiiviuAmountCents,
+      partnerAmountCents,
+      partnerRef || null,
+      providerTransferId,
+      settlementStatus,
+      existing.id
+    ).run();
+    return;
+  }
+
+  await env.DB.prepare(`
+    INSERT INTO booking_settlements
+      (booking_id,payment_intent_id,total_amount_cents,provider_amount_cents,fiiviu_amount_cents,partner_amount_cents,partner_ref,provider_transfer_id,settlement_status,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    ON CONFLICT(booking_id) DO UPDATE SET
+      payment_intent_id=excluded.payment_intent_id,
+      total_amount_cents=excluded.total_amount_cents,
+      provider_amount_cents=excluded.provider_amount_cents,
+      fiiviu_amount_cents=excluded.fiiviu_amount_cents,
+      partner_amount_cents=excluded.partner_amount_cents,
+      partner_ref=excluded.partner_ref,
+      provider_transfer_id=excluded.provider_transfer_id,
+      settlement_status=excluded.settlement_status,
+      updated_at=CURRENT_TIMESTAMP
+  `).bind(
+    bookingId,
+    paymentIntentId,
+    totalAmountCents,
+    providerAmountCents,
+    fiiviuAmountCents,
+    partnerAmountCents,
+    partnerRef || null,
+    providerTransferId,
+    settlementStatus
+  ).run();
+}
+
+async function createProviderTransfer(env, { amountCents, currency, destination, bookingId, paymentIntentId }) {
+  if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe secret not configured");
+
+  const params = new URLSearchParams();
+  params.set("amount", String(amountCents));
+  params.set("currency", currency);
+  params.set("destination", destination);
+  params.set("metadata[booking_id]", bookingId);
+  params.set("metadata[payment_intent_id]", paymentIntentId);
+  params.set("metadata[settlement]", "provider_85_percent");
+
+  const response = await fetch("https://api.stripe.com/v1/transfers", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + env.STRIPE_SECRET_KEY,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error?.message || "Stripe transfer failed");
+  return data;
 }
 
 async function ensureStripeWebhookEventsTable(env) {
@@ -135,12 +283,16 @@ async function ensureBookingSettlementsTable(env) {
       fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),
       partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),
       partner_ref TEXT,
+      provider_transfer_id TEXT UNIQUE,
       settlement_status TEXT NOT NULL DEFAULT 'pending' CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref)
     )
   `).run();
+  try {
+    await env.DB.prepare("ALTER TABLE booking_settlements ADD COLUMN provider_transfer_id TEXT UNIQUE").run();
+  } catch (e) {}
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_payment_intent ON booking_settlements(payment_intent_id)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
