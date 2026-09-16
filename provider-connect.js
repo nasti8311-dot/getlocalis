@@ -24,11 +24,31 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
             .bind(onboardingStatus, payoutsEnabled ? 1 : 0, status, accountId).run();
         }
       } else if (event.type === 'account.application.deauthorized') {
-        const account = event.account || event.data?.object;
-        const accountId = String(account?.id || account || '').trim();
+        const accountId = String(event.account || event.data?.object?.id || '').trim();
         if (accountId) {
           await env.DB.prepare(`UPDATE providers SET stripe_onboarding_status='deauthorized', stripe_payouts_enabled=0, status='inactive', updated_at=CURRENT_TIMESTAMP WHERE stripe_account_id=?`)
             .bind(accountId).run();
+        }
+      } else if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed' || event.type === 'payment_intent.canceled') {
+        const paymentIntent = event.data?.object;
+        const paymentIntentId = String(paymentIntent?.id || '').trim();
+        const status = event.type === 'payment_intent.succeeded' ? 'paid' : event.type === 'payment_intent.canceled' ? 'canceled' : 'failed';
+        if (paymentIntentId) {
+          await ensureSettlementTable(env);
+          await env.DB.prepare(`UPDATE booking_settlements SET status=?, updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?`).bind(status, paymentIntentId).run();
+        }
+      } else if (event.type === 'charge.refunded') {
+        const charge = event.data?.object;
+        const paymentIntentId = String(charge?.payment_intent || '').trim();
+        if (paymentIntentId) {
+          await ensureSettlementTable(env);
+          const settlement = await env.DB.prepare(`SELECT gross_cents,refunded_cents FROM booking_settlements WHERE payment_intent_id=? LIMIT 1`).bind(paymentIntentId).first();
+          if (settlement) {
+            const refundedCents = Math.min(Number(settlement.gross_cents || 0), Math.max(Number(settlement.refunded_cents || 0), Number(charge.amount_refunded || 0)));
+            const status = refundedCents >= Number(settlement.gross_cents || 0) ? 'refunded' : 'partially_refunded';
+            await env.DB.prepare(`UPDATE booking_settlements SET refunded_cents=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?`)
+              .bind(refundedCents, status, paymentIntentId).run();
+          }
         }
       }
       return json({ received: true }, 200, corsHeaders);
@@ -119,6 +139,10 @@ async function stripeRequest(env, path, method, body) {
 
 async function ensureProvidersTable(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS providers (id INTEGER PRIMARY KEY AUTOINCREMENT,legal_name TEXT NOT NULL,display_name TEXT NOT NULL,contact_email TEXT NOT NULL,phone TEXT,address TEXT,cui TEXT,vat_number TEXT,stripe_account_id TEXT UNIQUE,stripe_onboarding_status TEXT NOT NULL DEFAULT 'not_started',stripe_payouts_enabled INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'pending',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+}
+
+async function ensureSettlementTable(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS booking_settlements (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,experience_id TEXT NOT NULL,provider_id INTEGER NOT NULL,payment_intent_id TEXT UNIQUE,gross_cents INTEGER NOT NULL,provider_cents INTEGER NOT NULL,platform_cents INTEGER NOT NULL,partner_cents INTEGER NOT NULL DEFAULT 0,currency TEXT NOT NULL DEFAULT 'eur',partner_ref TEXT,status TEXT NOT NULL DEFAULT 'created',refunded_cents INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
 }
 
 async function verifyStripeSignature(payload, signatureHeader, secret) {
