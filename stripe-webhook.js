@@ -1,4 +1,5 @@
 const DEFAULT_TOLERANCE_SECONDS = 300;
+const DEFAULT_PROVIDER_CONNECT_ACCOUNT_ID = "acct_1UGKf1Rs1xBDKsEX";
 
 export async function handleStripeWebhook(request, env) {
   if (request.method !== "POST") return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers: { "Content-Type": "application/json" } });
@@ -66,12 +67,12 @@ async function createBookingSettlement(env, event) {
   const providerAmountCents = totalAmountCents - fiiviuAmountCents - partnerAmountCents;
   if (providerAmountCents < 0) throw new Error("Settlement amounts exceed payment amount");
 
-  const providerConnectAccountId = String(env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID || "").trim();
+  const providerConnectAccountId = String(metadata.provider_connect_account_id || env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID || DEFAULT_PROVIDER_CONNECT_ACCOUNT_ID).trim();
   let settlementStatus = providerConnectAccountId ? "ready" : "pending";
   let providerTransferId = existing?.provider_transfer_id || null;
 
   if (providerConnectAccountId) {
-    if (!/^acct_[A-Za-z0-9]+$/.test(providerConnectAccountId)) throw new Error("Invalid STRIPE_PROVIDER_CONNECT_ACCOUNT_ID");
+    if (!/^acct_[A-Za-z0-9]+$/.test(providerConnectAccountId)) throw new Error("Invalid provider Connect account ID");
     const transfer = await createProviderTransfer(env, { amountCents: providerAmountCents, currency, destination: providerConnectAccountId, bookingId, paymentIntentId });
     providerTransferId = transfer.id;
     settlementStatus = "transferred";
