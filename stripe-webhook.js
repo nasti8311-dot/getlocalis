@@ -15,6 +15,8 @@ export async function handleStripeWebhook(request, env) {
   if (env.DB) {
     await ensureStripeWebhookEventsTable(env);
     await ensureBookingSettlementsTable(env);
+    await ensureStripeRefundEventsTable(env);
+    await ensureStripeTransferReversalEventsTable(env);
     const existing = await env.DB.prepare("SELECT event_id FROM stripe_webhook_events WHERE event_id = ? LIMIT 1").bind(event.id).first();
     if (existing) return webhookJson({ received: true, duplicate: true });
   }
@@ -45,18 +47,44 @@ async function recordPaymentIntentEvent(env, event) {
 }
 
 async function recordRefundEvent(env, event) {
-  if (!env.DB) return;
-  await ensureStripeRefundEventsTable(env);
+  if (!env.DB || !env.STRIPE_SECRET_KEY) return;
   const object = event.data?.object || {};
   const isChargeEvent = event.type === "charge.refunded" || event.type === "charge.refund.updated";
   const chargeId = isChargeEvent ? String(object.id || "").trim() : String(object.charge || "").trim();
-  const paymentIntentId = String(object.payment_intent || "").trim();
-  const refundId = event.type === "charge.refunded" ? `charge_refund_${chargeId}` : String(object.id || "").trim();
-  const amount = event.type === "charge.refunded" ? Number(object.amount_refunded || 0) : Number(object.amount || 0);
-  const status = String(object.status || (event.type === "charge.refunded" ? "succeeded" : "")).trim();
-  if (!refundId || !paymentIntentId || !Number.isInteger(amount) || amount <= 0) throw new Error("Refund event is missing a valid payment intent or amount");
-  await env.DB.prepare(`INSERT INTO stripe_refund_events (refund_id,payment_intent_id,charge_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(refund_id) DO UPDATE SET amount=excluded.amount,status=excluded.status,event_type=excluded.event_type,charge_id=excluded.charge_id`).bind(refundId,paymentIntentId,chargeId || null,amount,status,event.type).run();
-  await applyRefundToSettlement(env, paymentIntentId);
+  if (!chargeId) throw new Error("Refund event is missing a valid charge ID");
+  await syncChargeRefunds(env, chargeId);
+}
+
+async function syncChargeRefunds(env, chargeId) {
+  let startingAfter = "";
+  let paymentIntentId = "";
+  let pages = 0;
+
+  while (pages < 20) {
+    const params = new URLSearchParams();
+    params.set("charge", chargeId);
+    params.set("limit", "100");
+    if (startingAfter) params.set("starting_after", startingAfter);
+    const response = await fetch(`https://api.stripe.com/v1/refunds?${params.toString()}`, {
+      headers: { "Authorization": "Bearer " + env.STRIPE_SECRET_KEY }
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error?.message || "Stripe refund reconciliation failed");
+
+    for (const refund of data.data || []) {
+      const refundPaymentIntentId = String(refund.payment_intent || "").trim();
+      if (refundPaymentIntentId) paymentIntentId = refundPaymentIntentId;
+      if (!refund.id || !refundPaymentIntentId || !Number.isInteger(Number(refund.amount)) || Number(refund.amount) <= 0) continue;
+      await env.DB.prepare(`INSERT INTO stripe_refund_events (refund_id,payment_intent_id,charge_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(refund_id) DO UPDATE SET payment_intent_id=excluded.payment_intent_id,charge_id=excluded.charge_id,amount=excluded.amount,status=excluded.status,event_type=excluded.event_type`).bind(String(refund.id), refundPaymentIntentId, chargeId, Number(refund.amount), String(refund.status || "").trim(), "refund.reconciled").run();
+    }
+
+    if (!data.has_more || !data.data?.length) break;
+    startingAfter = String(data.data[data.data.length - 1].id || "");
+    if (!startingAfter) break;
+    pages += 1;
+  }
+
+  if (paymentIntentId) await applyRefundToSettlement(env, paymentIntentId);
 }
 
 async function applyRefundToSettlement(env, paymentIntentId) {
@@ -64,28 +92,45 @@ async function applyRefundToSettlement(env, paymentIntentId) {
   const refundedCents = Number(refundRow?.refunded_cents || 0);
   const settlement = await env.DB.prepare("SELECT id,total_amount_cents,provider_amount_cents,provider_transfer_id,settlement_status FROM booking_settlements WHERE payment_intent_id = ? LIMIT 1").bind(paymentIntentId).first();
   if (!settlement) return;
+
   const totalCents = Number(settlement.total_amount_cents || 0);
   const providerAmountCents = Number(settlement.provider_amount_cents || 0);
-  if (refundedCents >= totalCents) {
-    if (settlement.provider_transfer_id) {
-      await reverseProviderTransfer(env, settlement.provider_transfer_id, providerAmountCents, paymentIntentId);
+  if (totalCents <= 0 || providerAmountCents <= 0 || !settlement.provider_transfer_id) {
+    if (refundedCents >= totalCents && totalCents > 0) {
+      await env.DB.prepare("UPDATE booking_settlements SET settlement_status='refunded',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(settlement.id).run();
     }
+    return;
+  }
+
+  const targetProviderReversalCents = Math.min(providerAmountCents, Math.round(providerAmountCents * Math.min(refundedCents, totalCents) / totalCents));
+  const reversedRow = await env.DB.prepare("SELECT COALESCE(SUM(amount),0) AS reversed_cents FROM stripe_transfer_reversal_events WHERE payment_intent_id = ? AND status = 'succeeded'").bind(paymentIntentId).first();
+  const reversedCents = Number(reversedRow?.reversed_cents || 0);
+  const reversalDeltaCents = targetProviderReversalCents - reversedCents;
+
+  if (reversalDeltaCents > 0) {
+    await reverseProviderTransfer(env, settlement.provider_transfer_id, reversalDeltaCents, paymentIntentId, refundedCents, totalCents);
+  }
+
+  const newReversedCents = reversedCents + Math.max(reversalDeltaCents, 0);
+  if (refundedCents >= totalCents && newReversedCents >= providerAmountCents) {
     await env.DB.prepare("UPDATE booking_settlements SET settlement_status='refunded',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(settlement.id).run();
+  } else if (refundedCents > 0) {
+    await env.DB.prepare("UPDATE booking_settlements SET updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(settlement.id).run();
   }
 }
 
-async function reverseProviderTransfer(env, transferId, amountCents, paymentIntentId) {
-  if (!env.STRIPE_SECRET_KEY || !transferId || amountCents <= 0) return;
-  const existing = await env.DB.prepare("SELECT refund_id FROM stripe_refund_events WHERE payment_intent_id = ? AND refund_id LIKE 'transfer_reversal_%' LIMIT 1").bind(paymentIntentId).first();
-  if (existing) return;
+async function reverseProviderTransfer(env, transferId, amountCents, paymentIntentId, refundedCents, totalCents) {
+  if (!env.STRIPE_SECRET_KEY || !transferId || !Number.isInteger(amountCents) || amountCents <= 0) return;
   const params = new URLSearchParams();
   params.set("amount", String(amountCents));
   params.set("metadata[payment_intent_id]", paymentIntentId);
   params.set("metadata[settlement]", "provider_refund_reversal");
+  params.set("metadata[refunded_cents]", String(refundedCents));
+  params.set("metadata[total_cents]", String(totalCents));
   const response = await fetch(`https://api.stripe.com/v1/transfers/${encodeURIComponent(transferId)}/reversals`, { method:"POST", headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"}, body:params });
   const data = await response.json();
   if (!response.ok) throw new Error(data?.error?.message || "Stripe transfer reversal failed");
-  await env.DB.prepare("INSERT OR IGNORE INTO stripe_refund_events (refund_id,payment_intent_id,charge_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)").bind(`transfer_reversal_${data.id}`,paymentIntentId,null,amountCents,"succeeded","transfer.reversed").run();
+  await env.DB.prepare("INSERT OR IGNORE INTO stripe_transfer_reversal_events (reversal_id,payment_intent_id,transfer_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)").bind(String(data.id),paymentIntentId,transferId,Number(data.amount || amountCents),"succeeded","transfer.reversed").run();
 }
 
 async function createBookingSettlement(env, event) {
@@ -156,6 +201,12 @@ async function ensureStripePaymentEventsTable(env) {
 async function ensureStripeRefundEventsTable(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stripe_refund_events (id INTEGER PRIMARY KEY AUTOINCREMENT,refund_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT NOT NULL,charge_id TEXT,amount INTEGER NOT NULL CHECK (amount > 0),status TEXT,event_type TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_stripe_refund_events_payment_intent ON stripe_refund_events(payment_intent_id)").run();
+}
+
+async function ensureStripeTransferReversalEventsTable(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stripe_transfer_reversal_events (id INTEGER PRIMARY KEY AUTOINCREMENT,reversal_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT NOT NULL,transfer_id TEXT NOT NULL,amount INTEGER NOT NULL CHECK (amount > 0),status TEXT,event_type TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_stripe_transfer_reversal_events_payment_intent ON stripe_transfer_reversal_events(payment_intent_id)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_stripe_transfer_reversal_events_transfer ON stripe_transfer_reversal_events(transfer_id)").run();
 }
 
 async function ensureBookingSettlementsTable(env) {
