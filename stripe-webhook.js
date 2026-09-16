@@ -210,32 +210,36 @@ async function ensureStripeTransferReversalEventsTable(env) {
 }
 
 async function ensureBookingSettlementsTable(env) {
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS booking_settlements (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT NOT NULL,total_amount_cents INTEGER NOT NULL,provider_amount_cents INTEGER NOT NULL,fiiviu_amount_cents INTEGER NOT NULL,partner_amount_cents INTEGER NOT NULL DEFAULT 0,partner_ref TEXT,provider_transfer_id TEXT,settlement_status TEXT NOT NULL DEFAULT 'pending',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS booking_settlements (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),partner_ref TEXT,provider_transfer_id TEXT,settlement_status TEXT NOT NULL DEFAULT 'pending' CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
+  try { await env.DB.prepare("ALTER TABLE booking_settlements ADD COLUMN provider_transfer_id TEXT").run(); } catch (e) {}
+  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_settlements_provider_transfer ON booking_settlements(provider_transfer_id)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_payment_intent ON booking_settlements(payment_intent_id)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
 }
 
-async function verifyStripeSignature(payload, signatureHeader, secret, toleranceSeconds) {
-  const parts = signatureHeader.split(",");
-  const timestampPart = parts.find((part) => part.startsWith("t="));
-  const signaturePart = parts.find((part) => part.startsWith("v1="));
-  if (!timestampPart || !signaturePart) return false;
+async function verifyStripeSignature(payload, header, secret, toleranceSeconds) {
+  const parts = header.split(",");
+  const timestampPart = parts.find(part => part.startsWith("t="));
+  const signatures = parts.filter(part => part.startsWith("v1=")).map(part => part.slice(3));
+  if (!timestampPart || signatures.length === 0) return false;
   const timestamp = Number(timestampPart.slice(2));
-  const expectedSignature = signaturePart.slice(3);
-  if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > toleranceSeconds) return false;
-  const signedPayload = `${timestamp}.${payload}`;
+  if (!Number.isInteger(timestamp)) return false;
+  if (Math.abs(Math.floor(Date.now()/1000)-timestamp) > toleranceSeconds) return false;
+  const expected = await hmacSha256Hex(secret, `${timestamp}.${payload}`);
+  return signatures.some(signature => timingSafeEqualHex(signature, expected));
+}
+
+async function hmacSha256Hex(secret, message) {
   const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signedPayload));
-  const actualSignature = [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  return timingSafeEqual(actualSignature, expectedSignature);
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
+  return [...new Uint8Array(signature)].map(byte => byte.toString(16).padStart(2,"0")).join("");
 }
 
-function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i += 1) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return result === 0;
+function timingSafeEqualHex(a,b) {
+  if (!/^[0-9a-f]+$/i.test(a) || !/^[0-9a-f]+$/i.test(b) || a.length !== b.length) return false;
+  let diff=0; for(let i=0;i<a.length;i++) diff |= a.charCodeAt(i)^b.charCodeAt(i); return diff===0;
 }
-
-function webhookJson(payload) { return new Response(JSON.stringify(payload), { status: 200, headers: { "Content-Type": "application/json" } }); }
-function webhookError(message, status) { return new Response(JSON.stringify({ error: message }), { status, headers: { "Content-Type": "application/json" } }); }
+function webhookError(message,status){return new Response(JSON.stringify({error:message}),{status,headers:{"Content-Type":"application/json"}})}
+function webhookJson(data){return new Response(JSON.stringify(data),{status:200,headers:{"Content-Type":"application/json"}})}
