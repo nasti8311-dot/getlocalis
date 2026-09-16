@@ -11,13 +11,9 @@ CREATE TABLE IF NOT EXISTS partner_payouts (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_partner_payouts_partner_ref
-  ON partner_payouts(partner_ref);
+CREATE INDEX IF NOT EXISTS idx_partner_payouts_partner_ref ON partner_payouts(partner_ref);
+CREATE INDEX IF NOT EXISTS idx_partner_payouts_payout_date ON partner_payouts(payout_date);
 
-CREATE INDEX IF NOT EXISTS idx_partner_payouts_payout_date
-  ON partner_payouts(payout_date);
-
--- Experience providers receive the provider share through Stripe Connect.
 CREATE TABLE IF NOT EXISTS providers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   legal_name TEXT NOT NULL,
@@ -35,8 +31,39 @@ CREATE TABLE IF NOT EXISTS providers (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_providers_status
-  ON providers(status);
+CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
+CREATE INDEX IF NOT EXISTS idx_providers_stripe_account ON providers(stripe_account_id);
 
-CREATE INDEX IF NOT EXISTS idx_providers_stripe_account
-  ON providers(stripe_account_id);
+CREATE TABLE IF NOT EXISTS experience_providers (
+  experience_id TEXT PRIMARY KEY,
+  provider_id INTEGER NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (provider_id) REFERENCES providers(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_experience_providers_provider ON experience_providers(provider_id);
+
+CREATE TABLE IF NOT EXISTS booking_settlements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  booking_id TEXT NOT NULL UNIQUE,
+  experience_id TEXT NOT NULL,
+  provider_id INTEGER NOT NULL,
+  payment_intent_id TEXT UNIQUE,
+  gross_cents INTEGER NOT NULL,
+  provider_cents INTEGER NOT NULL,
+  platform_cents INTEGER NOT NULL,
+  partner_cents INTEGER NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'eur',
+  partner_ref TEXT,
+  status TEXT NOT NULL DEFAULT 'created',
+  refunded_cents INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (provider_id) REFERENCES providers(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_settlements_provider ON booking_settlements(provider_id);
+CREATE INDEX IF NOT EXISTS idx_booking_settlements_experience ON booking_settlements(experience_id);
+CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner ON booking_settlements(partner_ref);
