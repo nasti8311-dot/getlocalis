@@ -1138,6 +1138,13 @@
                         Die Zahlungsabwicklung erfolgt sicher über Stripe.
                     </p>
 
+                    <label class="mt-4 flex items-start gap-3 text-xs text-gray-600 leading-relaxed">
+                        <input type="checkbox" id="legal-acceptance" required class="mt-0.5 h-4 w-4 rounded border-gray-300 text-fii-orange focus:ring-fii-orange">
+                        <span data-i18n="legal_acceptance">
+                            Ich akzeptiere die AGB & Buchungsbedingungen und die für dieses Erlebnis geltenden Storno- und Rückerstattungsbedingungen. Ich habe die Datenschutzerklärung gelesen.
+                        </span>
+                    </label>
+
                 </div>
 
 
@@ -1147,7 +1154,7 @@
                     class="w-full bg-fii-orange hover:bg-fii-orangeDark text-white font-black py-4 rounded-xl transition shadow-lg">
                     <i class="fa-solid fa-lock mr-2"></i>
                     <span data-i18n="pay_book">
-                        Sicher buchen
+                        Zahlungspflichtig buchen
                     </span>
                 </button>
 
@@ -1416,20 +1423,20 @@
                 <div class="space-y-3 text-sm text-white/50">
 
                     <button
-                        onclick="openModal('impressum-modal')"
+                        href="/legal/impressum.html"
                         class="block hover:text-white"
                         data-i18n="imprint">
                         Impressum
                     </button>
 
                     <button
-                        onclick="openModal('privacy-modal')"
+                        href="/legal/politica-de-confidentialitate.html"
                         class="block hover:text-white"
                         data-i18n="privacy">
                         Datenschutz
                     </button>
 <button
-    onclick="openModal('terms-modal')"
+    href="/legal/termeni-si-conditii.html"
     class="block hover:text-white"
     data-i18n="terms">
     AGB & Buchungsbedingungen
@@ -2615,7 +2622,14 @@ const translations = {
         notes: "Nachricht / Wünsche",
         payment: "Zahlung",
         payment_note: "Die Zahlungsabwicklung erfolgt sicher über Stripe.",
-        pay_book: "Sicher buchen",
+        pay_book: "Zahlungspflichtig buchen",
+        legal_acceptance: "Ich akzeptiere die AGB & Buchungsbedingungen und die für dieses Erlebnis geltenden Storno- und Rückerstattungsbedingungen. Ich habe die Datenschutzerklärung gelesen.",
+        provider_notice: "Die Leistung wird vom jeweiligen Erlebnisanbieter erbracht. FiiViu vermittelt die Buchung.",
+        cancellation_notice: "Storno- und Rückerstattungsbedingungen sind erlebnisspezifisch und vor der Zahlung einzusehen.",
+        terms_link: "AGB & Buchungsbedingungen",
+        refund_link: "Storno & Rückerstattung",
+        privacy_link: "Datenschutz",
+        legal_required: "Bitte bestätige vor der Zahlung die Buchungsbedingungen.",
 
         summary: "Deine Auswahl",
         price_per_unit: "Preis",
@@ -2710,7 +2724,14 @@ const translations = {
         notes: "Message / requests",
         payment: "Payment",
         payment_note: "Payment is securely processed via Stripe.",
-        pay_book: "Book securely",
+        pay_book: "Book and pay",
+        legal_acceptance: "I accept the Terms & Booking Conditions and the cancellation and refund conditions applicable to this experience. I have read the Privacy Policy.",
+        provider_notice: "The service is provided by the respective experience provider. FiiViu acts as intermediary for the booking.",
+        cancellation_notice: "Cancellation and refund conditions are specific to the experience and are shown before payment.",
+        terms_link: "Terms & Booking Conditions",
+        refund_link: "Cancellation & Refunds",
+        privacy_link: "Privacy Policy",
+        legal_required: "Please confirm the booking conditions before payment.",
 
         summary: "Your selection",
         price_per_unit: "Price",
@@ -2805,7 +2826,14 @@ const translations = {
         notes: "Mesaj / dorințe",
         payment: "Plată",
         payment_note: "Plata este procesată în siguranță prin Stripe.",
-        pay_book: "Rezervă în siguranță",
+        pay_book: "Plătește și rezervă",
+        legal_acceptance: "Accept Termenii și condițiile de rezervare și condițiile de anulare și rambursare aplicabile acestei experiențe. Am citit Politica de confidențialitate.",
+        provider_notice: "Serviciul este furnizat de operatorul experienței. FiiViu acționează ca intermediar al rezervării.",
+        cancellation_notice: "Condițiile de anulare și rambursare sunt specifice experienței și sunt afișate înainte de plată.",
+        terms_link: "Termeni și condiții",
+        refund_link: "Anulare și rambursare",
+        privacy_link: "Politica de confidențialitate",
+        legal_required: "Confirmă condițiile de rezervare înainte de plată.",
 
         summary: "Selecția ta",
         price_per_unit: "Preț",
@@ -3699,6 +3727,13 @@ async function processBooking(event) {
 
     const notes =
         document.getElementById("customer-notes").value.trim();
+
+    const legalAcceptance = document.getElementById("legal-acceptance");
+    if (!legalAcceptance || !legalAcceptance.checked) {
+        cardErrors.textContent = translations[currentLang].legal_required || "Bitte bestätige vor der Zahlung die Buchungsbedingungen.";
+        submitButton.disabled = false;
+        return;
+    }
 
     const tourName =
         document.getElementById("selected-tour-display").value;
