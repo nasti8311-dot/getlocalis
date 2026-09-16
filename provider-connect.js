@@ -57,12 +57,41 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
     }
   }
 
-  if (!url.pathname.startsWith('/api/admin/providers')) return null;
+  const isProviderRoute = url.pathname.startsWith('/api/admin/providers');
+  const isRefundRoute = url.pathname === '/api/admin/refund-payment';
+  if (!isProviderRoute && !isRefundRoute) return null;
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: 'Admin key not configured' }, 500, corsHeaders);
   if (!isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401, corsHeaders);
   if (!env.DB) return json({ error: 'D1 database not configured' }, 500, corsHeaders);
   try {
     await ensureProvidersTable(env);
+
+    if (isRefundRoute) {
+      if (request.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405, corsHeaders);
+      if (!env.STRIPE_SECRET_KEY) return json({ error: 'Stripe secret not configured' }, 500, corsHeaders);
+      await ensureSettlementTable(env);
+      const body = await request.json();
+      const bookingId = String(body.bookingId || '').trim();
+      const requestedAmount = Number(body.amountCents);
+      if (!bookingId) return json({ error: 'bookingId is required' }, 400, corsHeaders);
+      if (!Number.isInteger(requestedAmount) || requestedAmount <= 0) return json({ error: 'amountCents must be a positive integer' }, 400, corsHeaders);
+      const settlement = await env.DB.prepare(`SELECT booking_id,payment_intent_id,gross_cents,refunded_cents,status FROM booking_settlements WHERE booking_id=? LIMIT 1`).bind(bookingId).first();
+      if (!settlement) return json({ error: 'Booking settlement not found' }, 404, corsHeaders);
+      if (!settlement.payment_intent_id) return json({ error: 'PaymentIntent not found for booking' }, 409, corsHeaders);
+      const grossCents = Number(settlement.gross_cents || 0);
+      const alreadyRefunded = Number(settlement.refunded_cents || 0);
+      const remainingCents = Math.max(0, grossCents - alreadyRefunded);
+      if (requestedAmount > remainingCents) return json({ error: 'Refund exceeds remaining refundable amount', remainingCents }, 400, corsHeaders);
+      if (settlement.status !== 'paid' && settlement.status !== 'partially_refunded') return json({ error: `Booking cannot be refunded from status '${settlement.status}'` }, 409, corsHeaders);
+      const refundParams = new URLSearchParams();
+      refundParams.set('payment_intent', String(settlement.payment_intent_id));
+      refundParams.set('amount', String(requestedAmount));
+      refundParams.set('reverse_transfer', 'true');
+      refundParams.set('metadata[booking_id]', bookingId);
+      const refund = await stripeRequest(env, '/v1/refunds', 'POST', refundParams, { idempotencyKey: `refund-${bookingId}-${alreadyRefunded + requestedAmount}` });
+      if (!refund.ok) return json({ error: refund.data?.error?.message || 'Stripe refund failed' }, refund.status, corsHeaders);
+      return json({ success: true, refundId: refund.data.id, bookingId, paymentIntentId: settlement.payment_intent_id, refundedCents: requestedAmount, remainingCents: remainingCents - requestedAmount, reverseTransfer: true }, 200, corsHeaders);
+    }
 
     if (url.pathname === '/api/admin/providers/onboarding-link') {
       if (request.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405, corsHeaders);
@@ -74,12 +103,10 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
       if (!onboarding.ok) return json({ error: onboarding.data?.error?.message || 'Stripe onboarding link creation failed' }, onboarding.status, corsHeaders);
       return json({ success: true, onboardingUrl: onboarding.data.url }, 200, corsHeaders);
     }
-
     if (request.method === 'GET') {
       const result = await env.DB.prepare(`SELECT id,legal_name,display_name,contact_email,phone,cui,vat_number,stripe_account_id,stripe_onboarding_status,stripe_payouts_enabled,status,created_at,updated_at FROM providers ORDER BY created_at DESC,id DESC`).all();
       return json({ providers: result.results || [] }, 200, corsHeaders);
     }
-
     if (request.method === 'POST') {
       const body = await request.json();
       const legalName = String(body.legalName || '').trim();
@@ -91,7 +118,6 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
       const vatNumber = String(body.vatNumber || '').trim();
       if (!legalName || !displayName || !contactEmail) return json({ error: 'Legal name, display name and email are required.' }, 400, corsHeaders);
       if (!env.STRIPE_SECRET_KEY) return json({ error: 'Stripe secret not configured' }, 500, corsHeaders);
-
       const accountParams = new URLSearchParams();
       accountParams.set('type', 'express');
       accountParams.set('country', 'RO');
@@ -102,14 +128,11 @@ export async function handleProviderConnectRoute(request, env, url, corsHeaders)
       accountParams.set('capabilities[transfers][requested]', 'true');
       const stripeResponse = await stripeRequest(env, '/v1/accounts', 'POST', accountParams);
       if (!stripeResponse.ok) return json({ error: stripeResponse.data?.error?.message || 'Stripe account creation failed' }, stripeResponse.status, corsHeaders);
-
       const accountId = stripeResponse.data.id;
-      const result = await env.DB.prepare(`INSERT INTO providers (legal_name,display_name,contact_email,phone,address,cui,vat_number,stripe_account_id,stripe_onboarding_status,status) VALUES (?,?,?,?,?,?,?,?,'created','pending')`)
-        .bind(legalName, displayName, contactEmail, phone || null, address || null, cui || null, vatNumber || null, accountId).run();
+      const result = await env.DB.prepare(`INSERT INTO providers (legal_name,display_name,contact_email,phone,address,cui,vat_number,stripe_account_id,stripe_onboarding_status,status) VALUES (?,?,?,?,?,?,?,?,'created','pending')`).bind(legalName, displayName, contactEmail, phone || null, address || null, cui || null, vatNumber || null, accountId).run();
       const providerId = result.meta?.last_row_id || null;
       const onboarding = await createAccountLink(env, accountId, env.ADMIN_URL || url.origin, providerId);
       if (!onboarding.ok) return json({ error: onboarding.data?.error?.message || 'Stripe onboarding link creation failed', providerId, stripeAccountId: accountId }, onboarding.status, corsHeaders);
-
       return json({ success: true, providerId, stripeAccountId: accountId, onboardingUrl: onboarding.data.url }, 201, corsHeaders);
     }
     return json({ error: 'Method Not Allowed' }, 405, corsHeaders);
@@ -127,12 +150,10 @@ async function createAccountLink(env, accountId, origin, providerId) {
   return stripeRequest(env, '/v1/account_links', 'POST', params);
 }
 
-async function stripeRequest(env, path, method, body) {
-  const response = await fetch(`https://api.stripe.com${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
-  });
+async function stripeRequest(env, path, method, body, options = {}) {
+  const headers = { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' };
+  if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
+  const response = await fetch(`https://api.stripe.com${path}`, { method, headers, body });
   const data = await response.json();
   return { ok: response.ok, status: response.status, data };
 }
