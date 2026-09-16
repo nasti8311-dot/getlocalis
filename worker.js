@@ -54,7 +54,7 @@ export default {
           let partnerRef=String(body.partnerRef||"").trim().toUpperCase(); if(!name)return json({error:"Partner-Name fehlt"},400,corsHeaders); if(!partnerRef)partnerRef=await generatePartnerRef(env,name);
           if(!/^[A-Z0-9_-]{3,32}$/.test(partnerRef))return json({error:"Ungültiger Partner-Code"},400,corsHeaders);
           const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(partnerRef).first(); if(existing)return json({error:"Dieser Partner-Code existiert bereits."},409,corsHeaders);
-          const result=await env.DB.prepare("INSERT INTO partners (name,type,partner_ref,contact_name,contact_email,active) VALUES (?,?,?,?,?,1)").bind(name,type||"Hotel",partnerRef,contactName||null,contactEmail||null).run();
+          const result=await env.DB.prepare("INSERT INTO partners (name,type,partner_ref,contact_name,contact_email,active) VALUES (?,?,?,?,?,1)").bind(name,type||"Hotel",contactName||null,contactEmail||null).run();
           return json({success:true,partner:{id:result.meta?.last_row_id||null,name,type:type||"Hotel",partnerRef,contactName,contactEmail,active:1,link:buildPartnerLink(partnerRef),qrUrl:buildQrUrl(partnerRef)}},201,corsHeaders);
         }
         if(request.method==="PATCH"){
@@ -123,7 +123,41 @@ async function generatePartnerRef(env,name){const base=name.normalize("NFD").rep
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
 function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data="+encodeURIComponent(buildPartnerLink(partnerRef))}
 
-async function getPartnerStats(env,partnerRef){if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");const payments=await searchPartnerPayments(env,partnerRef);const successful=payments.filter(payment=>payment.status==="succeeded");let revenueCents=0;for(const payment of successful){const receivedCents=Number(payment.amount_received||payment.amount||0);const refundedCents=await getSuccessfulRefundAmount(env,payment.id);revenueCents+=Math.max(receivedCents-refundedCents,0)}const commissionCents=Math.round(revenueCents*0.03);let paidCents=0;if(env.DB){await ensurePayoutsTable(env);const payoutResult=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'").bind(partnerRef).first();paidCents=Number(payoutResult?.paid_cents||0)}const openCommissionCents=commissionCents-paidCents;return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,paidCommission:paidCents/100,currency:"eur"}}
+async function getPartnerStats(env,partnerRef){
+  if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
+  const payments=await searchPartnerPayments(env,partnerRef);
+  const successful=payments.filter(payment=>payment.status==="succeeded");
+  let revenueCents=0;
+  const bookingDetails=[];
+  for(const payment of successful){
+    const receivedCents=Number(payment.amount_received||payment.amount||0);
+    const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
+    const netCents=Math.max(receivedCents-refundedCents,0);
+    revenueCents+=netCents;
+    bookingDetails.push({
+      paymentIntentId:payment.id,
+      bookingId:payment.metadata?.booking_id||payment.id,
+      tourName:payment.metadata?.tour_name||"Buchung",
+      guests:Number(payment.metadata?.guests||1),
+      amount:receivedCents/100,
+      refunded:refundedCents/100,
+      netAmount:netCents/100,
+      commission:Math.round(netCents*0.03)/100,
+      currency:String(payment.currency||"eur").toLowerCase(),
+      created:Number(payment.created||0)
+    });
+  }
+  bookingDetails.sort((a,b)=>b.created-a.created);
+  const commissionCents=Math.round(revenueCents*0.03);
+  let paidCents=0;
+  if(env.DB){
+    await ensurePayoutsTable(env);
+    const payoutResult=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'").bind(partnerRef).first();
+    paidCents=Number(payoutResult?.paid_cents||0);
+  }
+  const openCommissionCents=commissionCents-paidCents;
+  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,paidCommission:paidCents/100,currency:"eur",bookingDetails};
+}
 async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
 async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
-function json(data,status,corsHeaders){return new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json",...corsHeaders}})
+function json(data,status,corsHeaders){return new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json",...corsHeaders}})}
