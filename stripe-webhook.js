@@ -25,6 +25,8 @@ export async function handleStripeWebhook(request, env) {
       await createBookingSettlement(env, event);
     } else if (event.type === "payment_intent.payment_failed") {
       await recordPaymentIntentEvent(env, event);
+    } else if (event.type === "charge.refunded" || event.type === "charge.refund.updated") {
+      await recordRefundEvent(env, event);
     }
     if (env.DB) await env.DB.prepare("INSERT INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(event_id) DO NOTHING").bind(event.id, event.type).run();
   } catch (error) {
@@ -40,6 +42,30 @@ async function recordPaymentIntentEvent(env, event) {
   const paymentIntent = event.data?.object || {};
   const metadata = paymentIntent.metadata || {};
   await env.DB.prepare(`INSERT INTO stripe_payment_events (event_id,payment_intent_id,event_type,booking_id,partner_ref,amount,currency,payment_status,created_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(event_id) DO NOTHING`).bind(event.id, paymentIntent.id || null, event.type, metadata.booking_id || null, metadata.partner_ref || null, Number(paymentIntent.amount || 0), paymentIntent.currency || null, paymentIntent.status || null).run();
+}
+
+async function recordRefundEvent(env, event) {
+  if (!env.DB) return;
+  await ensureStripeRefundEventsTable(env);
+  const object = event.data?.object || {};
+  const chargeId = String(object.id || "").trim();
+  const paymentIntentId = String(object.payment_intent || "").trim();
+  const refundId = event.type === "charge.refunded" ? `charge_refund_${chargeId}` : String(object.id || "").trim();
+  const amount = event.type === "charge.refunded" ? Number(object.amount_refunded || 0) : Number(object.amount || 0);
+  if (!refundId || !paymentIntentId || !Number.isInteger(amount) || amount <= 0) throw new Error("Refund event is missing a valid payment intent or amount");
+  await env.DB.prepare(`INSERT INTO stripe_refund_events (refund_id,payment_intent_id,charge_id,amount,status,event_type,created_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(refund_id) DO UPDATE SET amount=excluded.amount,status=excluded.status,event_type=excluded.event_type`).bind(refundId,paymentIntentId,chargeId,amount,String(object.status || "succeeded"),event.type).run();
+  await applyRefundToSettlement(env, paymentIntentId);
+}
+
+async function applyRefundToSettlement(env, paymentIntentId) {
+  const refundRow = await env.DB.prepare("SELECT COALESCE(SUM(amount),0) AS refunded_cents FROM stripe_refund_events WHERE payment_intent_id = ? AND status = 'succeeded'").bind(paymentIntentId).first();
+  const refundedCents = Number(refundRow?.refunded_cents || 0);
+  const settlement = await env.DB.prepare("SELECT id,total_amount_cents,settlement_status FROM booking_settlements WHERE payment_intent_id = ? LIMIT 1").bind(paymentIntentId).first();
+  if (!settlement) return;
+  const totalCents = Number(settlement.total_amount_cents || 0);
+  if (refundedCents >= totalCents) {
+    await env.DB.prepare("UPDATE booking_settlements SET settlement_status='refunded',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(settlement.id).run();
+  }
 }
 
 async function createBookingSettlement(env, event) {
@@ -105,6 +131,11 @@ async function ensureStripePaymentEventsTable(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stripe_payment_events (id INTEGER PRIMARY KEY AUTOINCREMENT,event_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT,event_type TEXT NOT NULL,booking_id TEXT,partner_ref TEXT,amount INTEGER,currency TEXT,payment_status TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_stripe_payment_events_payment_intent ON stripe_payment_events(payment_intent_id)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_stripe_payment_events_booking ON stripe_payment_events(booking_id)").run();
+}
+
+async function ensureStripeRefundEventsTable(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS stripe_refund_events (id INTEGER PRIMARY KEY AUTOINCREMENT,refund_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT NOT NULL,charge_id TEXT,amount INTEGER NOT NULL CHECK (amount > 0),status TEXT,event_type TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_stripe_refund_events_payment_intent ON stripe_refund_events(payment_intent_id)").run();
 }
 
 async function ensureBookingSettlementsTable(env) {
