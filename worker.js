@@ -1,8 +1,14 @@
+import { handleStripeWebhook } from "./stripe-webhook.js";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, PATCH, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
+
+    if (url.pathname === "/api/stripe/webhook") {
+      return handleStripeWebhook(request, env);
+    }
 
     if (url.pathname === "/api/create-payment-intent") {
       if (request.method !== "POST") return json({error:"Method Not Allowed"},405,corsHeaders);
