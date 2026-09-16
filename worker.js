@@ -28,28 +28,20 @@ export default {
         if(currency!=="eur")return json({error:"Marketplace-Zahlungen sind derzeit nur in EUR freigeschaltet."},400,corsHeaders);
         if(!env.STRIPE_SECRET_KEY)return json({error:"Stripe secret not configured"},500,corsHeaders);
         if(!env.DB)return json({error:"D1 database not configured"},500,corsHeaders);
-
         await ensureMarketplaceTables(env);
-        const mapping=await env.DB.prepare(`SELECT ep.experience_id,ep.provider_id,p.display_name,p.stripe_account_id,p.stripe_payouts_enabled,p.status
-          FROM experience_providers ep JOIN providers p ON p.id=ep.provider_id
-          WHERE ep.experience_id=? AND ep.active=1 LIMIT 1`).bind(experienceId).first();
+        const mapping=await env.DB.prepare(`SELECT ep.experience_id,ep.provider_id,p.display_name,p.stripe_account_id,p.stripe_payouts_enabled,p.status FROM experience_providers ep JOIN providers p ON p.id=ep.provider_id WHERE ep.experience_id=? AND ep.active=1 LIMIT 1`).bind(experienceId).first();
         if(!mapping)return json({error:"Für dieses Erlebnis ist noch kein Anbieter hinterlegt."},409,corsHeaders);
-        if(Number(mapping.stripe_payouts_enabled)!==1 || mapping.status!=="active" || !mapping.stripe_account_id){
-          return json({error:"Der Erlebnisanbieter ist für Auszahlungen noch nicht freigeschaltet."},409,corsHeaders);
-        }
-
+        if(Number(mapping.stripe_payouts_enabled)!==1 || mapping.status!=="active" || !mapping.stripe_account_id)return json({error:"Der Erlebnisanbieter ist für Auszahlungen noch nicht freigeschaltet."},409,corsHeaders);
         if(partnerRef){
           await ensurePartnersTable(env);
           const partner=await env.DB.prepare("SELECT active FROM partners WHERE partner_ref = ? LIMIT 1").bind(partnerRef).first();
           if(partner && Number(partner.active)!==1) partnerRef="";
         }
-
         const providerCents=Math.floor(amount*0.85);
         const platformCents=amount-providerCents;
         const partnerCents=partnerRef?Math.round(amount*0.03):0;
         const directPlatformCents=partnerRef?Math.round(amount*0.12):Math.round(amount*0.15);
         if(providerCents<=0 || directPlatformCents+providerCents!==amount)return json({error:"Ungültige Abrechnungssumme"},500,corsHeaders);
-
         const params=new URLSearchParams();
         params.set("amount",String(amount));
         params.set("currency",currency);
@@ -65,17 +57,10 @@ export default {
         params.set("transfer_data[destination]",mapping.stripe_account_id);
         params.set("transfer_data[amount]",String(providerCents));
         params.set("automatic_payment_methods[enabled]","true");
-
         const stripeResponse=await fetch("https://api.stripe.com/v1/payment_intents",{method:"POST",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},body:params});
         const data=await stripeResponse.json();
         if(!stripeResponse.ok)return json({error:data?.error?.message||"Stripe error"},stripeResponse.status,corsHeaders);
-
-        await env.DB.prepare(`INSERT INTO booking_settlements (booking_id,experience_id,provider_id,payment_intent_id,gross_cents,provider_cents,platform_cents,partner_cents,currency,partner_ref,status)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?)
-          ON CONFLICT(booking_id) DO UPDATE SET payment_intent_id=excluded.payment_intent_id,provider_id=excluded.provider_id,experience_id=excluded.experience_id,gross_cents=excluded.gross_cents,provider_cents=excluded.provider_cents,platform_cents=excluded.platform_cents,partner_cents=excluded.partner_cents,currency=excluded.currency,partner_ref=excluded.partner_ref,updated_at=CURRENT_TIMESTAMP`).bind(
-            bookingId,experienceId,Number(mapping.provider_id),data.id,amount,providerCents,directPlatformCents,partnerCents,currency,partnerRef||null,"created"
-          ).run();
-
+        await env.DB.prepare(`INSERT INTO booking_settlements (booking_id,experience_id,provider_id,payment_intent_id,gross_cents,provider_cents,platform_cents,partner_cents,currency,partner_ref,status) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(booking_id) DO UPDATE SET payment_intent_id=excluded.payment_intent_id,provider_id=excluded.provider_id,experience_id=excluded.experience_id,gross_cents=excluded.gross_cents,provider_cents=excluded.provider_cents,platform_cents=excluded.platform_cents,partner_cents=excluded.partner_cents,currency=excluded.currency,partner_ref=excluded.partner_ref,updated_at=CURRENT_TIMESTAMP`).bind(bookingId,experienceId,Number(mapping.provider_id),data.id,amount,providerCents,directPlatformCents,partnerCents,currency,partnerRef||null,"created").run();
         return json({clientSecret:data.client_secret,paymentIntentId:data.id,partnerRef:data.metadata?.partner_ref||"",experienceId,providerId:Number(mapping.provider_id),providerShareCents:providerCents,platformShareCents:directPlatformCents,partnerShareCents:partnerCents},200,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
@@ -87,8 +72,7 @@ export default {
       try{
         await ensureMarketplaceTables(env);
         if(request.method==="GET"){
-          const result=await env.DB.prepare(`SELECT ep.experience_id,ep.provider_id,ep.active,ep.created_at,ep.updated_at,p.display_name,p.stripe_account_id,p.status,p.stripe_payouts_enabled
-            FROM experience_providers ep JOIN providers p ON p.id=ep.provider_id ORDER BY ep.experience_id`).all();
+          const result=await env.DB.prepare(`SELECT ep.experience_id,ep.provider_id,ep.active,ep.created_at,ep.updated_at,p.display_name,p.stripe_account_id,p.status,p.stripe_payouts_enabled FROM experience_providers ep JOIN providers p ON p.id=ep.provider_id ORDER BY ep.experience_id`).all();
           return json({mappings:result.results||[]},200,corsHeaders);
         }
         if(request.method!=="POST" && request.method!=="PATCH")return json({error:"Method Not Allowed"},405,corsHeaders);
@@ -103,11 +87,9 @@ export default {
           const active=body.active===undefined?1:(body.active===true||body.active===1||body.active==="1"?1:0);
           await env.DB.prepare("UPDATE experience_providers SET provider_id=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE experience_id=?").bind(providerId,active,experienceId).run();
         }else{
-          await env.DB.prepare(`INSERT INTO experience_providers (experience_id,provider_id,active) VALUES (?,?,1)
-            ON CONFLICT(experience_id) DO UPDATE SET provider_id=excluded.provider_id,active=1,updated_at=CURRENT_TIMESTAMP`).bind(experienceId,providerId).run();
+          await env.DB.prepare(`INSERT INTO experience_providers (experience_id,provider_id,active) VALUES (?,?,1) ON CONFLICT(experience_id) DO UPDATE SET provider_id=excluded.provider_id,active=1,updated_at=CURRENT_TIMESTAMP`).bind(experienceId,providerId).run();
         }
-        const mapping=await env.DB.prepare(`SELECT ep.experience_id,ep.provider_id,ep.active,p.display_name,p.stripe_account_id,p.status,p.stripe_payouts_enabled
-          FROM experience_providers ep JOIN providers p ON p.id=ep.provider_id WHERE ep.experience_id=? LIMIT 1`).bind(experienceId).first();
+        const mapping=await env.DB.prepare(`SELECT ep.experience_id,ep.provider_id,ep.active,p.display_name,p.stripe_account_id,p.status,p.stripe_payouts_enabled FROM experience_providers ep JOIN providers p ON p.id=ep.provider_id WHERE ep.experience_id=? LIMIT 1`).bind(experienceId).first();
         return json({success:true,mapping},200,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
@@ -177,7 +159,14 @@ export default {
         return json({success:true,payoutId:result.meta?.last_row_id||null,partnerRef:bodyPartnerRef,amount:amountCents/100,payoutDate,reference:reference||null,openCommission:updatedStats.openCommission,paidCommission:updatedStats.paidCommission},201,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
-    return env.ASSETS.fetch(request);
+
+    const assetResponse = await env.ASSETS.fetch(request);
+    if(request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")){
+      return new HTMLRewriter().on("body",{element(element){
+        element.append(`<script>\n(function(){\n  const MARKETPLACE_WORKER = ${JSON.stringify(url.origin)};\n  const MARKETPLACE_API = MARKETPLACE_WORKER + '/api/create-payment-intent';\n  window.createPaymentIntent = async function({amountEUR, bookingId, tourName, guests}) {\n    const partnerRef = (window.currentPartnerRef || localStorage.getItem('fiiviu_partner_ref') || new URLSearchParams(window.location.search).get('ref') || '').trim();\n    const experienceId = (window.currentTourKey || '').trim();\n    if(!experienceId) throw new Error('Erlebnis-ID fehlt.');\n    const response = await fetch(MARKETPLACE_API + '?ref=' + encodeURIComponent(partnerRef), {\n      method:'POST',\n      headers:{'Content-Type':'application/json'},\n      body:JSON.stringify({amount:Math.round(Number(amountEUR)*100),currency:'eur',bookingId,tourName,guests:Number(guests),partnerRef,experienceId})\n    });\n    const data = await response.json();\n    if(!response.ok) throw new Error(data && data.error ? data.error : 'Zahlung konnte nicht vorbereitet werden.');\n    return data;\n  };\n})();\n</script>`,{html:true});
+      }}).transform(assetResponse);
+    }
+    return assetResponse;
   }
 };
 
@@ -187,7 +176,7 @@ async function ensurePartnersTable(env){
   try{await env.DB.prepare("ALTER TABLE partners ADD COLUMN active INTEGER NOT NULL DEFAULT 1").run()}catch(e){}
 }
 async function ensurePayoutsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid',reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_partner_ref ON partner_payouts(partner_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_payout_date ON partner_payouts(payout_date)").run();
 }
@@ -201,7 +190,6 @@ async function ensureMarketplaceTables(env){
 async function generatePartnerRef(env,name){const base=name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,8)||"PARTNER";for(let i=1;i<1000;i++){const candidate=base.slice(0,12)+String(i).padStart(3,"0");const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(candidate).first();if(!existing)return candidate}throw new Error("Kein freier Partner-Code verfügbar.")}
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
 function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data="+encodeURIComponent(buildPartnerLink(partnerRef))}
-
 async function getPartnerStats(env,partnerRef){if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");const payments=await searchPartnerPayments(env,partnerRef);const successful=payments.filter(payment=>payment.status==="succeeded");let revenueCents=0;for(const payment of successful){const receivedCents=Number(payment.amount_received||payment.amount||0);const refundedCents=await getSuccessfulRefundAmount(env,payment.id);revenueCents+=Math.max(receivedCents-refundedCents,0)}const commissionCents=Math.round(revenueCents*0.03);let paidCents=0;if(env.DB){await ensurePayoutsTable(env);const payoutResult=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'").bind(partnerRef).first();paidCents=Number(payoutResult?.paid_cents||0)}const openCommissionCents=commissionCents-paidCents;return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,paidCommission:paidCents/100,currency:"eur"}}
 async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
 async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
