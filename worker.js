@@ -106,9 +106,15 @@ async function ensurePartnersTable(env){
   try{await env.DB.prepare("ALTER TABLE partners ADD COLUMN active INTEGER NOT NULL DEFAULT 1").run()}catch(e){}
 }
 async function ensurePayoutsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid','cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_partner_ref ON partner_payouts(partner_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_payout_date ON partner_payouts(payout_date)").run();
+}
+async function ensureBookingSettlementsTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS booking_settlements (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),partner_ref TEXT,settlement_status TEXT NOT NULL DEFAULT 'pending' CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_payment_intent ON booking_settlements(payment_intent_id)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
 }
 async function generatePartnerRef(env,name){const base=name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,8)||"PARTNER";for(let i=1;i<1000;i++){const candidate=base.slice(0,12)+String(i).padStart(3,"0");const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(candidate).first();if(!existing)return candidate}throw new Error("Kein freier Partner-Code verfügbar.")}
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
