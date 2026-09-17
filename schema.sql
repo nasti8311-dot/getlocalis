@@ -47,7 +47,9 @@ CREATE TABLE IF NOT EXISTS bookings (
   meeting_latitude TEXT,
   meeting_longitude TEXT,
   partner_ref TEXT,
+  provider_connect_account_id TEXT,
   confirmation_email_sent_at TEXT,
+  confirmation_email_error TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
