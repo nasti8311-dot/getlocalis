@@ -12,10 +12,6 @@ export default {
       const body = await request.text();
       const replay = new Request(request, { body });
       const response = await legacyWorker.fetch(replay, env, ctx);
-
-      // The legacy webhook remains the source of truth for Stripe signature,
-      // event idempotency and settlement. Booking persistence/confirmation is
-      // layered on after it has accepted the event.
       if (response.ok) {
         try {
           const event = JSON.parse(body);
@@ -29,20 +25,116 @@ export default {
       return response;
     }
 
-    return legacyWorker.fetch(request, env, ctx);
+    // Bridge the existing static checkout to the server-side booking flow
+    // without requiring a risky 100KB+ rewrite of index.html. The bridge
+    // enriches the existing PaymentIntent request with the customer fields
+    // already present in the checkout form and disables the old client-side
+    // confirmation send for the FiiViu booking template.
+    if (request.method === "POST" && url.pathname === "/api/create-payment-intent") {
+      const body = await request.text();
+      try {
+        const data = JSON.parse(body);
+        data.customerName = data.customerName || "";
+        data.customerEmail = data.customerEmail || "";
+        data.customerPhone = data.customerPhone || "";
+        data.customerLanguage = data.customerLanguage || "en";
+        data.bookingDate = data.bookingDate || "";
+        data.bookingTime = data.bookingTime || "";
+        data.experienceName = data.experienceName || data.tourName || "";
+        data.meetingPointName = data.meetingPointName || "";
+        data.meetingAddress = data.meetingAddress || "";
+        data.meetingCity = data.meetingCity || "";
+        data.meetingCountry = data.meetingCountry || "";
+        data.meetingInstructions = data.meetingInstructions || "";
+        data.arrivalMinutesBefore = data.arrivalMinutesBefore ?? "";
+        data.meetingLatitude = data.meetingLatitude || "";
+        data.meetingLongitude = data.meetingLongitude || "";
+        data.providerConnectAccountId = data.providerConnectAccountId || "";
+        return legacyWorker.fetch(
+          new Request(request, { body: JSON.stringify(data) }),
+          env,
+          ctx
+        );
+      } catch (_) {
+        return legacyWorker.fetch(new Request(request, { body }), env, ctx);
+      }
+    }
+
+    const response = await legacyWorker.fetch(request, env, ctx);
+    if (request.method === "GET" && isHtmlResponse(response, url)) {
+      return injectCheckoutBridge(response);
+    }
+    return response;
   }
 };
+
+function isHtmlResponse(response, url) {
+  if (url.pathname.startsWith("/api/")) return false;
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.includes("text/html");
+}
+
+async function injectCheckoutBridge(response) {
+  const html = await response.text();
+  const bridge = `<script>
+(function(){
+  var originalFetch = window.fetch.bind(window);
+  window.fetch = function(input, init){
+    try {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (url.indexOf('/api/create-payment-intent') !== -1 && init && typeof init.body === 'string') {
+        var data = JSON.parse(init.body);
+        var get = function(id){ var el=document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+        data.customerName = get('customer-name') || data.customerName || '';
+        data.customerEmail = get('customer-email') || data.customerEmail || '';
+        data.customerPhone = get('customer-phone') || data.customerPhone || '';
+        data.bookingDate = get('booking-date') || data.bookingDate || '';
+        data.bookingTime = (typeof selectedTourTime !== 'undefined' ? String(selectedTourTime || '').trim() : '') || data.bookingTime || '';
+        data.customerLanguage = (typeof currentLang !== 'undefined' ? String(currentLang || 'en').slice(0,2) : 'en');
+        data.experienceName = data.experienceName || data.tourName || '';
+        var meeting = window.__fiiviuMeetingPoint || {};
+        data.meetingPointName = meeting.name || data.meetingPointName || '';
+        data.meetingAddress = meeting.address || data.meetingAddress || '';
+        data.meetingCity = meeting.city || data.meetingCity || '';
+        data.meetingCountry = meeting.country || data.meetingCountry || '';
+        data.meetingInstructions = meeting.instructions || data.meetingInstructions || '';
+        data.arrivalMinutesBefore = meeting.arrivalMinutesBefore ?? data.arrivalMinutesBefore ?? '';
+        data.meetingLatitude = meeting.latitude || data.meetingLatitude || '';
+        data.meetingLongitude = meeting.longitude || data.meetingLongitude || '';
+        data.providerConnectAccountId = window.__fiiviuProviderConnectAccountId || data.providerConnectAccountId || '';
+        init.body = JSON.stringify(data);
+      }
+    } catch (_) {}
+    return originalFetch(input, init);
+  };
+  try {
+    if (window.emailjs && typeof window.emailjs.send === 'function') {
+      var originalSend = window.emailjs.send.bind(window.emailjs);
+      window.emailjs.send = function(serviceId, templateId, params, options){
+        if (serviceId === '${EMAILJS_SERVICE_ID}' && templateId === '${EMAILJS_TEMPLATE_ID}') {
+          return Promise.resolve({status:200, text:'Server-side confirmation queued'});
+        }
+        return originalSend(serviceId, templateId, params, options);
+      };
+    }
+  } catch (_) {}
+})();
+</script>`;
+
+  const marker = "</body>";
+  const output = html.includes(marker) ? html.replace(marker, bridge + marker) : html + bridge;
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  headers.set("cache-control", "no-cache");
+  return new Response(output, { status: response.status, statusText: response.statusText, headers });
+}
 
 async function finalizePaidBooking(env, paymentIntent) {
   if (!env.DB || !env.STRIPE_SECRET_KEY || !paymentIntent?.id) return;
 
   try {
     await ensureBookingColumns(env);
-
-    const pi = await stripeGet(
-      env,
-      `/v1/payment_intents/${encodeURIComponent(paymentIntent.id)}?expand[]=payment_method`
-    );
+    const pi = await stripeGet(env, `/v1/payment_intents/${encodeURIComponent(paymentIntent.id)}?expand[]=payment_method`);
     const metadata = pi.metadata || {};
     const paymentMethod = pi.payment_method && typeof pi.payment_method === "object" ? pi.payment_method : null;
     const billing = paymentMethod?.billing_details || {};
@@ -50,9 +142,6 @@ async function finalizePaidBooking(env, paymentIntent) {
     const bookingId = String(metadata.booking_id || `FV-${paymentIntent.id.slice(-8).toUpperCase()}`).trim();
     const email = String(metadata.customer_email || pi.receipt_email || billing.email || "").trim().toLowerCase();
     const name = String(metadata.customer_name || billing.name || "").trim();
-
-    // Do not manufacture a customer email. The frontend will be upgraded to
-    // pass the checkout email explicitly; until then this keeps D1 clean.
     if (!email) {
       console.error("Paid FiiViu booking has no customer email", paymentIntent.id);
       return;
@@ -65,7 +154,6 @@ async function finalizePaidBooking(env, paymentIntent) {
     const experienceName = String(metadata.experience_name || metadata.tour_name || "Experience").trim();
     const bookingDate = clean(metadata.booking_date);
     const bookingTime = clean(metadata.booking_time);
-
     const meeting = {
       name: clean(metadata.meeting_point_name),
       address: clean(metadata.meeting_address),
@@ -76,9 +164,6 @@ async function finalizePaidBooking(env, paymentIntent) {
       latitude: clean(metadata.meeting_latitude),
       longitude: clean(metadata.meeting_longitude)
     };
-
-    const partnerRef = clean(metadata.partner_ref);
-    const providerConnectAccountId = clean(metadata.provider_connect_account_id);
 
     await env.DB.prepare(`
       INSERT INTO bookings (
@@ -92,69 +177,28 @@ async function finalizePaidBooking(env, paymentIntent) {
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         booking_id=excluded.booking_id,
-        status='confirmed',
-        payment_status='paid',
-        customer_name=excluded.customer_name,
-        customer_email=excluded.customer_email,
-        customer_phone=excluded.customer_phone,
-        customer_language=excluded.customer_language,
-        experience_name=excluded.experience_name,
-        booking_date=excluded.booking_date,
-        booking_time=excluded.booking_time,
-        guests=excluded.guests,
-        amount_cents=excluded.amount_cents,
-        currency=excluded.currency,
-        meeting_point_name=excluded.meeting_point_name,
-        meeting_address=excluded.meeting_address,
-        meeting_city=excluded.meeting_city,
-        meeting_country=excluded.meeting_country,
+        status='confirmed', payment_status='paid',
+        customer_name=excluded.customer_name, customer_email=excluded.customer_email,
+        customer_phone=excluded.customer_phone, customer_language=excluded.customer_language,
+        experience_name=excluded.experience_name, booking_date=excluded.booking_date,
+        booking_time=excluded.booking_time, guests=excluded.guests,
+        amount_cents=excluded.amount_cents, currency=excluded.currency,
+        meeting_point_name=excluded.meeting_point_name, meeting_address=excluded.meeting_address,
+        meeting_city=excluded.meeting_city, meeting_country=excluded.meeting_country,
         meeting_instructions=excluded.meeting_instructions,
         arrival_minutes_before=excluded.arrival_minutes_before,
-        meeting_latitude=excluded.meeting_latitude,
-        meeting_longitude=excluded.meeting_longitude,
-        partner_ref=excluded.partner_ref,
-        updated_at=CURRENT_TIMESTAMP
+        meeting_latitude=excluded.meeting_latitude, meeting_longitude=excluded.meeting_longitude,
+        partner_ref=excluded.partner_ref, updated_at=CURRENT_TIMESTAMP
     `).bind(
-      bookingId,
-      paymentIntent.id,
-      "confirmed",
-      "paid",
-      name || "Customer",
-      email,
-      clean(metadata.customer_phone),
-      language,
-      experienceName,
-      bookingDate,
-      bookingTime,
-      guests,
-      amountCents,
-      currency,
-      meeting.name,
-      meeting.address,
-      meeting.city,
-      meeting.country,
-      meeting.instructions,
-      meeting.arrivalMinutes,
-      meeting.latitude,
-      meeting.longitude,
-      partnerRef
+      bookingId, paymentIntent.id, "confirmed", "paid", name || "Customer", email,
+      clean(metadata.customer_phone), language, experienceName, bookingDate, bookingTime,
+      guests, amountCents, currency, meeting.name, meeting.address, meeting.city,
+      meeting.country, meeting.instructions, meeting.arrivalMinutes, meeting.latitude,
+      meeting.longitude, clean(metadata.partner_ref)
     ).run();
 
-    // Keep provider information available for the next marketplace settlement
-    // migration without changing the existing settlement implementation yet.
-    if (providerConnectAccountId) {
-      try {
-        await env.DB.prepare("UPDATE bookings SET provider_connect_account_id=? WHERE payment_intent_id=?")
-          .bind(providerConnectAccountId, paymentIntent.id).run();
-      } catch (error) {
-        console.error("Could not persist provider account snapshot", error);
-      }
-    }
-
-    const booking = await env.DB.prepare(
-      "SELECT * FROM bookings WHERE payment_intent_id = ? LIMIT 1"
-    ).bind(paymentIntent.id).first();
-
+    const booking = await env.DB.prepare("SELECT * FROM bookings WHERE payment_intent_id=? LIMIT 1")
+      .bind(paymentIntent.id).first();
     if (!booking || booking.confirmation_email_sent_at) return;
 
     await sendConfirmationWithRetry(env, booking);
@@ -165,7 +209,7 @@ async function finalizePaidBooking(env, paymentIntent) {
     console.error("FiiViu paid booking finalization failed", error);
     try {
       await env.DB.prepare("UPDATE bookings SET confirmation_email_error=?, updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
-        .bind(String(error?.message || error).slice(0, 1000), paymentIntent.id).run();
+        .bind(String(error?.message || error).slice(0, 1000), paymentIntent?.id).run();
     } catch (_) {}
   }
 }
@@ -188,7 +232,6 @@ async function sendEmailJsConfirmation(env, booking) {
   const serviceId = String(env.EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID).trim();
   const templateId = String(env.EMAILJS_TEMPLATE_ID || EMAILJS_TEMPLATE_ID).trim();
   const publicKey = String(env.EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY).trim();
-
   const language = normalizeLanguage(booking.customer_language);
   const subject = language === "de"
     ? `Buchung bestätigt – ${booking.experience_name}`
@@ -220,14 +263,8 @@ async function sendEmailJsConfirmation(env, booking) {
   const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      service_id: serviceId,
-      template_id: templateId,
-      user_id: publicKey,
-      template_params: params
-    })
+    body: JSON.stringify({ service_id: serviceId, template_id: templateId, user_id: publicKey, template_params: params })
   });
-
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`EmailJS ${response.status}: ${text.slice(0, 500)}`);
@@ -249,35 +286,19 @@ async function ensureBookingColumns(env) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       booking_id TEXT NOT NULL UNIQUE,
       payment_intent_id TEXT UNIQUE,
-      status TEXT NOT NULL DEFAULT 'pending',
-      payment_status TEXT NOT NULL DEFAULT 'pending',
-      customer_name TEXT NOT NULL,
-      customer_email TEXT NOT NULL,
-      customer_phone TEXT,
-      customer_language TEXT NOT NULL DEFAULT 'en',
-      experience_name TEXT NOT NULL,
-      booking_date TEXT,
-      booking_time TEXT,
-      guests INTEGER NOT NULL DEFAULT 1,
-      amount_cents INTEGER NOT NULL DEFAULT 0,
-      currency TEXT NOT NULL DEFAULT 'eur',
-      meeting_point_name TEXT,
-      meeting_address TEXT,
-      meeting_city TEXT,
-      meeting_country TEXT,
-      meeting_instructions TEXT,
-      arrival_minutes_before INTEGER,
-      meeting_latitude TEXT,
-      meeting_longitude TEXT,
-      partner_ref TEXT,
-      provider_connect_account_id TEXT,
-      confirmation_email_sent_at TEXT,
-      confirmation_email_error TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      status TEXT NOT NULL DEFAULT 'pending', payment_status TEXT NOT NULL DEFAULT 'pending',
+      customer_name TEXT NOT NULL, customer_email TEXT NOT NULL, customer_phone TEXT,
+      customer_language TEXT NOT NULL DEFAULT 'en', experience_name TEXT NOT NULL,
+      booking_date TEXT, booking_time TEXT, guests INTEGER NOT NULL DEFAULT 1,
+      amount_cents INTEGER NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'eur',
+      meeting_point_name TEXT, meeting_address TEXT, meeting_city TEXT, meeting_country TEXT,
+      meeting_instructions TEXT, arrival_minutes_before INTEGER,
+      meeting_latitude TEXT, meeting_longitude TEXT, partner_ref TEXT,
+      provider_connect_account_id TEXT, confirmation_email_sent_at TEXT,
+      confirmation_email_error TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
-
   for (const statement of [
     "ALTER TABLE bookings ADD COLUMN provider_connect_account_id TEXT",
     "ALTER TABLE bookings ADD COLUMN confirmation_email_error TEXT"
@@ -290,12 +311,10 @@ function normalizeLanguage(value) {
   const language = String(value || "en").toLowerCase().slice(0, 2);
   return ["de", "en", "ro"].includes(language) ? language : "en";
 }
-
 function clean(value) {
   const text = String(value ?? "").trim();
   return text || null;
 }
-
 function integerOrNull(value) {
   const number = Number(value);
   return Number.isInteger(number) && number >= 0 ? number : null;
