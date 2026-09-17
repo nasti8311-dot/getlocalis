@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>FiiViu — Oprește timpul, trăiește momentul.</title>
-    <meta name="description" content="FiiViu – besondere Erlebnisse in Bukarest. Entdecke lokale Momente, Wellness, Nightlife, Abenteuer, VIP-Erlebnisse und individuelle Pakete.">
+    <meta name="description" content="FiiViu – besondere Erlebnisse in Bukarest. Entdecke lokale Momente, Wellness, Nightlife, Abenteuer, VIP-Erlebnisse.">
 
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -218,13 +218,6 @@
                    data-i18n="nav_adventure">
                     Adventure
                 </a>
-
-                <a href="#"
-                   onclick="showCategory('packages'); return false;"
-                   class="text-fii-orange font-bold"
-                   data-i18n="nav_packages">
-                    Packages
-                </a>
             </nav>
 
             <div class="flex items-center gap-2">
@@ -286,12 +279,6 @@
                         data-i18n="nav_adventure">
                     Adventure
                 </button>
-
-                <button onclick="mobileCategory('packages')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_packages">
-                    Packages
-                </button>
             </div>
         </div>
     </div>
@@ -343,15 +330,6 @@
                             Erlebnisse entdecken
                         </span>
                         <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-
-                    <button
-                        onclick="showCategory('packages')"
-                        class="bg-white/10 hover:bg-white/20 border border-white/30 backdrop-blur-md text-white font-bold px-7 py-4 rounded-2xl transition flex items-center justify-center gap-2">
-                        <span data-i18n="hero_package_cta">
-                            Ein fertiges Erlebnis
-                        </span>
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
                     </button>
 
                 </div>
@@ -515,36 +493,7 @@
             </div>
 
 
-            <div onclick="showCategory('packages')"
-                 class="group relative h-[360px] rounded-3xl overflow-hidden cursor-pointer bg-fii-black text-white p-8 flex flex-col justify-between">
 
-                <div>
-                    <div class="w-12 h-12 rounded-2xl bg-fii-orange flex items-center justify-center mb-8">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    </div>
-
-                    <span class="text-xs uppercase tracking-[.2em] text-white/50 font-bold">
-                        06
-                    </span>
-
-                    <h3 class="text-3xl font-black mt-3"
-                        data-i18n="cat_packages">
-                        Packages
-                    </h3>
-
-                    <p class="text-white/65 mt-3 text-sm leading-relaxed"
-                       data-i18n="cat_packages_desc">
-                        Fertige Erlebnisse für Gruppen, Couples & besondere Tage.
-                    </p>
-                </div>
-
-                <div class="flex items-center gap-2 font-bold text-fii-orange">
-                    <span data-i18n="discover_packages">
-                        Packages entdecken
-                    </span>
-                    <i class="fa-solid fa-arrow-right"></i>
-                </div>
-            </div>
 
         </div>
     </section>
@@ -2394,152 +2343,6 @@ const categoriesData = {
         ]
     },
 
-    packages: {
-
-        eyebrow: {
-            de: "06 · Packages",
-            en: "06 · Packages",
-            ro: "06 · Pachete"
-        },
-
-        title: {
-            de: "Ein Tag. Ein Plan. Viele Momente.",
-            en: "One day. One plan. Many moments.",
-            ro: "O zi. Un plan. Multe momente."
-        },
-
-        subtitle: {
-            de: "Fertige FiiViu-Pakete für Gruppen, Couples, Geburtstage und besondere Wochenenden.",
-            en: "Ready-made FiiViu packages for groups, couples, birthdays and special weekends.",
-            ro: "Pachete FiiViu pentru grupuri, cupluri, aniversări și weekenduri speciale."
-        },
-
-        items: [
-
-            {
-                id: "bucharest-boys-day",
-
-                badge: {
-                    de: "FiiViu Package",
-                    en: "FiiViu Package",
-                    ro: "Pachet FiiViu"
-                },
-
-                title: {
-                    de: "Bucharest Boys Day",
-                    en: "Bucharest Boys Day",
-                    ro: "Bucharest Boys Day"
-                },
-
-                price: 119,
-
-                duration: {
-                    de: "Ganztägig",
-                    en: "Full day",
-                    ro: "Toată ziua"
-                },
-
-                availableTimes: [
-                    "10:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?q=85&w=1000",
-
-                images: [
-                    "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?q=85&w=1200"
-                ],
-
-                desc: {
-                    de: "Ein kompletter FiiViu-Tag für Freunde: aktive Erfahrung, gutes Essen und eine Nacht, die ihr nicht so schnell vergesst.",
-                    en: "A complete FiiViu day for friends: active experiences, great food and a night you won't forget.",
-                    ro: "O zi FiiViu completă pentru prieteni: experiențe active, mâncare bună și o noapte memorabilă."
-                },
-
-                highlights: {
-                    de: [
-                        "Aktivität am Tag",
-                        "Lokale Food-Empfehlung",
-                        "Nightlife-Spot",
-                        "Persönliche FiiViu Route"
-                    ],
-                    en: [
-                        "Day activity",
-                        "Local food recommendation",
-                        "Nightlife spot",
-                        "Personal FiiViu route"
-                    ],
-                    ro: [
-                        "Activitate în timpul zilei",
-                        "Recomandare locală de mâncare",
-                        "Nightlife spot",
-                        "Traseu FiiViu personalizat"
-                    ]
-                }
-            },
-
-            {
-                id: "bucharest-couple-day",
-
-                badge: {
-                    de: "Couples",
-                    en: "Couples",
-                    ro: "Cupluri"
-                },
-
-                title: {
-                    de: "Bucharest Couple Escape",
-                    en: "Bucharest Couple Escape",
-                    ro: "Bucharest Couple Escape"
-                },
-
-                price: 129,
-
-                duration: {
-                    de: "Ganztägig",
-                    en: "Full day",
-                    ro: "Toată ziua"
-                },
-
-                availableTimes: [
-                    "10:00"
-                ],
-
-                img: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=85&w=1000",
-
-                images: [
-                    "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=85&w=1200"
-                ],
-
-                desc: {
-                    de: "Ein entspannter Tag für zwei: entdecken, genießen, abschalten und gemeinsam etwas Neues erleben.",
-                    en: "A relaxed day for two: explore, enjoy, switch off and experience something new together.",
-                    ro: "O zi relaxantă pentru doi: descoperă, savurează, relaxează-te și trăiește ceva nou împreună."
-                },
-
-                highlights: {
-                    de: [
-                        "Geführte Entdeckung",
-                        "Wellness-Moment",
-                        "Food Recommendation",
-                        "Romantischer Abend"
-                    ],
-                    en: [
-                        "Guided discovery",
-                        "Wellness moment",
-                        "Food recommendation",
-                        "Romantic evening"
-                    ],
-                    ro: [
-                        "Descoperire ghidată",
-                        "Moment wellness",
-                        "Recomandare culinară",
-                        "Seară romantică"
-                    ]
-                }
-            }
-
-        ]
-    }
 
 };
 
@@ -2557,12 +2360,10 @@ const translations = {
         nav_relax: "Relax",
         nav_nightlife: "Nightlife",
         nav_adventure: "Adventure",
-        nav_packages: "Packages",
 
         hero_title: "Oprește timpul.<br>Trăiește momentul.",
         hero_subtitle: "FiiViu bringt dich zu den Momenten, die du später nicht vergessen willst. Entdecke Bukarest anders.",
         hero_cta: "Erlebnisse entdecken",
-        hero_package_cta: "Ein fertiges Erlebnis",
 
         intro_label: "FiiViu Moments",
         intro_title: "Nicht einfach etwas unternehmen. Etwas erleben.",
@@ -2578,9 +2379,6 @@ const translations = {
         cat_adventure_desc: "Adrenalin, Action & neue Erfahrungen.",
         cat_vip: "VIP",
         cat_vip_desc: "Komfort, Stil & besondere Zugänge.",
-        cat_packages: "Packages",
-        cat_packages_desc: "Fertige Erlebnisse für Gruppen, Couples & besondere Tage.",
-        discover_packages: "Packages entdecken",
 
         featured_label: "Jetzt entdecken",
         featured_title: "Momente, die bleiben.",
@@ -2659,12 +2457,10 @@ const translations = {
         nav_relax: "Relax",
         nav_nightlife: "Nightlife",
         nav_adventure: "Adventure",
-        nav_packages: "Packages",
 
         hero_title: "Oprește timpul.<br>Trăiește momentul.",
         hero_subtitle: "FiiViu takes you to the moments you'll remember long after the trip. Experience Bucharest differently.",
         hero_cta: "Discover experiences",
-        hero_package_cta: "Find a ready-made experience",
 
         intro_label: "FiiViu Moments",
         intro_title: "Don't just do something. Experience something.",
@@ -2680,9 +2476,6 @@ const translations = {
         cat_adventure_desc: "Adrenaline, action & new experiences.",
         cat_vip: "VIP",
         cat_vip_desc: "Comfort, style & special access.",
-        cat_packages: "Packages",
-        cat_packages_desc: "Ready-made experiences for groups, couples & special days.",
-        discover_packages: "Discover packages",
 
         featured_label: "Discover now",
         featured_title: "Moments that stay with you.",
@@ -2761,12 +2554,10 @@ const translations = {
         nav_relax: "Relax",
         nav_nightlife: "Nightlife",
         nav_adventure: "Aventură",
-        nav_packages: "Pachete",
 
         hero_title: "Oprește timpul.<br>Trăiește momentul.",
         hero_subtitle: "FiiViu te duce către momente pe care le vei ține minte mult timp după vacanță. Descoperă Bucureștiul altfel.",
         hero_cta: "Descoperă experiențele",
-        hero_package_cta: "Vezi un pachet",
 
         intro_label: "FiiViu Moments",
         intro_title: "Nu doar face ceva. Trăiește ceva.",
@@ -2782,9 +2573,6 @@ const translations = {
         cat_adventure_desc: "Adrenalină, acțiune și experiențe noi.",
         cat_vip: "VIP",
         cat_vip_desc: "Confort, stil și acces special.",
-        cat_packages: "Pachete",
-        cat_packages_desc: "Experiențe complete pentru grupuri, cupluri și zile speciale.",
-        discover_packages: "Descoperă pachetele",
 
         featured_label: "Descoperă acum",
         featured_title: "Momente care rămân.",
