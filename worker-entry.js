@@ -25,11 +25,8 @@ export default {
       return response;
     }
 
-    // Bridge the existing static checkout to the server-side booking flow
-    // without requiring a risky 100KB+ rewrite of index.html. The bridge
-    // enriches the existing PaymentIntent request with the customer fields
-    // already present in the checkout form and disables the old client-side
-    // confirmation send for the FiiViu booking template.
+    // Enrich the existing checkout request, then persist the extra values on
+    // the PaymentIntent so the signed Stripe webhook can use them later.
     if (request.method === "POST" && url.pathname === "/api/create-payment-intent") {
       const body = await request.text();
       try {
@@ -50,11 +47,41 @@ export default {
         data.meetingLatitude = data.meetingLatitude || "";
         data.meetingLongitude = data.meetingLongitude || "";
         data.providerConnectAccountId = data.providerConnectAccountId || "";
-        return legacyWorker.fetch(
+
+        const response = await legacyWorker.fetch(
           new Request(request, { body: JSON.stringify(data) }),
           env,
           ctx
         );
+
+        if (response.ok && env.STRIPE_SECRET_KEY) {
+          try {
+            const result = await response.clone().json();
+            if (result?.paymentIntentId) {
+              await updatePaymentIntentMetadata(env, result.paymentIntentId, {
+                customer_name: data.customerName,
+                customer_email: data.customerEmail,
+                customer_phone: data.customerPhone,
+                customer_language: normalizeLanguage(data.customerLanguage),
+                booking_date: data.bookingDate,
+                booking_time: data.bookingTime,
+                experience_name: data.experienceName,
+                meeting_point_name: data.meetingPointName,
+                meeting_address: data.meetingAddress,
+                meeting_city: data.meetingCity,
+                meeting_country: data.meetingCountry,
+                meeting_instructions: data.meetingInstructions,
+                arrival_minutes_before: data.arrivalMinutesBefore,
+                meeting_latitude: data.meetingLatitude,
+                meeting_longitude: data.meetingLongitude,
+                provider_connect_account_id: data.providerConnectAccountId
+              });
+            }
+          } catch (error) {
+            console.error("FiiViu PaymentIntent metadata enrichment failed", error);
+          }
+        }
+        return response;
       } catch (_) {
         return legacyWorker.fetch(new Request(request, { body }), env, ctx);
       }
@@ -129,6 +156,28 @@ async function injectCheckoutBridge(response) {
   return new Response(output, { status: response.status, statusText: response.statusText, headers });
 }
 
+async function updatePaymentIntentMetadata(env, paymentIntentId, values) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== null && value !== undefined && String(value) !== "") {
+      params.set(`metadata[${key}]`, String(value).slice(0, 500));
+    }
+  }
+  if (!params.size) return;
+  const response = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.error?.message || "Stripe PaymentIntent metadata update failed");
+  }
+}
+
 async function finalizePaidBooking(env, paymentIntent) {
   if (!env.DB || !env.STRIPE_SECRET_KEY || !paymentIntent?.id) return;
 
@@ -152,8 +201,6 @@ async function finalizePaidBooking(env, paymentIntent) {
     const amountCents = Number(pi.amount_received || pi.amount || 0);
     const currency = String(pi.currency || "eur").toLowerCase();
     const experienceName = String(metadata.experience_name || metadata.tour_name || "Experience").trim();
-    const bookingDate = clean(metadata.booking_date);
-    const bookingTime = clean(metadata.booking_time);
     const meeting = {
       name: clean(metadata.meeting_point_name),
       address: clean(metadata.meeting_address),
@@ -191,8 +238,9 @@ async function finalizePaidBooking(env, paymentIntent) {
         partner_ref=excluded.partner_ref, updated_at=CURRENT_TIMESTAMP
     `).bind(
       bookingId, paymentIntent.id, "confirmed", "paid", name || "Customer", email,
-      clean(metadata.customer_phone), language, experienceName, bookingDate, bookingTime,
-      guests, amountCents, currency, meeting.name, meeting.address, meeting.city,
+      clean(metadata.customer_phone), language, experienceName,
+      clean(metadata.booking_date), clean(metadata.booking_time), guests,
+      amountCents, currency, meeting.name, meeting.address, meeting.city,
       meeting.country, meeting.instructions, meeting.arrivalMinutes, meeting.latitude,
       meeting.longitude, clean(metadata.partner_ref)
     ).run();
