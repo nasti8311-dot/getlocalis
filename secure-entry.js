@@ -15,8 +15,7 @@ const LEGACY_EXPERIENCE_IDS={
   "Therme Bucharest – Relax Day":"therme-vip",
   "Therme București – Zi de Relaxare":"therme-vip",
   "Bucharest Night Out":"night-out",
-  "Bucharest Kart Grand Prix":"kart-grand-prix",
-  "Private Limousine Night":"limo-night"
+  "Bucharest Kart Grand Prix":"kart-grand-prix"
 };
 
 async function enrichLegacyCheckout(request){
