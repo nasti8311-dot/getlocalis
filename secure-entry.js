@@ -1,58 +1,78 @@
-import marketplaceWorker from "./marketplace-entry.js";
+const originalFetch = globalThis.fetch.bind(globalThis);
 
-const CORS={
-  "Access-Control-Allow-Origin":"*",
-  "Access-Control-Allow-Methods":"GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers":"Content-Type, Authorization"
-};
-
-const LEGACY_EXPERIENCE_IDS={
-  "Bukarest Old Town Story Walk":"old-town-walk",
-  "Bucharest Old Town Story Walk":"old-town-walk",
-  "Turul cu povești al Centrului Vechi":"old-town-walk",
-  "Bucharest Bike Story":"bike-bucharest",
-  "Therme București – Relax Day":"therme-vip",
-  "Therme Bucharest – Relax Day":"therme-vip",
-  "Therme București – Zi de Relaxare":"therme-vip",
-  "Bucharest Night Out":"night-out",
-  "Bucharest Kart Grand Prix":"kart-grand-prix"
-};
-
-async function enrichLegacyCheckout(request){
-  if(request.method!=="POST")return request;
-  const url=new URL(request.url);
-  if(url.pathname!=="/api/create-payment-intent")return request;
-  try{
-    const body=await request.clone().json();
-    if(body&&typeof body==="object"&&!body.experienceId&&!body.tourKey&&!body.experienceKey&&!body.experience_id){
-      const title=String(body.tourName||body.experienceName||"").split(" · ")[0].trim();
-      const experienceId=LEGACY_EXPERIENCE_IDS[title]||"";
-      if(experienceId){
-        body.experienceId=experienceId;
-        return new Request(request,{method:"POST",headers:request.headers,body:JSON.stringify(body)});
+if (!globalThis.__fiiviuSecureEmailPatch) {
+  globalThis.__fiiviuSecureEmailPatch = true;
+  globalThis.fetch = async function(input, init) {
+    try {
+      const target = typeof input === "string" ? input : input?.url || "";
+      if (target === "https://api.emailjs.com/api/v1.0/email/send" && init?.body && globalThis.__fiiviuDB) {
+        const payload = JSON.parse(init.body);
+        const params = payload?.template_params || {};
+        const bookingId = String(params.booking_id || "").trim();
+        if (bookingId) {
+          const booking = await globalThis.__fiiviuDB
+            .prepare("SELECT id,booking_id,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1")
+            .bind(bookingId)
+            .first();
+          if (booking) {
+            let token = String(booking.booking_access_token || "").trim();
+            if (!token) {
+              const bytes = new Uint8Array(32);
+              crypto.getRandomValues(bytes);
+              token = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+              await globalThis.__fiiviuDB
+                .prepare("UPDATE bookings SET booking_access_token=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND booking_access_token IS NULL")
+                .bind(token, booking.id)
+                .run();
+            }
+            const base = String(globalThis.__fiiviuPublicAppUrl || "https://getlocalis.nasti8311.workers.dev").replace(/\/$/, "");
+            const bookingUrl = `${base}/booking.html?id=${encodeURIComponent(booking.booking_id)}&token=${encodeURIComponent(token)}`;
+            params.booking_url = bookingUrl;
+            params.booking_link = bookingUrl;
+            payload.template_params = params;
+            init = { ...init, body: JSON.stringify(payload) };
+          }
+        }
       }
+    } catch (error) {
+      console.error("FiiViu secure EmailJS booking URL injection failed", error);
     }
-  }catch(_){ }
-  return request;
+    return originalFetch(input, init);
+  };
 }
+
+const { default: marketplaceWorker } = await import("./marketplace-entry.js");
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+};
 
 export default {
   async fetch(request, env, ctx) {
-    const url=new URL(request.url);
+    globalThis.__fiiviuDB = env.DB || null;
+    globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
+    const url = new URL(request.url);
 
-    // Partner statistics contain internal financial/booking data and are only
-    // used by the admin UI. Do not expose them through the public API.
-    if(url.pathname==="/api/partner-stats"){
-      if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});
-      if(request.method!=="GET")return new Response(JSON.stringify({error:"Method Not Allowed"}),{status:405,headers:{...CORS,"Content-Type":"application/json"}});
-      const expected=String(env.ADMIN_PAYOUT_KEY||"").trim();
-      const provided=String(request.headers.get("Authorization")||"");
-      if(!expected||provided!=="Bearer "+expected){
-        return new Response(JSON.stringify({error:"Unauthorized"}),{status:401,headers:{...CORS,"Content-Type":"application/json"}});
+    if (url.pathname === "/api/partner-stats") {
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+      if (request.method !== "GET") {
+        return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+          status: 405,
+          headers: { ...CORS, "Content-Type": "application/json" }
+        });
+      }
+      const expected = String(env.ADMIN_PAYOUT_KEY || "").trim();
+      const provided = String(request.headers.get("Authorization") || "");
+      if (!expected || provided !== "Bearer " + expected) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...CORS, "Content-Type": "application/json" }
+        });
       }
     }
 
-    const enriched=await enrichLegacyCheckout(request);
-    return marketplaceWorker.fetch(enriched,env,ctx);
+    return marketplaceWorker.fetch(request, env, ctx);
   }
 };
