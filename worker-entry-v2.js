@@ -1,7 +1,45 @@
 import baseWorker from "./worker-entry.js";
 
+const originalGlobalFetch = globalThis.fetch.bind(globalThis);
+if (!globalThis.__fiiviuEmailFetchPatched) {
+  globalThis.__fiiviuEmailFetchPatched = true;
+  globalThis.fetch = async function(input, init) {
+    try {
+      const target = typeof input === "string" ? input : input?.url || "";
+      if (target === "https://api.emailjs.com/api/v1.0/email/send" && init?.body && globalThis.__fiiviuDB) {
+        const payload = JSON.parse(init.body);
+        const params = payload?.template_params;
+        const bookingId = String(params?.booking_id || "").trim();
+        if (bookingId) {
+          const booking = await globalThis.__fiiviuDB.prepare("SELECT id,booking_id,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
+          if (booking) {
+            let token = booking.booking_access_token;
+            if (!token) {
+              const bytes = new Uint8Array(32);
+              crypto.getRandomValues(bytes);
+              token = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+              await globalThis.__fiiviuDB.prepare("UPDATE bookings SET booking_access_token=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND booking_access_token IS NULL").bind(token, booking.id).run();
+            }
+            const base = String(globalThis.__fiiviuPublicAppUrl || "https://getlocalis.nasti8311.workers.dev").replace(/\/$/, "");
+            const url = `${base}/booking.html?id=${encodeURIComponent(booking.booking_id)}&token=${encodeURIComponent(token)}`;
+            params.booking_url = url;
+            params.booking_link = url;
+            params.booking_access_token = token;
+            init = { ...init, body: JSON.stringify(payload) };
+          }
+        }
+      }
+    } catch (error) {
+      console.error("FiiViu EmailJS booking URL injection failed", error);
+    }
+    return originalGlobalFetch(input, init);
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
+    globalThis.__fiiviuDB = env.DB || null;
+    globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
     const url = new URL(request.url);
     if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
     if (url.pathname === "/api/provider/bookings") return handleProviderBookings(request, env);
@@ -89,7 +127,7 @@ async function ensurePaidBookingAccessToken(env,paymentIntentId){
       const booking=await env.DB.prepare("SELECT id,booking_id,booking_access_token FROM bookings WHERE payment_intent_id=? LIMIT 1").bind(paymentIntentId).first();
       if(booking){
         if(!booking.booking_access_token){
-          const token=await randomAccessToken();
+          const bytes=new Uint8Array(32); crypto.getRandomValues(bytes); const token=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
           await env.DB.prepare("UPDATE bookings SET booking_access_token=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND booking_access_token IS NULL").bind(token,booking.id).run();
         }
         return;
@@ -97,10 +135,6 @@ async function ensurePaidBookingAccessToken(env,paymentIntentId){
       await new Promise(resolve=>setTimeout(resolve,250));
     }
   }catch(error){console.error("FiiViu booking access token generation failed",error)}
-}
-
-async function randomAccessToken(){
-  const bytes=new Uint8Array(32); crypto.getRandomValues(bytes); return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
 }
 
 async function ensureBookingLookupTable(env){
