@@ -1,0 +1,78 @@
+name: Remove Packages category
+
+on:
+  push:
+    paths:
+      - ".packages-removal-trigger"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  remove-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Edit website
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          # Desktop/mobile navigation entries.
+          text = re.sub(r'\n\s*<a href="#"\s*onclick="showCategory\(\'packages\'\); return false;"[\s\S]*?</a>', '', text, count=1)
+          text = re.sub(r'\n\s*<button onclick="mobileCategory\(\'packages\'\)"[\s\S]*?</button>', '', text, count=2)
+
+          # Hero Packages CTA.
+          text = re.sub(r'\n\s*<button\s*\n\s*onclick="showCategory\(\'packages\'\)"[\s\S]*?</button>', '', text, count=1)
+
+          # Home category card: remove the card whose opening marker is unique.
+          marker = "            <div onclick=\"showCategory('packages')\""
+          start = text.find(marker)
+          if start != -1:
+              end_marker = "\n            </div>\n\n        </div>"
+              end = text.find(end_marker, start)
+              if end == -1:
+                  raise SystemExit("Packages card end not found")
+              text = text[:start] + text[end + len("\n            </div>"):]
+
+          # Remove Packages from the footer/category navigation.
+          text = re.sub(r'\n\s*<button onclick="showCategory\(\'packages\'\)"[\s\S]*?</button>', '', text)
+          text = re.sub(r'\n\s*<button onclick="mobileCategory\(\'packages\'\)"[\s\S]*?</button>', '', text)
+
+          # Remove packages data object with brace matching.
+          start = text.find("\n    packages: {")
+          if start != -1:
+              brace = text.find("{", start)
+              depth = 0
+              end = None
+              for i in range(brace, len(text)):
+                  if text[i] == "{": depth += 1
+                  elif text[i] == "}":
+                      depth -= 1
+                      if depth == 0:
+                          end = i + 1
+                          break
+              if end is None: raise SystemExit("Packages data end not found")
+              while end < len(text) and text[end] in " \t": end += 1
+              if end < len(text) and text[end] == ",": end += 1
+              if end < len(text) and text[end] == "\n": end += 1
+              text = text[:start] + "\n" + text[end:]
+
+          # Remove package translation keys and SEO wording.
+          for key in ["nav_packages", "hero_package_cta", "cat_packages", "cat_packages_desc", "discover_packages"]:
+              text = re.sub(r'^\s*' + re.escape(key) + r':.*\n', '', text, flags=re.MULTILINE)
+          text = text.replace(", VIP-Erlebnisse und individuelle Pakete", ", VIP-Erlebnisse")
+          path.write_text(text, encoding="utf-8")
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/remove-packages-category
+          delete-branch: true
+          title: Remove Packages category from website
+          commit-message: Remove Packages category from website
+          body: Remove the Packages category from the public website UI and category data.
