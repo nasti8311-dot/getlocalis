@@ -4,6 +4,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
+    if (url.pathname === "/api/provider/bookings") return handleProviderBookings(request, env);
     if (url.pathname === "/api/booking" && request.method === "GET") return handleBookingLookup(request, env);
     const response = await baseWorker.fetch(request, env, ctx);
     if (request.method !== "GET" || url.pathname.startsWith("/api/")) return response;
@@ -20,6 +21,19 @@ export default {
 const providerCors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 function providerJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...providerCors,"Content-Type":"application/json"}})}
 function providerAuth(request,env){const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();return !!expected&&request.headers.get("Authorization")==="Bearer "+expected}
+async function handleProviderBookings(request,env){
+  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
+  if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);
+  if(request.method!=="GET")return providerJson({error:"Method Not Allowed"},405);
+  if(!env.DB)return providerJson({error:"D1 database not configured"},500);
+  const account=String(new URL(request.url).searchParams.get("providerConnectAccountId")||"").trim();
+  if(!account)return providerJson({error:"Missing providerConnectAccountId"},400);
+  try{
+    await ensureBookingLookupTable(env);
+    const result=await env.DB.prepare(`SELECT booking_id,status,payment_status,customer_name,customer_email,experience_name,booking_date,booking_time,guests,amount_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude FROM bookings WHERE provider_connect_account_id=? AND payment_status='paid' AND status NOT IN ('cancelled','refunded') ORDER BY CASE WHEN booking_date IS NULL THEN 1 ELSE 0 END, booking_date ASC, booking_time ASC, id DESC`).bind(account).all();
+    return providerJson({bookings:result.results||[]});
+  }catch(error){return providerJson({error:error?.message||"Server error"},500)}
+}
 async function handleBookingLookup(request,env){
   if(!env.DB)return providerJson({error:"D1 database not configured"},500);
   const bookingId=String(new URL(request.url).searchParams.get("id")||"").trim();
