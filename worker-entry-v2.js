@@ -6,13 +6,26 @@ export default {
     if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
     if (url.pathname === "/api/provider/bookings") return handleProviderBookings(request, env);
     if (url.pathname === "/api/booking" && request.method === "GET") return handleBookingLookup(request, env);
+    if (url.pathname === "/api/booking-access-url" && request.method === "GET") return handleBookingAccessUrl(request, env);
+
+    if (url.pathname === "/api/stripe/webhook") {
+      const body = await request.clone().text();
+      try {
+        const event = JSON.parse(body);
+        if (event?.type === "payment_intent.succeeded" && event?.data?.object?.id) {
+          ctx.waitUntil(ensurePaidBookingAccessToken(env, event.data.object.id));
+        }
+      } catch (_) {}
+    }
+
     const response = await baseWorker.fetch(request, env, ctx);
     if (request.method !== "GET" || url.pathname.startsWith("/api/")) return response;
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html")) return response;
     const html = await response.text();
     const bridge = `<script src="/meeting-points.js"></script><script>(function(){var labels={de:{meeting:'Treffpunkt',instructions:'Hinweis',arrival:'Bitte vor Beginn da sein',maps:'Auf Google Maps öffnen'},en:{meeting:'Meeting point',instructions:'Instructions',arrival:'Please arrive before the start',maps:'Open in Google Maps'},ro:{meeting:'Punct de întâlnire',instructions:'Instrucțiuni',arrival:'Te rugăm să ajungi înainte de începere',maps:'Deschide în Google Maps'}};function lang(){return(typeof currentLang!=='undefined'&&currentLang)?String(currentLang).slice(0,2):'en'}function getMeeting(){var m=window.__fiiviuMeetingPoint||{};try{if(!m.name&&typeof categoriesData!=='undefined'&&typeof currentCategoryKey!=='undefined'&&typeof currentTourKey!=='undefined'){var c=categoriesData[currentCategoryKey],i=c&&c.items?c.items.find(function(x){return x.id===currentTourKey}):null;if(i&&i.meetingPoint)m=i.meetingPoint}}catch(_){}return m||{}}function mapsUrl(m){if(m.latitude&&m.longitude)return'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(m.latitude+','+m.longitude);var q=[m.name,m.address,m.city,m.country].filter(Boolean).join(', ');return q?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q):''}function esc(v){return String(v==null?'':v).replace(/[&<>\\"']/g,function(ch){return{'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#039;'}[ch]})}function render(){var m=getMeeting();window.__fiiviuMeetingPoint=m;var has=!!(m.name||m.address||m.city||m.country||m.instructions),old=document.getElementById('fiiviu-meeting-point-card');if(!has){if(old)old.classList.add('hidden');return}var l=labels[lang()]||labels.en,address=[m.address,m.city,m.country].filter(Boolean).join(', '),map=mapsUrl(m),card=old;if(!card){card=document.createElement('div');card.id='fiiviu-meeting-point-card';card.className='bg-white rounded-2xl border border-black/5 p-5 mt-6 shadow-sm';var anchor=document.getElementById('checkout-summary-date');if(anchor&&anchor.parentElement&&anchor.parentElement.parentElement)anchor.parentElement.parentElement.appendChild(card);else document.body.appendChild(card)}card.classList.remove('hidden');card.innerHTML='<div class="text-xs font-black uppercase tracking-widest text-fii-orange">'+l.meeting+'</div><div class="font-black mt-1">'+esc(m.name||address||'')+'</div>'+(address?'<div class="text-sm text-gray-600 mt-1">'+esc(address)+'</div>':'')+(m.instructions?'<div class="text-sm text-gray-500 mt-2">'+esc(l.instructions)+': '+esc(m.instructions)+'</div>':'')+(m.arrivalMinutesBefore!=null&&m.arrivalMinutesBefore!==''?'<div class="text-sm text-gray-500 mt-2">'+esc(l.arrival)+' '+esc(String(m.arrivalMinutesBefore))+' min.</div>':'')+(map?'<a href="'+map+'" target="_blank" rel="noopener" class="inline-flex mt-3 text-sm font-bold text-fii-orange">'+l.maps+'</a>':'')}window.__fiiviuRefreshMeetingPoint=render;setInterval(render,500);document.addEventListener('DOMContentLoaded',render)})();</script>`;
-    const marker="</body>"; const output=html.includes(marker)?html.replace(marker,bridge+marker):html+bridge;
+    const marker="</body>";
+    const output=html.includes(marker)?html.replace(marker,bridge+marker):html+bridge;
     const headers=new Headers(response.headers); headers.delete("content-length"); headers.set("cache-control","no-cache");
     return new Response(output,{status:response.status,statusText:response.statusText,headers});
   }
@@ -21,6 +34,7 @@ export default {
 const providerCors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 function providerJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...providerCors,"Content-Type":"application/json"}})}
 function providerAuth(request,env){const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();return !!expected&&request.headers.get("Authorization")==="Bearer "+expected}
+
 async function handleProviderBookings(request,env){
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
   if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);
@@ -34,6 +48,7 @@ async function handleProviderBookings(request,env){
     return providerJson({bookings:result.results||[]});
   }catch(error){return providerJson({error:error?.message||"Server error"},500)}
 }
+
 async function handleBookingLookup(request,env){
   if(!env.DB)return providerJson({error:"D1 database not configured"},500);
   const params=new URL(request.url).searchParams,bookingId=String(params.get("id")||"").trim(),token=String(params.get("token")||"").trim();
@@ -48,10 +63,52 @@ async function handleBookingLookup(request,env){
     return providerJson({booking});
   }catch(error){return providerJson({error:error?.message||"Server error"},500)}
 }
+
+async function handleBookingAccessUrl(request,env){
+  if(!env.DB)return providerJson({error:"D1 database not configured"},500);
+  const bookingId=String(new URL(request.url).searchParams.get("id")||"").trim();
+  const secret=String(new URL(request.url).searchParams.get("adminKey")||"").trim();
+  const expected=String(env.ADMIN_PAYOUT_KEY||env.PROVIDER_ADMIN_KEY||"").trim();
+  if(!expected||secret!==expected)return providerJson({error:"Unauthorized"},401);
+  if(!bookingId)return providerJson({error:"Missing booking id"},400);
+  try{
+    await ensureBookingLookupTable(env);
+    const booking=await env.DB.prepare("SELECT booking_id,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
+    if(!booking)return providerJson({error:"Booking not found"},404);
+    if(!booking.booking_access_token)return providerJson({error:"Booking access token not ready"},409);
+    const base=String(env.PUBLIC_APP_URL||"https://getlocalis.nasti8311.workers.dev").replace(/\/$/,"");
+    return providerJson({booking_id:booking.booking_id,booking_url:`${base}/booking.html?id=${encodeURIComponent(booking.booking_id)}&token=${encodeURIComponent(booking.booking_access_token)}`});
+  }catch(error){return providerJson({error:error?.message||"Server error"},500)}
+}
+
+async function ensurePaidBookingAccessToken(env,paymentIntentId){
+  if(!env.DB||!paymentIntentId)return;
+  try{
+    await ensureBookingLookupTable(env);
+    for(let attempt=0;attempt<12;attempt++){
+      const booking=await env.DB.prepare("SELECT id,booking_id,booking_access_token FROM bookings WHERE payment_intent_id=? LIMIT 1").bind(paymentIntentId).first();
+      if(booking){
+        if(!booking.booking_access_token){
+          const token=await randomAccessToken();
+          await env.DB.prepare("UPDATE bookings SET booking_access_token=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND booking_access_token IS NULL").bind(token,booking.id).run();
+        }
+        return;
+      }
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+  }catch(error){console.error("FiiViu booking access token generation failed",error)}
+}
+
+async function randomAccessToken(){
+  const bytes=new Uint8Array(32); crypto.getRandomValues(bytes); return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+
 async function ensureBookingLookupTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,status TEXT NOT NULL DEFAULT 'pending',payment_status TEXT NOT NULL DEFAULT 'pending',customer_name TEXT NOT NULL,customer_email TEXT NOT NULL,customer_phone TEXT,customer_language TEXT NOT NULL DEFAULT 'en',experience_name TEXT NOT NULL,booking_date TEXT,booking_time TEXT,guests INTEGER NOT NULL DEFAULT 1,amount_cents INTEGER NOT NULL DEFAULT 0,currency TEXT NOT NULL DEFAULT 'eur',meeting_point_name TEXT,meeting_address TEXT,meeting_city TEXT,meeting_country TEXT,meeting_instructions TEXT,arrival_minutes_before INTEGER,meeting_latitude TEXT,meeting_longitude TEXT,partner_ref TEXT,provider_connect_account_id TEXT,booking_access_token TEXT,confirmation_email_sent_at TEXT,confirmation_email_error TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   try{await env.DB.prepare("ALTER TABLE bookings ADD COLUMN booking_access_token TEXT").run()}catch(_){}
+  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(booking_access_token) WHERE booking_access_token IS NOT NULL").run();
 }
+
 async function handleProviderExperiences(request,env){
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
   if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);
