@@ -70,3 +70,30 @@ CREATE INDEX IF NOT EXISTS idx_bookings_confirmation_email
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token
   ON bookings(booking_access_token)
   WHERE booking_access_token IS NOT NULL;
+
+-- Provider-owned marketplace experiences. The provider Connect account is
+-- authoritative for settlement routing and is never taken from the browser.
+CREATE TABLE IF NOT EXISTS experiences (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  experience_id TEXT NOT NULL UNIQUE,
+  provider_connect_account_id TEXT,
+  title TEXT NOT NULL,
+  meeting_point_name TEXT,
+  meeting_address TEXT,
+  meeting_city TEXT,
+  meeting_country TEXT,
+  meeting_instructions TEXT,
+  arrival_minutes_before INTEGER,
+  meeting_latitude TEXT,
+  meeting_longitude TEXT,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'published', 'archived')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiences_provider
+  ON experiences(provider_connect_account_id);
+
+CREATE INDEX IF NOT EXISTS idx_experiences_status
+  ON experiences(status);
