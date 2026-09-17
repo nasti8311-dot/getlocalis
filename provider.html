@@ -10,14 +10,13 @@
 <section>
 <h2>Provider-Zugang</h2>
 <label for="providerKey">Provider-Schlüssel</label><input id="providerKey" type="password" autocomplete="off" placeholder="Provider-Schlüssel">
-<p class="muted">Der Schlüssel wird nicht gespeichert.</p>
+<p class="muted">Der Schlüssel wird nicht gespeichert. Das zugehörige Stripe-Connect-Konto wird serverseitig aus dem Provider-Schlüssel bestimmt.</p>
 </section>
 <section>
 <h2>Erlebnis anlegen</h2>
 <div class="grid">
 <div><label for="experienceId">Experience-ID</label><input id="experienceId" placeholder="z. B. old-town-walk"></div>
 <div><label for="title">Titel</label><input id="title" placeholder="Old Town Walking Tour"></div>
-<div><label for="providerConnect">Stripe Connect Account</label><input id="providerConnect" placeholder="acct_..."></div>
 <div><label for="city">Stadt</label><input id="city" value="Bucharest"></div>
 <div><label for="country">Land</label><input id="country" value="Romania"></div>
 <div><label for="meetingName">Treffpunkt</label><input id="meetingName" placeholder="z. B. Piața Unirii – Clock"></div>
@@ -34,8 +33,8 @@
 const API='/api/provider/experiences';
 const key=()=>document.getElementById('providerKey').value.trim();
 const headers=()=>({'Content-Type':'application/json','Authorization':'Bearer '+key()});
-const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-function data(){return {experienceId:document.getElementById('experienceId').value.trim(),title:document.getElementById('title').value.trim(),providerConnectAccountId:document.getElementById('providerConnect').value.trim(),meetingPointName:document.getElementById('meetingName').value.trim(),meetingAddress:document.getElementById('address').value.trim(),meetingCity:document.getElementById('city').value.trim(),meetingCountry:document.getElementById('country').value.trim(),meetingInstructions:document.getElementById('instructions').value.trim(),arrivalMinutesBefore:document.getElementById('arrival').value,meetingLatitude:document.getElementById('latitude').value.trim(),meetingLongitude:document.getElementById('longitude').value.trim()};}
+const esc=s=>String(s??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
+function data(){return {experienceId:document.getElementById('experienceId').value.trim(),title:document.getElementById('title').value.trim(),meetingPointName:document.getElementById('meetingName').value.trim(),meetingAddress:document.getElementById('address').value.trim(),meetingCity:document.getElementById('city').value.trim(),meetingCountry:document.getElementById('country').value.trim(),meetingInstructions:document.getElementById('instructions').value.trim(),arrivalMinutesBefore:document.getElementById('arrival').value,meetingLatitude:document.getElementById('latitude').value.trim(),meetingLongitude:document.getElementById('longitude').value.trim()};}
 function show(t,ok=false){const e=document.getElementById('result');e.className='result '+(ok?'ok':'error');e.textContent=t;}
 async function save(publish){try{const body=data();if(!body.experienceId||!body.title)throw Error('Experience-ID und Titel sind erforderlich.');const r=await fetch(API,{method:'POST',headers:headers(),body:JSON.stringify({...body,publish})});const d=await r.json();if(!r.ok)throw Error(d.error||'Speichern fehlgeschlagen.');show((publish?'Veröffentlicht':'Entwurf gespeichert')+'.\n'+d.experience.experienceId,true);await load();}catch(e){show(e.message);}}
 async function load(){const box=document.getElementById('list');box.textContent='Lade...';try{const r=await fetch(API,{headers:headers()});const d=await r.json();if(!r.ok)throw Error(d.error||'Laden fehlgeschlagen.');const rows=d.experiences||[];if(!rows.length){box.textContent='Noch keine Erlebnisse.';return;}box.innerHTML=rows.map(x=>`<div class="card"><strong>${esc(x.title)}</strong><div>${esc(x.experience_id)}</div><div class="status ${x.status==='published'?'published':'draft'}">${esc(x.status)}</div><div class="muted">${esc(x.meeting_point_name||'Kein Treffpunkt')} · ${esc(x.meeting_address||'Keine Adresse')}</div></div>`).join('');}catch(e){box.textContent=e.message;}}
