@@ -1,0 +1,88 @@
+name: Remove Packages category once
+
+on:
+  push:
+    paths:
+      - ".packages-removal-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  remove-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Remove Packages UI and data
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          # Remove package navigation links/buttons.
+          text = re.sub(r'\n\s*<a href="#"\s*onclick="showCategory\(\'packages\'\); return false;"[\s\S]*?</a>', '', text, count=1)
+          text = re.sub(r'\n\s*<button onclick="mobileCategory\(\'packages\'\)"[\s\S]*?</button>', '', text, count=2)
+
+          # Remove the hero CTA for packages.
+          text = re.sub(r'\n\s*<button\s*\n\s*onclick="showCategory\(\'packages\'\)"[\s\S]*?</button>', '', text, count=1)
+
+          # Remove the home-page Packages category card.
+          marker = "            <div onclick=\"showCategory('packages')\""
+          start = text.find(marker)
+          if start != -1:
+              end_marker = "\n            </div>\n\n        </div>"
+              end = text.find(end_marker, start)
+              if end == -1:
+                  raise SystemExit("Could not locate end of Packages category card")
+              text = text[:start] + text[end + len("\n            </div>"):] 
+
+          # Remove package data object from the category data map using brace matching.
+          start = text.find("\n    packages: {")
+          if start != -1:
+              brace = text.find("{", start)
+              depth = 0
+              end = None
+              for i in range(brace, len(text)):
+                  if text[i] == "{":
+                      depth += 1
+                  elif text[i] == "}":
+                      depth -= 1
+                      if depth == 0:
+                          end = i + 1
+                          break
+              if end is None:
+                  raise SystemExit("Could not locate end of Packages data object")
+              # Also consume the following comma/newline when present.
+              while end < len(text) and text[end] in " \t":
+                  end += 1
+              if end < len(text) and text[end] == ",":
+                  end += 1
+              if end < len(text) and text[end] == "\n":
+                  end += 1
+              text = text[:start] + "\n" + text[end:]
+
+          # Remove package-specific translation keys.
+          for key in [
+              "nav_packages", "hero_package_cta", "cat_packages", "cat_packages_desc", "discover_packages"
+          ]:
+              text = re.sub(r'^\s*' + re.escape(key) + r':.*\n', '', text, flags=re.MULTILINE)
+
+          # Remove package wording from the public SEO description.
+          text = text.replace(", VIP-Erlebnisse und individuelle Pakete", ", VIP-Erlebnisse")
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Commit and remove one-time workflow
+        shell: bash
+        run: |
+          rm -f .packages-removal-trigger .github/workflows/remove-packages-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .packages-removal-trigger .github/workflows/remove-packages-once.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "Remove Packages category from website"
+          git push
