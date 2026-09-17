@@ -36,18 +36,21 @@ async function handleProviderBookings(request,env){
 }
 async function handleBookingLookup(request,env){
   if(!env.DB)return providerJson({error:"D1 database not configured"},500);
-  const bookingId=String(new URL(request.url).searchParams.get("id")||"").trim();
-  if(!bookingId)return providerJson({error:"Missing booking id"},400);
+  const params=new URL(request.url).searchParams,bookingId=String(params.get("id")||"").trim(),token=String(params.get("token")||"").trim();
+  if(!bookingId||!token)return providerJson({error:"Missing booking access credentials"},400);
   try{
     await ensureBookingLookupTable(env);
-    const booking=await env.DB.prepare(`SELECT booking_id,status,payment_status,customer_name,customer_language,experience_name,booking_date,booking_time,guests,amount_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude FROM bookings WHERE booking_id=? LIMIT 1`).bind(bookingId).first();
+    const booking=await env.DB.prepare(`SELECT booking_id,status,payment_status,customer_name,customer_language,experience_name,booking_date,booking_time,guests,amount_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1`).bind(bookingId).first();
     if(!booking)return providerJson({error:"Booking not found"},404);
+    if(!booking.booking_access_token||token!==booking.booking_access_token)return providerJson({error:"Booking access denied"},403);
     if(booking.payment_status!=="paid" || ["cancelled","refunded"].includes(booking.status))return providerJson({error:"Booking is not active"},404);
+    delete booking.booking_access_token;
     return providerJson({booking});
   }catch(error){return providerJson({error:error?.message||"Server error"},500)}
 }
 async function ensureBookingLookupTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,status TEXT NOT NULL DEFAULT 'pending',payment_status TEXT NOT NULL DEFAULT 'pending',customer_name TEXT NOT NULL,customer_email TEXT NOT NULL,customer_phone TEXT,customer_language TEXT NOT NULL DEFAULT 'en',experience_name TEXT NOT NULL,booking_date TEXT,booking_time TEXT,guests INTEGER NOT NULL DEFAULT 1,amount_cents INTEGER NOT NULL DEFAULT 0,currency TEXT NOT NULL DEFAULT 'eur',meeting_point_name TEXT,meeting_address TEXT,meeting_city TEXT,meeting_country TEXT,meeting_instructions TEXT,arrival_minutes_before INTEGER,meeting_latitude TEXT,meeting_longitude TEXT,partner_ref TEXT,provider_connect_account_id TEXT,confirmation_email_sent_at TEXT,confirmation_email_error TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,status TEXT NOT NULL DEFAULT 'pending',payment_status TEXT NOT NULL DEFAULT 'pending',customer_name TEXT NOT NULL,customer_email TEXT NOT NULL,customer_phone TEXT,customer_language TEXT NOT NULL DEFAULT 'en',experience_name TEXT NOT NULL,booking_date TEXT,booking_time TEXT,guests INTEGER NOT NULL DEFAULT 1,amount_cents INTEGER NOT NULL DEFAULT 0,currency TEXT NOT NULL DEFAULT 'eur',meeting_point_name TEXT,meeting_address TEXT,meeting_city TEXT,meeting_country TEXT,meeting_instructions TEXT,arrival_minutes_before INTEGER,meeting_latitude TEXT,meeting_longitude TEXT,partner_ref TEXT,provider_connect_account_id TEXT,booking_access_token TEXT,confirmation_email_sent_at TEXT,confirmation_email_error TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  try{await env.DB.prepare("ALTER TABLE bookings ADD COLUMN booking_access_token TEXT").run()}catch(_){}
 }
 async function handleProviderExperiences(request,env){
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
