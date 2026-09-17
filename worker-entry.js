@@ -38,6 +38,7 @@ export default {
         data.bookingDate = data.bookingDate || "";
         data.bookingTime = data.bookingTime || "";
         data.experienceName = data.experienceName || data.tourName || "";
+        data.providerName = data.providerName || "";
         data.meetingPointName = data.meetingPointName || "";
         data.meetingAddress = data.meetingAddress || "";
         data.meetingCity = data.meetingCity || "";
@@ -66,6 +67,7 @@ export default {
                 booking_date: data.bookingDate,
                 booking_time: data.bookingTime,
                 experience_name: data.experienceName,
+                provider_name: data.providerName,
                 meeting_point_name: data.meetingPointName,
                 meeting_address: data.meetingAddress,
                 meeting_city: data.meetingCity,
@@ -216,8 +218,8 @@ async function finalizePaidBooking(env, paymentIntent) {
         amount_cents, currency,
         meeting_point_name, meeting_address, meeting_city, meeting_country,
         meeting_instructions, arrival_minutes_before, meeting_latitude, meeting_longitude,
-        partner_ref, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        partner_ref, provider_name, provider_connect_account_id, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         booking_id=excluded.booking_id,
         status='confirmed', payment_status='paid',
@@ -231,14 +233,17 @@ async function finalizePaidBooking(env, paymentIntent) {
         meeting_instructions=excluded.meeting_instructions,
         arrival_minutes_before=excluded.arrival_minutes_before,
         meeting_latitude=excluded.meeting_latitude, meeting_longitude=excluded.meeting_longitude,
-        partner_ref=excluded.partner_ref, updated_at=CURRENT_TIMESTAMP
+        partner_ref=excluded.partner_ref, provider_name=excluded.provider_name,
+        provider_connect_account_id=excluded.provider_connect_account_id,
+        updated_at=CURRENT_TIMESTAMP
     `).bind(
       bookingId, paymentIntent.id, "confirmed", "paid", name || "Customer", email,
       clean(metadata.customer_phone), language, experienceName,
       clean(metadata.booking_date), clean(metadata.booking_time), guests,
       amountCents, currency, meeting.name, meeting.address, meeting.city,
       meeting.country, meeting.instructions, meeting.arrivalMinutes, meeting.latitude,
-      meeting.longitude, clean(metadata.partner_ref)
+      meeting.longitude, clean(metadata.partner_ref), clean(metadata.provider_name),
+      clean(metadata.provider_connect_account_id)
     ).run();
 
     const booking = await env.DB.prepare("SELECT * FROM bookings WHERE payment_intent_id=? LIMIT 1")
@@ -301,6 +306,7 @@ async function sendEmailJsConfirmation(env, booking) {
     booking_id: booking.booking_id,
     customer_language: language,
     subject,
+    provider_name: booking.provider_name || "FiiViu Demo Organizer",
     meeting_point_name: booking.meeting_point_name || "",
     meeting_address: booking.meeting_address || "",
     meeting_city: booking.meeting_city || "",
@@ -308,7 +314,8 @@ async function sendEmailJsConfirmation(env, booking) {
     meeting_instructions: booking.meeting_instructions || "",
     arrival_minutes_before: booking.arrival_minutes_before == null ? "" : String(booking.arrival_minutes_before),
     meeting_latitude: booking.meeting_latitude || "",
-    meeting_longitude: booking.meeting_longitude || ""
+    meeting_longitude: booking.meeting_longitude || "",
+    meeting_map_link: makeMeetingMapLink(booking)
   };
 
   const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
@@ -320,6 +327,18 @@ async function sendEmailJsConfirmation(env, booking) {
     const text = await response.text();
     throw new Error(`EmailJS ${response.status}: ${text.slice(0, 500)}`);
   }
+}
+
+function makeMeetingMapLink(booking) {
+  const latitude = clean(booking.meeting_latitude);
+  const longitude = clean(booking.meeting_longitude);
+  const query = latitude && longitude
+    ? `${latitude},${longitude}`
+    : [booking.meeting_point_name, booking.meeting_address, booking.meeting_city, booking.meeting_country]
+        .map(clean)
+        .filter(Boolean)
+        .join(", ");
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : "";
 }
 
 async function stripeGet(env, path) {
@@ -345,12 +364,13 @@ async function ensureBookingColumns(env) {
       meeting_point_name TEXT, meeting_address TEXT, meeting_city TEXT, meeting_country TEXT,
       meeting_instructions TEXT, arrival_minutes_before INTEGER,
       meeting_latitude TEXT, meeting_longitude TEXT, partner_ref TEXT,
-      provider_connect_account_id TEXT, confirmation_email_sent_at TEXT,
+      provider_name TEXT, provider_connect_account_id TEXT, confirmation_email_sent_at TEXT,
       confirmation_email_error TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
   for (const statement of [
+    "ALTER TABLE bookings ADD COLUMN provider_name TEXT",
     "ALTER TABLE bookings ADD COLUMN provider_connect_account_id TEXT",
     "ALTER TABLE bookings ADD COLUMN confirmation_email_error TEXT"
   ]) {
