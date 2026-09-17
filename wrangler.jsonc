@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "getlocalis",
-  "main": "./worker-entry-v2.js",
+  "main": "./marketplace-entry.js",
   "compatibility_date": "2026-09-14",
   "assets": {
     "directory": ".",
