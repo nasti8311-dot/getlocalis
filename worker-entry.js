@@ -25,8 +25,6 @@ export default {
       return response;
     }
 
-    // Enrich the existing checkout request, then persist the extra values on
-    // the PaymentIntent so the signed Stripe webhook can use them later.
     if (request.method === "POST" && url.pathname === "/api/create-payment-intent") {
       const body = await request.text();
       try {
@@ -36,7 +34,7 @@ export default {
         data.customerPhone = data.customerPhone || "";
         data.customerLanguage = data.customerLanguage || "en";
         data.bookingDate = data.bookingDate || "";
-        data.bookingTime = data.bookingTime || "";
+        data.bookingTime = data.bookingTime || extractTime(data.experienceName || data.tourName || "");
         data.experienceName = data.experienceName || data.tourName || "";
         data.providerName = data.providerName || "";
         data.meetingPointName = data.meetingPointName || "";
@@ -118,10 +116,11 @@ async function injectCheckoutBridge(response) {
         data.customerEmail = get('customer-email') || data.customerEmail || '';
         data.customerPhone = get('customer-phone') || data.customerPhone || '';
         data.bookingDate = get('booking-date') || data.bookingDate || '';
-        data.bookingTime = (typeof selectedTourTime !== 'undefined' ? String(selectedTourTime || '').trim() : '') || data.bookingTime || '';
+        data.bookingTime = (typeof selectedTourTime !== 'undefined' ? String(selectedTourTime || '').trim() : '') || data.bookingTime || extractTime(data.experienceName || data.tourName || '');
         data.customerLanguage = (typeof currentLang !== 'undefined' ? String(currentLang || 'en').slice(0,2) : 'en');
         data.experienceName = data.experienceName || data.tourName || '';
         var meeting = window.__fiiviuMeetingPoint || {};
+        data.providerName = meeting.providerName || data.providerName || '';
         data.meetingPointName = meeting.name || data.meetingPointName || '';
         data.meetingAddress = meeting.address || data.meetingAddress || '';
         data.meetingCity = meeting.city || data.meetingCity || '';
@@ -136,6 +135,7 @@ async function injectCheckoutBridge(response) {
     } catch (_) {}
     return originalFetch(input, init);
   };
+  function extractTime(value){var match=String(value||'').match(/\b([01]?\d|2[0-3]):[0-5]\d\b/);return match?match[0]:'';}
   try {
     if (window.emailjs && typeof window.emailjs.send === 'function') {
       var originalSend = window.emailjs.send.bind(window.emailjs);
@@ -339,6 +339,11 @@ function makeMeetingMapLink(booking) {
         .filter(Boolean)
         .join(", ");
   return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : "";
+}
+
+function extractTime(value) {
+  const match = String(value || "").match(/\b([01]?\d|2[0-3]):[0-5]\d\b/);
+  return match ? match[0] : "";
 }
 
 async function stripeGet(env, path) {
