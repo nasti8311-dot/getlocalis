@@ -18,9 +18,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in *.js; do
-            [ -f "$file" ] || continue
+          while IFS= read -r -d '' file; do
             node --check "$file"
-          done
-      - name: Validate Wrangler configuration
+          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+      - name: Validate Wrangler configuration and worker bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
