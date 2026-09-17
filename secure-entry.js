@@ -49,7 +49,7 @@ export default {
       const expected=String(env.ADMIN_PAYOUT_KEY||"").trim();
       const provided=String(request.headers.get("Authorization")||"");
       if(!expected||provided!=="Bearer "+expected){
-        return new Response(JSON.stringify({error:"Unauthorized"},),{status:401,headers:{...CORS,"Content-Type":"application/json"}});
+        return new Response(JSON.stringify({error:"Unauthorized"}),{status:401,headers:{...CORS,"Content-Type":"application/json"}});
       }
     }
 
