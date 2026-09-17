@@ -191,10 +191,6 @@ async function finalizePaidBooking(env, paymentIntent) {
     const bookingId = String(metadata.booking_id || `FV-${paymentIntent.id.slice(-8).toUpperCase()}`).trim();
     const email = String(metadata.customer_email || pi.receipt_email || billing.email || "").trim().toLowerCase();
     const name = String(metadata.customer_name || billing.name || "").trim();
-    if (!email) {
-      console.error("Paid FiiViu booking has no customer email", paymentIntent.id);
-      return;
-    }
 
     const language = normalizeLanguage(metadata.customer_language);
     const guests = Math.max(1, Number(metadata.guests || 1));
@@ -248,6 +244,13 @@ async function finalizePaidBooking(env, paymentIntent) {
     const booking = await env.DB.prepare("SELECT * FROM bookings WHERE payment_intent_id=? LIMIT 1")
       .bind(paymentIntent.id).first();
     if (!booking || booking.confirmation_email_sent_at) return;
+
+    if (!booking.customer_email) {
+      await env.DB.prepare(
+        "UPDATE bookings SET confirmation_email_error=?, updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
+      ).bind("Keine Kunden-E-Mail für Bestätigungsversand vorhanden.", paymentIntent.id).run();
+      return;
+    }
 
     await sendConfirmationWithRetry(env, booking);
     await env.DB.prepare(
