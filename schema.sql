@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   meeting_longitude TEXT,
   partner_ref TEXT,
   provider_connect_account_id TEXT,
+  booking_access_token TEXT,
   confirmation_email_sent_at TEXT,
   confirmation_email_error TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,3 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_booking_date
 
 CREATE INDEX IF NOT EXISTS idx_bookings_confirmation_email
   ON bookings(confirmation_email_sent_at);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token
+  ON bookings(booking_access_token)
+  WHERE booking_access_token IS NOT NULL;
