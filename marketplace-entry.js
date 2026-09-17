@@ -2,7 +2,48 @@ import baseWorker from "./worker-entry-v2.js";
 
 const CORS={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 
-export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response);return response;}};
+export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(url.pathname.startsWith("/api/provider/"))return handleProviderRoute(request,env,ctx);const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response);return response;}};
+
+async function handleProviderRoute(request,env,ctx){
+  const url=new URL(request.url);
+  const account=resolveProviderAccount(request,env);
+  if(!account)return json({error:"Unauthorized provider credentials"},401);
+  if(url.pathname==="/api/provider/experiences"&&request.method==="GET"){
+    if(!env.DB)return json({error:"D1 database not configured"},500);
+    try{await ensureExperiencesTable(env);const rows=await env.DB.prepare("SELECT * FROM experiences WHERE provider_connect_account_id=? ORDER BY updated_at DESC,id DESC").bind(account).all();return json({experiences:rows.results||[]})}catch(error){return json({error:error?.message||"Server error"},500)}
+  }
+  if(url.pathname==="/api/provider/experiences"&&request.method==="POST"){
+    let body;try{body=await request.json()}catch(_){return json({error:"Invalid JSON payload"},400)}
+    body.providerConnectAccountId=account;
+    return forwardProviderRequest(request,env,ctx,JSON.stringify(body));
+  }
+  if(url.pathname==="/api/provider/bookings"&&request.method==="GET"){
+    url.searchParams.set("providerConnectAccountId",account);
+    return forwardProviderRequest(new Request(url.toString(),request),env,ctx);
+  }
+  return json({error:"Method Not Allowed"},405);
+}
+
+function resolveProviderAccount(request,env){
+  const authorization=String(request.headers.get("Authorization")||"");
+  const token=authorization.startsWith("Bearer ")?authorization.slice(7).trim():"";
+  if(!token)return "";
+  const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();
+  if(!raw)return "";
+  let map;try{map=JSON.parse(raw)}catch(_){return ""}
+  const account=typeof map?.[token]==="string"?map[token].trim():"";
+  return /^acct_[A-Za-z0-9]+$/.test(account)?account:"";
+}
+
+function forwardProviderRequest(request,env,ctx,body){
+  const headers=new Headers(request.headers);
+  const adminKey=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();
+  if(!adminKey)return json({error:"Provider admin authorization is not configured"},500);
+  headers.set("Authorization","Bearer "+adminKey);
+  const init={method:request.method,headers};
+  if(body!==undefined)init.body=body;else if(request.method!=="GET"&&request.method!=="HEAD")init.body=request.body;
+  return baseWorker.fetch(new Request(request.url,init),env,ctx);
+}
 
 async function createMarketplacePaymentIntent(request,env,ctx){let body;try{body=await request.json()}catch(_){return json({error:"Invalid JSON payload"},400)}if(!env.DB)return json({error:"D1 database not configured"},500);const experienceId=String(body.experienceId||body.tourKey||"").trim().toLowerCase();if(!experienceId)return json({error:"Missing experienceId"},400);try{await ensureExperiencesTable(env);const experience=await env.DB.prepare("SELECT experience_id,title,provider_connect_account_id,status FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();if(!experience)return json({error:"Experience is not configured for marketplace checkout"},409);if(String(experience.status)!=="published")return json({error:"Experience is not currently bookable"},409);const providerAccount=String(experience.provider_connect_account_id||"").trim();if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount))return json({error:"Experience has no valid provider Connect account"},409);body.experienceId=experienceId;body.providerConnectAccountId=providerAccount;body.experienceName=body.experienceName||experience.title||body.tourName||"";return baseWorker.fetch(new Request(request,{method:"POST",headers:request.headers,body:JSON.stringify(body)}),env,ctx)}catch(error){console.error("FiiViu marketplace payment routing failed",error);return json({error:error?.message||"Marketplace payment routing failed"},500)}}
 
