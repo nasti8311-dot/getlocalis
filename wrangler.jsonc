@@ -23,11 +23,5 @@
       "binding": "MEDIA_BUCKET",
       "bucket_name": "fiiviu-media"
     }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA_BUCKET",
-      "bucket_name": "fiiviu-media"
-    }
   ]
 }
