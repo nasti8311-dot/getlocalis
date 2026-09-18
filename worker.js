@@ -213,8 +213,20 @@ if (url.pathname === "/api/offers") {
 async function translateOfferText(text, target) {
   const source = String(text || "").trim();
   if (!source) return "";
+  const encoded = encodeURIComponent(source);
   try {
-    const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(source) + "&langpair=de|" + encodeURIComponent(target);
+    const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&q=" + encoded;
+    const response = await fetch(googleUrl, { headers: { "Accept": "application/json" } });
+    if (response.ok) {
+      const data = await response.json();
+      const translated = Array.isArray(data?.[0])
+        ? data[0].map(part => Array.isArray(part) ? String(part[0] || "") : "").join("").trim()
+        : "";
+      if (translated) return translated;
+    }
+  } catch (_) {}
+  try {
+    const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
     const response = await fetch(url, { headers: { "Accept": "application/json" } });
     if (!response.ok) return source;
     const data = await response.json();
@@ -224,7 +236,6 @@ async function translateOfferText(text, target) {
     return source;
   }
 }
-
 async function translateOfferFields(source) {
   const fields = [
     String(source.title || "").trim(),
