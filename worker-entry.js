@@ -593,8 +593,10 @@ function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      "Content-Type":
-        "application/json; charset=utf-8",
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
       ...headers
     }
   });
