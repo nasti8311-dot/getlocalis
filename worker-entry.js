@@ -1243,4 +1243,3 @@ function integerOrNull(value) {
     ? number
     : null;
 }
-`
