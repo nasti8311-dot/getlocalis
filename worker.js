@@ -237,34 +237,32 @@ async function translateOfferText(text, target) {
   }
 }
 async function translateOfferFields(source) {
-  const fields = [
-    String(source.title || "").trim(),
-    String(source.description || "").trim(),
-    String(source.meetingPointName || source.meeting_point_name || "").trim(),
-    String(source.meetingInstructions || source.meeting_instructions || "").trim()
-  ];
-  async function translateAll(target) {
-    const active = fields.map((value, index) => value ? "[" + (index + 1) + "] " + value : "[" + (index + 1) + "]").join("\n");
-    if (!active.trim()) return fields.slice();
-    const translated = await translateOfferText(active, target);
-    const parts = translated.split(/\n(?=\[\d+\])/);
-    const result = fields.slice();
-    for (const part of parts) {
-      const match = part.match(/^\[(\d+)\]\s*([\\s\\S]*)$/);
-      if (match) result[Number(match[1]) - 1] = String(match[2] || "").trim();
-    }
-    return result;
-  }
-  const [en, ro] = await Promise.all([translateAll("en"), translateAll("ro")]);
+  const title = String(source.title || "").trim();
+  const description = String(source.description || "").trim();
+  const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
+  const meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
+
+  const [titleEn, titleRo, descriptionEn, descriptionRo, pointEn, pointRo, instructionsEn, instructionsRo] =
+    await Promise.all([
+      translateOfferText(title, "en"),
+      translateOfferText(title, "ro"),
+      translateOfferText(description, "en"),
+      translateOfferText(description, "ro"),
+      translateOfferText(meetingPointName, "en"),
+      translateOfferText(meetingPointName, "ro"),
+      translateOfferText(meetingInstructions, "en"),
+      translateOfferText(meetingInstructions, "ro")
+    ]);
+
   return {
-    titleEn: en[0] || fields[0],
-    titleRo: ro[0] || fields[0],
-    descriptionEn: en[1] || fields[1],
-    descriptionRo: ro[1] || fields[1],
-    meetingPointNameEn: en[2] || fields[2],
-    meetingPointNameRo: ro[2] || fields[2],
-    meetingInstructionsEn: en[3] || fields[3],
-    meetingInstructionsRo: ro[3] || fields[3]
+    titleEn: titleEn || title,
+    titleRo: titleRo || title,
+    descriptionEn: descriptionEn || description,
+    descriptionRo: descriptionRo || description,
+    meetingPointNameEn: pointEn || meetingPointName,
+    meetingPointNameRo: pointRo || meetingPointName,
+    meetingInstructionsEn: instructionsEn || meetingInstructions,
+    meetingInstructionsRo: instructionsRo || meetingInstructions
   };
 }
 
