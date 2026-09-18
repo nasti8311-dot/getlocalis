@@ -66,6 +66,8 @@ export default {
           const priceCents=Number(body.priceCents);
           if(!providerRef||!title)return json({error:"Veranstalter und Titel sind erforderlich."},400,corsHeaders);
           if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis."},400,corsHeaders);
+          const translated = body.autoTranslate === true ? await translateOfferFields(body) : null;
+          if (translated) Object.assign(body, translated);
           const provider=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
           if(!provider)return json({error:"Aktiver Veranstalter nicht gefunden."},404,corsHeaders);
           const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,title_en,title_ro,description,description_en,description_ro,price_cents,currency,available_times,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_address,meeting_city,meeting_country,meeting_instructions,meeting_instructions_en,meeting_instructions_ro,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)").bind(providerRef,title,String(body.titleEn||"").trim()||null,String(body.titleRo||"").trim()||null,String(body.description||"").trim()||null,String(body.descriptionEn||"").trim()||null,String(body.descriptionRo||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingPointNameEn||"").trim()||null,String(body.meetingPointNameRo||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,String(body.meetingInstructionsEn||"").trim()||null,String(body.meetingInstructionsRo||"").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null).run();
@@ -80,6 +82,8 @@ export default {
           const priceCents=Number(body.priceCents ?? current.price_cents);
           const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
           if(!providerRef||!title||!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültige Angebotsdaten."},400,corsHeaders);
+          const translated = body.autoTranslate === true ? await translateOfferFields(body) : null;
+          if (translated) Object.assign(body, translated);
           await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,title_en=?,title_ro=?,description=?,description_en=?,description_ro=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,meeting_instructions_en=?,meeting_instructions_ro=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.titleEn ?? current.title_en ?? "").trim()||null,String(body.titleRo ?? current.title_ro ?? "").trim()||null,String(body.description ?? current.description ?? "").trim()||null,String(body.descriptionEn ?? current.description_en ?? "").trim()||null,String(body.descriptionRo ?? current.description_ro ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingPointNameEn ?? current.meeting_point_name_en ?? "").trim()||null,String(body.meetingPointNameRo ?? current.meeting_point_name_ro ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,String(body.meetingInstructionsEn ?? current.meeting_instructions_en ?? "").trim()||null,String(body.meetingInstructionsRo ?? current.meeting_instructions_ro ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",String(body.imageUrl ?? current.image_url ?? "").trim()||null,String(body.galleryUrls ?? current.gallery_urls ?? "").trim()||null,active?1:0,id).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first();
           return json({success:true,offer},200,corsHeaders);
@@ -158,6 +162,37 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+
+async function translateOfferText(text, target) {
+  const source = String(text || "").trim();
+  if (!source) return "";
+  try {
+    const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(source) + "&langpair=de|" + encodeURIComponent(target);
+    const response = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!response.ok) return source;
+    const data = await response.json();
+    const translated = String(data?.responseData?.translatedText || "").trim();
+    return translated || source;
+  } catch (_) {
+    return source;
+  }
+}
+
+async function translateOfferFields(source) {
+  const de = {
+    title: String(source.title || "").trim(),
+    description: String(source.description || "").trim(),
+    meetingPointName: String(source.meetingPointName || "").trim(),
+    meetingInstructions: String(source.meetingInstructions || "").trim()
+  };
+  const [titleEn, titleRo, descriptionEn, descriptionRo, pointEn, pointRo, instructionsEn, instructionsRo] = await Promise.all([
+    translateOfferText(de.title, "en"), translateOfferText(de.title, "ro"),
+    translateOfferText(de.description, "en"), translateOfferText(de.description, "ro"),
+    translateOfferText(de.meetingPointName, "en"), translateOfferText(de.meetingPointName, "ro"),
+    translateOfferText(de.meetingInstructions, "en"), translateOfferText(de.meetingInstructions, "ro")
+  ]);
+  return { titleEn, titleRo, descriptionEn, descriptionRo, meetingPointNameEn: pointEn, meetingPointNameRo: pointRo, meetingInstructionsEn: instructionsEn, meetingInstructionsRo: instructionsRo };
+}
 
 async function ensureOffersTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
