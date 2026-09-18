@@ -235,9 +235,9 @@ function editOfferById(id){
   document.getElementById("offerImagePreview").innerHTML=o.image_url?'<img src="'+escapeHtml(o.image_url)+'" class="h-32 w-48 object-cover rounded-xl border">':"";
   const gallery=o.gallery_urls?String(o.gallery_urls).split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean):[];
   document.getElementById("offerGalleryPreview").innerHTML=gallery.map(url=>'<img src="'+escapeHtml(url)+'" class="h-24 w-full object-cover rounded-xl border">').join("");
-  document.getElementById("offerMeetingName").value=o.meeting_point_name||""; document.getElementById("offerAddress").value=o.meeting_address||"";
+  document.getElementById("offerMeetingName").value=o.meeting_point_name||""; document.getElementById("offerMeetingNameEn").value=o.meeting_point_name_en||""; document.getElementById("offerMeetingNameRo").value=o.meeting_point_name_ro||""; document.getElementById("offerAddress").value=o.meeting_address||"";
   document.getElementById("offerCity").value=o.meeting_city||""; document.getElementById("offerCountry").value=o.meeting_country||"";
-  document.getElementById("offerArrival").value=o.arrival_minutes_before??15; document.getElementById("offerInstructions").value=o.meeting_instructions||"";
+  document.getElementById("offerArrival").value=o.arrival_minutes_before??15; document.getElementById("offerInstructions").value=o.meeting_instructions||""; document.getElementById("offerInstructionsEn").value=o.meeting_instructions_en||""; document.getElementById("offerInstructionsRo").value=o.meeting_instructions_ro||"";
   document.getElementById("offerForm").classList.remove("hidden");
 }
 function newOffer(){
@@ -248,7 +248,7 @@ function newOffer(){
   document.getElementById("offerImagePreview").innerHTML="";
   document.getElementById("offerGalleryPreview").innerHTML="";
   document.getElementById("offerCity").value="București"; document.getElementById("offerCountry").value="Romania"; document.getElementById("offerArrival").value=15;
-  document.getElementById("offerProvider").innerHTML=providers.filter(p=>Number(p.active)===1).map(p=>`<option value="${escapeHtml(p.provider_ref)}">${escapeHtml(p.name)} (${escapeHtml(p.provider_ref)})</option>`).join("");
+  populateOfferProviders("");
   document.getElementById("offerForm").classList.remove("hidden");
 }
 document.getElementById("loginBtn").onclick=async()=>{
