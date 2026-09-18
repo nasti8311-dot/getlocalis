@@ -1025,6 +1025,7 @@
                             id="booking-date"
                             required
                             placeholder="Datum wählen..."
+                            readonly
                             class="w-full bg-white border border-gray-200 rounded-xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-fii-orange">
 
                     </div>
@@ -3302,6 +3303,25 @@ function changeLanguage(lang) {
     else if (!document.getElementById("home-view").classList.contains("hidden")) {
 
         renderFeatured();
+
+    }
+
+    else if (!document.getElementById("checkout-view").classList.contains("hidden")) {
+
+        const category = categoriesData[currentCategoryKey];
+        const item = category?.items?.find(product => product.id === currentTourKey);
+
+        if (item) {
+            const title = item.title[currentLang] || item.title.de;
+            document.getElementById("checkout-summary-title").innerText = title;
+
+            const dateText = selectedDetailDate || document.getElementById("booking-date").value || "";
+            document.getElementById("checkout-summary-date").innerText =
+                dateText + (selectedTourTime ? " · " + selectedTourTime : "");
+
+            document.getElementById("selected-tour-display").value =
+                title + (dateText ? " · " + dateText : "") + (selectedTourTime ? " · " + selectedTourTime : "");
+        }
 
     }
 
