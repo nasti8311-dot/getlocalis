@@ -34,6 +34,47 @@ export default {
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
 
+    if (url.pathname.startsWith("/media/")) {
+      if (request.method !== "GET" && request.method !== "HEAD") return json({error:"Method Not Allowed"},405,corsHeaders);
+      if (!env.MEDIA_BUCKET) return json({error:"R2 media bucket not configured"},500,corsHeaders);
+      const key = decodeURIComponent(url.pathname.slice("/media/".length));
+      if (!key || key.includes("..") || key.startsWith("/")) return json({error:"Invalid media key"},400,corsHeaders);
+      const object = await env.MEDIA_BUCKET.get(key);
+      if (!object) return new Response("Not Found",{status:404});
+      const headers = new Headers(corsHeaders);
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("cache-control", "public, max-age=31536000, immutable");
+      return new Response(request.method === "HEAD" ? null : object.body,{status:200,headers});
+    }
+
+    if (url.pathname === "/api/admin/upload-image") {
+      if (request.method !== "POST") return json({error:"Method Not Allowed"},405,corsHeaders);
+      if (!env.ADMIN_PAYOUT_KEY) return json({error:"Admin key not configured"},500,corsHeaders);
+      if (!isAdmin(request,env)) return json({error:"Unauthorized"},401,corsHeaders);
+      if (!env.MEDIA_BUCKET) return json({error:"R2 media bucket not configured"},500,corsHeaders);
+      try {
+        const form = await request.formData();
+        const file = form.get("file");
+        const offerId = String(form.get("offerId") || "new").trim() || "new";
+        const kind = String(form.get("kind") || "gallery").trim().toLowerCase() === "title" ? "title" : "gallery";
+        if (!(file instanceof File)) return json({error:"Keine Bilddatei empfangen."},400,corsHeaders);
+        if (!String(file.type || "").startsWith("image/")) return json({error:"Nur Bilddateien sind erlaubt."},400,corsHeaders);
+        const allowed = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
+        if (!allowed.has(String(file.type))) return json({error:"Erlaubt sind JPG, PNG, WebP und GIF."},400,corsHeaders);
+        if (file.size > 10 * 1024 * 1024) return json({error:"Das Bild darf maximal 10 MB groß sein."},400,corsHeaders);
+        const ext = ({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif"})[file.type] || "bin";
+        const bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+        const token = Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+        const safeOffer = offerId.replace(/[^a-zA-Z0-9_-]/g,"").slice(0,64) || "new";
+        const key = "offers/"+safeOffer+"/"+kind+"-"+Date.now()+"-"+token+"."+ext;
+        await env.MEDIA_BUCKET.put(key,file.stream(),{httpMetadata:{contentType:file.type,cacheControl:"public, max-age=31536000, immutable"}});
+        return json({success:true,key,url:new URL("/media/"+encodeURIComponent(key),request.url).toString(),kind,size:file.size,contentType:file.type},201,corsHeaders);
+      } catch(error) {
+        return json({error:error?.message||"Bild-Upload fehlgeschlagen."},500,corsHeaders);
+      }
+    }
+
     if (url.pathname === "/api/offers") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
       if(!env.DB)return json({offers:[]},200,corsHeaders);
