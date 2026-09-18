@@ -163,7 +163,8 @@ export default {
                   arrival_minutes_before: data.arrivalMinutesBefore,
                   meeting_latitude: data.meetingLatitude,
                   meeting_longitude: data.meetingLongitude,
-                  provider_connect_account_id: data.providerConnectAccountId
+                  provider_connect_account_id: data.providerConnectAccountId,
+                  offer_id: String(data.offerId || "")
                 }
               );
             }
@@ -1357,9 +1358,24 @@ async function getLocalizedEmailOffer(env, booking, language) {
 
   try {
     const source = String(booking.experience_name || "").trim();
-    const row = await env.DB.prepare(
-      "SELECT title,title_en,title_ro,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_instructions,meeting_instructions_en,meeting_instructions_ro FROM offers WHERE title=? OR title_en=? OR title_ro=? LIMIT 1"
-    ).bind(source, source, source).first();
+    let offerId = "";
+    try {
+      if (booking.payment_intent_id && env.STRIPE_SECRET_KEY) {
+        const paymentIntent = await stripeGet(
+          env,
+          "/v1/payment_intents/" + encodeURIComponent(String(booking.payment_intent_id))
+        );
+        offerId = String(paymentIntent?.metadata?.offer_id || "").trim();
+      }
+    } catch (_) {}
+
+    const row = offerId
+      ? await env.DB.prepare(
+          "SELECT title,title_en,title_ro,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_instructions,meeting_instructions_en,meeting_instructions_ro FROM offers WHERE id=? LIMIT 1"
+        ).bind(Number(offerId)).first()
+      : await env.DB.prepare(
+          "SELECT title,title_en,title_ro,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_instructions,meeting_instructions_en,meeting_instructions_ro FROM offers WHERE title=? OR title_en=? OR title_ro=? LIMIT 1"
+        ).bind(source, source, source).first();
 
     if (!row) return {
       title: source,
