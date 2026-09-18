@@ -448,7 +448,7 @@ function buildCancellationView(booking) {
 
   return {
     booking_id: booking.booking_id,
-    tour_title: booking.experience_name,
+    tour_title: localizedTitle,
     booking_date: booking.booking_date || "",
     booking_time: booking.booking_time || "",
     guests: Number(booking.guests || 1),
@@ -1119,11 +1119,16 @@ async function sendEmailJsConfirmation(
   const provider =
     booking.provider_name || "FiiViu";
 
+  const localizedOffer = await getLocalizedEmailOffer(env, booking, language);
+  const localizedTitle = localizedOffer?.title || booking.experience_name || "";
   const meetingPoint =
-    booking.meeting_point_name || "";
+    localizedOffer?.meetingPoint || booking.meeting_point_name || "";
 
   const address =
     booking.meeting_address || "";
+
+  const localizedInstructions =
+    localizedOffer?.instructions || booking.meeting_instructions || "";
 
   const arrival =
     booking.arrival_minutes_before == null
@@ -1162,7 +1167,7 @@ async function sendEmailJsConfirmation(
     meeting_country:
       booking.meeting_country || "",
     meeting_instructions:
-      booking.meeting_instructions || "",
+      localizedInstructions,
     arrival_minutes_before: arrival,
     meeting_latitude:
       booking.meeting_latitude || "",
@@ -1179,7 +1184,7 @@ async function sendEmailJsConfirmation(
       booking.meeting_country || "",
     arrival_minutes: arrival,
     meeting_instructions:
-      booking.meeting_instructions || "",
+      localizedInstructions,
     map_link: mapLink,
     cancel_url: cancellationUrl,
     cancel_link: cancellationUrl,
@@ -1339,6 +1344,48 @@ function resolveMeetingDefaults(experienceName) {
     latitude: "",
     longitude: ""
   };
+}
+
+async function getLocalizedEmailOffer(env, booking, language) {
+  if (!env.DB || language === "de") {
+    return {
+      title: booking.experience_name || "",
+      meetingPoint: booking.meeting_point_name || "",
+      instructions: booking.meeting_instructions || ""
+    };
+  }
+
+  try {
+    const source = String(booking.experience_name || "").trim();
+    const row = await env.DB.prepare(
+      "SELECT title,title_en,title_ro,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_instructions,meeting_instructions_en,meeting_instructions_ro FROM offers WHERE title=? OR title_en=? OR title_ro=? LIMIT 1"
+    ).bind(source, source, source).first();
+
+    if (!row) return {
+      title: source,
+      meetingPoint: booking.meeting_point_name || "",
+      instructions: booking.meeting_instructions || ""
+    };
+
+    return {
+      title: language === "ro"
+        ? (row.title_ro || row.title_en || row.title)
+        : (row.title_en || row.title_ro || row.title),
+      meetingPoint: language === "ro"
+        ? (row.meeting_point_name_ro || row.meeting_point_name_en || row.meeting_point_name)
+        : (row.meeting_point_name_en || row.meeting_point_name_ro || row.meeting_point_name),
+      instructions: language === "ro"
+        ? (row.meeting_instructions_ro || row.meeting_instructions_en || row.meeting_instructions)
+        : (row.meeting_instructions_en || row.meeting_instructions_ro || row.meeting_instructions)
+    };
+  } catch (error) {
+    console.error("FiiViu localized email offer lookup failed", error);
+    return {
+      title: booking.experience_name || "",
+      meetingPoint: booking.meeting_point_name || "",
+      instructions: booking.meeting_instructions || ""
+    };
+  }
 }
 
 function makeMeetingMapLink(booking) {
