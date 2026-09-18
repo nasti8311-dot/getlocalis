@@ -34,7 +34,33 @@ export default {
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
 
-    if (url.pathname === "/api/offers") {
+    if (url.pathname === "/api/admin/translate-offers") {
+  if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405, corsHeaders);
+  const expected = String(env.ADMIN_PAYOUT_KEY || "").trim();
+  const provided = String(request.headers.get("Authorization") || "");
+  if (!expected || provided !== "Bearer " + expected) return json({ error: "Unauthorized" }, 401, corsHeaders);
+  try {
+    await ensureOffersTable(env);
+    const rows = await env.DB.prepare("SELECT id,title,description,meeting_point_name,meeting_instructions,title_en,title_ro,description_en,description_ro,meeting_point_name_en,meeting_point_name_ro,meeting_instructions_en,meeting_instructions_ro FROM offers").all();
+    let updated = 0;
+    for (const row of (rows.results || [])) {
+      const translated = await translateOfferFields(row);
+      const missing = !String(row.title_en || "").trim() || !String(row.title_ro || "").trim() ||
+        !String(row.description_en || "").trim() || !String(row.description_ro || "").trim() ||
+        !String(row.meeting_point_name_en || "").trim() || !String(row.meeting_point_name_ro || "").trim() ||
+        !String(row.meeting_instructions_en || "").trim() || !String(row.meeting_instructions_ro || "").trim();
+      if (!missing) continue;
+      await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+        .bind(translated.titleEn, translated.titleRo, translated.descriptionEn, translated.descriptionRo, translated.meetingPointNameEn, translated.meetingPointNameRo, translated.meetingInstructionsEn, translated.meetingInstructionsRo, row.id).run();
+      updated++;
+    }
+    return json({ ok: true, updated }, 200, corsHeaders);
+  } catch (error) {
+    return json({ error: error?.message || "Übersetzung fehlgeschlagen." }, 500, corsHeaders);
+  }
+}
+
+if (url.pathname === "/api/offers") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
       if(!env.DB)return json({offers:[]},200,corsHeaders);
       try{
