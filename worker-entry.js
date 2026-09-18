@@ -1,5 +1,5 @@
-```js
 import legacyWorker from "./worker.js";
+// FiiViu deployment sync: EmailJS private-key sender
 
 const EMAILJS_SERVICE_ID = "service_0fqphlf";
 const EMAILJS_TEMPLATE_ID = "template_x2mmo2p";
@@ -1243,4 +1243,4 @@ function integerOrNull(value) {
     ? number
     : null;
 }
-```
+`
