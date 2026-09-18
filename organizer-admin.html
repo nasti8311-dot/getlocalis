@@ -202,8 +202,17 @@ async function loadDetail(){
     document.getElementById("payoutList").innerHTML=(d.payouts||[]).length?(d.payouts||[]).map(p=>`<div class="border border-black/5 rounded-xl p-3 flex justify-between gap-4"><span><b>${escapeHtml(p.booking_id)}</b><br><span class="text-xs muted">${escapeHtml(p.payout_date||"")}</span></span><span class="font-black">${euro(p.amount_cents)}</span></div>`).join(""):"<p class='muted'>Noch keine Auszahlungen.</p>";
   }catch(e){showMessage(e.message,true)}
 }
+async function autoTranslateExistingOffers(){
+  try {
+    const result = await api("/api/admin/translate-offers", { method: "POST", body: JSON.stringify({}) });
+    if (result && Number(result.updated || 0) > 0) showMessage(result.updated + " bestehende Angebote automatisch übersetzt.");
+  } catch (e) {
+    console.warn("Automatische Nachübersetzung fehlgeschlagen:", e.message);
+  }
+}
 async function loadOffers(){
   try{
+    await autoTranslateExistingOffers();
     const d=await api("/api/admin/offers");
     const offers=d.offers||[];
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
