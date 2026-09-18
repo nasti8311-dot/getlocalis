@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buchung verwalten – FiiViu</title>
+<style>body{margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033}.wrap{max-width:620px;margin:0 auto;padding:28px 16px}.card{background:#fff;border-radius:18px;padding:30px;box-shadow:0 8px 30px rgba(20,30,50,.08)}.brand{font-size:24px;font-weight:800}.muted{color:#687286;line-height:1.55}.box{border:1px solid #e5e9f0;border-radius:14px;padding:18px;margin:20px 0}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eef1f5}.row:last-child{border-bottom:0}.btn{display:inline-block;border:0;border-radius:9px;padding:13px 18px;font-weight:700;cursor:pointer;background:#111827;color:#fff}.danger{background:#b42318}.hidden{display:none}.error{color:#b42318}.success{color:#087443}</style>
+</head>
+<body><div class="wrap"><div class="card"><div class="brand">FiiViu</div><h1>Buchung verwalten</h1><div id="loading" class="muted">Buchung wird geladen …</div><div id="content" class="hidden"><div class="box"><h2 id="tour"></h2><div class="row"><span>Datum</span><strong id="date"></strong></div><div class="row"><span>Beginn</span><strong id="time"></strong></div><div class="row"><span>Personen</span><strong id="guests"></strong></div><div class="row"><span>Gesamtpreis</span><strong id="price"></strong></div><div class="row"><span>Buchungs-ID</span><strong id="id"></strong></div></div><p id="policy" class="muted"></p><button id="cancel" class="btn danger">Buchung stornieren</button></div><div id="result" class="hidden"></div></div></div>
+<script>
+(function(){
+const token=new URLSearchParams(location.search).get('token');
+const loading=document.getElementById('loading'),content=document.getElementById('content'),result=document.getElementById('result'),cancel=document.getElementById('cancel');
+function showResult(text,cls){content.classList.add('hidden');loading.classList.add('hidden');result.className=cls||'';result.textContent=text;result.classList.remove('hidden');}
+async function load(){if(!token){showResult('Ungültiger Stornierungslink.','error');return}try{const r=await fetch('/api/cancel-booking?token='+encodeURIComponent(token));const d=await r.json();if(!r.ok)throw new Error(d.error||'Buchung nicht gefunden.');document.getElementById('tour').textContent=d.tour_title;document.getElementById('date').textContent=d.booking_date;document.getElementById('time').textContent=(d.booking_time||'')+' Uhr';document.getElementById('guests').textContent=d.guests;document.getElementById('price').textContent=d.total_price;document.getElementById('id').textContent=d.booking_id;document.getElementById('policy').textContent=d.policy_text;loading.classList.add('hidden');content.classList.remove('hidden');if(!d.allowed||d.status==='cancelled'){cancel.disabled=true;cancel.style.opacity='.5';cancel.textContent=d.status==='cancelled'?'Bereits storniert':'Stornierungsfrist abgelaufen';}}catch(e){showResult(e.message,'error')}}
+cancel.addEventListener('click',async()=>{if(!confirm('Möchtest du diese Buchung wirklich stornieren?'))return;cancel.disabled=true;cancel.textContent='Stornierung wird verarbeitet …';try{const r=await fetch('/api/cancel-booking?token='+encodeURIComponent(token),{method:'POST'});const d=await r.json();if(!r.ok)throw new Error(d.error||'Stornierung fehlgeschlagen.');showResult('Deine Buchung wurde erfolgreich storniert. Die Rückerstattung wurde bei Stripe angestoßen.','success');}catch(e){cancel.disabled=false;cancel.textContent='Buchung stornieren';alert(e.message)}});
+load();
+})();
+</script></body></html>

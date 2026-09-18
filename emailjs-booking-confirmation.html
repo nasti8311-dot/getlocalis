@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buchung bestätigt – FiiViu</title>
+</head>
+<body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <div style="max-width:620px;margin:0 auto;padding:28px 16px;">
+    <div style="background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(20,30,50,.08);">
+      <div style="padding:28px 30px;background:#111827;color:#fff;">
+        <div style="font-size:24px;font-weight:800;letter-spacing:.3px;">FiiViu</div>
+        <div style="margin-top:18px;font-size:26px;font-weight:800;">Buchung bestätigt ✓</div>
+        <div style="margin-top:8px;color:#dbe3ef;font-size:15px;">Dein Erlebnis ist erfolgreich gebucht.</div>
+      </div>
+
+      <div style="padding:30px;">
+        <p style="margin:0 0 22px;font-size:16px;">Hallo {{user_name}},</p>
+        <p style="margin:0 0 26px;color:#5b6577;line-height:1.6;">vielen Dank für deine Buchung bei FiiViu. Hier findest du alle wichtigen Informationen zu deinem Erlebnis.</p>
+
+        <div style="border:1px solid #e5e9f0;border-radius:14px;padding:20px;margin-bottom:20px;">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7b8494;font-weight:700;">Deine Buchung</div>
+          <div style="font-size:21px;font-weight:800;margin-top:8px;">{{tour_title}}</div>
+          <table style="width:100%;margin-top:16px;border-collapse:collapse;font-size:15px;">
+            <tr><td style="padding:7px 0;color:#7b8494;">Datum</td><td style="padding:7px 0;text-align:right;font-weight:700;">{{booking_date}}</td></tr>
+            <tr><td style="padding:7px 0;color:#7b8494;">Beginn</td><td style="padding:7px 0;text-align:right;font-weight:700;">{{booking_time}} Uhr</td></tr>
+            <tr><td style="padding:7px 0;color:#7b8494;">Personen</td><td style="padding:7px 0;text-align:right;font-weight:700;">{{guests}}</td></tr>
+            <tr><td style="padding:7px 0;color:#7b8494;">Gesamtpreis</td><td style="padding:7px 0;text-align:right;font-weight:700;">{{total_price}}</td></tr>
+          </table>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eef1f5;color:#7b8494;font-size:13px;">Buchungs-ID: <strong style="color:#172033;">{{booking_id}}</strong></div>
+        </div>
+
+        <div style="border:1px solid #e5e9f0;border-radius:14px;padding:20px;margin-bottom:20px;">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#7b8494;font-weight:700;">Treffpunkt</div>
+          <div style="font-size:18px;font-weight:800;margin-top:8px;">{{meeting_point_name}}</div>
+          <div style="margin-top:8px;color:#5b6577;line-height:1.55;">{{meeting_address}}<br>{{meeting_city}}<br>{{meeting_country}}</div>
+          <div style="margin-top:14px;font-size:14px;color:#5b6577;"><strong>Veranstalter:</strong> {{provider_name}}</div>
+          <div style="margin-top:16px;padding:14px;border-radius:10px;background:#f5f7fb;color:#4b5567;font-size:14px;line-height:1.55;">Bitte sei {{arrival_minutes_before}} Minuten vor Beginn am Treffpunkt.<br>{{meeting_instructions}}</div>
+          <div style="margin-top:18px;"><a href="{{meeting_map_link}}" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:700;font-size:14px;">Treffpunkt auf Google Maps öffnen</a></div>
+        </div>
+
+        <div style="border:1px solid #e5e9f0;border-radius:14px;padding:20px;margin-bottom:20px;">
+          <div style="font-size:16px;font-weight:800;">Buchung verwalten</div>
+          <div style="margin-top:7px;color:#687286;font-size:14px;line-height:1.5;">Eine kostenlose Stornierung ist bis 24 Stunden vor Beginn möglich.</div>
+          <div style="margin-top:16px;"><a href="{{cancellation_url}}" style="display:inline-block;border:1px solid #cfd6e2;color:#263246;text-decoration:none;padding:11px 17px;border-radius:9px;font-weight:700;font-size:14px;">Buchung verwalten / stornieren</a></div>
+        </div>
+
+        <p style="margin:24px 0 0;color:#7b8494;font-size:13px;line-height:1.55;">Bitte bewahre deine Buchungs-ID auf. Sie kann bei Rückfragen zum Erlebnis benötigt werden.</p>
+      </div>
+
+      <div style="padding:22px 30px;background:#f8f9fb;color:#7b8494;font-size:12px;line-height:1.5;text-align:center;">FiiViu · Oprește timpul, trăiește momentul.</div>
+    </div>
+  </div>
+</body>
+</html>
