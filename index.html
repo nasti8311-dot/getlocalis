@@ -3305,22 +3305,16 @@ function renderDetailGallery(item) {
     } else {
 
         container.className =
-            "grid grid-cols-1 gap-2 p-2 bg-gray-100";
+            images.length === 1
+                ? "grid grid-cols-1 gap-2 p-2 bg-gray-100"
+                : "grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-gray-100";
 
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "h-72 md:h-[480px] rounded-2xl overflow-hidden";
-
-        div.innerHTML = `
-            <img
-                src="${images[0]}"
-                class="w-full h-full object-cover"
-                alt="">
-        `;
-
-        container.appendChild(div);
+        images.forEach(image => {
+            const div = document.createElement("div");
+            div.className = "h-72 md:h-[360px] rounded-2xl overflow-hidden";
+            div.innerHTML = '<img src="' + image + '" class="w-full h-full object-cover" alt="">';
+            container.appendChild(div);
+        });
 
     }
 
