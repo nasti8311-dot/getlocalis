@@ -125,6 +125,37 @@ async function generatePartnerRef(env,name){const base=name.normalize("NFD").rep
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
 function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data="+encodeURIComponent(buildPartnerLink(partnerRef))}
 
+function getBookingEventTimestamp(dateValue,timeValue){
+  const date=String(dateValue||"").trim();
+  const time=String(timeValue||"").trim();
+  const match=date.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  const timeMatch=time.match(/^(\\d{1,2}):(\\d{2})/);
+  if(!match||!timeMatch)return null;
+  const year=Number(match[1]);
+  const month=Number(match[2]);
+  const day=Number(match[3]);
+  const hour=Number(timeMatch[1]);
+  const minute=Number(timeMatch[2]);
+  if(!Number.isInteger(year)||!Number.isInteger(month)||!Number.isInteger(day)||!Number.isInteger(hour)||!Number.isInteger(minute))return null;
+  const wallUtc=Date.UTC(year,month-1,day,hour,minute,0);
+  if(!Number.isFinite(wallUtc))return null;
+  const getOffsetMs=(timestamp)=>{
+    const parts=new Intl.DateTimeFormat("en-US",{
+      timeZone:"Europe/Bucharest",
+      year:"numeric",month:"2-digit",day:"2-digit",
+      hour:"2-digit",minute:"2-digit",second:"2-digit",
+      hourCycle:"h23"
+    }).formatToParts(new Date(timestamp));
+    const values={};
+    for(const part of parts)if(part.type!=="literal")values[part.type]=Number(part.value);
+    const localAsUtc=Date.UTC(values.year,values.month-1,values.day,values.hour,values.minute,values.second);
+    return localAsUtc-timestamp;
+  };
+  let utc=wallUtc-getOffsetMs(wallUtc);
+  utc=wallUtc-getOffsetMs(utc);
+  return Math.floor(utc/1000);
+}
+
 function getPartnerHoldDays(env){const value=Number(env.PARTNER_COMMISSION_HOLD_DAYS??14);return Number.isFinite(value)?Math.max(0,Math.min(Math.floor(value),90)):14}
 async function getPartnerStats(env,partnerRef){
   if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
@@ -141,8 +172,14 @@ async function getPartnerStats(env,partnerRef){
     const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
     const netCents=Math.max(receivedCents-refundedCents,0);
     const bookingCommissionCents=Math.round(netCents*0.03);
+    const bookingDate=String(payment.metadata?.booking_date||"").trim();
+    const bookingTime=String(payment.metadata?.booking_time||"").trim();
+    const eventTimestamp=getBookingEventTimestamp(bookingDate,bookingTime);
+    const commissionAvailable=eventTimestamp!==null
+      ? Math.floor(Date.now()/1000)>=eventTimestamp
+      : false;
     revenueCents+=netCents;
-    if(Number(payment.created||0)<=cutoff)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
+    if(commissionAvailable)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
     bookingDetails.push({
       paymentIntentId:payment.id,
       bookingId:payment.metadata?.booking_id||payment.id,
@@ -152,8 +189,10 @@ async function getPartnerStats(env,partnerRef){
       refunded:refundedCents/100,
       netAmount:netCents/100,
       commission:bookingCommissionCents/100,
-      commissionStatus:Number(payment.created||0)<=cutoff?"available":"pending",
-      commissionAvailableAt:new Date((Number(payment.created||0)+(holdDays*86400))*1000).toISOString(),
+      commissionStatus:commissionAvailable?"available":"pending",
+      commissionAvailableAt:eventTimestamp===null?null:new Date(eventTimestamp*1000).toISOString(),
+      bookingDate,
+      bookingTime,
       currency:String(payment.currency||"eur").toLowerCase(),
       created:Number(payment.created||0)
     });
