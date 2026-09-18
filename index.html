@@ -2678,12 +2678,112 @@ const translations = {
 
 
 /* ============================================================
+   PUBLIC ORGANIZER OFFERS
+============================================================ */
+
+const PUBLIC_API_BASE = "https://getlocalis.nasti8311.workers.dev";
+
+const categoryFallbackImages = {
+    explore: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1000",
+    relax: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1000",
+    nightlife: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=1000",
+    adventure: "https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=1000",
+    vip: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1000"
+};
+
+const categoryBadges = {
+    explore: { de: "Neu bei FiiViu", en: "New at FiiViu", ro: "Nou la FiiViu" },
+    relax: { de: "Relax", en: "Relax", ro: "Relax" },
+    nightlife: { de: "Nightlife", en: "Nightlife", ro: "Nightlife" },
+    adventure: { de: "Adventure", en: "Adventure", ro: "Adventure" },
+    vip: { de: "VIP", en: "VIP", ro: "VIP" }
+};
+
+function normalizeOfferTimes(value) {
+    if (Array.isArray(value)) return value.map(String).map(v => v.trim()).filter(Boolean);
+    const raw = String(value || "").trim();
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.map(String).map(v => v.trim()).filter(Boolean);
+    } catch (e) {}
+    return raw.split(",").map(v => v.trim()).filter(Boolean);
+}
+
+function mapPublicOffer(offer) {
+    const categoryKey = ["explore","relax","nightlife","adventure","vip"].includes(String(offer.category || "").toLowerCase())
+        ? String(offer.category).toLowerCase()
+        : "explore";
+    const title = String(offer.title || "FiiViu Erlebnis").trim();
+    const description = String(offer.description || "").trim() || "Ein besonderes Erlebnis in Bukarest.";
+    const image = categoryFallbackImages[categoryKey];
+
+    return {
+        id: "offer-" + String(offer.id),
+        providerRef: String(offer.provider_ref || ""),
+        badge: categoryBadges[categoryKey],
+        title: { de: title, en: title, ro: title },
+        price: Number(offer.price_cents || 0) / 100,
+        duration: { de: "Erlebnis", en: "Experience", ro: "Experiență" },
+        availableTimes: normalizeOfferTimes(offer.available_times),
+        img: image,
+        images: [image],
+        desc: { de: description, en: description, ro: description },
+        highlights: {
+            de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
+            en: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
+            ro: [offer.meeting_point_name, offer.meeting_city].filter(Boolean)
+        }
+    };
+}
+
+async function loadPublicOffers() {
+    try {
+        const response = await fetch(PUBLIC_API_BASE + "/api/offers", {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const offers = Array.isArray(data.offers) ? data.offers : [];
+        if (!offers.length) return;
+
+        const grouped = {
+            explore: [],
+            relax: [],
+            nightlife: [],
+            adventure: [],
+            vip: []
+        };
+
+        offers.forEach(offer => {
+            const item = mapPublicOffer(offer);
+            const categoryKey = ["explore","relax","nightlife","adventure","vip"].includes(String(offer.category || "").toLowerCase())
+                ? String(offer.category).toLowerCase()
+                : "explore";
+            grouped[categoryKey].push(item);
+        });
+
+        Object.keys(grouped).forEach(categoryKey => {
+            if (grouped[categoryKey].length) {
+                categoriesData[categoryKey].items = grouped[categoryKey];
+            }
+        });
+    } catch (error) {
+        // The existing built-in catalog remains the safe fallback.
+    }
+}
+
+/* ============================================================
    INITIALIZATION
 ============================================================ */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     
     capturePartnerRef();
+
+    await loadPublicOffers();
 
     renderFeatured();
 
