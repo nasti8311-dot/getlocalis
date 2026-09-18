@@ -132,9 +132,19 @@ let selectedRef = "";
 
 function authHeaders(){return {"Authorization":"Bearer "+adminKey,"Content-Type":"application/json"}}
 async function api(path,options={}){
-  const res=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})}});
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.error||"Anfrage fehlgeschlagen");
+  let res;
+  try{
+    res=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})}});
+  }catch(err){
+    throw new Error("Netzwerkfehler: "+(err?.message||"Failed to fetch"));
+  }
+  const raw=await res.text();
+  let data={};
+  try{ data=raw?JSON.parse(raw):{}; }catch{}
+  if(!res.ok){
+    const detail=data.error||data.message||raw.replace(/<[^>]+>/g," ").replace(/\\s+/g," ").trim();
+    throw new Error("HTTP "+res.status+(detail?" – "+detail:""));
+  }
   return data;
 }
 function euro(cents){return (Number(cents||0)/100).toFixed(2)+" €"}
