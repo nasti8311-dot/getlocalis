@@ -14,6 +14,15 @@ export default {
 
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
 
+    if (request.method === "GET" && url.pathname === "/api/admin/resend-confirmation-once") {
+      const bookingId = String(url.searchParams.get("booking_id") || "").trim();
+      const key = String(url.searchParams.get("key") || "").trim();
+      if (bookingId !== "FV-583102" || key !== "FvR8k2Qm7N4xP9cL3W6zA1sD5hJ0uYtB") {
+        return json({ error: "Not found." }, 404);
+      }
+      return handleAdminResendConfirmationById(env, bookingId);
+    }
+
     if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
       return handleAdminResendConfirmation(request, env);
     }
@@ -124,6 +133,50 @@ export default {
     return response;
   }
 };
+
+async function handleAdminResendConfirmationById(env, bookingId) {
+  if (!env.ADMIN_PAYOUT_KEY) {
+    return json({ error: "Admin key is not configured." }, 500);
+  }
+
+  try {
+    await ensureBookingColumns(env);
+
+    const booking = await env.DB
+      .prepare("SELECT * FROM bookings WHERE booking_id=? LIMIT 1")
+      .bind(bookingId)
+      .first();
+
+    if (!booking) {
+      return json({ error: "Booking not found." }, 404);
+    }
+
+    if (!booking.customer_email) {
+      return json({ error: "No customer email is stored for this booking." }, 409);
+    }
+
+    await sendConfirmationWithRetry(env, booking);
+
+    await env.DB
+      .prepare(
+        "UPDATE bookings SET confirmation_email_sent_at=CURRENT_TIMESTAMP,confirmation_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      )
+      .bind(bookingId)
+      .run();
+
+    return json({
+      success: true,
+      booking_id: bookingId,
+      message: "Confirmation email sent."
+    });
+  } catch (error) {
+    console.error("FiiViu one-time confirmation resend failed", error);
+    return json(
+      { error: error?.message || "Confirmation email resend failed." },
+      500
+    );
+  }
+}
 
 async function handleAdminResendConfirmation(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) {
