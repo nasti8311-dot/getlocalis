@@ -298,9 +298,7 @@ function buildCancellationView(booking) {
     booking_date: booking.booking_date || "",
     booking_time: booking.booking_time || "",
     guests: Number(booking.guests || 1),
-    total_price: `${(
-      Number(booking.amount_cents || 0) / 100
-    ).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
+    total_price: Number(booking.amount_cents || 0) / 100 + " " + String(booking.currency || "eur").toUpperCase(),
     status: booking.status,
     allowed: cancellation.allowed,
     cancellation_deadline: cancellation.deadline,
