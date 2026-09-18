@@ -14,6 +14,23 @@ export default {
 
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
 
+    // Admin UI is served from Pages and calls this Worker cross-origin.
+    if (
+      request.method === "OPTIONS" &&
+      (url.pathname === "/api/admin/providers" ||
+        url.pathname === "/api/admin/provider-payout" ||
+        url.pathname === "/api/admin/resend-confirmation")
+    ) {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
+    }
+
     if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
       return handleAdminResendConfirmation(request, env);
     }
