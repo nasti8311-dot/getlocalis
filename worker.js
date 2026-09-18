@@ -236,21 +236,6 @@ async function translateOfferFields(source) {
   };
 }
 
-async function translateOfferFields(source) {
-  const de = {
-    title: String(source.title || "").trim(),
-    description: String(source.description || "").trim(),
-    meetingPointName: String(source.meetingPointName || "").trim(),
-    meetingInstructions: String(source.meetingInstructions || "").trim()
-  };
-  const [titleEn, titleRo, descriptionEn, descriptionRo, pointEn, pointRo, instructionsEn, instructionsRo] = await Promise.all([
-    translateOfferText(de.title, "en"), translateOfferText(de.title, "ro"),
-    translateOfferText(de.description, "en"), translateOfferText(de.description, "ro"),
-    translateOfferText(de.meetingPointName, "en"), translateOfferText(de.meetingPointName, "ro"),
-    translateOfferText(de.meetingInstructions, "en"), translateOfferText(de.meetingInstructions, "ro")
-  ]);
-  return { titleEn, titleRo, descriptionEn, descriptionRo, meetingPointNameEn: pointEn, meetingPointNameRo: pointRo, meetingInstructionsEn: instructionsEn, meetingInstructionsRo: instructionsRo };
-}
 
 async function ensureOffersTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
