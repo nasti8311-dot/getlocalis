@@ -70,6 +70,7 @@ button{border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:
         <input type="hidden" id="offerId">
         <div><label class="text-sm font-bold">Veranstalter</label><select id="offerProvider" class="mt-2" required></select></div>
         <div><label class="text-sm font-bold">Titel</label><input id="offerTitle" class="mt-2" required></div>
+        <div><label class="text-sm font-bold">Kategorie</label><select id="offerCategory" class="mt-2"><option value="explore">Explore</option><option value="relax">Relax</option><option value="nightlife">Nightlife</option><option value="adventure">Adventure</option><option value="vip">VIP</option></select></div>
         <div><label class="text-sm font-bold">Preis (€)</label><input id="offerPrice" type="number" min="0.50" step="0.01" class="mt-2" required></div>
         <div><label class="text-sm font-bold">Startzeiten</label><input id="offerTimes" class="mt-2" placeholder="10:00, 15:00, 18:00"></div>
         <div class="md:col-span-2"><label class="text-sm font-bold">Beschreibung</label><textarea id="offerDescription" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
@@ -184,7 +185,7 @@ let offers=[];
 async function refreshOffersRaw(){const d=await api("/api/admin/offers");offers=d.offers||[];await loadOffers()}
 function editOfferById(id){
   const o=offers.find(x=>x.id===id); if(!o)return;
-  document.getElementById("offerId").value=o.id; document.getElementById("offerProvider").value=o.provider_ref;
+  document.getElementById("offerId").value=o.id; document.getElementById("offerProvider").value=o.provider_ref; document.getElementById("offerCategory").value=o.category||"explore";
   document.getElementById("offerProvider").disabled=true; document.getElementById("offerTitle").value=o.title||"";
   document.getElementById("offerPrice").value=(Number(o.price_cents||0)/100).toFixed(2);
   document.getElementById("offerTimes").value=o.available_times||""; document.getElementById("offerDescription").value=o.description||"";
@@ -226,7 +227,7 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
   e.preventDefault();
   try{
     const id=document.getElementById("offerId").value;
-    const body={providerRef:document.getElementById("offerProvider").value,title:document.getElementById("offerTitle").value.trim(),priceCents:Math.round(Number(document.getElementById("offerPrice").value)*100),availableTimes:document.getElementById("offerTimes").value.trim(),description:document.getElementById("offerDescription").value.trim(),meetingPointName:document.getElementById("offerMeetingName").value.trim(),meetingAddress:document.getElementById("offerAddress").value.trim(),meetingCity:document.getElementById("offerCity").value.trim(),meetingCountry:document.getElementById("offerCountry").value.trim(),arrivalMinutesBefore:Number(document.getElementById("offerArrival").value),meetingInstructions:document.getElementById("offerInstructions").value.trim()};
+    const body={providerRef:document.getElementById("offerProvider").value,title:document.getElementById("offerTitle").value.trim(),category:document.getElementById("offerCategory").value,priceCents:Math.round(Number(document.getElementById("offerPrice").value)*100),availableTimes:document.getElementById("offerTimes").value.trim(),description:document.getElementById("offerDescription").value.trim(),meetingPointName:document.getElementById("offerMeetingName").value.trim(),meetingAddress:document.getElementById("offerAddress").value.trim(),meetingCity:document.getElementById("offerCity").value.trim(),meetingCountry:document.getElementById("offerCountry").value.trim(),arrivalMinutesBefore:Number(document.getElementById("offerArrival").value),meetingInstructions:document.getElementById("offerInstructions").value.trim()};
     if(id){body.id=Number(id);await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)})}else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
     document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
