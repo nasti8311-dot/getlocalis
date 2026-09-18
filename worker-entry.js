@@ -372,6 +372,13 @@ async function handleCancellation(request, env) {
         .bind(refund.id, token)
         .run();
 
+      await env.DB
+        .prepare(
+          "UPDATE booking_settlements SET settlement_status='refunded', updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+        )
+        .bind(booking.booking_id)
+        .run();
+
       return json(
         {
           success: true,
@@ -943,6 +950,8 @@ async function finalizePaidBooking(
       .bind(paymentIntent.id)
       .first();
 
+    await recordBookingSettlement(env, booking);
+
     if (!booking || booking.confirmation_email_sent_at) {
       return;
     }
@@ -1358,6 +1367,74 @@ async function stripeGet(env, path) {
   }
 
   return data;
+}
+
+async function ensureBookingSettlementsTable(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS booking_settlements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      booking_id TEXT NOT NULL UNIQUE,
+      payment_intent_id TEXT UNIQUE,
+      total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),
+      provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),
+      fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),
+      partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),
+      partner_ref TEXT,
+      settlement_status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
+}
+
+async function recordBookingSettlement(env, booking) {
+  if (!env.DB || !booking?.booking_id) return;
+
+  await ensureBookingSettlementsTable(env);
+
+  const totalCents = Number(booking.amount_cents || 0);
+  if (!Number.isInteger(totalCents) || totalCents <= 0) return;
+
+  const partnerRef = clean(booking.partner_ref);
+  const hasPartner = Boolean(partnerRef);
+  const providerAmountCents = Math.round(totalCents * 0.85);
+  const partnerAmountCents = hasPartner ? Math.round(totalCents * 0.03) : 0;
+  const fiiviuAmountCents =
+    totalCents - providerAmountCents - partnerAmountCents;
+
+  await env.DB.prepare(`
+    INSERT INTO booking_settlements (
+      booking_id,
+      payment_intent_id,
+      total_amount_cents,
+      provider_amount_cents,
+      fiiviu_amount_cents,
+      partner_amount_cents,
+      partner_ref,
+      settlement_status,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(booking_id) DO UPDATE SET
+      payment_intent_id=excluded.payment_intent_id,
+      total_amount_cents=excluded.total_amount_cents,
+      provider_amount_cents=excluded.provider_amount_cents,
+      fiiviu_amount_cents=excluded.fiiviu_amount_cents,
+      partner_amount_cents=excluded.partner_amount_cents,
+      partner_ref=excluded.partner_ref,
+      updated_at=CURRENT_TIMESTAMP
+  `).bind(
+    booking.booking_id,
+    booking.payment_intent_id,
+    totalCents,
+    providerAmountCents,
+    fiiviuAmountCents,
+    partnerAmountCents,
+    partnerRef
+  ).run();
 }
 
 async function ensureBookingColumns(env) {
