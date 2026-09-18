@@ -62,6 +62,9 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/api/admin/")) {
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: CORS });
+      }
       return adminWorker.fetch(request, env, ctx);
     }
 
