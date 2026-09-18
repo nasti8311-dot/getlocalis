@@ -781,6 +781,12 @@
                     </div>
 
 
+                    <div id="detail-logistics" class="hidden bg-[#F8F6F1] rounded-2xl p-5 border border-black/5 space-y-4">
+                        <div id="detail-meeting-row" class="hidden"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-1" data-i18n="meeting_point">Treffpunkt</div><div id="detail-meeting-point" class="font-semibold text-gray-800 whitespace-pre-line"></div></div>
+                        <div id="detail-arrival-row" class="hidden"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-1" data-i18n="arrival_before">Vor Start</div><div id="detail-arrival-before" class="font-semibold text-gray-800"></div></div>
+                        <div id="detail-instructions-row" class="hidden"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-1" data-i18n="instructions">Anweisungen</div><div id="detail-instructions" class="text-gray-700 leading-6 whitespace-pre-line"></div></div>
+                    </div>
+
                     <div>
 
                         <h3 class="text-xl font-black mb-4"
@@ -2454,6 +2460,9 @@ const translations = {
         secure: "Sichere Zahlung",
         confirmation: "Buchungsbestätigung per E-Mail",
         meeting_point: "Treffpunkt",
+        arrival_before: "Vor Start",
+        instructions: "Anweisungen",
+        minutes_before: "Minuten vor Beginn",
         email_label: "E-Mail",
         guest_label: "Personen",
 
@@ -2555,6 +2564,9 @@ const translations = {
         secure: "Secure payment",
         confirmation: "Booking confirmation by email",
         meeting_point: "Meeting point",
+        arrival_before: "Before start",
+        instructions: "Instructions",
+        minutes_before: "minutes before start",
         email_label: "Email",
         guest_label: "Guests",
 
@@ -2656,6 +2668,9 @@ const translations = {
         secure: "Plată sigură",
         confirmation: "Confirmare prin email",
         meeting_point: "Loc de întâlnire",
+        arrival_before: "Înainte de începere",
+        instructions: "Instrucțiuni",
+        minutes_before: "minute înainte de începere",
         email_label: "Email",
         guest_label: "Persoane",
 
@@ -2729,13 +2744,19 @@ function mapPublicOffer(offer) {
         id: "offer-" + String(offer.id),
         providerRef: String(offer.provider_ref || ""),
         badge: categoryBadges[categoryKey],
-        title: { de: title, en: title, ro: title },
+        title: { de: title, en: String(offer.title_en || "").trim() || title, ro: String(offer.title_ro || "").trim() || title },
         price: Number(offer.price_cents || 0) / 100,
         duration: { de: "Erlebnis", en: "Experience", ro: "Experiență" },
         availableTimes: normalizeOfferTimes(offer.available_times),
         img: image,
         images,
-        desc: { de: description, en: description, ro: description },
+        desc: { de: description, en: String(offer.description_en || "").trim() || description, ro: String(offer.description_ro || "").trim() || description },
+        meetingPoint: { de: String(offer.meeting_point_name || "").trim(), en: String(offer.meeting_point_name_en || "").trim() || String(offer.meeting_point_name || "").trim(), ro: String(offer.meeting_point_name_ro || "").trim() || String(offer.meeting_point_name || "").trim() },
+        meetingAddress: String(offer.meeting_address || "").trim(),
+        meetingCity: String(offer.meeting_city || "").trim(),
+        meetingCountry: String(offer.meeting_country || "").trim(),
+        meetingInstructions: { de: String(offer.meeting_instructions || "").trim(), en: String(offer.meeting_instructions_en || "").trim() || String(offer.meeting_instructions || "").trim(), ro: String(offer.meeting_instructions_ro || "").trim() || String(offer.meeting_instructions || "").trim() },
+        arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
@@ -3130,6 +3151,23 @@ function showDetail(categoryKey, itemId) {
 
     });
 
+
+    const logistics = document.getElementById("detail-logistics");
+    const meetingRow = document.getElementById("detail-meeting-row");
+    const arrivalRow = document.getElementById("detail-arrival-row");
+    const instructionsRow = document.getElementById("detail-instructions-row");
+    const meetingPoint = item.meetingPoint && (item.meetingPoint[currentLang] || item.meetingPoint.de) || "";
+    const addressParts = [item.meetingAddress, item.meetingCity, item.meetingCountry].filter(Boolean);
+    const fullMeetingPoint = [meetingPoint].concat(addressParts).filter(Boolean).join("\n");
+    const instructions = item.meetingInstructions && (item.meetingInstructions[currentLang] || item.meetingInstructions.de) || "";
+    const arrival = Number.isFinite(Number(item.arrivalMinutesBefore)) ? Number(item.arrivalMinutesBefore) : null;
+    meetingRow.classList.toggle("hidden", !fullMeetingPoint);
+    arrivalRow.classList.toggle("hidden", !(arrival !== null && arrival >= 0));
+    instructionsRow.classList.toggle("hidden", !instructions);
+    document.getElementById("detail-meeting-point").innerText = fullMeetingPoint;
+    document.getElementById("detail-arrival-before").innerText = arrival !== null && arrival >= 0 ? String(arrival) + " " + (translations[currentLang].minutes_before || "minutes before start") : "";
+    document.getElementById("detail-instructions").innerText = instructions;
+    logistics.classList.toggle("hidden", !fullMeetingPoint && !(arrival !== null && arrival >= 0) && !instructions);
 
     renderDetailGallery(item);
 
