@@ -416,18 +416,17 @@ async function stripeRefundPaymentIntent(
   });
 
   const response = await fetch(
-    "https://api.stripe.com/v1/refunds",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
-        "Content-Type":
-          "application/x-www-form-urlencoded",
-        "Idempotency-Key": `fiiviu-cancel-${token}`
-      },
-      body: params
-    }
-  );
+  "https://api.stripe.com/v1/refunds",
+  {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + env.STRIPE_SECRET_KEY,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": "fiiviu-cancel-" + token
+    },
+    body: params
+  }
+);
 
   const data = await response.json().catch(() => ({}));
 
