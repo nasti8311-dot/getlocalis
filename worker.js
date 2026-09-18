@@ -93,7 +93,16 @@ if (url.pathname === "/api/offers") {
             !String(offer.description_en||"").trim()||!String(offer.description_ro||"").trim()||
             !String(offer.meeting_point_name_en||"").trim()||!String(offer.meeting_point_name_ro||"").trim()||
             !String(offer.meeting_instructions_en||"").trim()||!String(offer.meeting_instructions_ro||"").trim();
-          if(!missing) continue;
+          const stale =
+            String(offer.title_en||"").trim()===String(offer.title||"").trim() ||
+            String(offer.title_ro||"").trim()===String(offer.title||"").trim() ||
+            String(offer.description_en||"").trim()===String(offer.description||"").trim() ||
+            String(offer.description_ro||"").trim()===String(offer.description||"").trim() ||
+            String(offer.meeting_point_name_en||"").trim()===String(offer.meeting_point_name||"").trim() ||
+            String(offer.meeting_point_name_ro||"").trim()===String(offer.meeting_point_name||"").trim() ||
+            String(offer.meeting_instructions_en||"").trim()===String(offer.meeting_instructions||"").trim() ||
+            String(offer.meeting_instructions_ro||"").trim()===String(offer.meeting_instructions||"").trim();
+          if(!missing && !stale) continue;
           try{
             const translated=await translateOfferFields(offer);
             await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
@@ -234,6 +243,19 @@ if (url.pathname === "/api/offers") {
 async function translateOfferText(text, target) {
   const source = String(text || "").trim();
   if (!source) return "";
+  const common = {
+    "ro": {
+      "Vor dem Haus": "În fața casei",
+      "Bitte an wetterfeste Kleidung denken": "Vă rugăm să purtați îmbrăcăminte adecvată vremii",
+      "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Descoperă în turul nostru cele mai frumoase obiective și locuri pe care le oferă orașul. Durată: aproximativ 3 ore"
+    },
+    "en": {
+      "Vor dem Haus": "In front of the house",
+      "Bitte an wetterfeste Kleidung denken": "Please remember to wear weather-appropriate clothing",
+      "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Explore the most beautiful sights and places the city has to offer on our tour. Duration: approx. 3 hours"
+    }
+  };
+  if (common[target]?.[source]) return common[target][source];
   const encoded = encodeURIComponent(source);
   try {
     const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&q=" + encoded;
