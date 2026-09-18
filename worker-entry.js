@@ -1642,6 +1642,255 @@ async function handleAdminProviderPayout(request, env) {
   }
 }
 
+async function handleAdminProviders(request, env) {
+  if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (!env.DB) return json({ error: "D1 database not configured." }, 500);
+
+  await ensureProvidersTable(env);
+
+  try {
+    if (request.method === "GET") {
+      const result = await env.DB.prepare(
+        "SELECT id,provider_ref,name,connect_account_id,contact_email,active,created_at FROM providers ORDER BY name ASC,id ASC"
+      ).all();
+      return json({ providers: result.results || [] });
+    }
+
+    if (request.method === "POST") {
+      const body = await request.json();
+      const name = clean(body.name);
+      const connectAccountId = clean(body.connectAccountId);
+      const contactEmail = clean(body.contactEmail);
+      let providerRef = clean(body.providerRef).toUpperCase();
+
+      if (!name) return json({ error: "Organizer-Name fehlt." }, 400);
+      if (!providerRef) providerRef = providerRefFromName(name);
+
+      const existing = await env.DB.prepare(
+        "SELECT id FROM providers WHERE provider_ref=? LIMIT 1"
+      ).bind(providerRef).first();
+      if (existing) return json({ error: "Dieser Organizer-Code existiert bereits." }, 409);
+
+      const result = await env.DB.prepare(
+        "INSERT INTO providers (provider_ref,name,connect_account_id,contact_email,active) VALUES (?,?,?,?,1)"
+      ).bind(providerRef,name,connectAccountId || null,contactEmail || null).run();
+
+      const provider = await env.DB.prepare(
+        "SELECT id,provider_ref,name,connect_account_id,contact_email,active,created_at FROM providers WHERE id=? LIMIT 1"
+      ).bind(result.meta?.last_row_id).first();
+
+      return json({ success: true, provider }, 201);
+    }
+
+    if (request.method === "PATCH") {
+      const body = await request.json();
+      const id = Number(body.id);
+      if (!Number.isInteger(id) || id <= 0) return json({ error: "Ungültige Organizer-ID." }, 400);
+
+      const current = await env.DB.prepare(
+        "SELECT * FROM providers WHERE id=? LIMIT 1"
+      ).bind(id).first();
+      if (!current) return json({ error: "Organizer nicht gefunden." }, 404);
+
+      const name = clean(body.name ?? current.name);
+      const connectAccountId = clean(body.connectAccountId ?? current.connect_account_id);
+      const contactEmail = clean(body.contactEmail ?? current.contact_email);
+      const active = body.active === undefined
+        ? Number(current.active) === 1
+        : (body.active === true || body.active === 1 || body.active === "1");
+
+      if (!name) return json({ error: "Organizer-Name fehlt." }, 400);
+
+      await env.DB.prepare(
+        "UPDATE providers SET name=?,connect_account_id=?,contact_email=?,active=? WHERE id=?"
+      ).bind(name,connectAccountId || null,contactEmail || null,active ? 1 : 0,id).run();
+
+      const provider = await env.DB.prepare(
+        "SELECT id,provider_ref,name,connect_account_id,contact_email,active,created_at FROM providers WHERE id=? LIMIT 1"
+      ).bind(id).first();
+
+      return json({ success: true, provider });
+    }
+
+    return json({ error: "Method Not Allowed" }, 405);
+  } catch (error) {
+    console.error("FiiViu admin providers failed", error);
+    return json({ error: error?.message || "Server error" }, 500);
+  }
+}
+
+async function handleAdminProviderPayout(request, env) {
+  if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Payout admin key is not configured." }, 500);
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (!env.DB || !env.STRIPE_SECRET_KEY) {
+    return json({ error: "Payout service is not configured." }, 500);
+  }
+
+  await ensureProvidersTable(env);
+  await ensureProviderPayoutsTable(env);
+  await ensureBookingSettlementsTable(env);
+  await ensureBookingColumns(env);
+
+  try {
+    const url = new URL(request.url);
+    const providerRef = clean(url.searchParams.get("ref"));
+
+    if (request.method === "GET") {
+      if (!providerRef) return json({ error: "Organizer-Code fehlt." }, 400);
+
+      const provider = await env.DB.prepare(
+        "SELECT id,provider_ref,name,connect_account_id,contact_email,active,created_at FROM providers WHERE provider_ref=? LIMIT 1"
+      ).bind(providerRef).first();
+
+      if (!provider) return json({ error: "Organizer nicht gefunden." }, 404);
+
+      const rows = await env.DB.prepare(`
+        SELECT s.booking_id,s.payment_intent_id,s.total_amount_cents,s.provider_amount_cents,
+               s.settlement_status,s.stripe_transfer_id,b.booking_date,b.booking_time,
+               b.status,b.payment_status,b.currency,b.experience_name
+        FROM booking_settlements s
+        LEFT JOIN bookings b ON b.booking_id=s.booking_id
+        WHERE s.provider_ref=?
+        ORDER BY b.booking_date DESC,b.booking_time DESC,s.id DESC
+      `).bind(providerRef).all();
+
+      const available = (rows.results || [])
+        .filter(row => isSettlementEventDue(row) && row.settlement_status === "ready" && row.status === "confirmed" && row.payment_status === "paid")
+        .reduce((sum,row) => sum + Number(row.provider_amount_cents || 0), 0);
+
+      const payouts = await env.DB.prepare(
+        "SELECT id,booking_id,provider_ref,amount_cents,payout_date,status,stripe_transfer_id,reference,created_at FROM provider_payouts WHERE provider_ref=? ORDER BY payout_date DESC,id DESC"
+      ).bind(providerRef).all();
+
+      return json({
+        provider,
+        availableAmount: available / 100,
+        availableAmountCents: available,
+        bookings: rows.results || [],
+        payouts: (payouts.results || []).map(p => ({ ...p, amount: Number(p.amount_cents) / 100 }))
+      });
+    }
+
+    if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+
+    const body = await request.json();
+    const bookingId = clean(body.bookingId);
+    const payoutDate = clean(body.payoutDate) || new Date().toISOString().slice(0,10);
+    const reference = clean(body.reference);
+
+    if (!providerRef) return json({ error: "Organizer-Code fehlt." }, 400);
+    if (!bookingId) return json({ error: "bookingId fehlt." }, 400);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(payoutDate)) return json({ error: "Ungültiges Auszahlungsdatum." }, 400);
+
+    const provider = await env.DB.prepare(
+      "SELECT * FROM providers WHERE provider_ref=? LIMIT 1"
+    ).bind(providerRef).first();
+
+    if (!provider) return json({ error: "Organizer nicht gefunden." }, 404);
+    if (Number(provider.active) !== 1) return json({ error: "Dieser Organizer ist deaktiviert." }, 400);
+
+    const settlement = await env.DB.prepare(`
+      SELECT s.*,b.status AS booking_status,b.payment_status,b.booking_date,b.booking_time,b.currency,b.experience_name
+      FROM booking_settlements s
+      LEFT JOIN bookings b ON b.booking_id=s.booking_id
+      WHERE s.booking_id=? AND s.provider_ref=? LIMIT 1
+    `).bind(bookingId,providerRef).first();
+
+    if (!settlement) return json({ error: "Settlement für diese Buchung nicht gefunden." }, 404);
+    if (settlement.settlement_status === "transferred" || settlement.stripe_transfer_id) {
+      return json({ error: "Diese Buchung wurde bereits an den Organizer ausgezahlt.", stripeTransferId: settlement.stripe_transfer_id }, 409);
+    }
+    if (settlement.settlement_status !== "ready") {
+      return json({ error: "Diese Buchung ist aktuell nicht auszahlbar.", settlementStatus: settlement.settlement_status }, 409);
+    }
+    if (settlement.booking_status !== "confirmed" || settlement.payment_status !== "paid") {
+      return json({ error: "Nur bestätigte und bezahlte Buchungen können ausgezahlt werden." }, 409);
+    }
+    if (!isSettlementEventDue(settlement)) {
+      return json({ error: "Die Auszahlung wird erst nach dem Ende der gebuchten Experience freigegeben." }, 409);
+    }
+
+    const destination = clean(provider.connect_account_id || settlement.provider_connect_account_id);
+    if (!destination || !/^acct_[A-Za-z0-9]+$/.test(destination)) {
+      return json({ error: "Für diesen Organizer ist noch kein gültiges Stripe Connect Konto hinterlegt." }, 409);
+    }
+
+    const amountCents = Number(settlement.provider_amount_cents || 0);
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      return json({ error: "Ungültiger Organizer-Auszahlungsbetrag." }, 409);
+    }
+
+    const existingPayout = await env.DB.prepare(
+      "SELECT * FROM provider_payouts WHERE booking_id=? LIMIT 1"
+    ).bind(bookingId).first();
+    if (existingPayout) {
+      return json({ error: "Für diese Buchung existiert bereits ein Auszahlungsvorgang.", payout: existingPayout }, 409);
+    }
+
+    const params = new URLSearchParams();
+    params.set("amount", String(amountCents));
+    params.set("currency", String(settlement.currency || "eur").toLowerCase());
+    params.set("destination", destination);
+    params.set("description", "FiiViu Organizer-Auszahlung " + bookingId);
+    params.set("transfer_group", "FiiViu-" + bookingId);
+    params.set("metadata[booking_id]", bookingId);
+    params.set("metadata[provider_ref]", providerRef);
+
+    const stripeResponse = await fetch(
+      "https://api.stripe.com/v1/transfers",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + env.STRIPE_SECRET_KEY,
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Idempotency-Key": "fiiviu-provider-payout-" + bookingId
+        },
+        body: params
+      }
+    );
+
+    const transfer = await stripeResponse.json().catch(() => ({}));
+
+    if (!stripeResponse.ok) {
+      return json({
+        error: transfer?.error?.message || "Stripe Organizer-Auszahlung fehlgeschlagen."
+      }, stripeResponse.status);
+    }
+
+    await env.DB.prepare(
+      "INSERT INTO provider_payouts (booking_id,provider_ref,amount_cents,payout_date,status,stripe_transfer_id,reference) VALUES (?,?,?,?,?,?,?)"
+    ).bind(
+      bookingId,
+      providerRef,
+      amountCents,
+      payoutDate,
+      "paid",
+      transfer.id,
+      reference || null
+    ).run();
+
+    await env.DB.prepare(
+      "UPDATE booking_settlements SET settlement_status='transferred',stripe_transfer_id=?,provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+    ).bind(transfer.id,destination,bookingId).run();
+
+    return json({
+      success: true,
+      bookingId,
+      providerRef,
+      amount: amountCents / 100,
+      currency: String(settlement.currency || "eur").toLowerCase(),
+      stripeTransferId: transfer.id,
+      payoutDate,
+      reference: reference || null
+    }, 201);
+  } catch (error) {
+    console.error("FiiViu admin provider payout failed", error);
+    return json({ error: error?.message || "Organizer-Auszahlung fehlgeschlagen." }, 500);
+  }
+}
+
+
 function isAdminRequest(request, env) {
   return request.headers.get("Authorization") === "Bearer " + String(env.ADMIN_PAYOUT_KEY || "");
 }
