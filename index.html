@@ -19,6 +19,7 @@
           href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/de.js"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ro.js"></script>
 
     <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -1270,7 +1271,7 @@
             </div>
 
             <div class="flex justify-between gap-4">
-                <strong>E-Mail</strong>
+                <strong data-i18n="email_label">E-Mail</strong>
                 <span id="conf-email"
                       class="text-right">
                 </span>
@@ -1410,7 +1411,7 @@
         <div class="border-t border-white/10 mt-10 pt-7 flex flex-col md:flex-row justify-between gap-3 text-xs text-white/35">
 
             <span>
-                © 2026 FiiViu. All rights reserved.
+                © 2026 FiiViu. <span data-i18n="rights_reserved">Alle Rechte vorbehalten.</span>
             </span>
 
             <span>
@@ -2431,7 +2432,7 @@ const translations = {
         payment: "Zahlung",
         payment_note: "Die Zahlungsabwicklung erfolgt sicher über Stripe.",
         pay_book: "Zahlungspflichtig buchen",
-        legal_acceptance: "Ich akzeptiere die AGB & Buchungsbedingungen und die für dieses Erlebnis geltenden Storno- und Rückerstattungsbedingungen. Ich habe die Datenschutzerklärung gelesen.",
+        legal_acceptance: 'Ich akzeptiere die <a href="/legal/termeni-si-conditii.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">AGB &amp; Buchungsbedingungen</a> und die für dieses Erlebnis geltenden Storno- und Rückerstattungsbedingungen. Ich habe die <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Datenschutzerklärung</a> gelesen.',
         provider_notice: "Die Leistung wird vom jeweiligen Erlebnisanbieter erbracht. FiiViu vermittelt die Buchung.",
         cancellation_notice: "Storno- und Rückerstattungsbedingungen sind erlebnisspezifisch und vor der Zahlung einzusehen.",
         terms_link: "AGB & Buchungsbedingungen",
@@ -2446,15 +2447,18 @@ const translations = {
         secure: "Sichere Zahlung",
         confirmation: "Buchungsbestätigung per E-Mail",
         meeting_point: "Treffpunkt",
+        email_label: "E-Mail",
+        guest_label: "Personen",
 
         success_title: "Dein Moment ist reserviert.",
         success_text: "Wir haben deine Anfrage erhalten und senden dir die Buchungsdetails per E-Mail.",
         booking_id: "Buchungs-ID",
         experience: "Erlebnis",
-        date_time: "Datum",
+        date_time: "Datum & Uhrzeit",
         back_home_button: "Zurück zu FiiViu",
 
         footer_text: "Oprește timpul, trăiește momentul. Besondere Erlebnisse in Bukarest – kuratiert für Menschen, die mehr aus ihrer Reise machen wollen.",
+        rights_reserved: "Alle Rechte vorbehalten.",
         footer_discover: "Entdecken",
         footer_info: "Info",
         imprint: "Impressum",
@@ -2529,7 +2533,7 @@ const translations = {
         payment: "Payment",
         payment_note: "Payment is securely processed via Stripe.",
         pay_book: "Book and pay",
-        legal_acceptance: "I accept the Terms & Booking Conditions and the cancellation and refund conditions applicable to this experience. I have read the Privacy Policy.",
+        legal_acceptance: 'I accept the <a href="/legal/termeni-si-conditii.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Terms &amp; Booking Conditions</a> and the cancellation and refund conditions applicable to this experience. I have read the <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Privacy Policy</a>.',
         provider_notice: "The service is provided by the respective experience provider. FiiViu acts as intermediary for the booking.",
         cancellation_notice: "Cancellation and refund conditions are specific to the experience and are shown before payment.",
         terms_link: "Terms & Booking Conditions",
@@ -2544,15 +2548,18 @@ const translations = {
         secure: "Secure payment",
         confirmation: "Booking confirmation by email",
         meeting_point: "Meeting point",
+        email_label: "Email",
+        guest_label: "Guests",
 
         success_title: "Your moment is reserved.",
         success_text: "We received your request and will send the booking details by email.",
         booking_id: "Booking ID",
         experience: "Experience",
-        date_time: "Date",
+        date_time: "Date & Time",
         back_home_button: "Back to FiiViu",
 
         footer_text: "Oprește timpul, trăiește momentul. Special experiences in Bucharest – curated for people who want more from their trip.",
+        rights_reserved: "All rights reserved.",
         footer_discover: "Discover",
         footer_info: "Info",
         imprint: "Imprint",
@@ -2642,15 +2649,18 @@ const translations = {
         secure: "Plată sigură",
         confirmation: "Confirmare prin email",
         meeting_point: "Loc de întâlnire",
+        email_label: "Email",
+        guest_label: "Persoane",
 
         success_title: "Momentul tău este rezervat.",
         success_text: "Am primit cererea ta și îți vom trimite detaliile rezervării prin email.",
         booking_id: "ID rezervare",
         experience: "Experiență",
-        date_time: "Data",
+        date_time: "Data și ora",
         back_home_button: "Înapoi la FiiViu",
 
         footer_text: "Oprește timpul, trăiește momentul. Experiențe speciale în București – selectate pentru cei care vor mai mult de la călătoria lor.",
+        rights_reserved: "Toate drepturile rezervate.",
         footer_discover: "Descoperă",
         footer_info: "Info",
         imprint: "Impressum",
@@ -3033,8 +3043,8 @@ function showDetail(categoryKey, itemId) {
         detailDatePickerInstance = flatpickr(
             "#detail-date-picker",
             {
-                locale: currentLang === "de" ? "de" : "default",
-                dateFormat: "d.m.Y",
+                locale: currentLang === "de" ? "de" : currentLang === "ro" ? "ro" : "default",
+                dateFormat: currentLang === "en" ? "m/d/Y" : "d.m.Y",
                 minDate: "today",
                 defaultDate: "today",
 
@@ -3322,6 +3332,11 @@ function changeLanguage(lang) {
             document.getElementById("selected-tour-display").value =
                 title + (dateText ? " · " + dateText : "") + (selectedTourTime ? " · " + selectedTourTime : "");
         }
+
+    }
+    else if (!document.getElementById("success-view").classList.contains("hidden")) {
+
+        refreshSuccessViewLanguage();
 
     }
 
@@ -3677,17 +3692,13 @@ async function processBooking(event) {
         document.getElementById("conf-id").innerText =
             bookingId;
 
-        document.getElementById("conf-tour").innerText =
-            tourName;
+        document.getElementById("conf-tour").dataset.rawTourName = tourName;
+        document.getElementById("conf-date").dataset.rawDate = date;
+        document.getElementById("conf-date").dataset.rawTime = selectedTourTime || "";
+        document.getElementById("conf-date").dataset.rawGuests = String(guests);
+        document.getElementById("conf-email").innerText = email;
 
-        document.getElementById("conf-date").innerText =
-            `${date} · ${selectedTourTime || "Flexible Terminvereinbarung"} · ${guests} Personen`;
-
-        document.getElementById("conf-meeting").innerText =
-            getConfirmationMeetingPoint(tourName);
-
-        document.getElementById("conf-email").innerText =
-            email;
+        refreshSuccessViewLanguage();
 
 
         showView("success-view");
@@ -3720,7 +3731,104 @@ async function processBooking(event) {
 }
 
 
+function formatSuccessDate(dateText) {
+    if (!dateText) return "";
+
+    const parts = String(dateText).split(".");
+    if (parts.length !== 3) return dateText;
+
+    const [day, month, year] = parts;
+
+    return currentLang === "en"
+        ? `${month}/${day}/${year}`
+        : `${day}.${month}.${year}`;
+}
+
+
+function getLocalizedMeetingPoint(tourName) {
+    const sourceName = String(tourName || "").toLowerCase();
+
+    if (/bike|cycling|pedal|fahrrad|biciclet/.test(sourceName)) {
+        if (currentLang === "en") return "Piața Unirii Fountain, Piața Unirii, Bucharest";
+        if (currentLang === "ro") return "Fântâna Piața Unirii, Piața Unirii, București";
+        return "Piața Unirii Brunnen, Piața Unirii, Bukarest";
+    }
+
+    if (/old town|story walk|universitate|national theatre|orașul vechi|centrul vechi/.test(sourceName)) {
+        if (currentLang === "en") return "Universitate – National Theatre, Piața Universității 2, Bucharest";
+        if (currentLang === "ro") return "Universitate – Teatrul Național, Piața Universității 2, București";
+        return "Universitate – Nationaltheater, Piața Universității 2, Bukarest";
+    }
+
+    if (/therme|spa|wellness|vip/.test(sourceName)) {
+        if (currentLang === "en") return "Therme Bucharest – Main Entrance, Calea București 1K, Balotești";
+        if (currentLang === "ro") return "Therme București – Intrarea principală, Calea București 1K, Balotești";
+        return "Therme Bucharest – Haupteingang, Calea București 1K, Balotești";
+    }
+
+    if (/night out|nightlife|club|after dark|viață de noapte/.test(sourceName)) {
+        if (currentLang === "en") return "Manuc’s Inn – Main Courtyard, Strada Franceză 62, Bucharest";
+        if (currentLang === "ro") return "Hanul lui Manuc – Curtea principală, Strada Franceză 62, București";
+        return "Manuc’s Inn – Innenhof, Strada Franceză 62, Bukarest";
+    }
+
+    if (/kart|grand prix/.test(sourceName)) {
+        if (currentLang === "en") return "Karting Arena – Reception, Șoseaua Pipera 4, Bucharest";
+        if (currentLang === "ro") return "Karting Arena – Recepție, Șoseaua Pipera 4, București";
+        return "Karting Arena – Rezeption, Șoseaua Pipera 4, Bukarest";
+    }
+
+    return currentLang === "ro"
+        ? "Locul exact de întâlnire este menționat în confirmarea rezervării trimisă prin e-mail."
+        : currentLang === "en"
+            ? "The exact meeting point is included in your booking confirmation email."
+            : "Der genaue Treffpunkt steht in deiner Buchungsbestätigung per E-Mail.";
+}
+
+
+function refreshSuccessViewLanguage() {
+    const rawTourName = document.getElementById("conf-tour").dataset.rawTourName || "";
+    const date = document.getElementById("conf-date").dataset.rawDate || "";
+    const time = document.getElementById("conf-date").dataset.rawTime || "";
+    const guests = document.getElementById("conf-date").dataset.rawGuests || "";
+
+    if (rawTourName) {
+        const translatedTour = findTranslatedTourTitle(rawTourName);
+        document.getElementById("conf-tour").innerText = translatedTour;
+        document.getElementById("conf-meeting").innerText = getLocalizedMeetingPoint(translatedTour);
+    }
+
+    if (date) {
+        const flexible = currentLang === "de"
+            ? "Flexible Terminvereinbarung"
+            : currentLang === "ro"
+                ? "Program flexibil"
+                : "Flexible scheduling";
+        const guestLabel = translations[currentLang].guest_label || "Guests";
+
+        document.getElementById("conf-date").innerText =
+            `${formatSuccessDate(date)} · ${time || flexible} · ${guests} ${guestLabel}`;
+    }
+}
+
+
+function findTranslatedTourTitle(rawTourName) {
+    for (const categoryKey of Object.keys(categoriesData)) {
+        const item = categoriesData[categoryKey].items.find(candidate =>
+            Object.values(candidate.title || {}).includes(rawTourName)
+        );
+        if (item) return item.title[currentLang] || item.title.de;
+    }
+
+    return rawTourName;
+}
+
+
 function getConfirmationMeetingPoint(tourName) {
+    return getLocalizedMeetingPoint(tourName);
+}
+
+
     const sourceName = String(tourName || "").toLowerCase();
 
     if (/bike|cycling|pedal|fahrrad/.test(sourceName)) {
