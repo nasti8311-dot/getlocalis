@@ -128,8 +128,8 @@ function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-co
 function getBookingEventTimestamp(dateValue,timeValue){
   const date=String(dateValue||"").trim();
   const time=String(timeValue||"").trim();
-  const match=date.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
-  const timeMatch=time.match(/^(\\d{1,2}):(\\d{2})/);
+  const match=date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch=time.match(/^(\d{1,2}):(\d{2})/);
   if(!match||!timeMatch)return null;
   const year=Number(match[1]);
   const month=Number(match[2]);
