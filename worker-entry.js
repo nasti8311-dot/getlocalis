@@ -1798,3 +1798,128 @@ async function recordBookingSettlement(env, booking) {
     booking.provider_name,
     booking.provider_connect_account_id
   );
+
+  await env.DB.prepare(`
+    INSERT INTO booking_settlements (
+      booking_id,
+      payment_intent_id,
+      total_amount_cents,
+      provider_amount_cents,
+      fiiviu_amount_cents,
+      partner_amount_cents,
+      partner_ref,
+      provider_ref,
+      provider_name,
+      provider_connect_account_id,
+      settlement_status,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(booking_id) DO UPDATE SET
+      payment_intent_id=excluded.payment_intent_id,
+      total_amount_cents=excluded.total_amount_cents,
+      provider_amount_cents=excluded.provider_amount_cents,
+      fiiviu_amount_cents=excluded.fiiviu_amount_cents,
+      partner_amount_cents=excluded.partner_amount_cents,
+      partner_ref=excluded.partner_ref,
+      provider_ref=excluded.provider_ref,
+      provider_name=excluded.provider_name,
+      provider_connect_account_id=excluded.provider_connect_account_id,
+      updated_at=CURRENT_TIMESTAMP
+  `).bind(
+    booking.booking_id,
+    booking.payment_intent_id,
+    totalCents,
+    providerAmountCents,
+    fiiviuAmountCents,
+    partnerAmountCents,
+    partnerRef,
+    provider?.provider_ref || null,
+    provider?.name || clean(booking.provider_name) || null,
+    provider?.connect_account_id || clean(booking.provider_connect_account_id) || null
+  ).run();
+}
+
+async function ensureBookingColumns(env) {
+  await env.DB
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id TEXT NOT NULL UNIQUE,
+        payment_intent_id TEXT UNIQUE,
+        status TEXT NOT NULL DEFAULT 'pending',
+        payment_status TEXT NOT NULL DEFAULT 'pending',
+        customer_name TEXT NOT NULL,
+        customer_email TEXT NOT NULL,
+        customer_phone TEXT,
+        customer_language TEXT NOT NULL DEFAULT 'en',
+        experience_name TEXT NOT NULL,
+        booking_date TEXT,
+        booking_time TEXT,
+        guests INTEGER NOT NULL DEFAULT 1,
+        amount_cents INTEGER NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'eur',
+        meeting_point_name TEXT,
+        meeting_address TEXT,
+        meeting_city TEXT,
+        meeting_country TEXT,
+        meeting_instructions TEXT,
+        arrival_minutes_before INTEGER,
+        meeting_latitude TEXT,
+        meeting_longitude TEXT,
+        partner_ref TEXT,
+        provider_name TEXT,
+        provider_connect_account_id TEXT,
+        confirmation_email_sent_at TEXT,
+        confirmation_email_error TEXT,
+        cancellation_token TEXT,
+        cancelled_at TEXT,
+        cancellation_refund_id TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`
+    )
+    .run();
+
+  for (const statement of [
+    "ALTER TABLE bookings ADD COLUMN provider_name TEXT",
+    "ALTER TABLE bookings ADD COLUMN provider_connect_account_id TEXT",
+    "ALTER TABLE bookings ADD COLUMN confirmation_email_error TEXT",
+    "ALTER TABLE bookings ADD COLUMN cancellation_token TEXT",
+    "ALTER TABLE bookings ADD COLUMN cancelled_at TEXT",
+    "ALTER TABLE bookings ADD COLUMN cancellation_refund_id TEXT"
+  ]) {
+    try {
+      await env.DB.prepare(statement).run();
+    } catch (_) {}
+  }
+
+  await env.DB
+    .prepare(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cancellation_token ON bookings(cancellation_token)"
+    )
+    .run();
+}
+
+function normalizeLanguage(value) {
+  const language = String(value || "en")
+    .toLowerCase()
+    .slice(0, 2);
+
+  return ["de", "en", "ro"].includes(language)
+    ? language
+    : "en";
+}
+
+function clean(value) {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function integerOrNull(value) {
+  const number = Number(value);
+
+  return Number.isInteger(number) && number >= 0
+    ? number
+    : null;
+}
