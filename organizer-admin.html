@@ -123,6 +123,8 @@ button{border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:
 </div>
 
 <script>
+window.CLOUDINARY_CLOUD_NAME = "";
+window.CLOUDINARY_UPLOAD_PRESET = "";
 const API = "https://getlocalis.nasti8311.workers.dev";
 let adminKey = sessionStorage.getItem("fiiviu_admin_key") || "";
 let providers = [];
@@ -242,9 +244,19 @@ document.getElementById("providerForm").onsubmit=async(e)=>{
   }catch(e){showMessage(e.message,true)}
 };
 async function uploadImage(file,offerId,kind){
-  const form=new FormData();form.append("file",file);form.append("offerId",String(offerId));form.append("kind",kind);
-  const res=await fetch(API+"/api/admin/upload-image",{method:"POST",headers:{"Authorization":"Bearer "+adminKey},body:form});
-  const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Bild-Upload fehlgeschlagen");return data;
+  const cloudName = window.CLOUDINARY_CLOUD_NAME || "";
+  const uploadPreset = window.CLOUDINARY_UPLOAD_PRESET || "";
+  if(!cloudName || !uploadPreset) throw new Error("Cloudinary ist noch nicht konfiguriert.");
+  if(!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)) throw new Error("Erlaubt sind JPG, PNG, WebP und GIF.");
+  if(file.size > 10 * 1024 * 1024) throw new Error("Das Bild darf maximal 10 MB groß sein.");
+  const form = new FormData();
+  form.append("file",file);
+  form.append("upload_preset",uploadPreset);
+  form.append("folder","getlocalis/offers/"+String(offerId||"new"));
+  const res = await fetch("https://api.cloudinary.com/v1_1/"+encodeURIComponent(cloudName)+"/image/upload",{method:"POST",body:form});
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.secure_url) throw new Error(data.error?.message||"Cloudinary-Upload fehlgeschlagen");
+  return {url:data.secure_url,publicId:data.public_id||"",size:file.size,contentType:file.type};
 }
 document.getElementById("offerImageFile").onchange=()=>{const f=document.getElementById("offerImageFile").files[0];document.getElementById("offerImagePreview").innerHTML=f?'<div class="text-sm muted">'+escapeHtml(f.name)+'</div>':""};
 document.getElementById("offerGalleryFiles").onchange=()=>{document.getElementById("offerGalleryPreview").innerHTML=Array.from(document.getElementById("offerGalleryFiles").files||[]).map(f=>'<div class="text-xs muted truncate">'+escapeHtml(f.name)+'</div>').join("")};
