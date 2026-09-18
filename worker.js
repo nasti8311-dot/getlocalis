@@ -39,7 +39,7 @@ export default {
       if(!env.DB)return json({offers:[]},200,corsHeaders);
       try{
         await ensureOffersTable(env);
-        const result=await env.DB.prepare("SELECT id,provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active FROM offers WHERE active=1 ORDER BY category ASC, title ASC, id ASC").all();
+        const result=await env.DB.prepare("SELECT id,provider_ref,title,title_en,title_ro,description,description_en,description_ro,price_cents,currency,available_times,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_address,meeting_city,meeting_country,meeting_instructions,meeting_instructions_en,meeting_instructions_ro,arrival_minutes_before,category,image_url,gallery_urls,active FROM offers WHERE active=1 ORDER BY category ASC, title ASC, id ASC").all();
         return json({offers:result.results||[]},200,corsHeaders);
       }catch(error){
         return json({offers:[]},200,corsHeaders);
@@ -68,7 +68,7 @@ export default {
           if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis."},400,corsHeaders);
           const provider=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
           if(!provider)return json({error:"Aktiver Veranstalter nicht gefunden."},404,corsHeaders);
-          const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)").bind(providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null).run();
+          const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,title_en,title_ro,description,description_en,description_ro,price_cents,currency,available_times,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_address,meeting_city,meeting_country,meeting_instructions,meeting_instructions_en,meeting_instructions_ro,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)").bind(providerRef,title,String(body.titleEn||"").trim()||null,String(body.titleRo||"").trim()||null,String(body.description||"").trim()||null,String(body.descriptionEn||"").trim()||null,String(body.descriptionRo||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingPointNameEn||"").trim()||null,String(body.meetingPointNameRo||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,String(body.meetingInstructionsEn||"").trim()||null,String(body.meetingInstructionsRo||"").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
           return json({success:true,offer},201,corsHeaders);
         }
@@ -80,7 +80,7 @@ export default {
           const priceCents=Number(body.priceCents ?? current.price_cents);
           const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
           if(!providerRef||!title||!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültige Angebotsdaten."},400,corsHeaders);
-          await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,description=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.description ?? current.description ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",String(body.imageUrl ?? current.image_url ?? "").trim()||null,String(body.galleryUrls ?? current.gallery_urls ?? "").trim()||null,active?1:0,id).run();
+          await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,title_en=?,title_ro=?,description=?,description_en=?,description_ro=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,meeting_instructions_en=?,meeting_instructions_ro=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.titleEn ?? current.title_en ?? "").trim()||null,String(body.titleRo ?? current.title_ro ?? "").trim()||null,String(body.description ?? current.description ?? "").trim()||null,String(body.descriptionEn ?? current.description_en ?? "").trim()||null,String(body.descriptionRo ?? current.description_ro ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingPointNameEn ?? current.meeting_point_name_en ?? "").trim()||null,String(body.meetingPointNameRo ?? current.meeting_point_name_ro ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,String(body.meetingInstructionsEn ?? current.meeting_instructions_en ?? "").trim()||null,String(body.meetingInstructionsRo ?? current.meeting_instructions_ro ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",String(body.imageUrl ?? current.image_url ?? "").trim()||null,String(body.galleryUrls ?? current.gallery_urls ?? "").trim()||null,active?1:0,id).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first();
           return json({success:true,offer},200,corsHeaders);
         }
@@ -174,6 +174,14 @@ async function ensureOffersTable(env){
     meeting_country TEXT,
     meeting_instructions TEXT,
     arrival_minutes_before INTEGER,
+    title_en TEXT,
+    title_ro TEXT,
+    description_en TEXT,
+    description_ro TEXT,
+    meeting_point_name_en TEXT,
+    meeting_point_name_ro TEXT,
+    meeting_instructions_en TEXT,
+    meeting_instructions_ro TEXT,
     image_url TEXT,
     gallery_urls TEXT,
     category TEXT NOT NULL DEFAULT 'explore',
@@ -186,6 +194,14 @@ async function ensureOffersTable(env){
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN category TEXT NOT NULL DEFAULT 'explore'").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN image_url TEXT").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN gallery_urls TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN title_en TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN title_ro TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN description_en TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN description_ro TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_point_name_en TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_point_name_ro TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_instructions_en TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_instructions_ro TEXT").run()}catch(e){}
 }
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
