@@ -124,9 +124,11 @@ if (url.pathname === "/api/offers") {
         if(request.method==="PATCH"){
           const id=Number(body.id); if(!Number.isInteger(id)||id<=0)return json({error:"Ungültige Angebots-ID."},400,corsHeaders);
           const current=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first(); if(!current)return json({error:"Angebot nicht gefunden."},404,corsHeaders);
-          const providerRef=String(body.providerRef ?? current.provider_ref).trim();
-          const title=String(body.title ?? current.title).trim();
-          const priceCents=Number(body.priceCents ?? current.price_cents);
+          const providerRef=String(body.providerRef || current.provider_ref || "").trim();
+          const title=String(body.title || current.title || "").trim();
+          const rawPriceCents=body.priceCents;
+          const parsedPriceCents=Number(rawPriceCents);
+          const priceCents=Number.isFinite(parsedPriceCents) ? Math.round(parsedPriceCents) : Number(current.price_cents);
           const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
           if(!providerRef)return json({error:"Veranstalter fehlt."},400,corsHeaders); if(!title)return json({error:"Titel fehlt."},400,corsHeaders); if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis: "+String(body.priceCents)},400,corsHeaders);
           const translated = body.autoTranslate === true ? await translateOfferFields(body) : null;
