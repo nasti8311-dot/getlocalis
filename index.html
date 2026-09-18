@@ -3617,7 +3617,8 @@ async function createPaymentIntent({
     customerEmail,
     customerLanguage,
     bookingDate,
-    bookingTime
+    bookingTime,
+    offerId
 }) {
 
     const partnerRef =
@@ -3652,6 +3653,7 @@ const response =
                 customerLanguage: customerLanguage,
                 bookingDate: bookingDate,
                 bookingTime: bookingTime,
+                offerId: offerId || "",
                 partnerRef: partnerRef
             })
         });
@@ -3774,7 +3776,8 @@ async function processBooking(event) {
                 customerEmail: email,
                 customerLanguage: currentLang,
                 bookingDate: date,
-                bookingTime: selectedTourTime
+                bookingTime: selectedTourTime,
+                offerId: String(currentTourKey || "").replace(/^offer-/, "")
             });
 
 
