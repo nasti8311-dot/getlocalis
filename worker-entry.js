@@ -19,8 +19,35 @@ export default {
     }
 
     if (url.pathname === "/api/stripe/webhook") {
+      if (request.method !== "POST") {
+        return json({ error: "Method Not Allowed" }, 405);
+      }
+
       const body = await request.text();
-      const response = await legacyWorker.fetch(new Request(request, { body }), env, ctx);
+      const signature = request.headers.get("Stripe-Signature") || "";
+      const signatureSecret = String(env.STRIPE_WEBHOOK_SECRET || "").trim();
+
+      if (!signatureSecret) {
+        console.error("FiiViu Stripe webhook secret is not configured");
+        return json({ error: "Webhook is not configured." }, 500);
+      }
+
+      const verified = await verifyStripeWebhookSignature(
+        body,
+        signature,
+        signatureSecret
+      );
+
+      if (!verified) {
+        console.error("FiiViu Stripe webhook signature verification failed");
+        return json({ error: "Invalid webhook signature." }, 400);
+      }
+
+      const response = await legacyWorker.fetch(
+        new Request(request, { body }),
+        env,
+        ctx
+      );
 
       if (response.ok) {
         try {
@@ -618,6 +645,89 @@ async function updatePaymentIntentMetadata(
         "Stripe PaymentIntent metadata update failed"
     );
   }
+}
+
+async function verifyStripeWebhookSignature(body, header, secret) {
+  try {
+    const parts = String(header || "")
+      .split(",")
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    let timestamp = "";
+    const signatures = [];
+
+    for (const part of parts) {
+      const separator = part.indexOf("=");
+      if (separator <= 0) continue;
+
+      const key = part.slice(0, separator);
+      const value = part.slice(separator + 1);
+
+      if (key === "t") timestamp = value;
+      if (key === "v1" && /^[a-f0-9]{64}$/i.test(value)) {
+        signatures.push(value.toLowerCase());
+      }
+    }
+
+    if (!timestamp || !/^\d+$/.test(timestamp) || signatures.length === 0) {
+      return false;
+    }
+
+    const timestampSeconds = Number(timestamp);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    if (
+      !Number.isFinite(timestampSeconds) ||
+      Math.abs(nowSeconds - timestampSeconds) > 300
+    ) {
+      return false;
+    }
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signedPayload = timestamp + "." + body;
+    const digest = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(signedPayload)
+    );
+
+    const expected = Array.from(new Uint8Array(digest))
+      .map(byte => byte.toString(16).padStart(2, "0"))
+      .join("");
+
+    return signatures.some(signature => timingSafeEqualHex(signature, expected));
+  } catch (error) {
+    console.error("FiiViu Stripe webhook verification error", error);
+    return false;
+  }
+}
+
+function timingSafeEqualHex(a, b) {
+  if (
+    typeof a !== "string" ||
+    typeof b !== "string" ||
+    a.length !== b.length ||
+    a.length === 0
+  ) {
+    return false;
+  }
+
+  let difference = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+
+  return difference === 0;
 }
 
 async function finalizePaidBooking(
