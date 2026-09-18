@@ -3431,7 +3431,12 @@ async function createPaymentIntent({
     amountEUR,
     bookingId,
     tourName,
-    guests
+    guests,
+    customerName,
+    customerEmail,
+    customerLanguage,
+    bookingDate,
+    bookingTime
 }) {
 
     const partnerRef =
@@ -3461,6 +3466,11 @@ const response =
                 bookingId: bookingId,
                 tourName: tourName,
                 guests: Number(guests),
+                customerName: customerName,
+                customerEmail: customerEmail,
+                customerLanguage: customerLanguage,
+                bookingDate: bookingDate,
+                bookingTime: bookingTime,
                 partnerRef: partnerRef
             })
         });
@@ -3578,7 +3588,12 @@ async function processBooking(event) {
                 amountEUR: totalAmount,
                 bookingId: bookingId,
                 tourName: tourName,
-                guests: guests
+                guests: guests,
+                customerName: name,
+                customerEmail: email,
+                customerLanguage: currentLang,
+                bookingDate: date,
+                bookingTime: selectedTourTime
             });
 
 
