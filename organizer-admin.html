@@ -74,8 +74,18 @@ button{border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:
         <div><label class="text-sm font-bold">Preis (€)</label><input id="offerPrice" type="number" min="0.50" step="0.01" class="mt-2" required></div>
         <div><label class="text-sm font-bold">Startzeiten</label><input id="offerTimes" class="mt-2" placeholder="10:00, 15:00, 18:00"></div>
         <div class="md:col-span-2"><label class="text-sm font-bold">Beschreibung</label><textarea id="offerDescription" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
-        <div class="md:col-span-2"><label class="text-sm font-bold">Titelbild (Bild-URL)</label><input id="offerImageUrl" type="url" class="mt-2" placeholder="https://.../bild.jpg"><p class="text-xs muted mt-1">Für den Test verwenden wir Bild-URLs. Später können wir daraus einen echten Upload machen.</p></div>
-        <div class="md:col-span-2"><label class="text-sm font-bold">Weitere Fotos (Bild-URLs)</label><textarea id="offerGalleryUrls" rows="2" class="w-full border border-gray-200 rounded-xl p-3 mt-2" placeholder="Eine URL pro Zeile"></textarea></div>
+        <div class="md:col-span-2">
+          <label class="text-sm font-bold">Titelbild</label>
+          <input id="offerImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="mt-2">
+          <div id="offerImagePreview" class="mt-3"></div>
+          <p class="text-xs muted mt-1">JPG, PNG, WebP oder GIF · maximal 10 MB.</p>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm font-bold">Weitere Fotos</label>
+          <input id="offerGalleryFiles" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" class="mt-2">
+          <div id="offerGalleryPreview" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3"></div>
+          <p class="text-xs muted mt-1">Mehrere Bilder auswählen · maximal 10 MB je Bild.</p>
+        </div>
         <div><label class="text-sm font-bold">Treffpunkt</label><input id="offerMeetingName" class="mt-2"></div>
         <div><label class="text-sm font-bold">Adresse</label><input id="offerAddress" class="mt-2"></div>
         <div><label class="text-sm font-bold">Stadt</label><input id="offerCity" class="mt-2" value="București"></div>
@@ -191,8 +201,11 @@ function editOfferById(id){
   document.getElementById("offerProvider").disabled=true; document.getElementById("offerTitle").value=o.title||"";
   document.getElementById("offerPrice").value=(Number(o.price_cents||0)/100).toFixed(2);
   document.getElementById("offerTimes").value=o.available_times||""; document.getElementById("offerDescription").value=o.description||"";
-  document.getElementById("offerImageUrl").value=o.image_url||"";
-  document.getElementById("offerGalleryUrls").value=o.gallery_urls||"";
+  document.getElementById("offerImageFile").value="";
+  document.getElementById("offerGalleryFiles").value="";
+  document.getElementById("offerImagePreview").innerHTML=o.image_url?'<img src="'+escapeHtml(o.image_url)+'" class="h-32 w-48 object-cover rounded-xl border">':"";
+  const gallery=o.gallery_urls?String(o.gallery_urls).split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean):[];
+  document.getElementById("offerGalleryPreview").innerHTML=gallery.map(url=>'<img src="'+escapeHtml(url)+'" class="h-24 w-full object-cover rounded-xl border">').join("");
   document.getElementById("offerMeetingName").value=o.meeting_point_name||""; document.getElementById("offerAddress").value=o.meeting_address||"";
   document.getElementById("offerCity").value=o.meeting_city||""; document.getElementById("offerCountry").value=o.meeting_country||"";
   document.getElementById("offerArrival").value=o.arrival_minutes_before??15; document.getElementById("offerInstructions").value=o.meeting_instructions||"";
@@ -200,7 +213,12 @@ function editOfferById(id){
 }
 function newOffer(){
   document.getElementById("offerForm").reset(); document.getElementById("offerId").value="";
-  document.getElementById("offerProvider").disabled=false; document.getElementById("offerCity").value="București"; document.getElementById("offerCountry").value="Romania"; document.getElementById("offerArrival").value=15;
+  document.getElementById("offerProvider").disabled=false;
+  document.getElementById("offerImageFile").value="";
+  document.getElementById("offerGalleryFiles").value="";
+  document.getElementById("offerImagePreview").innerHTML="";
+  document.getElementById("offerGalleryPreview").innerHTML="";
+  document.getElementById("offerCity").value="București"; document.getElementById("offerCountry").value="Romania"; document.getElementById("offerArrival").value=15;
   document.getElementById("offerProvider").innerHTML=providers.filter(p=>Number(p.active)===1).map(p=>`<option value="${escapeHtml(p.provider_ref)}">${escapeHtml(p.name)} (${escapeHtml(p.provider_ref)})</option>`).join("");
   document.getElementById("offerForm").classList.remove("hidden");
 }
@@ -223,6 +241,14 @@ document.getElementById("providerForm").onsubmit=async(e)=>{
     resetForm();showMessage("Veranstalter gespeichert.");await loadProviders();if(selectedRef)await loadDetail();
   }catch(e){showMessage(e.message,true)}
 };
+async function uploadImage(file,offerId,kind){
+  const form=new FormData();form.append("file",file);form.append("offerId",String(offerId));form.append("kind",kind);
+  const res=await fetch(API+"/api/admin/upload-image",{method:"POST",headers:{"Authorization":"Bearer "+adminKey},body:form});
+  const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Bild-Upload fehlgeschlagen");return data;
+}
+document.getElementById("offerImageFile").onchange=()=>{const f=document.getElementById("offerImageFile").files[0];document.getElementById("offerImagePreview").innerHTML=f?'<div class="text-sm muted">'+escapeHtml(f.name)+'</div>':""};
+document.getElementById("offerGalleryFiles").onchange=()=>{document.getElementById("offerGalleryPreview").innerHTML=Array.from(document.getElementById("offerGalleryFiles").files||[]).map(f=>'<div class="text-xs muted truncate">'+escapeHtml(f.name)+'</div>').join("")};
+
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))}
 function escapeJs(s){return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
 document.getElementById("newOfferBtn").onclick=newOffer;
@@ -231,8 +257,16 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
   e.preventDefault();
   try{
     const id=document.getElementById("offerId").value;
-    const body={providerRef:document.getElementById("offerProvider").value,title:document.getElementById("offerTitle").value.trim(),category:document.getElementById("offerCategory").value,priceCents:Math.round(Number(document.getElementById("offerPrice").value)*100),availableTimes:document.getElementById("offerTimes").value.trim(),description:document.getElementById("offerDescription").value.trim(),meetingPointName:document.getElementById("offerMeetingName").value.trim(),meetingAddress:document.getElementById("offerAddress").value.trim(),meetingCity:document.getElementById("offerCity").value.trim(),meetingCountry:document.getElementById("offerCountry").value.trim(),arrivalMinutesBefore:Number(document.getElementById("offerArrival").value),meetingInstructions:document.getElementById("offerInstructions").value.trim(),imageUrl:document.getElementById("offerImageUrl").value.trim(),galleryUrls:document.getElementById("offerGalleryUrls").value.trim()};
-    if(id){body.id=Number(id);await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)})}else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
+    const body={providerRef:document.getElementById("offerProvider").value,title:document.getElementById("offerTitle").value.trim(),category:document.getElementById("offerCategory").value,priceCents:Math.round(Number(document.getElementById("offerPrice").value)*100),availableTimes:document.getElementById("offerTimes").value.trim(),description:document.getElementById("offerDescription").value.trim(),meetingPointName:document.getElementById("offerMeetingName").value.trim(),meetingAddress:document.getElementById("offerAddress").value.trim(),meetingCity:document.getElementById("offerCity").value.trim(),meetingCountry:document.getElementById("offerCountry").value.trim(),arrivalMinutesBefore:Number(document.getElementById("offerArrival").value),meetingInstructions:document.getElementById("offerInstructions").value.trim()};
+    if(id){body.id=Number(id);}
+    const titleFile=document.getElementById("offerImageFile").files[0];
+    const galleryFiles=Array.from(document.getElementById("offerGalleryFiles").files||[]);
+    if(titleFile){const uploaded=await uploadImage(titleFile,id||"new","title");body.imageUrl=uploaded.url}
+    else if(id){body.imageUrl=offers.find(x=>Number(x.id)===Number(id))?.image_url||""}
+    if(galleryFiles.length){const urls=[];for(const file of galleryFiles)urls.push((await uploadImage(file,id||"new","gallery")).url);body.galleryUrls=urls.join("\n")}
+    else if(id){body.galleryUrls=offers.find(x=>Number(x.id)===Number(id))?.gallery_urls||""}
+    if(id) await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)});
+    else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
     document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
