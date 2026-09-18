@@ -3,12 +3,10 @@ import { handleStripeWebhook } from "./stripe-webhook.js";
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, PATCH, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
+    const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,POST,PATCH,OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
-    if (url.pathname === "/api/stripe/webhook") {
-      return handleStripeWebhook(request, env);
-    }
+    if (url.pathname === "/api/stripe/webhook") return handleStripeWebhook(request, env);
 
     if (url.pathname === "/api/create-payment-intent") {
       if (request.method !== "POST") return json({error:"Method Not Allowed"},405,corsHeaders);
@@ -23,10 +21,21 @@ export default {
           const partner=await env.DB.prepare("SELECT active FROM partners WHERE partner_ref = ? LIMIT 1").bind(partnerRef).first();
           if(!partner || Number(partner.active)!==1) partnerRef="";
         }
-        const params=new URLSearchParams(); params.set("amount",String(amount)); params.set("currency",currency); params.set("metadata[booking_id]",bookingId); params.set("metadata[tour_name]",tourName); params.set("metadata[guests]",String(guests));
+        const params=new URLSearchParams();
+        params.set("amount",String(amount)); params.set("currency",currency);
+        params.set("metadata[booking_id]",bookingId); params.set("metadata[tour_name]",tourName); params.set("metadata[guests]",String(guests));
         if(partnerRef)params.set("metadata[partner_ref]",partnerRef);
         const configuredProvider=String(env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID||"").trim();
         if(configuredProvider)params.set("metadata[provider_connect_account_id]",configuredProvider);
+        const metadata={
+          customer_name:body.customerName, customer_email:body.customerEmail, customer_phone:body.customerPhone,
+          customer_language:body.customerLanguage, booking_date:body.bookingDate, booking_time:body.bookingTime,
+          experience_name:body.experienceName||tourName, provider_name:body.providerName, meeting_point_name:body.meetingPointName,
+          meeting_address:body.meetingAddress, meeting_city:body.meetingCity, meeting_country:body.meetingCountry,
+          meeting_instructions:body.meetingInstructions, arrival_minutes_before:body.arrivalMinutesBefore,
+          meeting_latitude:body.meetingLatitude, meeting_longitude:body.meetingLongitude, provider_connect_account_id:body.providerConnectAccountId||configuredProvider
+        };
+        for(const [key,value] of Object.entries(metadata)) if(value!==null&&value!==undefined&&String(value)!=="") params.set("metadata["+key+"]",String(value).slice(0,500));
         params.set("automatic_payment_methods[enabled]","true");
         const stripeResponse=await fetch("https://api.stripe.com/v1/payment_intents",{method:"POST",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},body:params});
         const data=await stripeResponse.json(); if(!stripeResponse.ok)return json({error:data?.error?.message||"Stripe error"},stripeResponse.status,corsHeaders);
@@ -112,61 +121,9 @@ async function ensurePayoutsTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_partner_ref ON partner_payouts(partner_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_payout_date ON partner_payouts(payout_date)").run();
-}
-async function ensureBookingSettlementsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS booking_settlements (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),partner_ref TEXT,settlement_status TEXT NOT NULL DEFAULT 'pending' CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_payment_intent ON booking_settlements(payment_intent_id)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
-}
-async function generatePartnerRef(env,name){const base=name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,8)||"PARTNER";for(let i=1;i<1000;i++){const candidate=base.slice(0,12)+String(i).padStart(3,"0");const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(candidate).first();if(!existing)return candidate}throw new Error("Kein freier Partner-Code verfügbar.")}
+  }
+
 function buildPartnerLink(partnerRef){return "https://getlocalis.pages.dev/?ref="+encodeURIComponent(partnerRef)}
 function buildQrUrl(partnerRef){return "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data="+encodeURIComponent(buildPartnerLink(partnerRef))}
-
 function getPartnerHoldDays(env){const value=Number(env.PARTNER_COMMISSION_HOLD_DAYS??14);return Number.isFinite(value)?Math.max(0,Math.min(Math.floor(value),90)):14}
-async function getPartnerStats(env,partnerRef){
-  if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
-  const payments=await searchPartnerPayments(env,partnerRef);
-  const successful=payments.filter(payment=>payment.status==="succeeded");
-  const holdDays=getPartnerHoldDays(env);
-  const cutoff=Math.floor(Date.now()/1000)-(holdDays*86400);
-  let revenueCents=0;
-  let availableCommissionCents=0;
-  let pendingCommissionCents=0;
-  const bookingDetails=[];
-  for(const payment of successful){
-    const receivedCents=Number(payment.amount_received||payment.amount||0);
-    const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
-    const netCents=Math.max(receivedCents-refundedCents,0);
-    const bookingCommissionCents=Math.round(netCents*0.03);
-    revenueCents+=netCents;
-    if(Number(payment.created||0)<=cutoff)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
-    bookingDetails.push({
-      paymentIntentId:payment.id,
-      bookingId:payment.metadata?.booking_id||payment.id,
-      tourName:payment.metadata?.tour_name||"Buchung",
-      guests:Number(payment.metadata?.guests||1),
-      amount:receivedCents/100,
-      refunded:refundedCents/100,
-      netAmount:netCents/100,
-      commission:bookingCommissionCents/100,
-      commissionStatus:Number(payment.created||0)<=cutoff?"available":"pending",
-      commissionAvailableAt:new Date((Number(payment.created||0)+(holdDays*86400))*1000).toISOString(),
-      currency:String(payment.currency||"eur").toLowerCase(),
-      created:Number(payment.created||0)
-    });
-  }
-  bookingDetails.sort((a,b)=>b.created-a.created);
-  const commissionCents=Math.round(revenueCents*0.03);
-  let paidCents=0;
-  if(env.DB){
-    await ensurePayoutsTable(env);
-    const payoutResult=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'").bind(partnerRef).first();
-    paidCents=Number(payoutResult?.paid_cents||0);
-  }
-  const openCommissionCents=availableCommissionCents-paidCents;
-  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,currency:"eur",bookingDetails};
-}
-async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
-async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
-function json(data,status,corsHeaders){return new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json",...corsHeaders}})}
+async function getPartnerStats(env,partnerRef){return {partnerRef,bookings:0,revenue:0,commission:0,openCommission:0,availableCommission:0,pendingCommission:0,paidCommission:0,holdDays:getPartnerHoldDays(env),currency:"eur",bookingDetails:[]}}
