@@ -17,11 +17,5 @@
       "database_name": "fiiviu-payouts",
       "database_id": "c445e0ff-8013-4e20-988b-71b019c41db7"
     }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA_BUCKET",
-      "bucket_name": "fiiviu-media"
-    }
   ]
 }
