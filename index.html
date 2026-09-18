@@ -1252,9 +1252,18 @@
 
             <div class="flex justify-between gap-4">
                 <strong data-i18n="date_time">
-                    Datum
+                    Datum & Uhrzeit
                 </strong>
                 <span id="conf-date"
+                      class="text-right">
+                </span>
+            </div>
+
+            <div class="flex justify-between gap-4">
+                <strong data-i18n="meeting_point">
+                    Treffpunkt
+                </strong>
+                <span id="conf-meeting"
                       class="text-right">
                 </span>
             </div>
@@ -2435,6 +2444,7 @@ const translations = {
         total: "Gesamt",
         secure: "Sichere Zahlung",
         confirmation: "Buchungsbestätigung per E-Mail",
+        meeting_point: "Treffpunkt",
 
         success_title: "Dein Moment ist reserviert.",
         success_text: "Wir haben deine Anfrage erhalten und senden dir die Buchungsdetails per E-Mail.",
@@ -2532,6 +2542,7 @@ const translations = {
         total: "Total",
         secure: "Secure payment",
         confirmation: "Booking confirmation by email",
+        meeting_point: "Meeting point",
 
         success_title: "Your moment is reserved.",
         success_text: "We received your request and will send the booking details by email.",
@@ -2629,6 +2640,7 @@ const translations = {
         total: "Total",
         secure: "Plată sigură",
         confirmation: "Confirmare prin email",
+        meeting_point: "Loc de întâlnire",
 
         success_title: "Momentul tău este rezervat.",
         success_text: "Am primit cererea ta și îți vom trimite detaliile rezervării prin email.",
@@ -3374,9 +3386,13 @@ function proceedToCheckout() {
                 locale: currentLang === "de" ? "de" : "default",
                 dateFormat: "d.m.Y",
                 minDate: "today",
-                defaultDate: selectedDetailDate || "today"
+                defaultDate: selectedDetailDate || "today",
+                clickOpens: false
             }
         );
+
+    // Das Datum wird im Checkout nicht erneut geändert.
+    // So bleiben die vorher ausgewählte Uhrzeit und das Datum immer zusammen.
 
 
     showView("checkout-view");
@@ -3612,65 +3628,12 @@ async function processBooking(event) {
         }
 
 
-        /* ----------------------------------------------------
-           EMAILJS
-        ---------------------------------------------------- */
-
         /*
-         * Die Variablennamen entsprechen exakt deinem
-         * EmailJS-Template:
-         *
-         * {{user_name}}
-         * {{tour_title}}
-         * {{booking_date}}
-         * {{guests}}
-         * {{total_price}}
-         * {{booking_id}}
+         * Die Bestätigungs-Mail wird serverseitig nach bestätigter
+         * Zahlung versendet. Der Browser sendet deshalb keine
+         * zweite E-Mail mehr und zeigt nach erfolgreicher Zahlung
+         * direkt die vollständige Bestätigungsseite.
          */
-
-        const templateParams = {
-
-            user_name: name,
-
-            tour_title: tourName,
-
-            booking_date: date,
-
-            guests: guests,
-
-            total_price: totalAmount.toFixed(2),
-
-            booking_id: bookingId,
-
-            user_email: email
-
-        };
-
-
-        /*
-         * Wichtig:
-         * Die Zahlung ist bereits erfolgreich.
-         * Deshalb darf ein EmailJS-Fehler die erfolgreiche
-         * Zahlung nicht wieder als Zahlungsfehler anzeigen.
-         */
-
-        try {
-
-            await emailjs.send(
-                "service_0fqphlf",
-                "template_x2mmo2p",
-                templateParams
-            );
-
-        } catch (emailError) {
-
-            console.warn(
-                "EmailJS Fehler nach erfolgreicher Zahlung:",
-                emailError
-            );
-
-        }
-
 
         /* ----------------------------------------------------
            SUCCESS
@@ -3683,7 +3646,10 @@ async function processBooking(event) {
             tourName;
 
         document.getElementById("conf-date").innerText =
-            `${date} · ${guests} Personen`;
+            `${date} · ${selectedTourTime || "Flexible Terminvereinbarung"} · ${guests} Personen`;
+
+        document.getElementById("conf-meeting").innerText =
+            getConfirmationMeetingPoint(tourName);
 
         document.getElementById("conf-email").innerText =
             email;
@@ -3716,6 +3682,33 @@ async function processBooking(event) {
 
     }
 
+}
+
+
+function getConfirmationMeetingPoint(tourName) {
+    const sourceName = String(tourName || "").toLowerCase();
+
+    if (/bike|cycling|pedal|fahrrad/.test(sourceName)) {
+        return "Piața Unirii Fountain, Piața Unirii, București";
+    }
+
+    if (/old town|story walk|universitate|national theatre/.test(sourceName)) {
+        return "Universitate – National Theatre, Piața Universității 2, București";
+    }
+
+    if (/therme|spa|wellness|vip/.test(sourceName)) {
+        return "Therme Bucharest – Main Entrance, Calea București 1K, Balotești";
+    }
+
+    if (/night out|nightlife|club|after dark/.test(sourceName)) {
+        return "Manuc’s Inn – Main Courtyard, Strada Franceză 62, București";
+    }
+
+    if (/kart|grand prix/.test(sourceName)) {
+        return "Karting Arena – Reception, Șoseaua Pipera 4, București";
+    }
+
+    return "Der genaue Treffpunkt steht in deiner Buchungsbestätigung per E-Mail.";
 }
 
 
