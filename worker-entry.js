@@ -304,7 +304,7 @@ function buildCancellationView(booking) {
     cancellation_deadline: cancellation.deadline,
     cancellation_hours: CANCELLATION_HOURS,
     policy_text: cancellation.allowed
-      ? `Kostenlose Stornierung bis ${CANCELLATION_HOURS} Stunden vor Beginn.`
+      ? "Kostenlose Stornierung bis " + CANCELLATION_HOURS + " Stunden vor Beginn."
       : "Die kostenlose Stornierungsfrist ist abgelaufen."
   };
 }
