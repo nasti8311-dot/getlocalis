@@ -3836,31 +3836,6 @@ function getConfirmationMeetingPoint(tourName) {
 }
 
 
-    const sourceName = String(tourName || "").toLowerCase();
-
-    if (/bike|cycling|pedal|fahrrad/.test(sourceName)) {
-        return "Piața Unirii Fountain, Piața Unirii, București";
-    }
-
-    if (/old town|story walk|universitate|national theatre/.test(sourceName)) {
-        return "Universitate – National Theatre, Piața Universității 2, București";
-    }
-
-    if (/therme|spa|wellness|vip/.test(sourceName)) {
-        return "Therme Bucharest – Main Entrance, Calea București 1K, Balotești";
-    }
-
-    if (/night out|nightlife|club|after dark/.test(sourceName)) {
-        return "Manuc’s Inn – Main Courtyard, Strada Franceză 62, București";
-    }
-
-    if (/kart|grand prix/.test(sourceName)) {
-        return "Karting Arena – Reception, Șoseaua Pipera 4, București";
-    }
-
-    return "Der genaue Treffpunkt steht in deiner Buchungsbestätigung per E-Mail.";
-}
-
 
 /* ============================================================
    MODALS
