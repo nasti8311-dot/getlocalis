@@ -14,6 +14,10 @@ export default {
 
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
 
+    if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
+      return handleAdminResendConfirmation(request, env);
+    }
+
     if (url.pathname === "/api/stripe/webhook") {
       const body = await request.text();
       const response = await legacyWorker.fetch(new Request(request, { body }), env, ctx);
@@ -120,6 +124,79 @@ export default {
     return response;
   }
 };
+
+async function handleAdminResendConfirmation(request, env) {
+  if (!env.ADMIN_PAYOUT_KEY) {
+    return json({ error: "Admin key is not configured." }, 500);
+  }
+
+  const authorization = String(request.headers.get("Authorization") || "").trim();
+  const expected = "Bearer " + String(env.ADMIN_PAYOUT_KEY).trim();
+
+  if (!authorization || authorization !== expected) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    await ensureBookingColumns(env);
+
+    const url = new URL(request.url);
+    const bookingId = String(url.searchParams.get("booking_id") || "").trim();
+
+    if (!bookingId) {
+      return json({ error: "booking_id is required." }, 400);
+    }
+
+    const booking = await env.DB
+      .prepare("SELECT * FROM bookings WHERE booking_id=? LIMIT 1")
+      .bind(bookingId)
+      .first();
+
+    if (!booking) {
+      return json({ error: "Booking not found." }, 404);
+    }
+
+    if (!booking.customer_email) {
+      return json({ error: "No customer email is stored for this booking." }, 409);
+    }
+
+    await sendConfirmationWithRetry(env, booking);
+
+    await env.DB
+      .prepare(
+        "UPDATE bookings SET confirmation_email_sent_at=CURRENT_TIMESTAMP,confirmation_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      )
+      .bind(bookingId)
+      .run();
+
+    return json({
+      success: true,
+      booking_id: bookingId,
+      email: booking.customer_email,
+      message: "Confirmation email sent."
+    });
+  } catch (error) {
+    console.error("FiiViu admin confirmation resend failed", error);
+
+    try {
+      const url = new URL(request.url);
+      const bookingId = String(url.searchParams.get("booking_id") || "").trim();
+      if (bookingId) {
+        await env.DB
+          .prepare(
+            "UPDATE bookings SET confirmation_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+          )
+          .bind(String(error?.message || error).slice(0, 1000), bookingId)
+          .run();
+      }
+    } catch (_) {}
+
+    return json(
+      { error: error?.message || "Confirmation email resend failed." },
+      500
+    );
+  }
+}
 
 async function handleCancellation(request, env) {
   const corsHeaders = {
