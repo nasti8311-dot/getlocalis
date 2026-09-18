@@ -240,6 +240,13 @@ function editOfferById(id){
   document.getElementById("offerArrival").value=o.arrival_minutes_before??15; document.getElementById("offerInstructions").value=o.meeting_instructions||""; document.getElementById("offerInstructionsEn").value=o.meeting_instructions_en||""; document.getElementById("offerInstructionsRo").value=o.meeting_instructions_ro||"";
   document.getElementById("offerForm").classList.remove("hidden");
 }
+function populateOfferProviders(selectedRef){
+  const select=document.getElementById("offerProvider");
+  if(!select)return;
+  const activeProviders=(providers||[]).filter(p=>Number(p.active)!==0);
+  select.innerHTML='<option value="">Veranstalter auswählen…</option>'+activeProviders.map(p=>'<option value="'+escapeHtml(p.provider_ref)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.provider_ref)+'</option>').join("");
+  select.value=selectedRef||"";
+}
 function newOffer(){
   document.getElementById("offerForm").reset(); document.getElementById("offerId").value="";
   document.getElementById("offerProvider").disabled=false;
