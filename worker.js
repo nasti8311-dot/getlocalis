@@ -36,6 +36,8 @@ export default {
 
     if (url.pathname === "/api/partner-stats") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
+      if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key not configured"},500,corsHeaders);
+      if(!isAdmin(request,env))return json({error:"Unauthorized"},401,corsHeaders);
       try{const partnerRef=url.searchParams.get("ref")?.trim()||"";if(!partnerRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);return json(await getPartnerStats(env,partnerRef),200,corsHeaders)}catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
 
