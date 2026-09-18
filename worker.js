@@ -60,6 +60,27 @@ export default {
   }
 }
 
+if (url.pathname === "/api/offer-translation-status") {
+  if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405, corsHeaders);
+  if (!env.DB) return json({ ready: false }, 200, corsHeaders);
+  try {
+    await ensureOffersTable(env);
+    const id = Number(new URL(request.url).searchParams.get("id") || 0);
+    if (!id) return json({ error: "id is required" }, 400, corsHeaders);
+    const row = await env.DB.prepare("SELECT id,title,title_en,title_ro,description,description_en,description_ro,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_instructions,meeting_instructions_en,meeting_instructions_ro FROM offers WHERE id=? LIMIT 1").bind(id).first();
+    if (!row) return json({ error: "Offer not found" }, 404, corsHeaders);
+    return json({
+      ready: Boolean(String(row.title_en||"").trim() && String(row.title_ro||"").trim() &&
+        String(row.description_en||"").trim() && String(row.description_ro||"").trim() &&
+        String(row.meeting_point_name_en||"").trim() && String(row.meeting_point_name_ro||"").trim() &&
+        String(row.meeting_instructions_en||"").trim() && String(row.meeting_instructions_ro||"").trim()),
+      offer: row
+    }, 200, corsHeaders);
+  } catch (error) {
+    return json({ error: error?.message || "Status failed" }, 500, corsHeaders);
+  }
+}
+
 if (url.pathname === "/api/offers") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
       if(!env.DB)return json({offers:[]},200,corsHeaders);
