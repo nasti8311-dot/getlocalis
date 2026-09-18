@@ -34,6 +34,48 @@ export default {
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
 
+    if (url.pathname === "/api/admin/offers") {
+      if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key not configured"},500,corsHeaders);
+      if(!isAdmin(request,env))return json({error:"Unauthorized"},401,corsHeaders);
+      if(!env.DB)return json({error:"D1 database not configured"},500,corsHeaders);
+      try{
+        await ensureOffersTable(env);
+        if(request.method==="GET"){
+          const providerRef=url.searchParams.get("provider_ref")?.trim()||"";
+          const result=providerRef
+            ? await env.DB.prepare("SELECT * FROM offers WHERE provider_ref=? ORDER BY active DESC, title ASC, id ASC").bind(providerRef).all()
+            : await env.DB.prepare("SELECT * FROM offers ORDER BY provider_ref ASC, active DESC, title ASC, id ASC").all();
+          return json({offers:result.results||[]},200,corsHeaders);
+        }
+        const body=await request.json();
+        if(request.method==="POST"){
+          const providerRef=String(body.providerRef||"").trim();
+          const title=String(body.title||"").trim();
+          const priceCents=Number(body.priceCents);
+          if(!providerRef||!title)return json({error:"Veranstalter und Titel sind erforderlich."},400,corsHeaders);
+          if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis."},400,corsHeaders);
+          const provider=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
+          if(!provider)return json({error:"Aktiver Veranstalter nicht gefunden."},404,corsHeaders);
+          const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)").bind(providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null).run();
+          const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
+          return json({success:true,offer},201,corsHeaders);
+        }
+        if(request.method==="PATCH"){
+          const id=Number(body.id); if(!Number.isInteger(id)||id<=0)return json({error:"Ungültige Angebots-ID."},400,corsHeaders);
+          const current=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first(); if(!current)return json({error:"Angebot nicht gefunden."},404,corsHeaders);
+          const providerRef=String(body.providerRef ?? current.provider_ref).trim();
+          const title=String(body.title ?? current.title).trim();
+          const priceCents=Number(body.priceCents ?? current.price_cents);
+          const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
+          if(!providerRef||!title||!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültige Angebotsdaten."},400,corsHeaders);
+          await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,description=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.description ?? current.description ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,active?1:0,id).run();
+          const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first();
+          return json({success:true,offer},200,corsHeaders);
+        }
+        return json({error:"Method Not Allowed"},405,corsHeaders);
+      }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
+    }
+
     if (url.pathname === "/api/partner-stats") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
       if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key not configured"},500,corsHeaders);
@@ -104,6 +146,29 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+
+async function ensureOffersTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider_ref TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    price_cents INTEGER NOT NULL CHECK (price_cents >= 50),
+    currency TEXT NOT NULL DEFAULT 'eur',
+    available_times TEXT,
+    meeting_point_name TEXT,
+    meeting_address TEXT,
+    meeting_city TEXT,
+    meeting_country TEXT,
+    meeting_instructions TEXT,
+    arrival_minutes_before INTEGER,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)").run();
+}
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
 async function ensurePartnersTable(env){
