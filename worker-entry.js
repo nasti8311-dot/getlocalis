@@ -26,7 +26,20 @@ export default {
         try {
           const event = JSON.parse(body);
           if (event?.type === "payment_intent.succeeded") {
-            ctx.waitUntil(finalizePaidBooking(env, event.data?.object));
+            const stripeSecretKey = String(env.STRIPE_SECRET_KEY || "").trim();
+            const configuredTestMode = stripeSecretKey.startsWith("sk_test_");
+            const eventIsTestMode = event?.livemode === false;
+
+            // Safety guard: never finalize a live event while the Worker is
+            // configured with test credentials, or vice versa.
+            if (configuredTestMode !== eventIsTestMode) {
+              console.error("FiiViu Stripe mode mismatch; booking finalization skipped", {
+                configuredTestMode,
+                eventIsTestMode,
+              });
+            } else {
+              ctx.waitUntil(finalizePaidBooking(env, event.data?.object));
+            }
           }
         } catch (error) {
           console.error("FiiViu webhook post-processing parse failed", error);
