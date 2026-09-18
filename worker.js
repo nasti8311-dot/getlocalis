@@ -87,7 +87,26 @@ if (url.pathname === "/api/offers") {
       try{
         await ensureOffersTable(env);
         const result=await env.DB.prepare("SELECT id,provider_ref,title,title_en,title_ro,description,description_en,description_ro,price_cents,currency,available_times,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_address,meeting_city,meeting_country,meeting_instructions,meeting_instructions_en,meeting_instructions_ro,arrival_minutes_before,category,image_url,gallery_urls,active FROM offers WHERE active=1 ORDER BY category ASC, title ASC, id ASC").all();
-        return json({offers:result.results||[]},200,corsHeaders);
+        const offers=result.results||[];
+        for(const offer of offers){
+          const missing=!String(offer.title_en||"").trim()||!String(offer.title_ro||"").trim()||
+            !String(offer.description_en||"").trim()||!String(offer.description_ro||"").trim()||
+            !String(offer.meeting_point_name_en||"").trim()||!String(offer.meeting_point_name_ro||"").trim()||
+            !String(offer.meeting_instructions_en||"").trim()||!String(offer.meeting_instructions_ro||"").trim();
+          if(!missing) continue;
+          try{
+            const translated=await translateOfferFields(offer);
+            await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+              .bind(translated.titleEn,translated.titleRo,translated.descriptionEn,translated.descriptionRo,translated.meetingPointNameEn,translated.meetingPointNameRo,translated.meetingInstructionsEn,translated.meetingInstructionsRo,offer.id).run();
+            Object.assign(offer,{
+              title_en:translated.titleEn,title_ro:translated.titleRo,
+              description_en:translated.descriptionEn,description_ro:translated.descriptionRo,
+              meeting_point_name_en:translated.meetingPointNameEn,meeting_point_name_ro:translated.meetingPointNameRo,
+              meeting_instructions_en:translated.meetingInstructionsEn,meeting_instructions_ro:translated.meetingInstructionsRo
+            });
+          }catch(_){}
+        }
+        return json({offers},200,corsHeaders);
       }catch(error){
         return json({offers:[]},200,corsHeaders);
       }
