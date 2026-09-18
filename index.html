@@ -2716,7 +2716,14 @@ function mapPublicOffer(offer) {
         : "explore";
     const title = String(offer.title || "FiiViu Erlebnis").trim();
     const description = String(offer.description || "").trim() || "Ein besonderes Erlebnis in Bukarest.";
-    const image = categoryFallbackImages[categoryKey];
+    const fallbackImage = categoryFallbackImages[categoryKey];
+    const imageUrl = String(offer.image_url || "").trim();
+    const galleryUrls = String(offer.gallery_urls || "")
+        .split(/\\r?\\n|,/)
+        .map(url => url.trim())
+        .filter(Boolean);
+    const image = imageUrl || galleryUrls[0] || fallbackImage;
+    const images = [image, ...galleryUrls.filter(url => url !== image)].filter(Boolean);
 
     return {
         id: "offer-" + String(offer.id),
@@ -2727,7 +2734,7 @@ function mapPublicOffer(offer) {
         duration: { de: "Erlebnis", en: "Experience", ro: "Experiență" },
         availableTimes: normalizeOfferTimes(offer.available_times),
         img: image,
-        images: [image],
+        images,
         desc: { de: description, en: description, ro: description },
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
