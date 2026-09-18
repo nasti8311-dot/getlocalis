@@ -2759,8 +2759,8 @@ function mapPublicOffer(offer) {
         arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
-            en: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
-            ro: [offer.meeting_point_name, offer.meeting_city].filter(Boolean)
+            en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
+            ro: [offer.meeting_point_name_ro || offer.meeting_point_name, offer.meeting_city].filter(Boolean)
         }
     };
 }
