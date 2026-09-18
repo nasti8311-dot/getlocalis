@@ -19,7 +19,8 @@ export default {
       request.method === "OPTIONS" &&
       (url.pathname === "/api/admin/providers" ||
         url.pathname === "/api/admin/provider-payout" ||
-        url.pathname === "/api/admin/resend-confirmation")
+        url.pathname === "/api/admin/resend-confirmation" ||
+        url.pathname === "/api/admin/offers")
     ) {
       return new Response(null, {
         status: 204,
@@ -33,6 +34,10 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
       return handleAdminResendConfirmation(request, env);
+    }
+
+    if (url.pathname === "/api/admin/offers") {
+      return legacyWorker.fetch(request, env, ctx);
     }
 
     if (url.pathname === "/api/admin/providers") {
