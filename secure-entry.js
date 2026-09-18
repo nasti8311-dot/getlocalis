@@ -47,6 +47,7 @@ if (!globalThis.__fiiviuSecureEmailPatch) {
 }
 
 const { default: marketplaceWorker } = await import("./marketplace-entry.js");
+const { default: adminWorker } = await import("./worker-entry.js");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,10 @@ export default {
     globalThis.__fiiviuDB = env.DB || null;
     globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/admin/")) {
+      return adminWorker.fetch(request, env, ctx);
+    }
 
     if (url.pathname === "/api/partner-stats") {
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
