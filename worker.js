@@ -39,7 +39,7 @@ export default {
       if(!env.DB)return json({offers:[]},200,corsHeaders);
       try{
         await ensureOffersTable(env);
-        const result=await env.DB.prepare("SELECT id,provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,active FROM offers WHERE active=1 ORDER BY category ASC, title ASC, id ASC").all();
+        const result=await env.DB.prepare("SELECT id,provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active FROM offers WHERE active=1 ORDER BY category ASC, title ASC, id ASC").all();
         return json({offers:result.results||[]},200,corsHeaders);
       }catch(error){
         return json({offers:[]},200,corsHeaders);
@@ -68,7 +68,7 @@ export default {
           if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis."},400,corsHeaders);
           const provider=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
           if(!provider)return json({error:"Aktiver Veranstalter nicht gefunden."},404,corsHeaders);
-          const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)").bind(providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore").run();
+          const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)").bind(providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
           return json({success:true,offer},201,corsHeaders);
         }
@@ -80,7 +80,7 @@ export default {
           const priceCents=Number(body.priceCents ?? current.price_cents);
           const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
           if(!providerRef||!title||!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültige Angebotsdaten."},400,corsHeaders);
-          await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,description=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,category=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.description ?? current.description ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",active?1:0,id).run();
+          await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,description=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.description ?? current.description ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",String(body.imageUrl ?? current.image_url ?? "").trim()||null,String(body.galleryUrls ?? current.gallery_urls ?? "").trim()||null,active?1:0,id).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first();
           return json({success:true,offer},200,corsHeaders);
         }
@@ -174,6 +174,8 @@ async function ensureOffersTable(env){
     meeting_country TEXT,
     meeting_instructions TEXT,
     arrival_minutes_before INTEGER,
+    image_url TEXT,
+    gallery_urls TEXT,
     category TEXT NOT NULL DEFAULT 'explore',
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -182,6 +184,8 @@ async function ensureOffersTable(env){
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)").run();
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN category TEXT NOT NULL DEFAULT 'explore'").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN image_url TEXT").run()}catch(e){}
+  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN gallery_urls TEXT").run()}catch(e){}
 }
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
@@ -218,75 +222,3 @@ function getBookingEventTimestamp(dateValue,timeValue){
   if(!Number.isInteger(year)||!Number.isInteger(month)||!Number.isInteger(day)||!Number.isInteger(hour)||!Number.isInteger(minute))return null;
   const wallUtc=Date.UTC(year,month-1,day,hour,minute,0);
   if(!Number.isFinite(wallUtc))return null;
-  const getOffsetMs=(timestamp)=>{
-    const parts=new Intl.DateTimeFormat("en-US",{
-      timeZone:"Europe/Bucharest",
-      year:"numeric",month:"2-digit",day:"2-digit",
-      hour:"2-digit",minute:"2-digit",second:"2-digit",
-      hourCycle:"h23"
-    }).formatToParts(new Date(timestamp));
-    const values={};
-    for(const part of parts)if(part.type!=="literal")values[part.type]=Number(part.value);
-    const localAsUtc=Date.UTC(values.year,values.month-1,values.day,values.hour,values.minute,values.second);
-    return localAsUtc-timestamp;
-  };
-  let utc=wallUtc-getOffsetMs(wallUtc);
-  utc=wallUtc-getOffsetMs(utc);
-  return Math.floor(utc/1000);
-}
-
-function getPartnerHoldDays(env){const value=Number(env.PARTNER_COMMISSION_HOLD_DAYS??14);return Number.isFinite(value)?Math.max(0,Math.min(Math.floor(value),90)):14}
-async function getPartnerStats(env,partnerRef){
-  if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
-  const payments=await searchPartnerPayments(env,partnerRef);
-  const successful=payments.filter(payment=>payment.status==="succeeded");
-  const holdDays=getPartnerHoldDays(env);
-  const cutoff=Math.floor(Date.now()/1000)-(holdDays*86400);
-  let revenueCents=0;
-  let availableCommissionCents=0;
-  let pendingCommissionCents=0;
-  const bookingDetails=[];
-  for(const payment of successful){
-    const receivedCents=Number(payment.amount_received||payment.amount||0);
-    const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
-    const netCents=Math.max(receivedCents-refundedCents,0);
-    const bookingCommissionCents=Math.round(netCents*0.03);
-    const bookingDate=String(payment.metadata?.booking_date||"").trim();
-    const bookingTime=String(payment.metadata?.booking_time||"").trim();
-    const eventTimestamp=getBookingEventTimestamp(bookingDate,bookingTime);
-    const commissionAvailable=eventTimestamp!==null
-      ? Math.floor(Date.now()/1000)>=eventTimestamp
-      : false;
-    revenueCents+=netCents;
-    if(commissionAvailable)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
-    bookingDetails.push({
-      paymentIntentId:payment.id,
-      bookingId:payment.metadata?.booking_id||payment.id,
-      tourName:payment.metadata?.tour_name||"Buchung",
-      guests:Number(payment.metadata?.guests||1),
-      amount:receivedCents/100,
-      refunded:refundedCents/100,
-      netAmount:netCents/100,
-      commission:bookingCommissionCents/100,
-      commissionStatus:commissionAvailable?"available":"pending",
-      commissionAvailableAt:eventTimestamp===null?null:new Date(eventTimestamp*1000).toISOString(),
-      bookingDate,
-      bookingTime,
-      currency:String(payment.currency||"eur").toLowerCase(),
-      created:Number(payment.created||0)
-    });
-  }
-  bookingDetails.sort((a,b)=>b.created-a.created);
-  const commissionCents=Math.round(revenueCents*0.03);
-  let paidCents=0;
-  if(env.DB){
-    await ensurePayoutsTable(env);
-    const payoutResult=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS paid_cents FROM partner_payouts WHERE partner_ref = ? AND status = 'paid'").bind(partnerRef).first();
-    paidCents=Number(payoutResult?.paid_cents||0);
-  }
-  const openCommissionCents=availableCommissionCents-paidCents;
-  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,currency:"eur",bookingDetails};
-}
-async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
-async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
-function json(data,status,corsHeaders){return new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json",...corsHeaders}})}
