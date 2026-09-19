@@ -257,26 +257,28 @@ async function translateOfferText(text, target) {
   };
   if (common[target]?.[source]) return common[target][source];
   const encoded = encodeURIComponent(source);
-  try {
-    const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&q=" + encoded;
-    const response = await fetch(googleUrl, { headers: { "Accept": "application/json" } });
-    if (response.ok) {
-      const data = await response.json();
-      const translated = Array.isArray(data?.[0])
-        ? data[0].map(part => Array.isArray(part) ? String(part[0] || "") : "").join("").trim()
-        : "";
-      if (translated) return translated;
-    }
-  } catch (_) {}
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&q=" + encoded;
+      const response = await fetch(googleUrl, { headers: { "Accept": "application/json" } });
+      if (response.ok) {
+        const data = await response.json();
+        const translated = Array.isArray(data?.[0])
+          ? data[0].map(part => Array.isArray(part) ? String(part[0] || "") : "").join("").trim()
+          : "";
+        if (translated && translated !== source) return translated;
+      }
+    } catch (_) {}
+  }
   try {
     const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
     const response = await fetch(url, { headers: { "Accept": "application/json" } });
     if (!response.ok) return source;
     const data = await response.json();
     const translated = String(data?.responseData?.translatedText || "").trim();
-    return translated || source;
+    return translated && translated !== source ? translated : "";
   } catch (_) {
-    return source;
+    return "";
   }
 }
 async function translateOfferFields(source) {
