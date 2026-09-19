@@ -20,7 +20,8 @@ export default {
       (url.pathname === "/api/admin/providers" ||
         url.pathname === "/api/admin/provider-payout" ||
         url.pathname === "/api/admin/resend-confirmation" ||
-        url.pathname === "/api/admin/offers")
+        url.pathname === "/api/admin/offers" ||
+        url.pathname === "/api/admin/translate-offers")
     ) {
       return new Response(null, {
         status: 204,
