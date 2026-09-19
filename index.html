@@ -3959,7 +3959,7 @@ function normalizeBookingDateValue(dateText) {
         return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
 
-    if (/^\\d{1,2}\\/\\d{1,2}\\/\\d{4}$/.test(value)) {
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
         const [month, day, year] = value.split("/");
         return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
