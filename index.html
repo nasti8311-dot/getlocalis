@@ -3620,6 +3620,16 @@ function proceedToCheckout() {
             }
         );
 
+    // The checkout date is display-only and must always mirror the date
+    // selected on the experience detail page. Never let flatpickr/browser
+    // parsing invent a different date here.
+    const checkoutDate = selectedDetailDate || "";
+    if (checkoutDate && datePickerInstance) {
+        datePickerInstance.setDate(checkoutDate, false, "Y-m-d");
+    }
+    document.getElementById("booking-date").value =
+        checkoutDate ? formatDisplayBookingDate(checkoutDate) : "";
+
     // Das Datum wird im Checkout nicht erneut geändert.
     // So bleiben die vorher ausgewählte Uhrzeit und das Datum immer zusammen.
 
@@ -3762,8 +3772,10 @@ async function processBooking(event) {
     const email =
         document.getElementById("customer-email").value.trim();
 
+    // Use the canonical ISO date selected on the experience page.
+    // The checkout field is display-only and must never be the source of truth.
     const date =
-        normalizeBookingDateValue(document.getElementById("booking-date").value);
+        normalizeBookingDateValue(selectedDetailDate);
 
     const guests =
         parseInt(
