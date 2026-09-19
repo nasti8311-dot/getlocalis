@@ -1233,6 +1233,8 @@ async function sendEmailJsConfirmation(
     mail_arrival_label: language === "de" ? "Bitte " + arrival + " Minuten vorher treffen" : language === "ro" ? "Te rugăm să ajungi cu " + arrival + " minute înainte" : "Please arrive " + arrival + " minutes before the start",
     mail_cancel_label: language === "de" ? "Buchung stornieren" : language === "ro" ? "Anulează rezervarea" : "Cancel booking",
     mail_cancel_policy: language === "de" ? "Kostenlose Stornierung bis " + cancellationHours + " Stunden vor Beginn." : language === "ro" ? "Anulare gratuită până la " + cancellationHours + " ore înainte de începere." : "Free cancellation up to " + cancellationHours + " hours before the start.",
+    mail_provider_label: language === "de" ? "Veranstalter" : language === "ro" ? "Organizator" : "Organizer",
+    mail_provider_text: language === "de" ? "Dieses Erlebnis wird von " + provider + " durchgeführt." : language === "ro" ? "Această experiență este organizată de " + provider + "." : "This experience is operated by " + provider + ".",
     provider_name: provider,
     meeting_point_name: meetingPoint,
     meeting_address: address,
