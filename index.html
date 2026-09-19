@@ -376,7 +376,7 @@
 
         <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            <div onclick="showCategory('explore')"
+            <div data-category="explore"
                  role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
@@ -402,7 +402,7 @@
             </div>
 
 
-            <div onclick="showCategory('relax')"
+            <div data-category="relax"
                  role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
@@ -428,7 +428,7 @@
             </div>
 
 
-            <div onclick="showCategory('nightlife')"
+            <div data-category="nightlife"
                  role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
@@ -454,7 +454,7 @@
             </div>
 
 
-            <div onclick="showCategory('adventure')"
+            <div data-category="adventure"
                  role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
@@ -480,7 +480,7 @@
             </div>
 
 
-            <div onclick="showCategory('vip')"
+            <div data-category="vip"
                  role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
@@ -2827,6 +2827,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     renderFeatured();
 
+    // Category navigation: bind directly to the cards after the DOM exists.
+    document.querySelectorAll(".category-card[data-category]").forEach(card => {
+        const open = () => {
+            const key = card.getAttribute("data-category");
+            if (key) showCategory(key);
+        };
+        card.addEventListener("click", open);
+        card.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                open();
+            }
+        });
+    });
+
     if (cardElement) {
 
         setTimeout(() => {
@@ -4095,24 +4110,6 @@ function escapeHtml(value) {
 }
 
 
-
-/* ============================================================
-   CATEGORY CLICK FALLBACK
-   Use delegated events so category cards work even if inline
-   handlers are blocked or a child overlay receives the click.
-============================================================ */
-document.addEventListener("click", function (event) {
-    const card = event.target.closest(".category-card");
-    if (!card) return;
-
-    const handler = card.getAttribute("onclick") || "";
-    const match = handler.match(/showCategory\\(['"]([^'"]+)['"]\\)/);
-    if (!match) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    showCategory(match[1]);
-}, true);
 
 </script>
 
