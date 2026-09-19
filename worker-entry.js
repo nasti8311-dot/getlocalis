@@ -498,7 +498,7 @@ function buildCancellationView(booking) {
 
   return {
     booking_id: booking.booking_id,
-    tour_title: localizedTitle,
+    tour_title: booking.experience_name || "",
     booking_date: booking.booking_date || "",
     booking_time: booking.booking_time || "",
     guests: Number(booking.guests || 1),
@@ -1245,7 +1245,7 @@ async function sendEmailJsConfirmation(
     arrival_minutes: arrival,
     meeting_instructions:
       localizedInstructions,
-    map_link: mapLink,
+    map_link: "",
     cancel_url: cancellationUrl,
     cancel_link: cancellationUrl,
     bookingTime: bookingTime,
@@ -1269,7 +1269,7 @@ async function sendEmailJsConfirmation(
     cancel_hours: cancellationHours,
     cancelHoursBefore: cancellationHours,
     refund_hours: cancellationHours,
-    mapLink: mapLink
+    mapLink: ""
   };
 
   const response = await fetch(
