@@ -313,7 +313,8 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     else if(id){body.galleryUrls=offers.find(x=>Number(x.id)===Number(id))?.gallery_urls||""}
     if(id) await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)});
     else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
-    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert."); await refreshOffersRaw();
+    await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
+    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert und Übersetzungen aktualisiert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
 if(adminKey){document.getElementById("adminKey").value=adminKey;openApp()}
