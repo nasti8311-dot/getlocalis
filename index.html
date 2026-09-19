@@ -94,6 +94,18 @@
             transform: scale(1.07);
         }
 
+        /* Category cards must always receive the click themselves. */
+        .category-card {
+            position: relative;
+            z-index: 20;
+            pointer-events: auto !important;
+            cursor: pointer;
+        }
+
+        .category-card > * {
+            pointer-events: none !important;
+        }
+
         .time-slot-btn {
             background: white;
             border: 1px solid #E5E7EB;
@@ -4081,6 +4093,26 @@ function escapeHtml(value) {
         .replace(/'/g, "&#039;");
 
 }
+
+
+
+/* ============================================================
+   CATEGORY CLICK FALLBACK
+   Use delegated events so category cards work even if inline
+   handlers are blocked or a child overlay receives the click.
+============================================================ */
+document.addEventListener("click", function (event) {
+    const card = event.target.closest(".category-card");
+    if (!card) return;
+
+    const handler = card.getAttribute("onclick") || "";
+    const match = handler.match(/showCategory\\(['"]([^'"]+)['"]\\)/);
+    if (!match) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    showCategory(match[1]);
+}, true);
 
 </script>
 
