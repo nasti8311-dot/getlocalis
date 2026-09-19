@@ -3777,7 +3777,8 @@ async function processBooking(event) {
                 customerLanguage: currentLang,
                 bookingDate: date,
                 bookingTime: selectedTourTime,
-                offerId: String(currentTourKey || "").replace(/^offer-/, "")
+                offerId: String(currentTourKey || "").replace(/^offer-/, ""),
+                experienceId: String(currentTourKey || "").trim()
             });
 
 
