@@ -2823,24 +2823,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     capturePartnerRef();
 
+    // Bind category navigation BEFORE any async catalog/network work.
+    // This keeps the homepage cards clickable even if loading public offers
+    // is slow or temporarily unavailable.
+    const bindCategoryCards = () => {
+        document.querySelectorAll(".category-card[data-category]").forEach(card => {
+            if (card.dataset.categoryBound === "1") return;
+            const open = (event) => {
+                if (event) event.preventDefault();
+                const key = card.getAttribute("data-category");
+                if (key) showCategory(key);
+            };
+            card.dataset.categoryBound = "1";
+            card.addEventListener("click", open);
+            card.addEventListener("pointerup", open);
+            card.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") open(event);
+            });
+        });
+    };
+
+    bindCategoryCards();
+
     await loadPublicOffers();
 
     renderFeatured();
 
-    // Category navigation: bind directly to the cards after the DOM exists.
-    document.querySelectorAll(".category-card[data-category]").forEach(card => {
-        const open = () => {
-            const key = card.getAttribute("data-category");
-            if (key) showCategory(key);
-        };
-        card.addEventListener("click", open);
-        card.addEventListener("keydown", event => {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                open();
-            }
-        });
-    });
+    // Re-bind in case a future render replaces the category cards.
+    bindCategoryCards();
 
     if (cardElement) {
 
