@@ -823,6 +823,8 @@ async function finalizePaidBooking(
   env,
   paymentIntent
 ) {
+  let bookingCreated = false;
+
   if (
     !env.DB ||
     !env.STRIPE_SECRET_KEY ||
@@ -1025,6 +1027,8 @@ async function finalizePaidBooking(
       )
       .run();
 
+    bookingCreated = true;
+
     const booking = await env.DB
       .prepare(
         "SELECT * FROM bookings WHERE payment_intent_id=? LIMIT 1"
@@ -1080,6 +1084,12 @@ async function finalizePaidBooking(
         )
         .run();
     } catch (_) {}
+
+    // If the booking row itself could not be created, do not hide the
+    // database/schema error behind the generic finalization message.
+    if (!bookingCreated) {
+      throw error;
+    }
   }
 }
 
