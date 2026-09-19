@@ -114,7 +114,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
     body.experienceId=experienceId;
     body.offerId=offerIdRaw || (experienceId.startsWith("offer-") ? experienceId.slice(6) : "");
-    body.providerConnectAccountId=providerAccount;
+    body.providerConnectAccountId=validProviderAccount;
     body.providerName=String(experience.provider_name||"");
     body.experienceName=experience.title||body.tourName||"";
     body.amount=totalAmount;
