@@ -2755,6 +2755,7 @@ function mapPublicOffer(offer) {
     return {
         id: "offer-" + String(offer.id),
         providerRef: String(offer.provider_ref || ""),
+        providerName: String(offer.provider_name || "").trim(),
         badge: categoryBadges[categoryKey],
         title: { de: title, en: String(offer.title_en || "").trim() || title, ro: String(offer.title_ro || "").trim() || title },
         price: Number(offer.price_cents || 0) / 100,
