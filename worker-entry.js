@@ -2067,7 +2067,9 @@ async function ensureBookingColumns(env) {
     ["confirmation_email_error", "TEXT"],
     ["cancellation_token", "TEXT"],
     ["cancelled_at", "TEXT"],
-    ["cancellation_refund_id", "TEXT"]
+    ["cancellation_refund_id", "TEXT"],
+    ["created_at", "TEXT"],
+    ["updated_at", "TEXT"]
   ];
 
   for (const [name, type] of requiredColumns) {
