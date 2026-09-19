@@ -49,6 +49,54 @@ export default {
       return handleAdminProviderPayout(request, env);
     }
 
+    if (request.method === "POST" && url.pathname === "/api/finalize-booking") {
+      try {
+        const body = await request.json();
+        const paymentIntentId = String(body?.paymentIntentId || "").trim();
+
+        if (!paymentIntentId) {
+          return json({ error: "paymentIntentId is required." }, 400);
+        }
+
+        if (!env.DB || !env.STRIPE_SECRET_KEY) {
+          return json({ error: "Booking finalization is not configured." }, 500);
+        }
+
+        const paymentIntent = await stripeGet(
+          env,
+          "/v1/payment_intents/" + encodeURIComponent(paymentIntentId)
+        );
+
+        if (paymentIntent?.status !== "succeeded") {
+          return json({
+            error: "Payment is not completed.",
+            status: paymentIntent?.status || "unknown"
+          }, 409);
+        }
+
+        await finalizePaidBooking(env, paymentIntent);
+
+        const booking = await env.DB
+          .prepare("SELECT booking_id,confirmation_email_sent_at,confirmation_email_error FROM bookings WHERE payment_intent_id=? LIMIT 1")
+          .bind(paymentIntentId)
+          .first();
+
+        if (!booking) {
+          return json({ error: "Paid booking could not be finalized." }, 500);
+        }
+
+        return json({
+          success: true,
+          booking_id: booking.booking_id,
+          confirmation_email_sent: !!booking.confirmation_email_sent_at,
+          confirmation_email_error: booking.confirmation_email_error || ""
+        });
+      } catch (error) {
+        console.error("FiiViu direct booking finalization failed", error);
+        return json({ error: error?.message || "Booking finalization failed." }, 500);
+      }
+    }
+
     if (url.pathname === "/api/stripe/webhook") {
       if (request.method !== "POST") {
         return json({ error: "Method Not Allowed" }, 405);
