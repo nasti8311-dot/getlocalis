@@ -91,9 +91,15 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(!experience)return json({error:"Experience is not configured for marketplace checkout"},409);
     if(String(experience.status)!=="published")return json({error:"Experience is not currently bookable"},409);
 
-    const providerAccount=String(experience.provider_connect_account_id||"").trim();
+    const providerAccount=String(
+      experience.provider_connect_account_id ||
+      env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID ||
+      ""
+    ).trim();
     if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
-      return json({error:"Experience has no valid provider Connect account"},409);
+      return json({
+        error:"Experience has no valid provider Connect account. Please set the provider's Stripe Connect account (acct_...) in Organizer settings."
+      },409);
     }
 
     const guests=Number(body.guests||1);
