@@ -3200,14 +3200,25 @@ function showDetail(categoryKey, itemId) {
                 minDate: "today",
                 defaultDate: "today",
 
-                onChange: function(selectedDates, dateStr) {
-                    selectedDetailDate = dateStr;
+                onChange: function(selectedDates) {
+                    if (selectedDates && selectedDates[0]) {
+                        const d = selectedDates[0];
+                        selectedDetailDate =
+                            d.getFullYear() + "-" +
+                            String(d.getMonth() + 1).padStart(2, "0") + "-" +
+                            String(d.getDate()).padStart(2, "0");
+                    }
                 }
             }
         );
 
-        selectedDetailDate =
-            document.getElementById("detail-date-picker").value;
+        const initialDetailDate = detailDatePickerInstance.selectedDates?.[0];
+        if (initialDetailDate) {
+            selectedDetailDate =
+                initialDetailDate.getFullYear() + "-" +
+                String(initialDetailDate.getMonth() + 1).padStart(2, "0") + "-" +
+                String(initialDetailDate.getDate()).padStart(2, "0");
+        }
 
 
         item.availableTimes.forEach((time, index) => {
@@ -3535,13 +3546,13 @@ function proceedToCheckout() {
 
 
     document.getElementById("selected-tour-display").value =
-        selectionText;
+        title;
 
     document.getElementById("checkout-summary-title").innerText =
         title;
 
     document.getElementById("checkout-summary-date").innerText =
-        `${dateText}${selectedTourTime ? " · " + selectedTourTime : ""}`;
+        formatDisplayBookingDate(dateText) + (selectedTourTime ? " · " + selectedTourTime : "");
 
 
     document.getElementById("guest-count").value =
@@ -3565,7 +3576,7 @@ function proceedToCheckout() {
             "#booking-date",
             {
                 locale: currentLang === "de" ? "de" : "default",
-                dateFormat: "d.m.Y",
+                dateFormat: currentLang === "en" ? "m/d/Y" : "d.m.Y",
                 minDate: "today",
                 defaultDate: selectedDetailDate || "today",
                 clickOpens: false
@@ -3651,7 +3662,7 @@ const response =
                 customerName: customerName,
                 customerEmail: customerEmail,
                 customerLanguage: customerLanguage,
-                bookingDate: bookingDate,
+                bookingDate: normalizeBookingDateValue(bookingDate),
                 bookingTime: bookingTime,
                 offerId: offerId || "",
                 partnerRef: partnerRef
@@ -3715,7 +3726,7 @@ async function processBooking(event) {
         document.getElementById("customer-email").value.trim();
 
     const date =
-        document.getElementById("booking-date").value;
+        normalizeBookingDateValue(document.getElementById("booking-date").value);
 
     const guests =
         parseInt(
@@ -3881,17 +3892,35 @@ async function processBooking(event) {
 }
 
 
-function formatSuccessDate(dateText) {
-    if (!dateText) return "";
+function normalizeBookingDateValue(dateText) {
+    const value = String(dateText || "").trim();
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return value;
 
-    const parts = String(dateText).split(".");
-    if (parts.length !== 3) return dateText;
+    if (/^\\d{1,2}\\.\\d{1,2}\\.\\d{4}$/.test(value)) {
+        const [day, month, year] = value.split(".");
+        return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
 
-    const [day, month, year] = parts;
+    if (/^\\d{1,2}\\/\\d{1,2}\\/\\d{4}$/.test(value)) {
+        const [month, day, year] = value.split("/");
+        return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
 
+    return value;
+}
+
+function formatDisplayBookingDate(dateText) {
+    const iso = normalizeBookingDateValue(dateText);
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso)) return dateText || "";
+
+    const [year, month, day] = iso.split("-");
     return currentLang === "en"
         ? `${month}/${day}/${year}`
         : `${day}.${month}.${year}`;
+}
+
+function formatSuccessDate(dateText) {
+    return formatDisplayBookingDate(dateText);
 }
 
 
