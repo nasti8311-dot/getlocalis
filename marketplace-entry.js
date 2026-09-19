@@ -96,11 +96,12 @@ async function createMarketplacePaymentIntent(request,env,ctx){
       env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID ||
       ""
     ).trim();
-    if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
-      return json({
-        error:"Experience has no valid provider Connect account. Please set the provider's Stripe Connect account (acct_...) in Organizer settings."
-      },409);
-    }
+    // Payment is collected first. The provider Connect account is only
+    // required when the later payout/transfer is executed, so a missing
+    // account must not block a test checkout.
+    const validProviderAccount=/^acct_[A-Za-z0-9]+$/.test(providerAccount)
+      ? providerAccount
+      : "";
 
     const guests=Number(body.guests||1);
     if(!Number.isInteger(guests)||guests<1||guests>50)return json({error:"Invalid guest count"},400);
