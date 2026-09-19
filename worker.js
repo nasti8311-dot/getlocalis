@@ -86,7 +86,7 @@ if (url.pathname === "/api/offers") {
       if(!env.DB)return json({offers:[]},200,corsHeaders);
       try{
         await ensureOffersTable(env);
-        const result=await env.DB.prepare("SELECT id,provider_ref,title,title_en,title_ro,description,description_en,description_ro,price_cents,currency,available_times,meeting_point_name,meeting_point_name_en,meeting_point_name_ro,meeting_address,meeting_city,meeting_country,meeting_instructions,meeting_instructions_en,meeting_instructions_ro,arrival_minutes_before,category,image_url,gallery_urls,active FROM offers WHERE active=1 ORDER BY category ASC, title ASC, id ASC").all();
+        const result=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.active FROM offers o LEFT JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1 ORDER BY o.category ASC, o.title ASC, o.id ASC").all();
         const offers=result.results||[];
         for(const offer of offers){
           const missing=!String(offer.title_en||"").trim()||!String(offer.title_ro||"").trim()||
