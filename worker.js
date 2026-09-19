@@ -246,21 +246,65 @@ async function translateOfferText(text, target) {
   const common = {
     "ro": {
       "Vor dem Haus": "În fața casei",
+      "Vor dem Cafe": "În fața cafenelei",
       "Bitte an wetterfeste Kleidung denken": "Vă rugăm să purtați îmbrăcăminte adecvată vremii",
+      "Bitte einfach nur gute Laune mitbringen!": "Vă rugăm să aduceți doar voie bună!",
+      "Das ist ein Test und hat keine Bedeutung.": "Acesta este un test și nu are nicio semnificație.",
+      "Test erlebnis bukarest": "Experiență de test în București",
       "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Descoperă în turul nostru cele mai frumoase obiective și locuri pe care le oferă orașul. Durată: aproximativ 3 ore"
     },
     "en": {
       "Vor dem Haus": "In front of the house",
+      "Vor dem Cafe": "In front of the cafe",
       "Bitte an wetterfeste Kleidung denken": "Please remember to wear weather-appropriate clothing",
+      "Bitte einfach nur gute Laune mitbringen!": "Please just bring a good mood!",
+      "Das ist ein Test und hat keine Bedeutung.": "This is a test and has no meaning.",
+      "Test erlebnis bukarest": "Test experience in Bucharest",
       "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Explore the most beautiful sights and places the city has to offer on our tour. Duration: approx. 3 hours"
     }
   };
   if (common[target]?.[source]) return common[target][source];
+
   const encoded = encodeURIComponent(source);
+
+  // Provider 1: MyMemory
+  try {
+    const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
+    const response = await fetch(url, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
+    if (response.ok) {
+      const data = await response.json();
+      const translated = String(data?.responseData?.translatedText || "").trim();
+      if (translated && translated !== source && !/^MYMEMORY/i.test(translated)) return translated;
+    }
+  } catch (_) {}
+
+  // Provider 2: LibreTranslate public mirrors. Cloudflare Workers can call
+  // third-party HTTP APIs directly from the request handler.
+  const mirrors = [
+    "https://translate.argosopentech.com/translate",
+    "https://libretranslate.de/translate"
+  ];
+  for (const endpoint of mirrors) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ q: source, source: "de", target, format: "text" }),
+        cf: { cacheTtl: 0, cacheEverything: false }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const translated = String(data?.translatedText || "").trim();
+        if (translated && translated !== source) return translated;
+      }
+    } catch (_) {}
+  }
+
+  // Provider 3: Google Translate endpoint as a final fallback.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&q=" + encoded;
-      const response = await fetch(googleUrl, { headers: { "Accept": "application/json" } });
+      const response = await fetch(googleUrl, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
       if (response.ok) {
         const data = await response.json();
         const translated = Array.isArray(data?.[0])
@@ -270,16 +314,9 @@ async function translateOfferText(text, target) {
       }
     } catch (_) {}
   }
-  try {
-    const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
-    const response = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!response.ok) return source;
-    const data = await response.json();
-    const translated = String(data?.responseData?.translatedText || "").trim();
-    return translated && translated !== source ? translated : "";
-  } catch (_) {
-    return "";
-  }
+
+  // Never silently store German as an "EN/RO translation".
+  return "";
 }
 async function translateOfferFields(source) {
   const title = String(source.title || "").trim();
