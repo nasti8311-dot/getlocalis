@@ -336,6 +336,21 @@ async function translateOfferFields(source) {
       translateOfferText(meetingInstructions, "ro")
     ]);
 
+  const required = [
+    ["title", title, titleEn, "en"],
+    ["title", title, titleRo, "ro"],
+    ["description", description, descriptionEn, "en"],
+    ["description", description, descriptionRo, "ro"],
+    ["meetingPointName", meetingPointName, pointEn, "en"],
+    ["meetingPointName", meetingPointName, pointRo, "ro"],
+    ["meetingInstructions", meetingInstructions, instructionsEn, "en"],
+    ["meetingInstructions", meetingInstructions, instructionsRo, "ro"]
+  ];
+  const failed = required.find(([field, sourceText, translated]) => sourceText && !translated);
+  if (failed) {
+    throw new Error("Automatische Übersetzung fehlgeschlagen für " + failed[0] + ". Bitte erneut speichern.");
+  }
+
   return {
     titleEn: titleEn || title,
     titleRo: titleRo || title,
@@ -347,6 +362,7 @@ async function translateOfferFields(source) {
     meetingInstructionsRo: instructionsRo || meetingInstructions
   };
 }
+
 
 
 async function ensureOffersTable(env){
