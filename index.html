@@ -3838,6 +3838,27 @@ async function processBooking(event) {
 
         }
 
+        // Finalize the booking immediately. The Stripe webhook remains
+        // as a second idempotent safety net.
+        const finalizeResponse = await fetch(
+            "https://getlocalis.nasti8311.workers.dev/api/finalize-booking",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    paymentIntentId: paymentResult.paymentIntent.id
+                })
+            }
+        );
+
+        const finalizeData = await finalizeResponse.json().catch(() => ({}));
+
+        if (!finalizeResponse.ok) {
+            throw new Error(
+                finalizeData.error ||
+                "Die Zahlung wurde abgeschlossen, aber die Buchung konnte nicht bestätigt werden."
+            );
+        }
 
         /*
          * Die Bestätigungs-Mail wird serverseitig nach bestätigter
