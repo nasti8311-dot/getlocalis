@@ -2017,17 +2017,60 @@ async function ensureBookingColumns(env) {
     )
     .run();
 
-  for (const statement of [
-    "ALTER TABLE bookings ADD COLUMN provider_name TEXT",
-    "ALTER TABLE bookings ADD COLUMN provider_connect_account_id TEXT",
-    "ALTER TABLE bookings ADD COLUMN confirmation_email_error TEXT",
-    "ALTER TABLE bookings ADD COLUMN cancellation_token TEXT",
-    "ALTER TABLE bookings ADD COLUMN cancelled_at TEXT",
-    "ALTER TABLE bookings ADD COLUMN cancellation_refund_id TEXT"
-  ]) {
+  // Older D1 databases may already have a bookings table from an earlier
+  // version of the app. CREATE TABLE IF NOT EXISTS does not migrate such a
+  // table, so make sure every column used by finalization exists.
+  const columns = await env.DB
+    .prepare("PRAGMA table_info(bookings)")
+    .all();
+
+  const existingColumns = new Set(
+    (columns.results || []).map(row => String(row.name || ""))
+  );
+
+  const requiredColumns = [
+    ["payment_intent_id", "TEXT"],
+    ["status", "TEXT"],
+    ["payment_status", "TEXT"],
+    ["customer_name", "TEXT"],
+    ["customer_email", "TEXT"],
+    ["customer_phone", "TEXT"],
+    ["customer_language", "TEXT"],
+    ["experience_name", "TEXT"],
+    ["booking_date", "TEXT"],
+    ["booking_time", "TEXT"],
+    ["guests", "INTEGER"],
+    ["amount_cents", "INTEGER"],
+    ["currency", "TEXT"],
+    ["meeting_point_name", "TEXT"],
+    ["meeting_address", "TEXT"],
+    ["meeting_city", "TEXT"],
+    ["meeting_country", "TEXT"],
+    ["meeting_instructions", "TEXT"],
+    ["arrival_minutes_before", "INTEGER"],
+    ["meeting_latitude", "TEXT"],
+    ["meeting_longitude", "TEXT"],
+    ["partner_ref", "TEXT"],
+    ["provider_name", "TEXT"],
+    ["provider_connect_account_id", "TEXT"],
+    ["confirmation_email_sent_at", "TEXT"],
+    ["confirmation_email_error", "TEXT"],
+    ["cancellation_token", "TEXT"],
+    ["cancelled_at", "TEXT"],
+    ["cancellation_refund_id", "TEXT"]
+  ];
+
+  for (const [name, type] of requiredColumns) {
+    if (existingColumns.has(name)) continue;
     try {
-      await env.DB.prepare(statement).run();
-    } catch (_) {}
+      await env.DB
+        .prepare("ALTER TABLE bookings ADD COLUMN " + name + " " + type)
+        .run();
+      existingColumns.add(name);
+    } catch (error) {
+      console.error("FiiViu booking schema migration failed", name, error);
+      throw error;
+    }
   }
 
   await env.DB
