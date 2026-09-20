@@ -738,6 +738,8 @@
                         class="text-3xl md:text-5xl font-black tracking-tight">
                     </h1>
 
+                    <div id="detail-provider" class="hidden text-sm text-gray-500 mt-2 font-semibold"></div>
+
                     <div class="flex flex-wrap gap-5 text-sm text-gray-500 mt-4">
 
                         <span class="flex items-center gap-2">
@@ -3057,6 +3059,8 @@ function createExperienceCard(item, categoryKey) {
 
     const description =
         item.desc[currentLang] || item.desc.de;
+    const providerName = String(item.providerName || "").trim();
+    const providerLabel = currentLang === "ro" ? "Furnizor" : currentLang === "en" ? "Provider" : "Anbieter";
 
 
     card.innerHTML = `
@@ -3099,6 +3103,8 @@ function createExperienceCard(item, categoryKey) {
             <h3 class="text-xl font-black leading-tight">
                 ${escapeHtml(title)}
             </h3>
+
+            ${providerName ? `<div class="text-sm text-gray-500 mt-1"><span class="font-semibold">${escapeHtml(providerLabel)}:</span> ${escapeHtml(providerName)}</div>` : ""}
 
             <p class="text-gray-500 text-sm leading-relaxed mt-3 line-clamp-2">
                 ${escapeHtml(description)}
@@ -3154,6 +3160,15 @@ function showDetail(categoryKey, itemId) {
 
     document.getElementById("detail-title").innerText =
         item.title[currentLang] || item.title.de;
+
+    const detailProviderName = String(item.providerName || "").trim();
+    const detailProviderEl = document.getElementById("detail-provider");
+    if (detailProviderEl) {
+        detailProviderEl.textContent = detailProviderName
+            ? (currentLang === "ro" ? "Furnizor: " : currentLang === "en" ? "Provider: " : "Anbieter: ") + detailProviderName
+            : "";
+        detailProviderEl.classList.toggle("hidden", !detailProviderName);
+    }
 
     document.getElementById("detail-duration").innerText =
         item.duration[currentLang] || item.duration.de;
