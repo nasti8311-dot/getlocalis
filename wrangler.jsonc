@@ -3,7 +3,7 @@
   "name": "getlocalis",
   "main": "./secure-entry.js",
   "compatibility_date": "2026-09-14",
-  "triggers": { "crons": ["*/15 * * * *"] },
+  "triggers": { "crons": ["* * * * *"] },
   "assets": {
     "directory": ".",
     "exclude": [".git/**", ".wrangler/**", "node_modules/**"],
