@@ -48,6 +48,7 @@ if (!globalThis.__fiiviuSecureEmailPatch) {
 
 const { default: marketplaceWorker } = await import("./marketplace-entry.js");
 const { default: adminWorker } = await import("./worker-entry.js");
+const { releaseDueProviderSettlements } = await import("./stripe-webhook.js");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,7 @@ const CORS = {
 };
 
 export default {
-  async fetch(request, env, ctx) {
+  async scheduled(controller, env, ctx) {\n    try { await releaseDueProviderSettlements(env); } catch (error) { console.error("FiiViu settlement cron failed", error); }\n  },\n\n  async fetch(request, env, ctx) {
     globalThis.__fiiviuDB = env.DB || null;
     globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
     const url = new URL(request.url);
