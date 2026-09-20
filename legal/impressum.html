@@ -1,25 +1,66 @@
 <!doctype html>
-<html lang="ro">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Date despre FiiViu – Informații juridice</title>
-<style>body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:800px;margin:0 auto;padding:32px 20px;line-height:1.65;color:#171717}h1,h2{line-height:1.2}h2{margin-top:32px}a{color:#c9581d}</style>
+<title>FiiViu – Impressum</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:800px;margin:0 auto;padding:32px 20px;line-height:1.65;color:#171717;background:#F8F6F1}
+main{background:#fff;border-radius:24px;padding:32px;box-shadow:0 12px 45px rgba(21,21,21,.08)}
+h1,h2{line-height:1.2}h2{margin-top:32px}a{color:#c9581d}
+.lang{display:flex;gap:6px;justify-content:flex-end;margin-bottom:24px}.lang button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:7px 10px;cursor:pointer;font-weight:700}.lang button.active{background:#151515;color:#fff}.lang span{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;overflow:hidden;margin-left:4px}
+.back{display:inline-block;margin-bottom:18px;text-decoration:none;font-weight:700}
+</style>
 </head>
 <body>
-<h1>Informații juridice</h1>
-<h2>Operator</h2>
-<p><strong>FiiViu S.R.L.</strong><br>București, Piața Unirii, România<br>E-mail: <a href="mailto:info@fiiviu.ro">info@fiiviu.ro</a></p>
-<h2>Obiectul platformei</h2>
-<p>FiiViu este o platformă de intermediere pentru experiențe și servicii individuale oferite de furnizori independenți.</p>
-<h2>Date obligatorii ale operatorului</h2>
-<ul>
-<li>CUI: [DE COMPLETAT]</li>
-<li>Număr Registrul Comerțului: [DE COMPLETAT]</li>
-<li>Adresa juridică completă: [DE COMPLETAT]</li>
-<li>Statut TVA / identificare TVA, dacă este cazul: [DE COMPLETAT]</li>
-<li>Telefon: [DE COMPLETAT, dacă este utilizat ca date oficiale de contact]</li>
-</ul>
-<p>Informațiile de mai sus trebuie completate exclusiv pe baza documentelor oficiale ale societății. Nu trebuie publicate valori presupuse.</p>
+<div class="lang" aria-label="Language">
+<button data-lang="de" onclick="setLanguage('de')">DE <span>🇩🇪</span></button>
+<button data-lang="en" onclick="setLanguage('en')">EN <span>🇬🇧</span></button>
+<button data-lang="ro" onclick="setLanguage('ro')">RO <span>🇷🇴</span></button>
+</div>
+<main id="legal-content"></main>
+<script>
+const content={
+de:{
+title:"Impressum",operator:"Betreiber",platform:"Gegenstand der Plattform",mandatory:"Pflichtangaben zum Betreiber",
+body:"FiiViu ist eine Vermittlungsplattform für Erlebnisse und einzelne Dienstleistungen unabhängiger Anbieter.",
+operatorBody:"FiiViu S.R.L.<br>București, Piața Unirii, Rumänien<br>E-Mail: <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>",
+list:"<li>CUI: [ZU ERGÄNZEN]</li><li>Handelsregisternummer: [ZU ERGÄNZEN]</li><li>Vollständige Geschäftsanschrift: [ZU ERGÄNZEN]</li><li>Umsatzsteuerstatus / USt-Identifikationsnummer, falls zutreffend: [ZU ERGÄNZEN]</li><li>Telefon: [ZU ERGÄNZEN, falls als offizielle Kontaktdaten verwendet]</li>",
+note:"Die oben genannten Angaben dürfen ausschließlich anhand der offiziellen Unternehmensunterlagen ergänzt werden. Es dürfen keine angenommenen Werte veröffentlicht werden.",
+back:"← Zurück zu FiiViu"
+},
+en:{
+title:"Legal Notice",operator:"Operator",platform:"Purpose of the platform",mandatory:"Mandatory operator information",
+body:"FiiViu is an intermediary platform for experiences and individual services provided by independent providers.",
+operatorBody:"FiiViu S.R.L.<br>Bucharest, Piața Unirii, Romania<br>Email: <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>",
+list:"<li>CUI: [TO BE COMPLETED]</li><li>Trade Register number: [TO BE COMPLETED]</li><li>Full legal address: [TO BE COMPLETED]</li><li>VAT status / VAT identification number, if applicable: [TO BE COMPLETED]</li><li>Telephone: [TO BE COMPLETED, if used as official contact information]</li>",
+note:"The information above must be completed exclusively on the basis of the company's official documents. Assumed values must not be published.",
+back:"← Back to FiiViu"
+},
+ro:{
+title:"Informații juridice",operator:"Operator",platform:"Obiectul platformei",mandatory:"Date obligatorii ale operatorului",
+body:"FiiViu este o platformă de intermediere pentru experiențe și servicii individuale oferite de furnizori independenți.",
+operatorBody:"FiiViu S.R.L.<br>București, Piața Unirii, România<br>E-mail: <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>",
+list:"<li>CUI: [DE COMPLETAT]</li><li>Număr Registrul Comerțului: [DE COMPLETAT]</li><li>Adresa juridică completă: [DE COMPLETAT]</li><li>Statut TVA / identificare TVA, dacă este cazul: [DE COMPLETAT]</li><li>Telefon: [DE COMPLETAT, dacă este utilizat ca date oficiale de contact]</li>",
+note:"Informațiile de mai sus trebuie completate exclusiv pe baza documentelor oficiale ale societății. Nu trebuie publicate valori presupuse.",
+back:"← Înapoi la FiiViu"
+}};
+function setLanguage(lang){
+const c=content[lang]||content.de;
+document.documentElement.lang=lang;
+document.title=c.title+" – FiiViu";
+document.getElementById("legal-content").innerHTML=
+"<a class='back' href='/?lang="+encodeURIComponent(lang)+"'>"+c.back+"</a>"+
+"<h1>"+c.title+"</h1>"+
+"<h2>"+c.operator+"</h2><p><strong>FiiViu S.R.L.</strong><br>București, Piața Unirii, "+(lang==="ro"?"România":lang==="de"?"Rumänien":"Romania")+"<br>"+(lang==="ro"?"E-mail":"Email")+": <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a></p>"+
+"<p>"+c.body+"</p>"+
+"<h2>"+c.platform+"</h2><p>"+c.body+"</p>"+
+"<h2>"+c.mandatory+"</h2><ul>"+c.list+"</ul><p>"+c.note+"</p>";
+document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
+localStorage.setItem("fiiviu_language",lang);
+}
+const params=new URLSearchParams(location.search);
+setLanguage(params.get("lang")||localStorage.getItem("fiiviu_language")||"de");
+</script>
 </body>
 </html>
