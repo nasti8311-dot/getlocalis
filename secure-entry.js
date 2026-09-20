@@ -66,6 +66,37 @@ export default {
     globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/admin/settlement-run") {
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: CORS });
+      }
+      if (request.method !== "POST") {
+        return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+          status: 405,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+      if (!env.ADMIN_PAYOUT_KEY || request.headers.get("Authorization") !== "Bearer " + String(env.ADMIN_PAYOUT_KEY)) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+      try {
+        const result = await releaseDueProviderSettlements(env);
+        return new Response(JSON.stringify({ success: true, ...result }), {
+          status: 200,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      } catch (error) {
+        console.error("FiiViu manual settlement run failed", error);
+        return new Response(JSON.stringify({ error: error?.message || "Settlement run failed." }), {
+          status: 500,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
     if (url.pathname.startsWith("/api/admin/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: CORS });
