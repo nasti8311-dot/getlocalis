@@ -527,7 +527,7 @@ async function getPartnerStats(env,partnerRef){
     const receivedCents=Number(payment.amount_received||payment.amount||0);
     const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
     const netCents=Math.max(receivedCents-refundedCents,0);
-    const bookingCommissionCents=Math.round(netCents*0.03);
+    const bookingCommissionCents=Math.round(netCents*0.05);
     const bookingDate=String(payment.metadata?.booking_date||"").trim();
     const bookingTime=String(payment.metadata?.booking_time||"").trim();
     const eventTimestamp=getBookingEventTimestamp(bookingDate,bookingTime);
