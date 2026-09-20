@@ -171,9 +171,34 @@ if (url.pathname === "/api/offers") {
 
     if (url.pathname === "/api/partner-stats") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
+      try{
+        const requestedRef=url.searchParams.get("ref")?.trim()||"";
+        if(!requestedRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);
+        if(isAdmin(request,env))return json(await getPartnerStats(env,requestedRef),200,corsHeaders);
+        const authenticatedRef=await authenticatePartner(request,env);
+        if(!authenticatedRef||authenticatedRef!==requestedRef)return json({error:"Unauthorized"},401,corsHeaders);
+        return json(await getPartnerStats(env,authenticatedRef),200,corsHeaders);
+      }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
+    }
+
+    if (url.pathname === "/api/admin/partner-token") {
+      if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
       if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key not configured"},500,corsHeaders);
       if(!isAdmin(request,env))return json({error:"Unauthorized"},401,corsHeaders);
-      try{const partnerRef=url.searchParams.get("ref")?.trim()||"";if(!partnerRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);return json(await getPartnerStats(env,partnerRef),200,corsHeaders)}catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
+      try{
+        await ensurePartnersTable(env);
+        await ensurePartnerAuthTable(env);
+        const body=await request.json();
+        const partnerRef=String(body.partnerRef||"").trim().toUpperCase();
+        if(!partnerRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);
+        const partner=await env.DB.prepare("SELECT partner_ref,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
+        if(!partner)return json({error:"Partner nicht gefunden"},404,corsHeaders);
+        if(Number(partner.active)!==1)return json({error:"Dieser Partner ist deaktiviert."},400,corsHeaders);
+        const token=generatePartnerToken();
+        const tokenHash=await hashPartnerToken(token);
+        await env.DB.prepare("INSERT INTO partner_auth_tokens (partner_ref,token_hash,updated_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(partner_ref) DO UPDATE SET token_hash=excluded.token_hash,updated_at=CURRENT_TIMESTAMP").bind(partnerRef,tokenHash).run();
+        return json({success:true,partnerRef,dashboardUrl:"/partner.html?ref="+encodeURIComponent(partnerRef)+"#token="+token,token},200,corsHeaders);
+      }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
 
     if (url.pathname === "/api/admin/partners") {
@@ -414,6 +439,32 @@ function isAdmin(request,env){return request.headers.get("Authorization")==="Bea
 async function ensurePartnersTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'Hotel',partner_ref TEXT NOT NULL UNIQUE,contact_name TEXT,contact_email TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   try{await env.DB.prepare("ALTER TABLE partners ADD COLUMN active INTEGER NOT NULL DEFAULT 1").run()}catch(e){}
+}
+async function ensurePartnerAuthTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_auth_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL UNIQUE,token_hash TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_auth_tokens_hash ON partner_auth_tokens(token_hash)").run();
+}
+function generatePartnerToken(){
+  const bytes=new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function hashPartnerToken(token){
+  const data=new TextEncoder().encode(String(token||""));
+  const digest=await crypto.subtle.digest("SHA-256",data);
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function authenticatePartner(request,env){
+  if(!env.DB)return null;
+  const authorization=String(request.headers.get("Authorization")||"");
+  if(!authorization.startsWith("Bearer "))return null;
+  const token=authorization.slice(7).trim();
+  if(!/^[a-f0-9]{64}$/.test(token))return null;
+  await ensurePartnerAuthTable(env);
+  const tokenHash=await hashPartnerToken(token);
+  const partner=await env.DB.prepare("SELECT p.partner_ref,p.active FROM partner_auth_tokens t JOIN partners p ON p.partner_ref=t.partner_ref WHERE t.token_hash=? LIMIT 1").bind(tokenHash).first();
+  if(!partner||Number(partner.active)!==1)return null;
+  return String(partner.partner_ref||"");
 }
 async function ensurePayoutsTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
