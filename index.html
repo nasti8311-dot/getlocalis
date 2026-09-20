@@ -1782,7 +1782,7 @@
    CONFIG
 ============================================================ */
 
-let currentLang = 'de';
+let currentLang = localStorage.getItem('fiiviu_language') || 'de';
 let currentCurrency = 'EUR';
 
 const currencyRates = {
@@ -3514,7 +3514,6 @@ function changeLanguage(lang) {
     updateLanguageSelector();
 
     document.documentElement.lang = lang;
-    updateLanguageSelector();
 
     const translation =
         translations[lang];
