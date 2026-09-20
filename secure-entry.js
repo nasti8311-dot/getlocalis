@@ -68,24 +68,6 @@ export default {
       return adminWorker.fetch(request, env, ctx);
     }
 
-    if (url.pathname === "/api/partner-stats") {
-      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-      if (request.method !== "GET") {
-        return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
-          status: 405,
-          headers: { ...CORS, "Content-Type": "application/json" }
-        });
-      }
-      const expected = String(env.ADMIN_PAYOUT_KEY || "").trim();
-      const provided = String(request.headers.get("Authorization") || "");
-      if (!expected || provided !== "Bearer " + expected) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...CORS, "Content-Type": "application/json" }
-        });
-      }
-    }
-
     return marketplaceWorker.fetch(request, env, ctx);
   }
 };
