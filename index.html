@@ -243,14 +243,27 @@
                     <option value="RON">lei RON</option>
                 </select>
 
-                <select
-                    id="lang-select"
-                    onchange="changeLanguage(this.value)"
-                    class="bg-white border border-black/10 text-gray-700 text-xs sm:text-sm font-semibold py-2 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-fii-orange cursor-pointer">
-                    <option value="de">DE</option>
-                    <option value="en">EN</option>
-                    <option value="ro">RO</option>
-                </select>
+                <div id="lang-select"
+                     class="flex items-center gap-1 bg-white border border-black/10 rounded-xl p-1">
+                    <button type="button" data-lang="de" onclick="changeLanguage('de')"
+                            class="lang-btn flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition"
+                            title="Deutsch">
+                        <span>DE</span>
+                        <span class="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-sm leading-none">🇩🇪</span>
+                    </button>
+                    <button type="button" data-lang="en" onclick="changeLanguage('en')"
+                            class="lang-btn flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition"
+                            title="English">
+                        <span>EN</span>
+                        <span class="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-sm leading-none">🇬🇧</span>
+                    </button>
+                    <button type="button" data-lang="ro" onclick="changeLanguage('ro')"
+                            class="lang-btn flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition"
+                            title="Română">
+                        <span>RO</span>
+                        <span class="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-sm leading-none">🇷🇴</span>
+                    </button>
+                </div>
 
                 <button
                     onclick="toggleMobileMenu()"
@@ -1403,20 +1416,20 @@
                 <div class="space-y-3 text-sm text-white/50">
 
                     <a
-                        href="/legal/impressum.html"
+                        href="/legal/impressum.html" onclick="openLegalPage('/legal/impressum.html'); return false;"
                         class="block hover:text-white"
                         data-i18n="imprint">
                         Impressum
                     </a>
 
                     <a
-                        href="/legal/politica-de-confidentialitate.html"
+                        href="/legal/politica-de-confidentialitate.html" onclick="openLegalPage('/legal/politica-de-confidentialitate.html'); return false;"
                         class="block hover:text-white"
                         data-i18n="privacy">
                         Datenschutz
                     </a>
 <a
-    href="/legal/termeni-si-conditii.html"
+    href="/legal/termeni-si-conditii.html" onclick="openLegalPage('/legal/termeni-si-conditii.html'); return false;"
     class="block hover:text-white"
     data-i18n="terms_link">
     AGB & Buchungsbedingungen
@@ -3480,11 +3493,28 @@ function updateDetailPrice() {
    LANGUAGE
 ============================================================ */
 
+function updateLanguageSelector() {
+    document.querySelectorAll("#lang-select .lang-btn").forEach(button => {
+        const active = button.dataset.lang === currentLang;
+        button.classList.toggle("bg-[#151515]", active);
+        button.classList.toggle("text-white", active);
+        button.classList.toggle("text-gray-700", !active);
+    });
+}
+
+function openLegalPage(path) {
+    const separator = path.includes("?") ? "&" : "?";
+    window.location.href = path + separator + "lang=" + encodeURIComponent(currentLang);
+}
+
 function changeLanguage(lang) {
 
     currentLang = lang;
+    localStorage.setItem("fiiviu_language", lang);
+    updateLanguageSelector();
 
     document.documentElement.lang = lang;
+    updateLanguageSelector();
 
     const translation =
         translations[lang];
