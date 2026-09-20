@@ -57,7 +57,11 @@ const CORS = {
 };
 
 export default {
-  async scheduled(controller, env, ctx) {\n    try { await releaseDueProviderSettlements(env); } catch (error) { console.error("FiiViu settlement cron failed", error); }\n  },\n\n  async fetch(request, env, ctx) {
+  async scheduled(controller, env, ctx) {
+    try { await releaseDueProviderSettlements(env); } catch (error) { console.error("FiiViu settlement cron failed", error); }
+  },
+
+  async fetch(request, env, ctx) {
     globalThis.__fiiviuDB = env.DB || null;
     globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
     const url = new URL(request.url);
