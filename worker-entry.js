@@ -4,7 +4,7 @@ import legacyWorker from "./worker.js";
 const EMAILJS_SERVICE_ID = "service_0fqphlf";
 const EMAILJS_TEMPLATE_ID = "template_x2mmo2p";
 const EMAILJS_PUBLIC_KEY = "Q_tJ6LhJkeMcVE0U4";
-const DEFAULT_APP_URL = "https://getlocalis.nasti8311.workers.dev";
+const DEFAULT_APP_URL = "https://fiiviu.ro";
 const CANCELLATION_HOURS = 24;
 const BOOKING_TIME_ZONE = "Europe/Bucharest";
 
