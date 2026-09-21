@@ -97,6 +97,95 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/admin/settlement-status") {
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: CORS });
+      }
+      if (request.method !== "GET") {
+        return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+          status: 405,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+      if (!env.ADMIN_PAYOUT_KEY || request.headers.get("Authorization") !== "Bearer " + String(env.ADMIN_PAYOUT_KEY)) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+      if (!env.DB) {
+        return new Response(JSON.stringify({ error: "D1 database not configured" }), {
+          status: 500,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+      const bookingId = String(url.searchParams.get("booking_id") || "").trim();
+      if (!bookingId) {
+        return new Response(JSON.stringify({ error: "booking_id is required" }), {
+          status: 400,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+      try {
+        const row = await env.DB.prepare(`
+          SELECT
+            booking_id,
+            payment_intent_id,
+            settlement_status,
+            total_amount_cents,
+            provider_amount_cents,
+            fiiviu_amount_cents,
+            partner_amount_cents,
+            provider_transfer_amount_cents,
+            provider_transfer_currency,
+            provider_transfer_id,
+            settlement_test_transfer_id,
+            settlement_last_attempt_at,
+            settlement_error,
+            release_at,
+            updated_at
+          FROM booking_settlements
+          WHERE booking_id=?
+          LIMIT 1
+        `).bind(bookingId).first();
+        if (!row) {
+          return new Response(JSON.stringify({ error: "Settlement not found", booking_id: bookingId }), {
+            status: 404,
+            headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          });
+        }
+        return new Response(JSON.stringify({
+          success: true,
+          settlement: {
+            booking_id: row.booking_id,
+            payment_intent_id: row.payment_intent_id,
+            settlement_status: row.settlement_status,
+            total_amount_cents: Number(row.total_amount_cents || 0),
+            provider_amount_cents: Number(row.provider_amount_cents || 0),
+            fiiviu_amount_cents: Number(row.fiiviu_amount_cents || 0),
+            partner_amount_cents: Number(row.partner_amount_cents || 0),
+            provider_transfer_amount_cents: Number(row.provider_transfer_amount_cents || 0),
+            provider_transfer_currency: row.provider_transfer_currency || null,
+            provider_transfer_id: row.provider_transfer_id || null,
+            settlement_test_transfer_id: row.settlement_test_transfer_id || null,
+            settlement_last_attempt_at: row.settlement_last_attempt_at || null,
+            settlement_error: row.settlement_error || null,
+            release_at: row.release_at || null,
+            updated_at: row.updated_at || null
+          }
+        }), {
+          status: 200,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      } catch (error) {
+        console.error("FiiViu settlement status lookup failed", error);
+        return new Response(JSON.stringify({ error: error?.message || "Settlement status lookup failed" }), {
+          status: 500,
+          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+    }
+
     if (url.pathname.startsWith("/api/admin/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: CORS });
