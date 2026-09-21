@@ -19,7 +19,10 @@ export default {
   async fetch(request, env, ctx) {
     globalThis.__fiiviuDB=env.DB||null; globalThis.__fiiviuPublicAppUrl=env.PUBLIC_APP_URL||"https://getlocalis.nasti8311.workers.dev";
     const url=new URL(request.url);
-    if(url.pathname==="/api/provider/connect-onboarding")return handleProviderConnectOnboarding(request,env);\n    if(url.pathname==="/api/provider/connect-onboarding/refresh")return handleProviderConnectOnboardingRefresh(request,env);\n    if(url.pathname==="/api/provider/connect-status")return handleProviderConnectStatus(request,env);\n    if(url.pathname==="/api/provider/experiences")return handleProviderExperiences(request,env);
+    if(url.pathname==="/api/provider/connect-onboarding")return handleProviderConnectOnboarding(request,env);
+    if(url.pathname==="/api/provider/connect-onboarding/refresh")return handleProviderConnectOnboardingRefresh(request,env);
+    if(url.pathname==="/api/provider/connect-status")return handleProviderConnectStatus(request,env);
+    if(url.pathname==="/api/provider/experiences")return handleProviderExperiences(request,env);
     if(url.pathname==="/api/provider/bookings")return handleProviderBookings(request,env);
     if(url.pathname==="/api/booking"&&request.method==="GET")return handleBookingLookup(request,env);
     if(url.pathname==="/api/booking-access-url"&&request.method==="GET")return handleBookingAccessUrl(request,env);
