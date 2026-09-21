@@ -65,9 +65,9 @@ async function verifyOnboardingToken(env,token){
   const parts=String(token||"").split(".");
   if(parts.length!==2)throw new Error("Invalid onboarding token.");
   const [body,sig]=parts;
-  const expected=await signOnboardingPayload(env,JSON.parse(atob(body.replace(/-/g,"+").replace(/_/g,"/")+"==".slice((body.length+3)%4))));
+  const decodedBody=body.replace(/-/g,"+").replace(/_/g,"/");const padding="=".repeat((4-decodedBody.length%4)%4);const expected=await signOnboardingPayload(env,JSON.parse(atob(decodedBody+padding)));
   if(expected.split(".")[1]!==sig)throw new Error("Invalid onboarding token.");
-  const payload=JSON.parse(atob(body.replace(/-/g,"+").replace(/_/g,"/")+"==".slice((body.length+3)%4)));
+  const payload=JSON.parse(atob(decodedBody+padding));
   if(Number(payload.exp||0)<Math.floor(Date.now()/1000))throw new Error("Onboarding token expired.");
   if(!/^acct_[A-Za-z0-9]+$/.test(String(payload.account||"")))throw new Error("Invalid onboarding account.");
   return payload;
