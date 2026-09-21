@@ -30,7 +30,7 @@ if (!globalThis.__fiiviuSecureEmailPatch) {
                 .bind(token, booking.id)
                 .run();
             }
-            const base = String(globalThis.__fiiviuPublicAppUrl || "https://getlocalis.nasti8311.workers.dev").replace(/\/$/, "");
+            const base = String(globalThis.__fiiviuPublicAppUrl || "https://fiiviu.ro").replace(/\/$/, "");
             const bookingUrl = `${base}/booking.html?id=${encodeURIComponent(booking.booking_id)}&token=${encodeURIComponent(token)}`;
             params.booking_url = bookingUrl;
             params.booking_link = bookingUrl;
@@ -63,7 +63,7 @@ export default {
 
   async fetch(request, env, ctx) {
     globalThis.__fiiviuDB = env.DB || null;
-    globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://getlocalis.nasti8311.workers.dev";
+    globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://fiiviu.ro";
     const url = new URL(request.url);
 
     if (url.pathname === "/api/admin/settlement-run") {
