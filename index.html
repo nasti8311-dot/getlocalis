@@ -2723,7 +2723,7 @@ const translations = {
    PUBLIC ORGANIZER OFFERS
 ============================================================ */
 
-const PUBLIC_API_BASE = "https://getlocalis.nasti8311.workers.dev";
+const PUBLIC_API_BASE = "";
 
 const categoryFallbackImages = {
     explore: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1000",
@@ -3736,7 +3736,7 @@ async function createPaymentIntent({
 
 const response =
     await fetch(
-    "https://getlocalis.nasti8311.workers.dev/api/create-payment-intent?ref=" +
+    "/api/create-payment-intent?ref=" +
     encodeURIComponent(partnerRef),
     {
             method: "POST",
@@ -3935,7 +3935,7 @@ async function processBooking(event) {
         // Finalize the booking immediately. The Stripe webhook remains
         // as a second idempotent safety net.
         const finalizeResponse = await fetch(
-            "https://getlocalis.nasti8311.workers.dev/api/finalize-booking",
+            "/api/finalize-booking",
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
