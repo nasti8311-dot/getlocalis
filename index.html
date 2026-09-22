@@ -268,8 +268,8 @@
             <nav class="hidden lg:flex items-center gap-9 text-sm font-semibold">
                 <a href="#" onclick="showView('home-view'); return false;" class="text-white border-b-2 border-white pb-2" data-i18n="nav_home">Experiences</a>
                 <a href="#" onclick="showCategory('explore'); return false;" class="text-white/80 hover:text-white transition" data-i18n="nav_explore">Explore</a>
-                <a href="#" onclick="openProviderPage(); return false;" class="text-white/80 hover:text-white transition">For Providers</a>
-                <a href="#" onclick="openPartnerPage(); return false;" class="text-white/80 hover:text-white transition">For Partners</a>
+                <a href="#" onclick="window.location.href='provider.html'; return false;" class="text-white/80 hover:text-white transition">For Providers</a>
+                <a href="#" onclick="window.location.href='partner.html'; return false;" class="text-white/80 hover:text-white transition">For Partners</a>
             </nav>
 
             <div class="flex items-center gap-2">
@@ -289,8 +289,8 @@
             <div class="grid gap-2 text-sm font-semibold">
                 <button onclick="mobileNavigate('home-view')" class="text-left p-3 rounded-xl bg-white/10" data-i18n="nav_home">Experiences</button>
                 <button onclick="mobileCategory('explore')" class="text-left p-3 rounded-xl bg-white/10" data-i18n="nav_explore">Explore</button>
-                <button onclick="openProviderPage(); toggleMobileMenu()" class="text-left p-3 rounded-xl bg-white/10">For Providers</button>
-                <button onclick="openPartnerPage(); toggleMobileMenu()" class="text-left p-3 rounded-xl bg-white/10">For Partners</button>
+                <button onclick="window.location.href='provider.html'" class="text-left p-3 rounded-xl bg-white/10">For Providers</button>
+                <button onclick="window.location.href='partner.html'" class="text-left p-3 rounded-xl bg-white/10">For Partners</button>
             </div>
         </div>
     </div>
@@ -531,14 +531,14 @@
     </section>
 
 
-    <section class="bg-white py-20 border-y border-black/5">
+    <section class="bg-[#F8F6F1] py-20 border-y border-black/5 relative overflow-hidden">
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <div class="flex flex-col md:flex-row justify-between md:items-end gap-5 mb-10">
 
                 <div>
-                    <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
+                    <span class="text-[#f13d9a] font-black text-xs uppercase tracking-[.22em]"
                           data-i18n="featured_label">
                         Jetzt entdecken
                     </span>
@@ -3060,7 +3060,7 @@ function createExperienceCard(item, categoryKey) {
     const card = document.createElement("article");
 
     card.className =
-        "experience-card bg-white rounded-3xl overflow-hidden border border-black/5 cursor-pointer flex flex-col";
+        "experience-card bg-white rounded-[28px] overflow-hidden border border-black/5 cursor-pointer flex flex-col shadow-sm";
 
     card.onclick = () => {
         showDetail(categoryKey, item.id);
@@ -3084,7 +3084,7 @@ function createExperienceCard(item, categoryKey) {
 
     card.innerHTML = `
 
-        <div class="h-60 overflow-hidden relative">
+        <div class="h-64 overflow-hidden relative">
 
             <img
                 src="${item.img}"
@@ -3093,9 +3093,13 @@ function createExperienceCard(item, categoryKey) {
 
             <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent"></div>
 
-            <span class="absolute top-4 left-4 bg-white/90 backdrop-blur text-fii-black text-xs font-black px-3 py-1.5 rounded-full">
+            <span class="absolute top-4 left-4 bg-gradient-to-r from-cyan-400 to-pink-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg">
                 ${escapeHtml(badge)}
             </span>
+
+            <button type="button" aria-label="Favorite" onclick="event.stopPropagation()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/25 backdrop-blur-md text-white flex items-center justify-center hover:bg-white hover:text-pink-500 transition">
+                <i class="fa-regular fa-heart"></i>
+            </button>
 
             <div class="absolute bottom-5 left-5 right-5 flex justify-between items-end">
 
@@ -3108,7 +3112,7 @@ function createExperienceCard(item, categoryKey) {
 
                 </div>
 
-                <div class="bg-fii-orange text-white font-black px-3 py-1.5 rounded-xl">
+                <div class="bg-white/95 text-[#152a3d] font-black px-4 py-2 rounded-2xl shadow-lg">
                     ${formatPrice(item.price)}
                 </div>
 
@@ -3117,7 +3121,7 @@ function createExperienceCard(item, categoryKey) {
         </div>
 
 
-        <div class="p-6 flex flex-col flex-grow">
+        <div class="p-5 flex flex-col flex-grow">
 
             <h3 class="text-xl font-black leading-tight">
                 ${escapeHtml(title)}
@@ -3129,7 +3133,7 @@ function createExperienceCard(item, categoryKey) {
                 ${escapeHtml(description)}
             </p>
 
-            <div class="mt-5 pt-4 border-t border-black/5 text-fii-orange font-bold text-sm flex items-center justify-between">
+            <div class="mt-5 pt-4 border-t border-black/5 text-[#0bbbc5] font-bold text-sm flex items-center justify-between">
 
                 <span>
                     ${translations[currentLang].explore_btn || "Entdecken"}
@@ -3502,7 +3506,7 @@ function updateDetailPrice() {
 function updateLanguageSelector() {
     document.querySelectorAll("#lang-select .lang-btn").forEach(button => {
         const active = button.dataset.lang === currentLang;
-        button.classList.toggle("bg-[#151515]", active);
+        button.classList.toggle("bg-white", active);
         button.classList.toggle("text-white", active);
         button.classList.toggle("text-gray-700", !active);
     });
