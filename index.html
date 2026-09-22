@@ -230,58 +230,740 @@
             background: #F8F6F1;
             border-radius: 50% 50% 0 0 / 45% 45% 0 0;
         }
+    
+/* ============================================================
+   FIIVIU HOMEPAGE — visual system matching the supplied design
+============================================================ */
+:root {
+    --fiiviu-cyan: #08c8d2;
+    --fiiviu-cyan-dark: #06b7c7;
+    --fiiviu-pink: #f23b98;
+    --fiiviu-orange: #ff9a3d;
+    --fiiviu-navy: #0f2d45;
+    --fiiviu-bg: #f8fafb;
+}
+
+.fiiviu-shell {
+    width: min(100% - 64px, 1200px);
+    margin-inline: auto;
+}
+
+.fiiviu-header {
+    color: #fff;
+}
+
+.fiiviu-nav {
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    border-bottom: 1px solid rgba(255,255,255,.16);
+}
+
+.fiiviu-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.fiiviu-brand-mark {
+    position: relative;
+    width: 48px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 1000;
+    font-size: 30px;
+    letter-spacing: -10px;
+    line-height: 1;
+    transform: skewX(-7deg);
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.16));
+}
+
+.fiiviu-brand-mark::before {
+    content: "";
+    position: absolute;
+    inset: 5px 7px 4px 4px;
+    background: linear-gradient(135deg, #15d2d5 5%, #4c91ee 35%, #ee4a9b 67%, #ff9c40 100%);
+    clip-path: polygon(4% 16%, 41% 0, 57% 34%, 75% 4%, 100% 13%, 73% 100%, 48% 65%, 28% 100%);
+    opacity: .95;
+}
+
+.fiiviu-mark-f, .fiiviu-mark-v {
+    position: relative;
+    z-index: 1;
+    -webkit-text-stroke: 2px rgba(255,255,255,.35);
+    text-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+.fiiviu-mark-f { color: #21d4d7; }
+.fiiviu-mark-v { color: #f34b9d; margin-left: 3px; }
+
+.fiiviu-brand-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+.fiiviu-brand-copy strong {
+    font-size: 26px;
+    letter-spacing: -.045em;
+    font-weight: 900;
+}
+.fiiviu-brand-copy strong span { color: #ff719f; }
+.fiiviu-brand-copy small {
+    margin-top: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: .01em;
+    color: rgba(255,255,255,.9);
+}
+
+.fiiviu-main-nav {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    margin-left: auto;
+    margin-right: 20px;
+}
+.fiiviu-main-nav a {
+    color: rgba(255,255,255,.88);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 650;
+    transition: color .2s ease, opacity .2s ease;
+}
+.fiiviu-main-nav a:hover { color: #fff; }
+.fiiviu-main-nav a.is-active {
+    color: #fff;
+    position: relative;
+}
+.fiiviu-main-nav a.is-active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -29px;
+    height: 2px;
+    background: #fff;
+    border-radius: 2px;
+}
+
+.fiiviu-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.fiiviu-language, .fiiviu-account, .fiiviu-bookings {
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+.fiiviu-language {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.fiiviu-language .fa-chevron-down { font-size: 9px; opacity: .8; }
+.fiiviu-account {
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255,255,255,.75);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+}
+.fiiviu-bookings {
+    border: 1px solid rgba(255,255,255,.55);
+    border-radius: 999px;
+    padding: 11px 19px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: background .2s ease, transform .2s ease;
+}
+.fiiviu-bookings:hover {
+    background: rgba(255,255,255,.12);
+    transform: translateY(-1px);
+}
+.fiiviu-mobile-toggle { display: none; }
+.fiiviu-mobile-menu { display: none; }
+
+.fiiviu-hero {
+    position: relative;
+    min-height: 610px;
+    overflow: hidden;
+    color: #fff;
+    isolation: isolate;
+}
+.fiiviu-hero-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url("https://images.unsplash.com/photo-1550951196-1992d5cb8c2a?auto=format&fit=crop&fm=jpg&q=88&w=2400");
+    background-size: cover;
+    background-position: center 57%;
+    transform: scale(1.02);
+}
+.fiiviu-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(0,179,204,.92) 0%, rgba(5,188,202,.76) 26%, rgba(19,121,185,.30) 52%, rgba(220,45,130,.62) 80%, rgba(255,147,54,.75) 100%),
+        linear-gradient(180deg, rgba(0,35,65,.10), rgba(0,23,44,.18));
+    mix-blend-mode: multiply;
+}
+.fiiviu-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0,193,211,.2), transparent 55%, rgba(255,105,145,.16));
+    z-index: 1;
+}
+.fiiviu-hero-shapes {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: .7;
+}
+.fiiviu-hero-shapes .hs {
+    position: absolute;
+    display: block;
+    border: 1px solid rgba(255,255,255,.28);
+    background: rgba(255,255,255,.06);
+}
+.hs-1 { width: 66px; height: 66px; left: 15px; top: 64px; transform: rotate(45deg); clip-path: polygon(50% 0,100% 100%,0 100%); }
+.hs-2 { width: 54px; height: 54px; left: 51px; top: 370px; transform: rotate(20deg); clip-path: polygon(50% 0,100% 100%,0 100%); }
+.hs-3 { width: 78px; height: 78px; left: 0; bottom: 42px; transform: rotate(32deg); clip-path: polygon(50% 0,100% 100%,0 100%); }
+.hs-4 { width: 72px; height: 72px; right: 10px; top: 32px; border-radius: 50%; border-style: dashed; }
+.hs-5 { width: 115px; height: 115px; right: -12px; top: 0; border-radius: 50%; }
+.hs-6 { width: 58px; height: 58px; right: 21%; top: 160px; transform: rotate(45deg); clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%); }
+.hs-7 { width: 44px; height: 44px; right: 35%; top: 120px; transform: rotate(15deg); clip-path: polygon(50% 0,100% 100%,0 100%); }
+
+.fiiviu-hero-inner {
+    position: relative;
+    z-index: 4;
+    min-height: 610px;
+    padding-top: 115px;
+    padding-bottom: 36px;
+}
+.fiiviu-hero-copy {
+    max-width: 690px;
+    padding-top: 34px;
+}
+.fiiviu-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .25em;
+    margin-bottom: 12px;
+}
+.fiiviu-eyebrow::after {
+    content: "";
+    width: 34px;
+    height: 2px;
+    background: linear-gradient(90deg,#00d6d8,#f34b9d);
+}
+.fiiviu-hero-copy h1 {
+    margin: 0;
+    font-size: clamp(52px, 5.2vw, 82px);
+    line-height: .94;
+    letter-spacing: -.055em;
+    font-weight: 900;
+    text-shadow: 0 8px 24px rgba(0,0,0,.10);
+}
+.fiiviu-hero-copy h1 span {
+    background: linear-gradient(90deg,#68e8e6 0%, #25cdd1 32%, #f44a9c 68%, #ffac4c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.fiiviu-hero-copy p {
+    margin: 20px 0 0;
+    font-size: 18px;
+    line-height: 1.5;
+    font-weight: 520;
+    color: rgba(255,255,255,.95);
+}
+
+.fiiviu-searchbar {
+    margin-top: 26px;
+    width: 100%;
+    min-height: 66px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 7px;
+    background: #fff;
+    border-radius: 999px;
+    box-shadow: 0 18px 44px rgba(0,0,0,.20);
+    color: #17334a;
+}
+.fiiviu-search-field {
+    min-width: 0;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    color: #193a55;
+    border: 0;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.fiiviu-search-field i:first-child { color: #143a5b; font-size: 17px; }
+.fiiviu-search-main { flex: 1.55; cursor: text; }
+.fiiviu-search-main input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #18354d;
+    font: inherit;
+}
+.fiiviu-search-main input::placeholder { color: #7890a4; font-weight: 500; }
+.fiiviu-search-field:not(.fiiviu-search-main) { flex: 1; }
+.fiiviu-search-field .fiiviu-chevron { margin-left: auto; font-size: 9px; color: #7690a3; }
+.fiiviu-search-divider {
+    width: 1px;
+    height: 34px;
+    background: #e2e8ed;
+    flex: 0 0 auto;
+}
+.fiiviu-search-submit {
+    flex: 0 0 auto;
+    height: 52px;
+    padding: 0 25px;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 13px;
+    cursor: pointer;
+    background: linear-gradient(90deg,#06cbd0 0%, #f13f98 58%, #ff9b43 100%);
+    box-shadow: 0 8px 20px rgba(245,64,146,.25);
+}
+.fiiviu-search-submit i { font-size: 14px; }
+
+.fiiviu-trust-row {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 20px;
+}
+.fiiviu-trust-item {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+.fiiviu-trust-item > span:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.fiiviu-trust-item strong { font-size: 13px; font-weight: 850; }
+.fiiviu-trust-item small { font-size: 11px; color: rgba(255,255,255,.88); }
+.fiiviu-trust-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    position: relative;
+    color: #fff;
+    font-size: 25px;
+}
+.fiiviu-icon-check {
+    position: absolute;
+    font-size: 10px;
+    top: 9px;
+    left: 14px;
+}
+.fiiviu-trust-item:nth-of-type(2) .fiiviu-trust-icon { color: #ffd36b; }
+.fiiviu-trust-item:nth-of-type(3) .fiiviu-trust-icon { color: #ffe06d; }
+.fiiviu-trust-item:nth-of-type(4) .fiiviu-trust-icon { color: #fff; }
+.fiiviu-trust-separator {
+    width: 1px;
+    height: 34px;
+    background: rgba(255,255,255,.28);
+}
+
+.fiiviu-featured-section {
+    position: relative;
+    background: #fff;
+    margin-top: -1px;
+    padding: 50px 0 60px;
+    border-radius: 50% 50% 0 0 / 38px 38px 0 0;
+}
+.fiiviu-featured-section::before {
+    content: "";
+    position: absolute;
+    top: -36px;
+    left: -4%;
+    width: 108%;
+    height: 70px;
+    background: #fff;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+.fiiviu-featured-section > * { position: relative; z-index: 2; }
+.fiiviu-featured-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 30px;
+}
+.fiiviu-section-kicker {
+    color: #f13f98;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+}
+.fiiviu-featured-head h2 {
+    margin: 7px 0 7px;
+    color: #15344c;
+    font-size: clamp(34px, 3.1vw, 46px);
+    line-height: 1.02;
+    letter-spacing: -.04em;
+    font-weight: 900;
+}
+.fiiviu-featured-head p {
+    margin: 0;
+    color: #63788c;
+    font-size: 15px;
+    line-height: 1.45;
+}
+.fiiviu-view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 13px;
+    border: 1px solid #08bdd0;
+    border-radius: 999px;
+    padding: 12px 19px;
+    background: #fff;
+    color: #08aeca;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.fiiviu-view-all:hover { background: #effcff; }
+
+.fiiviu-featured-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 17px;
+    margin-top: 23px;
+}
+.fiiviu-featured-card {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(15,45,69,.10);
+    cursor: pointer;
+    transition: transform .22s ease, box-shadow .22s ease;
+}
+.fiiviu-featured-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 30px rgba(15,45,69,.16);
+}
+.fiiviu-card-media {
+    position: relative;
+    height: 224px;
+    overflow: hidden;
+}
+.fiiviu-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .5s ease;
+}
+.fiiviu-featured-card:hover .fiiviu-card-media img { transform: scale(1.05); }
+.fiiviu-card-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,.80) 100%);
+}
+.fiiviu-card-category {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(90deg,#00c9d0,#ef3e98);
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .06em;
+}
+.fiiviu-card-heart {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+    width: 31px;
+    height: 31px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+}
+.fiiviu-card-heart:hover { background: rgba(255,255,255,.18); }
+.fiiviu-card-meta {
+    position: absolute;
+    left: 14px;
+    bottom: 13px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 650;
+}
+.fiiviu-card-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.fiiviu-card-meta i { font-size: 12px; }
+.fiiviu-card-body {
+    position: relative;
+    min-height: 91px;
+    padding: 11px 13px 13px;
+}
+.fiiviu-card-body h3 {
+    margin: 0;
+    color: #fff;
+    position: absolute;
+    left: 14px;
+    bottom: 73px;
+    right: 14px;
+    font-size: 17px;
+    line-height: 1.08;
+    font-weight: 850;
+    z-index: 2;
+    text-shadow: 0 2px 8px rgba(0,0,0,.45);
+    pointer-events: none;
+}
+.fiiviu-card-provider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 1px;
+    padding-right: 58px;
+}
+.fiiviu-avatar {
+    width: 31px;
+    height: 31px;
+    flex: 0 0 31px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(135deg,#1d6f9e,#f04d98);
+    font-size: 10px;
+    font-weight: 900;
+}
+.fiiviu-card-provider > span:last-child {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.fiiviu-card-provider strong {
+    color: #1b3a52;
+    font-size: 11px;
+    line-height: 1.1;
+}
+.fiiviu-card-provider small {
+    color: #7890a4;
+    font-size: 9px;
+    margin-top: 2px;
+}
+.fiiviu-card-price {
+    position: absolute;
+    right: 13px;
+    bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+.fiiviu-card-price strong {
+    color: #152f46;
+    font-size: 16px;
+    line-height: 1;
+    font-weight: 900;
+}
+.fiiviu-card-price small {
+    color: #7b8c9b;
+    font-size: 9px;
+    margin-top: 3px;
+}
+
+.fiiviu-below-fold {
+    padding: 85px 0;
+    background: #f7fafc;
+}
+.fiiviu-below-fold span {
+    color: #f13f98;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+}
+.fiiviu-below-fold h2 {
+    color: #15344c;
+    margin: 8px 0;
+    font-size: 42px;
+    font-weight: 900;
+}
+.fiiviu-below-fold p { color: #60788d; }
+
+@media (max-width: 1100px) {
+    .fiiviu-shell { width: min(100% - 40px, 1100px); }
+    .fiiviu-main-nav { gap: 22px; }
+    .fiiviu-featured-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .fiiviu-trust-row { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+    .fiiviu-trust-separator { display: none; }
+}
+@media (max-width: 820px) {
+    .fiiviu-shell { width: min(100% - 28px, 720px); }
+    .fiiviu-main-nav, .fiiviu-language, .fiiviu-account, .fiiviu-bookings { display: none; }
+    .fiiviu-mobile-toggle {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,.5);
+        background: rgba(0,0,0,.08);
+        color: #fff;
+    }
+    .fiiviu-mobile-menu {
+        display: grid;
+        gap: 5px;
+        padding: 12px;
+        background: rgba(11,52,76,.92);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 18px;
+        margin-top: 4px;
+    }
+    .fiiviu-mobile-menu.hidden { display: none; }
+    .fiiviu-mobile-menu a {
+        color: #fff;
+        text-decoration: none;
+        padding: 12px;
+        border-radius: 12px;
+        font-weight: 700;
+    }
+    .fiiviu-mobile-menu a:hover { background: rgba(255,255,255,.08); }
+    .fiiviu-hero { min-height: 720px; }
+    .fiiviu-hero-inner { min-height: 720px; padding-top: 110px; }
+    .fiiviu-hero-copy h1 { font-size: clamp(48px, 12vw, 72px); }
+    .fiiviu-searchbar {
+        border-radius: 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+        padding: 8px;
+    }
+    .fiiviu-search-main { grid-column: 1 / -1; }
+    .fiiviu-search-divider { display: none; }
+    .fiiviu-search-submit { width: 100%; justify-content: center; }
+    .fiiviu-trust-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+    .fiiviu-shell { width: min(100% - 22px, 520px); }
+    .fiiviu-brand-copy strong { font-size: 22px; }
+    .fiiviu-brand-copy small { font-size: 11px; }
+    .fiiviu-hero-copy { padding-top: 18px; }
+    .fiiviu-hero-copy h1 { font-size: 50px; }
+    .fiiviu-hero-copy p { font-size: 15px; }
+    .desktop-only { display: none; }
+    .fiiviu-searchbar { grid-template-columns: 1fr; }
+    .fiiviu-search-main { grid-column: auto; }
+    .fiiviu-featured-head { flex-direction: column; align-items: flex-start; }
+    .fiiviu-featured-grid { grid-template-columns: 1fr; }
+    .fiiviu-card-media { height: 250px; }
+    .fiiviu-trust-row { grid-template-columns: 1fr; }
+    .fiiviu-featured-section { padding-top: 42px; }
+}
+
     </style>
 </head>
 
 <body class="text-fii-black font-sans min-h-screen flex flex-col">
 
+
 <!-- ========================================================= -->
 <!-- HEADER -->
 <!-- ========================================================= -->
 
-<header class="absolute top-0 left-0 right-0 z-50 text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="h-[82px] flex items-center justify-between border-b border-white/15">
-
-            <button onclick="showView('home-view')" class="flex items-center gap-3 cursor-pointer">
-                <div class="logo-mark w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                    <span class="font-black text-lg tracking-tighter">FV</span>
-                </div>
-                <div class="text-left leading-none">
-                    <div class="text-2xl font-black tracking-tight text-white">
-                        Fii<span class="text-[#ff6b9e]">Viu</span>
-                    </div>
-                    <div class="text-[10px] uppercase tracking-[.22em] text-white/75 mt-1">Bucharest</div>
-                </div>
+<header class="fiiviu-header absolute top-0 left-0 right-0 z-50 text-white">
+    <div class="fiiviu-shell">
+        <div class="fiiviu-nav">
+            <button onclick="showView('home-view')" class="fiiviu-brand" aria-label="FiiViu Bucharest">
+                <span class="fiiviu-brand-mark" aria-hidden="true">
+                    <span class="fiiviu-mark-f">F</span><span class="fiiviu-mark-v">V</span>
+                </span>
+                <span class="fiiviu-brand-copy">
+                    <strong>Fii<span>Viu</span></strong>
+                    <small>Bucharest</small>
+                </span>
             </button>
 
-            <nav class="hidden lg:flex items-center gap-9 text-sm font-semibold">
-                <a href="#" onclick="showView('home-view'); return false;" class="text-white border-b-2 border-white pb-2" data-i18n="nav_home">Experiences</a>
-                <a href="#" onclick="showCategory('explore'); return false;" class="text-white/80 hover:text-white transition" data-i18n="nav_explore">Explore</a>
-                <a href="#" onclick="window.location.href='provider.html'; return false;" class="text-white/80 hover:text-white transition">For Providers</a>
-                <a href="#" onclick="window.location.href='partner.html'; return false;" class="text-white/80 hover:text-white transition">For Partners</a>
+            <nav class="fiiviu-main-nav" aria-label="Main navigation">
+                <a href="#" onclick="showView('home-view'); return false;" class="is-active">Experiences</a>
+                <a href="#fiiviu-about" onclick="document.getElementById('fiiviu-about')?.scrollIntoView({behavior:'smooth'}); return false;">About</a>
+                <a href="provider.html">For Providers</a>
+                <a href="partner.html">For Partners</a>
             </nav>
 
-            <div class="flex items-center gap-2">
-                <div id="lang-select" class="hidden sm:flex items-center gap-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full p-1">
-                    <button type="button" data-lang="de" onclick="changeLanguage('de')" class="lang-btn px-2.5 py-1.5 rounded-full text-xs font-bold transition text-white" title="Deutsch">DE</button>
-                    <button type="button" data-lang="en" onclick="changeLanguage('en')" class="lang-btn px-2.5 py-1.5 rounded-full text-xs font-bold transition text-white" title="English">EN</button>
-                    <button type="button" data-lang="ro" onclick="changeLanguage('ro')" class="lang-btn px-2.5 py-1.5 rounded-full text-xs font-bold transition text-white" title="Română">RO</button>
-                </div>
-
-                <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+            <div class="fiiviu-nav-actions">
+                <button class="fiiviu-language" type="button" onclick="changeLanguage(currentLang === 'en' ? 'de' : 'en')" aria-label="Change language">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>EN</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <button class="fiiviu-account" type="button" aria-label="Account">
+                    <i class="fa-regular fa-user"></i>
+                </button>
+                <button class="fiiviu-bookings" type="button" onclick="showView('home-view')">My Bookings</button>
+                <button onclick="toggleMobileMenu()" class="fiiviu-mobile-toggle" type="button" aria-label="Open menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
         </div>
 
-        <div id="mobile-menu" class="hidden lg:hidden pb-5 border-t border-white/10 pt-4">
-            <div class="grid gap-2 text-sm font-semibold">
-                <button onclick="mobileNavigate('home-view')" class="text-left p-3 rounded-xl bg-white/10" data-i18n="nav_home">Experiences</button>
-                <button onclick="mobileCategory('explore')" class="text-left p-3 rounded-xl bg-white/10" data-i18n="nav_explore">Explore</button>
-                <button onclick="window.location.href='provider.html'" class="text-left p-3 rounded-xl bg-white/10">For Providers</button>
-                <button onclick="window.location.href='partner.html'" class="text-left p-3 rounded-xl bg-white/10">For Partners</button>
-            </div>
+        <div id="mobile-menu" class="fiiviu-mobile-menu hidden">
+            <a href="#" onclick="mobileNavigate('home-view'); return false;">Experiences</a>
+            <a href="#fiiviu-about" onclick="document.getElementById('fiiviu-about')?.scrollIntoView({behavior:'smooth'}); return false;">About</a>
+            <a href="provider.html">For Providers</a>
+            <a href="partner.html">For Partners</a>
         </div>
     </div>
 </header>
@@ -290,8 +972,10 @@
 <!-- ========================================================= -->
 <!-- MAIN -->
 <!-- ========================================================= -->
+<!-- ========================================================= -->
 
 <main class="flex-grow">
+
 
 
 <!-- ========================================================= -->
@@ -300,379 +984,120 @@
 
 <div id="home-view" class="view-section">
 
-    <section class="hero-bg fiiviu-parliament-hero text-white">
-        <div class="fiiviu-abstracts" aria-hidden="true">
-            <span class="shape shape-a"></span>
-            <span class="shape shape-b"></span>
-            <span class="shape shape-c"></span>
-            <span class="shape shape-d"></span>
-            <span class="shape shape-e"></span>
-            <span class="shape shape-f"></span>
+    <section class="fiiviu-hero">
+        <div class="fiiviu-hero-bg"></div>
+        <div class="fiiviu-hero-overlay"></div>
+        <div class="fiiviu-hero-shapes" aria-hidden="true">
+            <span class="hs hs-1"></span>
+            <span class="hs hs-2"></span>
+            <span class="hs hs-3"></span>
+            <span class="hs hs-4"></span>
+            <span class="hs hs-5"></span>
+            <span class="hs hs-6"></span>
+            <span class="hs hs-7"></span>
         </div>
 
-        <div class="fiiviu-hero-overlay"></div>
+        <div class="fiiviu-shell fiiviu-hero-inner">
+            <div class="fiiviu-hero-copy">
+                <div class="fiiviu-eyebrow">REAL PEOPLE. LOCAL EXPERIENCES.</div>
 
-        <div class="relative z-10 min-h-[760px] flex flex-col items-center justify-center px-5 py-28 text-center">
-            <div class="fade-up flex flex-col items-center w-full max-w-4xl">
-
-                <div class="mb-7 flex flex-col items-center">
-                    <div class="fiiviu-logo-badge w-20 h-20 rounded-[26px] flex items-center justify-center shadow-2xl mb-3">
-                        <span class="font-black text-3xl tracking-[-.12em] text-white">FV</span>
-                    </div>
-                    <div class="text-5xl sm:text-6xl font-black tracking-[-.06em] leading-none">
-                        Fii<span class="text-[#ff7a9e]">Viu</span>
-                    </div>
-                    <div class="mt-2 text-base sm:text-lg uppercase tracking-[.38em] font-semibold text-white/90">
-                        Bucharest
-                    </div>
-                </div>
-
-                <h1 class="text-5xl sm:text-6xl md:text-8xl font-black uppercase tracking-[-.035em] leading-[.88] drop-shadow-2xl">
-                    Bored in<br>
-                    <span class="text-white">Bucharest?</span>
+                <h1>
+                    Discover <span>Bucharest</span><br>
+                    like a local.
                 </h1>
 
-                <div class="mt-8 w-full max-w-2xl rounded-[28px] bg-white p-3 sm:p-4 shadow-[0_25px_80px_rgba(0,0,0,.35)] text-left">
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <div class="flex-1 flex items-center gap-3 rounded-2xl bg-[#f5f6f7] px-5 py-4">
-                            <i class="fa-solid fa-magnifying-glass text-[#08bfc8]"></i>
-                            <input id="hero-search-input" type="text"
-                                   placeholder="What do you want to experience?"
-                                   class="w-full bg-transparent outline-none text-[#172a3b] font-semibold placeholder:text-gray-400">
-                        </div>
-                        <button type="button"
-                                onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})"
-                                class="rounded-2xl px-8 py-4 bg-gradient-to-r from-[#06cbd0] via-[#f33d94] to-[#ff9b45] text-white font-black text-base shadow-lg hover:scale-[1.015] transition">
-                            BOOK NOW
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-3 text-xs font-bold uppercase tracking-[.14em] text-gray-400">
-                        <span>TOURS</span><span>PARTIES</span><span>FOOD</span><span>ADVENTURES</span><span>AND MORE</span>
-                    </div>
-                </div>
-
-                <div class="mt-8 text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-[.08em] drop-shadow-lg">
-                    Book your experience now!
-                </div>
-                <div class="mt-2 text-sm sm:text-base font-semibold text-white/85">
-                    Local experiences. Real moments. Bucharest.
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="section-wave bg-[#F8F6F1] pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-
-        <div class="max-w-2xl mb-12 relative z-10">
-
-            <span class="text-[#f13d9a] font-black text-xs uppercase tracking-[.22em]"
-                  data-i18n="intro_label">
-                FiiViu Moments
-            </span>
-
-            <h2 class="text-4xl md:text-5xl font-black tracking-tight mt-3"
-                data-i18n="intro_title">
-                Nicht einfach etwas unternehmen.
-                Etwas erleben.
-            </h2>
-
-            <p class="text-gray-600 mt-5 leading-relaxed"
-               data-i18n="intro_text">
-                Von kleinen lokalen Entdeckungen bis zu besonderen Tagen:
-                FiiViu kuratiert Erlebnisse, die sich nach Urlaub anfühlen.
-            </p>
-        </div>
-
-
-        <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
-            <div data-category="explore"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Bucharest">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        01
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_explore">
-                        Explore
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_explore_desc">
-                        Geschichte, Kultur & lokale Geschichten.
-                    </p>
-                </div>
-            </div>
-
-
-            <div data-category="relax"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Wellness">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        02
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_relax">
-                        Relax
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_relax_desc">
-                        Spa, Therme & Momente zum Abschalten.
-                    </p>
-                </div>
-            </div>
-
-
-            <div data-category="nightlife"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Nightlife">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        03
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_nightlife">
-                        Nightlife
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_nightlife_desc">
-                        Drinks, Clubs & besondere Nächte.
-                    </p>
-                </div>
-            </div>
-
-
-            <div data-category="adventure"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Adventure">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        04
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_adventure">
-                        Adventure
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_adventure_desc">
-                        Adrenalin, Action & neue Erfahrungen.
-                    </p>
-                </div>
-            </div>
-
-
-            <div data-category="vip"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="VIP">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        05
-                    </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_vip">
-                        VIP
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_vip_desc">
-                        Komfort, Stil & besondere Zugänge.
-                    </p>
-                </div>
-            </div>
-
-
-
-
-        </div>
-    </section>
-
-
-    <section class="bg-[#F8F6F1] py-20 border-y border-black/5 relative overflow-hidden">
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            <div class="flex flex-col md:flex-row justify-between md:items-end gap-5 mb-10">
-
-                <div>
-                    <span class="text-[#f13d9a] font-black text-xs uppercase tracking-[.22em]"
-                          data-i18n="featured_label">
-                        Jetzt entdecken
-                    </span>
-
-                    <h2 class="text-4xl font-black mt-2"
-                        data-i18n="featured_title">
-                        Momente, die bleiben.
-                    </h2>
-                </div>
-
-                <button
-                    onclick="showCategory('explore')"
-                    class="font-bold text-sm text-fii-orange hover:underline">
-                    <span data-i18n="view_all">
-                        Alle Erlebnisse
-                    </span>
-                    <i class="fa-solid fa-arrow-right ml-1"></i>
-                </button>
-
-            </div>
-
-            <div id="featured-grid"
-                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-            </div>
-
-        </div>
-    </section>
-
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-
-        <div class="grid lg:grid-cols-2 gap-14 items-center">
-
-            <div>
-
-                <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]">
-                    FiiViu
-                </span>
-
-                <h2 class="text-4xl md:text-5xl font-black tracking-tight mt-3 leading-tight"
-                    data-i18n="philosophy_title">
-                    Dein Urlaub ist zu kurz,
-                    um ihn mit langweiligen Dingen zu verbringen.
-                </h2>
-
-                <p class="text-gray-600 leading-relaxed mt-6"
-                   data-i18n="philosophy_text">
-                    Wir glauben, dass eine Stadt nicht durch ihre Sehenswürdigkeiten
-                    lebendig wird, sondern durch die Momente, die du dort erlebst.
-                    Deshalb suchen wir Erlebnisse aus, die mehr sind als ein weiterer
-                    Punkt auf deiner To-do-Liste.
+                <p>
+                    Unique tours, authentic experiences, great food<br class="desktop-only">
+                    and unforgettable moments – all in one place.
                 </p>
-
-                <div class="mt-8 flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-full bg-fii-orange text-white flex items-center justify-center">
-                        <i class="fa-solid fa-heart"></i>
-                    </div>
-
-                    <div>
-                        <div class="font-bold"
-                             data-i18n="philosophy_small">
-                            Weniger planen. Mehr erleben.
-                        </div>
-                        <div class="text-xs text-gray-500">
-                            FiiViu · Bucharest
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
-            <div class="relative">
-
-                <img
-                    src="https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?q=85&w=1200"
-                    alt="Bucharest experience"
-                    class="w-full h-[520px] object-cover rounded-[2rem]">
-
-                <div class="absolute -bottom-6 -left-4 md:-left-8 bg-white shadow-2xl rounded-2xl p-5 max-w-xs">
-
-                    <div class="flex gap-3">
-
-                        <div class="w-10 h-10 rounded-xl bg-orange-100 text-fii-orange flex items-center justify-center shrink-0">
-                            <i class="fa-solid fa-location-dot"></i>
-                        </div>
-
-                        <div>
-                            <div class="font-black text-sm"
-                                 data-i18n="local_title">
-                                Made for Bucharest
-                            </div>
-
-                            <div class="text-xs text-gray-500 mt-1"
-                                 data-i18n="local_text">
-                                Kuratiert mit lokalem Blick.
-                            </div>
-                        </div>
-
-                    </div>
-
+            <div class="fiiviu-searchbar" role="search">
+                <div class="fiiviu-search-field fiiviu-search-main">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="hero-search-input" type="text" placeholder="What are you looking for?" aria-label="What are you looking for?">
                 </div>
-
+                <div class="fiiviu-search-divider"></div>
+                <button class="fiiviu-search-field" type="button" onclick="showCategory('explore')">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Bucharest</span>
+                    <i class="fa-solid fa-chevron-down fiiviu-chevron"></i>
+                </button>
+                <div class="fiiviu-search-divider"></div>
+                <button class="fiiviu-search-field" type="button" onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})">
+                    <i class="fa-regular fa-calendar"></i>
+                    <span>Any date</span>
+                    <i class="fa-solid fa-chevron-down fiiviu-chevron"></i>
+                </button>
+                <div class="fiiviu-search-divider"></div>
+                <button class="fiiviu-search-field" type="button" onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})">
+                    <i class="fa-regular fa-user"></i>
+                    <span>2 guests</span>
+                    <i class="fa-solid fa-chevron-down fiiviu-chevron"></i>
+                </button>
+                <button class="fiiviu-search-submit" type="button" onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})">
+                    <span>Search</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
             </div>
 
+            <div class="fiiviu-trust-row">
+                <div class="fiiviu-trust-item">
+                    <span class="fiiviu-trust-icon"><i class="fa-regular fa-shield-check"></i><i class="fa-solid fa-check fiiviu-icon-check"></i></span>
+                    <span><strong>Secure payment</strong><small>Your booking is protected.</small></span>
+                </div>
+                <div class="fiiviu-trust-separator"></div>
+                <div class="fiiviu-trust-item">
+                    <span class="fiiviu-trust-icon"><i class="fa-solid fa-location-dot"></i></span>
+                    <span><strong>Local providers</strong><small>Authentic. Verified. Local.</small></span>
+                </div>
+                <div class="fiiviu-trust-separator"></div>
+                <div class="fiiviu-trust-item">
+                    <span class="fiiviu-trust-icon"><i class="fa-regular fa-star"></i></span>
+                    <span><strong>Top experiences</strong><small>Handpicked by locals.</small></span>
+                </div>
+                <div class="fiiviu-trust-separator"></div>
+                <div class="fiiviu-trust-item">
+                    <span class="fiiviu-trust-icon"><i class="fa-solid fa-feather-pointed"></i></span>
+                    <span><strong>Flexible booking</strong><small>Free cancellation (in most cases).</small></span>
+                </div>
+            </div>
         </div>
     </section>
 
+    <section id="moments" class="fiiviu-featured-section">
+        <div class="fiiviu-shell">
+            <div class="fiiviu-featured-head">
+                <div>
+                    <div class="fiiviu-section-kicker">POPULAR EXPERIENCES</div>
+                    <h2>Top experiences in Bucharest</h2>
+                    <p>From guided city tours to food adventures, discover the<br class="desktop-only"> best of the city with local experts.</p>
+                </div>
+                <button type="button" class="fiiviu-view-all" onclick="showCategory('explore')">
+                    <span>View all experiences</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
 
-    <section class="bg-fii-black text-white">
-
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-20 text-center">
-
-            <span class="text-fii-orange text-xs font-black uppercase tracking-[.2em]">
-                FiiViu
-            </span>
-
-            <h2 class="text-4xl md:text-6xl font-black mt-4"
-                data-i18n="cta_title">
-                Bereit für deinen nächsten Moment?
-            </h2>
-
-            <p class="text-white/60 max-w-xl mx-auto mt-5"
-               data-i18n="cta_text">
-                Such dir etwas aus, das du morgen noch erzählen wirst.
-            </p>
-
-            <button
-                onclick="scrollToMoments()"
-                class="mt-8 bg-fii-orange hover:bg-fii-orangeDark px-8 py-4 rounded-2xl font-bold transition">
-                <span data-i18n="cta_button">
-                    Erlebnisse entdecken
-                </span>
-            </button>
-
+            <div id="featured-grid" class="fiiviu-featured-grid"></div>
         </div>
-
     </section>
 
+    <section id="fiiviu-about" class="fiiviu-below-fold">
+        <div class="fiiviu-shell">
+            <div>
+                <span>FiiViu</span>
+                <h2>Real people. Local experiences.</h2>
+                <p>Discover Bucharest through the people who know it best.</p>
+            </div>
+        </div>
+    </section>
 </div>
 
 
 <!-- ========================================================= -->
 <!-- CATEGORY VIEW -->
+
 <!-- ========================================================= -->
 
 <div id="category-view"
@@ -2955,49 +3380,74 @@ function scrollToMoments() {
    FEATURED
 ============================================================ */
 
+
 function getFeaturedItems() {
-
-    return [
-
-        {
-            item: categoriesData.explore.items[0],
-            category: "explore"
-        },
-
-        {
-            item: categoriesData.relax.items[0],
-            category: "relax"
-        },
-
-        {
-            item: categoriesData.nightlife.items[0],
-            category: "nightlife"
-        }
-
+    const picks = [
+        { item: categoriesData.explore?.items?.[0], category: "explore", label: "CITY TOURS" },
+        { item: categoriesData.relax?.items?.[0], category: "relax", label: "WELLNESS" },
+        { item: categoriesData.nightlife?.items?.[0], category: "nightlife", label: "NIGHTLIFE" },
+        { item: categoriesData.adventure?.items?.[0], category: "adventure", label: "ADVENTURE" }
     ];
 
+    return picks.filter(entry => entry.item);
 }
 
+function featuredInitials(name) {
+    const parts = String(name || "Local Guide").trim().split(/\s+/).filter(Boolean);
+    return (parts.slice(0, 2).map(part => part[0]).join("") || "LG").toUpperCase();
+}
+
+function createFeaturedCard(item, categoryKey, label) {
+    const card = document.createElement("article");
+    card.className = "fiiviu-featured-card";
+    card.onclick = () => showDetail(categoryKey, item.id);
+
+    const title = item.title[currentLang] || item.title.de;
+    const duration = item.duration[currentLang] || item.duration.de;
+    const providerName = String(item.providerName || "").trim() || "Local Guide";
+    const price = formatPrice(item.price);
+    const guestText = item.maxGuests || item.capacity || "2–8";
+
+    card.innerHTML = `
+        <div class="fiiviu-card-media">
+            <img src="${item.img}" alt="${escapeHtml(title)}" loading="lazy">
+            <div class="fiiviu-card-gradient"></div>
+            <span class="fiiviu-card-category">${escapeHtml(label)}</span>
+            <button type="button" class="fiiviu-card-heart" aria-label="Favorite" onclick="event.stopPropagation()">
+                <i class="fa-regular fa-heart"></i>
+            </button>
+            <div class="fiiviu-card-meta">
+                <span><i class="fa-regular fa-clock"></i> ${escapeHtml(duration)}</span>
+                <span><i class="fa-regular fa-user-group"></i> ${escapeHtml(String(guestText))}</span>
+            </div>
+        </div>
+        <div class="fiiviu-card-body">
+            <h3>${escapeHtml(title)}</h3>
+            <div class="fiiviu-card-provider">
+                <span class="fiiviu-avatar">${featuredInitials(providerName)}</span>
+                <span><strong>${escapeHtml(providerName)}</strong><small>Local Guide</small></span>
+            </div>
+            <div class="fiiviu-card-price">
+                <strong>${escapeHtml(price)}</strong>
+                <small>per person</small>
+            </div>
+        </div>
+    `;
+
+    return card;
+}
 
 function renderFeatured() {
-
     const container = document.getElementById("featured-grid");
-
     if (!container) return;
 
     container.innerHTML = "";
 
     getFeaturedItems().forEach(featured => {
-
-        const card = createExperienceCard(
-            featured.item,
-            featured.category
+        container.appendChild(
+            createFeaturedCard(featured.item, featured.category, featured.label)
         );
-
-        container.appendChild(card);
-
     });
-
 }
 
 
