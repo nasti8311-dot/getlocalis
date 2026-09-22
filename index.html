@@ -58,16 +58,69 @@
         }
 
         .hero-bg {
+            position: relative;
+            overflow: hidden;
             background:
-                linear-gradient(
-                    180deg,
-                    rgba(0,0,0,.18) 0%,
-                    rgba(0,0,0,.50) 70%,
-                    rgba(0,0,0,.72) 100%
-                ),
-                url('https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=2000')
-                center/cover no-repeat;
+                radial-gradient(circle at 78% 20%, rgba(255,166,73,.72), transparent 28%),
+                radial-gradient(circle at 72% 62%, rgba(244,51,126,.78), transparent 34%),
+                radial-gradient(circle at 20% 55%, rgba(0,224,220,.72), transparent 38%),
+                linear-gradient(115deg, #08cfd0 0%, #0aa9c7 36%, #8f7fc8 62%, #ef3f83 82%, #ff9a43 100%);
+            min-height: 690px;
         }
+
+        .hero-bg::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: .42;
+            background:
+                linear-gradient(135deg, transparent 0 44%, rgba(255,255,255,.14) 44.2% 44.8%, transparent 45%),
+                linear-gradient(35deg, transparent 0 63%, rgba(255,255,255,.11) 63.2% 63.7%, transparent 64%),
+                radial-gradient(circle at 14% 22%, rgba(255,255,255,.18) 0 2px, transparent 3px),
+                radial-gradient(circle at 88% 74%, rgba(255,255,255,.16) 0 2px, transparent 3px);
+            background-size: auto, auto, 90px 90px, 120px 120px;
+        }
+
+        .hero-pattern {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .hero-pattern span {
+            position: absolute;
+            display: block;
+            border: 1px solid rgba(255,255,255,.25);
+            background: rgba(255,255,255,.06);
+            transform: rotate(25deg);
+        }
+
+        .hero-pattern .p1 { width: 120px; height: 120px; left: -35px; top: 120px; clip-path: polygon(50% 0,100% 100%,0 100%); }
+        .hero-pattern .p2 { width: 90px; height: 90px; left: 7%; bottom: 80px; border-radius: 30px; }
+        .hero-pattern .p3 { width: 170px; height: 170px; right: -50px; top: 40px; border-radius: 50%; }
+        .hero-pattern .p4 { width: 110px; height: 110px; right: 24%; top: 145px; clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%); }
+        .hero-pattern .p5 { width: 140px; height: 140px; right: 7%; bottom: 40px; border-radius: 50%; border-style: dashed; }
+
+        .hero-photo {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: min(55%, 820px);
+            height: 78%;
+            object-fit: cover;
+            object-position: center;
+            opacity: .92;
+            mix-blend-mode: screen;
+            mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,.55) 28%, #000 65%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,.55) 28%, #000 65%);
+        }
+
+        .hero-content { position: relative; z-index: 3; }
+        .hero-search { box-shadow: 0 18px 55px rgba(0,0,0,.22); }
+        .hero-benefit { border-right: 1px solid rgba(255,255,255,.22); }
+        .hero-benefit:last-child { border-right: 0; }
 
         .glass {
             background: rgba(255,255,255,.82);
@@ -162,7 +215,30 @@
         }
 
         .logo-mark {
-            background: linear-gradient(135deg, #E86F2D, #F29A62);
+            background: linear-gradient(135deg, #05c9cf 0%, #ff4f9a 55%, #ff9f45 100%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #ffffff 10%, #73e8e7 38%, #ff5caa 70%, #ffad58 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .section-wave {
+            position: relative;
+            margin-top: -1px;
+        }
+
+        .section-wave::before {
+            content: "";
+            position: absolute;
+            top: -70px;
+            left: -5%;
+            width: 110%;
+            height: 120px;
+            background: #F8F6F1;
+            border-radius: 50% 50% 0 0 / 45% 45% 0 0;
         }
     </style>
 </head>
@@ -173,138 +249,48 @@
 <!-- HEADER -->
 <!-- ========================================================= -->
 
-<header class="sticky top-0 z-50 bg-[#F8F6F1]/90 backdrop-blur-xl border-b border-black/5">
+<header class="absolute top-0 left-0 right-0 z-50 text-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="h-[76px] flex items-center justify-between">
+        <div class="h-[82px] flex items-center justify-between border-b border-white/15">
 
-            <button
-                onclick="showView('home-view')"
-                class="flex items-center gap-3 cursor-pointer">
-
-                <div class="logo-mark w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg">
-                    <i class="fa-solid fa-sparkles"></i>
+            <button onclick="showView('home-view')" class="flex items-center gap-3 cursor-pointer">
+                <div class="logo-mark w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                    <span class="font-black text-lg tracking-tighter">FV</span>
                 </div>
-
                 <div class="text-left leading-none">
-                    <div class="text-xl font-black tracking-tight">
-                        Fii<span class="text-fii-orange">Viu</span>
+                    <div class="text-2xl font-black tracking-tight text-white">
+                        Fii<span class="text-[#ff6b9e]">Viu</span>
                     </div>
-                    <div class="text-[9px] uppercase tracking-[.2em] text-gray-500 mt-1">
-                        Bucharest Moments
-                    </div>
+                    <div class="text-[10px] uppercase tracking-[.22em] text-white/75 mt-1">Bucharest</div>
                 </div>
             </button>
 
-            <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-gray-700">
-
-                <a href="#"
-                   onclick="showView('home-view'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_home">
-                    Start
-                </a>
-
-                <a href="#"
-                   onclick="showCategory('explore'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_explore">
-                    Entdecken
-                </a>
-
-                <a href="#"
-                   onclick="showCategory('relax'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_relax">
-                    Relax
-                </a>
-
-                <a href="#"
-                   onclick="showCategory('nightlife'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_nightlife">
-                    Nightlife
-                </a>
-
-                <a href="#"
-                   onclick="showCategory('adventure'); return false;"
-                   class="hover:text-fii-orange transition"
-                   data-i18n="nav_adventure">
-                    Adventure
-                </a>
+            <nav class="hidden lg:flex items-center gap-9 text-sm font-semibold">
+                <a href="#" onclick="showView('home-view'); return false;" class="text-white border-b-2 border-white pb-2" data-i18n="nav_home">Experiences</a>
+                <a href="#" onclick="showCategory('explore'); return false;" class="text-white/80 hover:text-white transition" data-i18n="nav_explore">Explore</a>
+                <a href="#" onclick="openProviderPage(); return false;" class="text-white/80 hover:text-white transition">For Providers</a>
+                <a href="#" onclick="openPartnerPage(); return false;" class="text-white/80 hover:text-white transition">For Partners</a>
             </nav>
 
             <div class="flex items-center gap-2">
-
-                <select
-                    id="currency-select"
-                    onchange="changeCurrency(this.value)"
-                    class="bg-white border border-black/10 text-gray-700 text-xs sm:text-sm font-semibold py-2 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-fii-orange cursor-pointer">
-                    <option value="EUR">€ EUR</option>
-                    <option value="RON">lei RON</option>
-                </select>
-
-                <div id="lang-select"
-                     class="flex items-center gap-1 bg-white border border-black/10 rounded-xl p-1">
-                    <button type="button" data-lang="de" onclick="changeLanguage('de')"
-                            class="lang-btn flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition"
-                            title="Deutsch">
-                        <span>DE</span>
-                        <span class="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-sm leading-none">🇩🇪</span>
-                    </button>
-                    <button type="button" data-lang="en" onclick="changeLanguage('en')"
-                            class="lang-btn flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition"
-                            title="English">
-                        <span>EN</span>
-                        <span class="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-sm leading-none">🇬🇧</span>
-                    </button>
-                    <button type="button" data-lang="ro" onclick="changeLanguage('ro')"
-                            class="lang-btn flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold transition"
-                            title="Română">
-                        <span>RO</span>
-                        <span class="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-sm leading-none">🇷🇴</span>
-                    </button>
+                <div id="lang-select" class="hidden sm:flex items-center gap-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full p-1">
+                    <button type="button" data-lang="de" onclick="changeLanguage('de')" class="lang-btn px-2.5 py-1.5 rounded-full text-xs font-bold transition text-white" title="Deutsch">DE</button>
+                    <button type="button" data-lang="en" onclick="changeLanguage('en')" class="lang-btn px-2.5 py-1.5 rounded-full text-xs font-bold transition text-white" title="English">EN</button>
+                    <button type="button" data-lang="ro" onclick="changeLanguage('ro')" class="lang-btn px-2.5 py-1.5 rounded-full text-xs font-bold transition text-white" title="Română">RO</button>
                 </div>
 
-                <button
-                    onclick="toggleMobileMenu()"
-                    class="lg:hidden w-10 h-10 rounded-xl bg-white border border-black/10 flex items-center justify-center">
+                <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
         </div>
 
-        <div id="mobile-menu" class="hidden lg:hidden pb-5 border-t border-black/5 pt-4">
+        <div id="mobile-menu" class="hidden lg:hidden pb-5 border-t border-white/10 pt-4">
             <div class="grid gap-2 text-sm font-semibold">
-
-                <button onclick="mobileNavigate('home-view')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_home">
-                    Start
-                </button>
-
-                <button onclick="mobileCategory('explore')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_explore">
-                    Entdecken
-                </button>
-
-                <button onclick="mobileCategory('relax')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_relax">
-                    Relax
-                </button>
-
-                <button onclick="mobileCategory('nightlife')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_nightlife">
-                    Nightlife
-                </button>
-
-                <button onclick="mobileCategory('adventure')"
-                        class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_adventure">
-                    Adventure
-                </button>
+                <button onclick="mobileNavigate('home-view')" class="text-left p-3 rounded-xl bg-white/10" data-i18n="nav_home">Experiences</button>
+                <button onclick="mobileCategory('explore')" class="text-left p-3 rounded-xl bg-white/10" data-i18n="nav_explore">Explore</button>
+                <button onclick="openProviderPage(); toggleMobileMenu()" class="text-left p-3 rounded-xl bg-white/10">For Providers</button>
+                <button onclick="openPartnerPage(); toggleMobileMenu()" class="text-left p-3 rounded-xl bg-white/10">For Partners</button>
             </div>
         </div>
     </div>
@@ -324,51 +310,71 @@
 
 <div id="home-view" class="view-section">
 
-    <section class="hero-bg min-h-[680px] md:min-h-[720px] flex items-end text-white">
+    <section class="hero-bg text-white">
+        <div class="hero-pattern">
+            <span class="p1"></span><span class="p2"></span><span class="p3"></span><span class="p4"></span><span class="p5"></span>
+        </div>
 
-        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-20 md:pb-24">
+        <img class="hero-photo hidden md:block" src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1800" alt="Bucharest">
 
-            <div class="max-w-3xl fade-up">
-
-                <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest mb-6">
-                    <span class="w-2 h-2 rounded-full bg-fii-orange"></span>
-                    Bucharest · Romania
+        <div class="hero-content max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-32 pb-16 md:pt-40 md:pb-14">
+            <div class="max-w-[760px] fade-up">
+                <div class="text-xs sm:text-sm uppercase tracking-[.28em] font-bold text-white/80 mb-5">
+                    Real people. <span class="text-white">Local experiences.</span>
                 </div>
 
-                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[.92] mb-7"
-                    data-i18n="hero_title">
-                    Oprește timpul.<br>
-                    Trăiește momentul.
+                <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-[82px] font-black tracking-tight leading-[.94] mb-6">
+                    Discover <span class="gradient-text">Bucharest</span><br>
+                    like a local.
                 </h1>
 
-                <p class="text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed mb-9"
-                   data-i18n="hero_subtitle">
-                    FiiViu bringt dich zu den Momenten, die du später nicht vergessen willst.
-                    Entdecke Bukarest anders.
+                <p class="text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed mb-8">
+                    Unique tours, authentic experiences, great food and unforgettable moments — all in one place.
                 </p>
 
-                <div class="flex flex-col sm:flex-row gap-3">
-
-                    <button
-                        onclick="scrollToMoments()"
-                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-7 py-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2">
-                        <span data-i18n="hero_cta">
-                            Erlebnisse entdecken
-                        </span>
-                        <i class="fa-solid fa-arrow-right"></i>
+                <div class="hero-search glass rounded-full p-2 max-w-5xl flex flex-col md:flex-row items-stretch md:items-center text-gray-700">
+                    <div class="flex-1 flex items-center gap-3 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                        <input id="hero-search-input" type="text" placeholder="What are you looking for?" class="w-full bg-transparent outline-none text-sm font-medium placeholder:text-gray-400">
+                    </div>
+                    <button type="button" onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})" class="flex items-center gap-3 px-5 py-3 border-b md:border-b-0 md:border-r border-gray-200 text-sm font-semibold">
+                        <i class="fa-solid fa-location-dot text-cyan-600"></i><span>Bucharest</span>
                     </button>
+                    <button type="button" onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})" class="flex items-center gap-3 px-5 py-3 border-b md:border-b-0 md:border-r border-gray-200 text-sm font-semibold">
+                        <i class="fa-regular fa-calendar text-gray-500"></i><span>Any date</span>
+                    </button>
+                    <button type="button" onclick="document.getElementById('moments')?.scrollIntoView({behavior:'smooth'})" class="m-1 rounded-full px-7 py-3.5 bg-gradient-to-r from-cyan-400 via-cyan-500 to-pink-500 text-white font-black text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition">
+                        Search <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
 
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-0 mt-9 max-w-5xl">
+                    <div class="hero-benefit flex items-center gap-3 py-3 pr-5">
+                        <i class="fa-regular fa-circle-check text-2xl text-white"></i>
+                        <div><div class="font-bold text-sm">Secure payment</div><div class="text-xs text-white/65">Your booking is protected.</div></div>
+                    </div>
+                    <div class="hero-benefit flex items-center gap-3 py-3 px-5">
+                        <i class="fa-solid fa-location-dot text-2xl text-[#ffe06b]"></i>
+                        <div><div class="font-bold text-sm">Local providers</div><div class="text-xs text-white/65">Authentic. Verified. Local.</div></div>
+                    </div>
+                    <div class="hero-benefit flex items-center gap-3 py-3 px-5">
+                        <i class="fa-regular fa-star text-2xl text-[#ffe06b]"></i>
+                        <div><div class="font-bold text-sm">Top experiences</div><div class="text-xs text-white/65">Handpicked by locals.</div></div>
+                    </div>
+                    <div class="hero-benefit hidden lg:flex items-center gap-3 py-3 pl-5">
+                        <i class="fa-regular fa-calendar-check text-2xl text-white"></i>
+                        <div><div class="font-bold text-sm">Flexible booking</div><div class="text-xs text-white/65">Simple and transparent.</div></div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <section class="section-wave bg-[#F8F6F1] pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
 
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div class="max-w-2xl mb-12 relative z-10">
 
-        <div class="max-w-2xl mb-12">
-
-            <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
+            <span class="text-[#f13d9a] font-black text-xs uppercase tracking-[.22em]"
                   data-i18n="intro_label">
                 FiiViu Moments
             </span>
