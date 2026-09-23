@@ -36,7 +36,20 @@ export default {
 
 const providerCors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 function providerJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...providerCors,"Content-Type":"application/json"}})}
-function providerAuth(request,env){const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();return !!expected&&request.headers.get("Authorization")==="Bearer "+expected}
+function providerAuth(request,env){
+  const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\\s+/,"").trim();
+  const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();
+  if(expected&&auth===expected)return true;
+  try{
+    const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();
+    if(raw){
+      const map=JSON.parse(raw);
+      const account=String(map?.[auth]||"").trim();
+      if(/^acct_[A-Za-z0-9]+$/.test(account))return true;
+    }
+  }catch(_){}
+  return false;
+}
 function providerAccountForRequest(request,env){
   const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\s+/,"").trim();
   if(!auth)return "";
