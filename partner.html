@@ -25,10 +25,10 @@
       <div id="login-error" class="text-sm text-red-600 mt-3"></div>
     </form>
     <section id="dashboard" class="hidden">
-      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6 flex items-center justify-between gap-4"><div><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div><button onclick="logout()" class="rounded-xl border border-gray-200 px-4 py-2 font-semibold">Abmelden</button></div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6 flex items-center justify-between gap-4"><div><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div><button onclick="logout()" class="rounded-xl border border-gray-200 px-4 py-2 font-semibold">Deconectare</button></div>
       <div class="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">QR-/Link-Aufrufe</div><div id="scan-count" class="text-3xl font-bold mt-2">0</div></div>
-        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Eindeutige Besucher</div><div id="unique-visitors" class="text-3xl font-bold mt-2">0</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Accesări QR/link</div><div id="scan-count" class="text-3xl font-bold mt-2">0</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Vizitatori unici</div><div id="unique-visitors" class="text-3xl font-bold mt-2">0</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Rezervări</div><div id="bookings" class="text-3xl font-bold mt-2">0</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Valoarea rezervărilor</div><div id="revenue" class="text-3xl font-bold mt-2">0,00 €</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Comision disponibil</div><div id="open-commission" class="text-3xl font-bold mt-2">0,00 €</div></div>
@@ -59,7 +59,7 @@
     function euro(value){return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(value)||0)}
     function date(value){if(!value)return '—';return new Intl.DateTimeFormat('ro-RO',{dateStyle:'medium',timeStyle:'short'}).format(new Date(Number(value)*1000))}
     function dateIso(value){if(!value)return '—';return new Intl.DateTimeFormat('ro-RO',{dateStyle:'medium'}).format(new Date(value))}
-    function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[char]))}
+    function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
     function renderBookings(bookings){
       const list=document.getElementById('booking-list');
       const empty=document.getElementById('no-bookings');
@@ -91,7 +91,7 @@
         if(ref&&data.partnerRef!==ref)throw new Error('Acces de partener nevalid.');
         document.getElementById('partner-ref').textContent=data.partnerRef;
         document.getElementById('scan-count').textContent=Number(data.scanCount||0).toLocaleString('ro-RO');
-        document.getElementById('unique-visitors').textContent=Number(data.uniqueVisitors||0).toLocaleString('de-DE');
+        document.getElementById('unique-visitors').textContent=Number(data.uniqueVisitors||0).toLocaleString('ro-RO');
         document.getElementById('bookings').textContent=data.bookings;
         document.getElementById('revenue').textContent=euro(data.revenue);
         document.getElementById('open-commission').textContent=euro(data.openCommission);
