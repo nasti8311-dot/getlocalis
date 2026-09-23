@@ -8,7 +8,7 @@ if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return c
 
 async function handleProviderRoute(request,env,ctx){
   const url=new URL(request.url);
-  const account=resolveProviderAccount(request,env);
+  const account=await resolveProviderAccount(request,env);
   if(!account)return json({error:"Unauthorized provider credentials"},401);
   if(url.pathname!=="/api/provider/experiences")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured"},500);
