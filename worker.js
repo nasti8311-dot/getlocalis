@@ -366,33 +366,30 @@ async function translateOfferFields(source) {
   const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
   const meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
 
-  const [titleEn, titleRo, descriptionEn, descriptionRo, pointEn, pointRo, instructionsEn, instructionsRo] =
-    await Promise.all([
-      translateOfferText(title, "en"),
-      translateOfferText(title, "ro"),
-      translateOfferText(description, "en"),
-      translateOfferText(description, "ro"),
-      translateOfferText(meetingPointName, "en"),
-      translateOfferText(meetingPointName, "ro"),
-      translateOfferText(meetingInstructions, "en"),
-      translateOfferText(meetingInstructions, "ro")
-    ]);
+  // If the admin/provider already supplied EN/RO text, use it directly.
+  // Translation is only a fallback for fields that are still empty.
+  let titleEn = String(source.titleEn || source.title_en || "").trim();
+  let titleRo = String(source.titleRo || source.title_ro || "").trim();
+  let descriptionEn = String(source.descriptionEn || source.description_en || "").trim();
+  let descriptionRo = String(source.descriptionRo || source.description_ro || "").trim();
+  let pointEn = String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
+  let pointRo = String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
+  let instructionsEn = String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
+  let instructionsRo = String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
 
-  const required = [
-    ["title", title, titleEn, "en"],
-    ["title", title, titleRo, "ro"],
-    ["description", description, descriptionEn, "en"],
-    ["description", description, descriptionRo, "ro"],
-    ["meetingPointName", meetingPointName, pointEn, "en"],
-    ["meetingPointName", meetingPointName, pointRo, "ro"],
-    ["meetingInstructions", meetingInstructions, instructionsEn, "en"],
-    ["meetingInstructions", meetingInstructions, instructionsRo, "ro"]
-  ];
-  const failed = required.find(([field, sourceText, translated]) => sourceText && !translated);
-  if (failed) {
-    throw new Error("Automatische Übersetzung fehlgeschlagen für " + failed[0] + ". Bitte erneut speichern.");
-  }
+  const jobs = [];
+  if (title && !titleEn) jobs.push(translateOfferText(title, "en").then(v => { titleEn = v; }));
+  if (title && !titleRo) jobs.push(translateOfferText(title, "ro").then(v => { titleRo = v; }));
+  if (description && !descriptionEn) jobs.push(translateOfferText(description, "en").then(v => { descriptionEn = v; }));
+  if (description && !descriptionRo) jobs.push(translateOfferText(description, "ro").then(v => { descriptionRo = v; }));
+  if (meetingPointName && !pointEn) jobs.push(translateOfferText(meetingPointName, "en").then(v => { pointEn = v; }));
+  if (meetingPointName && !pointRo) jobs.push(translateOfferText(meetingPointName, "ro").then(v => { pointRo = v; }));
+  if (meetingInstructions && !instructionsEn) jobs.push(translateOfferText(meetingInstructions, "en").then(v => { instructionsEn = v; }));
+  if (meetingInstructions && !instructionsRo) jobs.push(translateOfferText(meetingInstructions, "ro").then(v => { instructionsRo = v; }));
+  await Promise.all(jobs);
 
+  // A translation service being temporarily unavailable must never block saving.
+  // The original text is used only when no translated text was supplied or returned.
   return {
     titleEn: titleEn || title,
     titleRo: titleRo || title,
@@ -404,7 +401,6 @@ async function translateOfferFields(source) {
     meetingInstructionsRo: instructionsRo || meetingInstructions
   };
 }
-
 
 
 async function ensureOffersTable(env){
