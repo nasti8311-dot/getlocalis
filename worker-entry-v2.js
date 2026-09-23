@@ -115,10 +115,37 @@ async function handleProviderConnectOnboarding(request,env){
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
   if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
   if(!(await providerAuth(request,env)))return providerJson({error:"Unauthorized"},401);
-  const account=await providerAccountForRequest(request,env);
-  if(!account)return providerJson({error:"No Stripe Connect account is assigned to this provider."},409);
-  try{return providerJson({success:true,onboarding:await createProviderAccountLink(env,account)})}
-  catch(error){return providerJson({error:error?.message||"Onboarding link failed."},500)}
+  if(!env.DB||!env.STRIPE_SECRET_KEY)return providerJson({error:"Stripe Connect ist nicht konfiguriert."},500);
+  try{
+    const providerRef=await providerRefFromSession(request,env);
+    if(!providerRef)return providerJson({error:"Unauthorized"},401);
+    const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
+    if(!provider||Number(provider.active)!==1)return providerJson({error:"Veranstalter nicht gefunden oder deaktiviert."},404);
+    let account=String(provider.connect_account_id||"").trim();
+    if(!/^acct_[A-Za-z0-9]+$/.test(account)){
+      const params=new URLSearchParams();
+      params.set("type","express");
+      params.set("country","RO");
+      if(String(provider.contact_email||"").trim())params.set("email",String(provider.contact_email).trim());
+      params.set("business_type","individual");
+      params.set("capabilities[card_payments][requested]","true");
+      params.set("capabilities[transfers][requested]","true");
+      const response=await fetch("https://api.stripe.com/v1/accounts",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},
+        body:params
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data?.error?.message||"Stripe Connect-Konto konnte nicht erstellt werden.");
+      account=String(data?.id||"").trim();
+      if(!/^acct_[A-Za-z0-9]+$/.test(account))throw new Error("Stripe Connect-Konto konnte nicht erstellt werden.");
+      await env.DB.prepare("UPDATE providers SET connect_account_id=? WHERE provider_ref=?").bind(account,providerRef).run();
+    }
+    return providerJson({success:true,accountId:account,onboarding:await createProviderAccountLink(env,account)});
+  }catch(error){
+    console.error("FiiViu provider Connect onboarding failed",error);
+    return providerJson({error:error?.message||"Onboarding link failed."},500);
+  }
 }
 async function handleProviderConnectOnboardingRefresh(request,env){
   if(request.method!=="GET")return new Response("Method Not Allowed",{status:405});
