@@ -1843,6 +1843,29 @@ function capturePartnerRef() {
         localStorage.getItem(
             "fiiviu_partner_ref"
         ) || "";
+
+    if (ref && currentPartnerRef === ref) {
+        trackPartnerVisit(ref);
+    }
+}
+
+async function trackPartnerVisit(partnerRef) {
+    try {
+        let visitorId = localStorage.getItem("fiiviu_partner_visitor_id") || "";
+        if (!visitorId) {
+            const bytes = new Uint8Array(16);
+            crypto.getRandomValues(bytes);
+            visitorId = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+            localStorage.setItem("fiiviu_partner_visitor_id", visitorId);
+        }
+        await fetch("/api/partner-visit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ref: partnerRef, visitorId })
+        });
+    } catch (error) {
+        console.warn("Partner-Tracking konnte nicht erfasst werden.", error);
+    }
 }
 
 /* ============================================================
