@@ -186,6 +186,37 @@ if (url.pathname === "/api/offers") {
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
 
+    if (url.pathname === "/api/partner-login") {
+      if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
+      try{
+        if(!env.DB)return json({error:"D1 database not configured"},500,corsHeaders);
+        await ensurePartnersTable(env); await ensurePartnerAccountsTable(env); await ensurePartnerSessionsTable(env);
+        const body=await request.json();
+        const email=String(body.email||"").trim().toLowerCase();
+        const password=String(body.password||"");
+        if(!email||!password)return json({error:"E-Mail und Passwort sind erforderlich."},400,corsHeaders);
+        const account=await env.DB.prepare("SELECT a.partner_ref,a.password_salt,a.password_hash,p.active FROM partner_accounts a JOIN partners p ON p.partner_ref=a.partner_ref WHERE lower(a.email)=? LIMIT 1").bind(email).first();
+        if(!account||Number(account.active)!==1)return json({error:"E-Mail oder Passwort ist falsch."},401,corsHeaders);
+        const candidate=await hashPassword(password,account.password_salt);
+        if(candidate!==String(account.password_hash||""))return json({error:"E-Mail oder Passwort ist falsch."},401,corsHeaders);
+        const session=await createPartnerSession(env,String(account.partner_ref));
+        return new Response(JSON.stringify({success:true,partnerRef:String(account.partner_ref)}),{status:200,headers:{"Content-Type":"application/json",...corsHeaders,"Set-Cookie":partnerSessionCookie(session.raw)}});
+      }catch(error){return json({error:error?.message||"Login fehlgeschlagen."},500,corsHeaders)}
+    }
+
+    if (url.pathname === "/api/partner-logout") {
+      if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
+      try{
+        if(env.DB){
+          await ensurePartnerSessionsTable(env);
+          const cookie=String(request.headers.get("Cookie")||"");
+          const match=cookie.match(/(?:^|;\\s*)fiiviu_partner_session=([^;]+)/);
+          if(match)await env.DB.prepare("DELETE FROM partner_sessions WHERE session_hash=?").bind(await hashText(decodeURIComponent(match[1]))).run();
+        }
+      }catch(_){}
+      return new Response(JSON.stringify({success:true}),{status:200,headers:{"Content-Type":"application/json",...corsHeaders,"Set-Cookie":partnerSessionCookie("",0)}});
+    }
+
     if (url.pathname === "/api/partner-stats") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
       try{
@@ -196,6 +227,29 @@ if (url.pathname === "/api/offers") {
         if(!authenticatedRef||authenticatedRef!==requestedRef)return json({error:"Unauthorized"},401,corsHeaders);
         return json(await getPartnerStats(env,authenticatedRef),200,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
+    }
+
+    if (url.pathname === "/api/admin/partner-password") {
+      if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
+      if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key not configured"},500,corsHeaders);
+      if(!isAdmin(request,env))return json({error:"Unauthorized"},401,corsHeaders);
+      try{
+        await ensurePartnersTable(env); await ensurePartnerAccountsTable(env);
+        const body=await request.json();
+        const partnerRef=String(body.partnerRef||"").trim().toUpperCase();
+        if(!partnerRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);
+        const partner=await env.DB.prepare("SELECT partner_ref,contact_email,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
+        if(!partner)return json({error:"Partner nicht gefunden"},404,corsHeaders);
+        if(Number(partner.active)!==1)return json({error:"Dieser Partner ist deaktiviert."},400,corsHeaders);
+        const email=String(body.email||partner.contact_email||"").trim().toLowerCase();
+        if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return json({error:"Für diesen Partner muss zuerst eine gültige E-Mail-Adresse hinterlegt werden."},400,corsHeaders);
+        const password=generateTemporaryPassword();
+        const salt=randomHex(16), passwordHash=await hashPassword(password,salt);
+        const existing=await env.DB.prepare("SELECT partner_ref FROM partner_accounts WHERE lower(email)=? AND partner_ref!=? LIMIT 1").bind(email,partnerRef).first();
+        if(existing)return json({error:"Diese E-Mail-Adresse ist bereits einem anderen Partner zugeordnet."},409,corsHeaders);
+        await env.DB.prepare("INSERT INTO partner_accounts (partner_ref,email,password_salt,password_hash,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(partner_ref) DO UPDATE SET email=excluded.email,password_salt=excluded.password_salt,password_hash=excluded.password_hash,updated_at=CURRENT_TIMESTAMP").bind(partnerRef,email,salt,passwordHash).run();
+        return json({success:true,partnerRef,email,temporaryPassword:password,loginUrl:"/partner.html"},200,corsHeaders);
+      }catch(error){return json({error:error?.message||"Login-Zugang konnte nicht erzeugt werden."},500,corsHeaders)}
     }
 
     if (url.pathname === "/api/admin/partner-token") {
@@ -466,8 +520,7 @@ async function ensurePartnerAuthTable(env){
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_auth_tokens_hash ON partner_auth_tokens(token_hash)").run();
 }
 function generatePartnerToken(){
-  const bytes=new Uint8Array(32);
-  crypto.getRandomValues(bytes);
+  const bytes=new Uint8Array(32); crypto.getRandomValues(bytes);
   return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
 }
 async function hashPartnerToken(token){
@@ -475,17 +528,53 @@ async function hashPartnerToken(token){
   const digest=await crypto.subtle.digest("SHA-256",data);
   return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
 }
+async function ensurePartnerAccountsTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL UNIQUE,email TEXT NOT NULL UNIQUE,password_salt TEXT NOT NULL,password_hash TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
+  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_partner_accounts_email ON partner_accounts(email)").run();
+}
+async function ensurePartnerSessionsTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,session_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_sessions_partner ON partner_sessions(partner_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_sessions_expires ON partner_sessions(expires_at)").run();
+}
+function randomHex(bytesLength=32){
+  const bytes=new Uint8Array(bytesLength); crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function hashText(value){
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(value||"")));
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function hashPassword(password,salt){
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(String(password||"")),{name:"PBKDF2"},false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(String(salt||"")),iterations:120000,hash:"SHA-256"},key,256);
+  return Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function generateTemporaryPassword(){
+  return randomHex(9);
+}
+async function createPartnerSession(env,partnerRef){
+  await ensurePartnerSessionsTable(env);
+  const raw=randomHex(32), hash=await hashText(raw);
+  const expires=Math.floor(Date.now()/1000)+60*60*24*30;
+  await env.DB.prepare("DELETE FROM partner_sessions WHERE partner_ref=? OR expires_at<?").bind(partnerRef,Math.floor(Date.now()/1000)).run();
+  await env.DB.prepare("INSERT INTO partner_sessions (partner_ref,session_hash,expires_at) VALUES (?,?,?)").bind(partnerRef,hash,expires).run();
+  return {raw,expires};
+}
 async function authenticatePartner(request,env){
   if(!env.DB)return null;
-  const authorization=String(request.headers.get("Authorization")||"");
-  if(!authorization.startsWith("Bearer "))return null;
-  const token=authorization.slice(7).trim();
-  if(!/^[a-f0-9]{64}$/.test(token))return null;
-  await ensurePartnerAuthTable(env);
-  const tokenHash=await hashPartnerToken(token);
-  const partner=await env.DB.prepare("SELECT p.partner_ref,p.active FROM partner_auth_tokens t JOIN partners p ON p.partner_ref=t.partner_ref WHERE t.token_hash=? LIMIT 1").bind(tokenHash).first();
+  await ensurePartnerSessionsTable(env);
+  const cookie=String(request.headers.get("Cookie")||"");
+  const match=cookie.match(/(?:^|;\\s*)fiiviu_partner_session=([^;]+)/);
+  const session=match?decodeURIComponent(match[1]):"";
+  if(!session)return null;
+  const hash=await hashText(session);
+  const partner=await env.DB.prepare("SELECT p.partner_ref,p.active FROM partner_sessions s JOIN partners p ON p.partner_ref=s.partner_ref WHERE s.session_hash=? AND s.expires_at>? LIMIT 1").bind(hash,Math.floor(Date.now()/1000)).first();
   if(!partner||Number(partner.active)!==1)return null;
   return String(partner.partner_ref||"");
+}
+function partnerSessionCookie(value,maxAge=2592000){
+  return "fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
