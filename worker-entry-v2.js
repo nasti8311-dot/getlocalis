@@ -37,7 +37,7 @@ export default {
 
 const providerCors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 function providerJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...providerCors,"Content-Type":"application/json"}})}
-function providerAuth(request,env){
+async function providerAuth(request,env){
   if(authenticateProviderSession(request,env)) return true;
   const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\\s+/,"").trim();
   const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();
@@ -110,7 +110,7 @@ async function createProviderAccountLink(env,account){
 async function handleProviderConnectOnboarding(request,env){
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
   if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
-  if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);
+  if(!(await providerAuth(request,env)))return providerJson({error:"Unauthorized"},401);
   const account=await providerAccountForRequest(request,env);
   if(!account)return providerJson({error:"No Stripe Connect account is assigned to this provider."},409);
   try{return providerJson({success:true,onboarding:await createProviderAccountLink(env,account)})}
