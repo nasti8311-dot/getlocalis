@@ -3,9 +3,63 @@ import partnerWorker from "./worker.js";
 
 const CORS={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 
-export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(url.pathname.startsWith("/api/provider/"))return handleProviderRoute(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
+export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(url.pathname==="/api/provider/experiences")return handleProviderRoute(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
 
-async function handleProviderRoute(request,env,ctx){const url=new URL(request.url);const account=resolveProviderAccount(request,env);if(!account)return json({error:"Unauthorized provider credentials"},401);if(url.pathname==="/api/provider/experiences"&&request.method==="GET"){if(!env.DB)return json({error:"D1 database not configured"},500);try{await ensureExperiencesTable(env);const rows=await env.DB.prepare("SELECT * FROM experiences WHERE provider_connect_account_id=? ORDER BY updated_at DESC,id DESC").bind(account).all();return json({experiences:rows.results||[]})}catch(error){return json({error:error?.message||"Server error"},500)}}if(url.pathname==="/api/provider/experiences"&&request.method==="POST"){let body;try{body=await request.json()}catch(_){return json({error:"Invalid JSON payload"},400)}body.providerConnectAccountId=account;const priceCents=Number(body.priceCents);const currency=String(body.currency||"eur").trim().toLowerCase();if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Preis muss mindestens 0,50 betragen."},400);if(!["eur","ron","usd","gbp"].includes(currency))return json({error:"Nicht unterstützte Währung."},400);await ensureExperiencesTable(env);const response=await forwardProviderRequest(request,env,ctx,JSON.stringify(body));if(response.ok){try{const result=await response.clone().json();const experienceId=String(result?.experience?.experienceId||result?.experience?.experience_id||body.experienceId||"").trim().toLowerCase();if(experienceId)await env.DB.prepare("UPDATE experiences SET price_cents=?,currency=?,updated_at=CURRENT_TIMESTAMP WHERE experience_id=? AND provider_connect_account_id=?").bind(priceCents,currency,experienceId,account).run()}catch(_){}}return response}if(url.pathname==="/api/provider/bookings"&&request.method==="GET"){url.searchParams.set("providerConnectAccountId",account);return forwardProviderRequest(new Request(url.toString(),request),env,ctx)}return json({error:"Method Not Allowed"},405)}
+async function handleProviderRoute(request,env,ctx){
+  const url=new URL(request.url);
+  const account=resolveProviderAccount(request,env);
+  if(!account)return json({error:"Unauthorized provider credentials"},401);
+  if(url.pathname!=="/api/provider/experiences")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({error:"D1 database not configured"},500);
+  try{
+    await ensureExperiencesTable(env);
+    if(request.method==="GET"){
+      const rows=await env.DB.prepare("SELECT * FROM experiences WHERE provider_connect_account_id=? ORDER BY updated_at DESC,id DESC").bind(account).all();
+      return json({experiences:rows.results||[]});
+    }
+    if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
+    const body=await request.json();
+    const experienceId=String(body.experienceId||"").trim().toLowerCase();
+    const title=String(body.title||"").trim();
+    const priceCents=Number(body.priceCents);
+    const currency=String(body.currency||"eur").trim().toLowerCase();
+    const meetingPointName=String(body.meetingPointName||"").trim();
+    const meetingAddress=String(body.meetingAddress||"").trim();
+    const meetingCity=String(body.meetingCity||"").trim();
+    const meetingCountry=String(body.meetingCountry||"").trim();
+    const meetingInstructions=String(body.meetingInstructions||"").trim();
+    const arrival=Number(body.arrivalMinutesBefore);
+    const arrivalMinutesBefore=Number.isInteger(arrival)&&arrival>=0&&arrival<=180?arrival:null;
+    const latitude=String(body.meetingLatitude||"").trim();
+    const longitude=String(body.meetingLongitude||"").trim();
+    const publish=body.publish===true;
+    if(!/^[a-z0-9][a-z0-9_-]{2,63}$/.test(experienceId))return json({error:"Ungültige Experience-ID."},400);
+    if(!title)return json({error:"Titel fehlt."},400);
+    if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Preis muss mindestens 0,50 betragen."},400);
+    if(!["eur","ron","usd","gbp"].includes(currency))return json({error:"Nicht unterstützte Währung."},400);
+    if(publish){
+      if(!meetingPointName||!meetingAddress||!meetingCity||!meetingCountry)return json({error:"Veröffentlichung blockiert: Treffpunkt, Adresse, Stadt und Land sind erforderlich."},400);
+    }
+    const status=publish?"published":"draft";
+    await env.DB.prepare(`INSERT INTO experiences (
+      experience_id,provider_connect_account_id,provider_name,title,price_cents,currency,
+      meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,
+      arrival_minutes_before,meeting_latitude,meeting_longitude,status,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    ON CONFLICT(experience_id) DO UPDATE SET
+      provider_connect_account_id=excluded.provider_connect_account_id,
+      provider_name=excluded.provider_name,
+      title=excluded.title,price_cents=excluded.price_cents,currency=excluded.currency,
+      meeting_point_name=excluded.meeting_point_name,meeting_address=excluded.meeting_address,
+      meeting_city=excluded.meeting_city,meeting_country=excluded.meeting_country,
+      meeting_instructions=excluded.meeting_instructions,arrival_minutes_before=excluded.arrival_minutes_before,
+      meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,
+      status=excluded.status,updated_at=CURRENT_TIMESTAMP
+    `).bind(account,String(body.providerName||"").trim()||null,title,priceCents,currency,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,latitude||null,longitude||null,status).run();
+    const experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
+    return json({success:true,experience});
+  }catch(error){return json({error:error?.message||"Server error"},500)}
+}
 function resolveProviderAccount(request,env){const authorization=String(request.headers.get("Authorization")||"");const token=authorization.startsWith("Bearer ")?authorization.slice(7).trim():"";if(!token)return "";const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();if(!raw)return "";let map;try{map=JSON.parse(raw)}catch(_){return ""}const account=typeof map?.[token]==="string"?map[token].trim():"";return /^acct_[A-Za-z0-9]+$/.test(account)?account:""}
 
 async function createMarketplacePaymentIntent(request,env,ctx){
