@@ -1572,35 +1572,35 @@ async function handleAdminProviderPassword(request,env){
 }
 
 async function handleProviderLogin(request,env){
-  if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
-  if(!env.DB)return providerJson({error:"D1 database not configured"},500);
+  if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({error:"D1 database not configured"},500);
   try{
     await ensureProvidersTable(env); await ensureProviderAuthTables(env);
     const body=await request.json(),email=clean(body.email).toLowerCase(),password=String(body.password||"");
-    if(!email||!password)return providerJson({error:"E-Mail und Passwort sind erforderlich."},400);
+    if(!email||!password)return json({error:"E-Mail und Passwort sind erforderlich."},400);
     const account=await env.DB.prepare("SELECT a.provider_ref,a.password_salt,a.password_hash,a.active,p.name,p.connect_account_id,p.active AS provider_active FROM provider_accounts a JOIN providers p ON p.provider_ref=a.provider_ref WHERE lower(a.email)=? LIMIT 1").bind(email).first();
-    if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return providerJson({error:"E-Mail oder Passwort ist falsch."},401);
-    if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return providerJson({error:"E-Mail oder Passwort ist falsch."},401);
+    if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return json({error:"E-Mail oder Passwort ist falsch."},401);
+    if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return json({error:"E-Mail oder Passwort ist falsch."},401);
     const session=await createProviderSession(env,String(account.provider_ref));
-    const response=providerJson({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id}});
+    const response=json({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id}});
     response.headers.set("Set-Cookie",providerSessionCookie(session.raw));
     return response;
-  }catch(error){return providerJson({error:error?.message||"Login fehlgeschlagen."},500)}
+  }catch(error){return json({error:error?.message||"Login fehlgeschlagen."},500)}
 }
 
 async function handleProviderSession(request,env){
-  if(request.method!=="GET")return providerJson({error:"Method Not Allowed"},405);
+  if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
   const providerRef=await authenticateProviderSession(request,env);
-  if(!providerRef)return providerJson({authenticated:false},401);
+  if(!providerRef)return json({authenticated:false},401);
   const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
-  if(!provider||Number(provider.active)!==1)return providerJson({authenticated:false},401);
-  return providerJson({authenticated:true,provider});
+  if(!provider||Number(provider.active)!==1)return json({authenticated:false},401);
+  return json({authenticated:true,provider});
 }
 
 async function handleProviderLogout(request,env){
-  if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
+  if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   try{if(env.DB){await ensureProviderAuthTables(env);const raw=providerSessionFromRequest(request);if(raw)await env.DB.prepare("DELETE FROM provider_sessions WHERE session_hash=?").bind(await hashProviderSession(raw)).run();}}catch(_){}
-  const response=providerJson({success:true}); response.headers.set("Set-Cookie",providerSessionCookie("",0)); return response;
+  const response=json({success:true}); response.headers.set("Set-Cookie",providerSessionCookie("",0)); return response;
 }
 
 async function handleAdminProviders(request, env) {
