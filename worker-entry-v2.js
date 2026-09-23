@@ -23,6 +23,7 @@ export default {
     if(url.pathname==="/api/provider/connect-onboarding/refresh")return handleProviderConnectOnboardingRefresh(request,env);
     if(url.pathname==="/api/provider/connect-status")return handleProviderConnectStatus(request,env);
     if(url.pathname==="/api/provider/experiences")return handleProviderExperiences(request,env);
+    if(url.pathname==="/api/provider/overview")return handleProviderOverview(request,env);
     if(url.pathname==="/api/provider/bookings")return handleProviderBookings(request,env);
     if(url.pathname==="/api/booking"&&request.method==="GET")return handleBookingLookup(request,env);
     if(url.pathname==="/api/booking-access-url"&&request.method==="GET")return handleBookingAccessUrl(request,env);
@@ -136,7 +137,58 @@ async function handleProviderConnectStatus(request,env){
   }catch(error){return providerJson({error:error?.message||"Stripe account lookup failed."},500)}
 }
 
-async function handleProviderBookings(request,env){if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);if(request.method!=="GET")return providerJson({error:"Method Not Allowed"},405);if(!env.DB)return providerJson({error:"D1 database not configured"},500);const account=providerAccountForRequest(request,env);if(!account)return providerJson({error:"No Stripe Connect account is assigned to this provider."},409);try{await ensureBookingLookupTable(env);const result=await env.DB.prepare(`SELECT booking_id,status,payment_status,customer_name,customer_email,experience_name,booking_date,booking_time,guests,amount_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude FROM bookings WHERE provider_connect_account_id=? AND payment_status='paid' AND status NOT IN ('cancelled','refunded') ORDER BY CASE WHEN booking_date IS NULL THEN 1 ELSE 0 END, booking_date ASC, booking_time ASC, id DESC`).bind(account).all();return providerJson({bookings:result.results||[]})}catch(error){return providerJson({error:error?.message||"Server error"},500)}}
+
+async function handleProviderOverview(request,env){
+  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});
+  if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);
+  if(request.method!=="GET")return providerJson({error:"Method Not Allowed"},405);
+  if(!env.DB)return providerJson({error:"D1 database not configured"},500);
+  const account=providerAccountForRequest(request,env);
+  if(!account)return providerJson({error:"No Stripe Connect account is assigned to this provider."},409);
+  try{
+    await ensureBookingLookupTable(env);
+    await ensureBookingSettlementsTable(env);
+    const provider=await env.DB.prepare(
+      "SELECT id,name,provider_ref,contact_email,connect_account_id,active FROM providers WHERE connect_account_id=? AND active=1 ORDER BY id ASC LIMIT 1"
+    ).bind(account).first();
+    const rows=await env.DB.prepare(`
+      SELECT b.booking_id,b.status,b.payment_status,b.customer_name,b.experience_name,b.booking_date,b.booking_time,
+             b.guests,b.amount_cents,b.currency,b.created_at,
+             s.provider_amount_cents,s.settlement_status,s.release_at,s.stripe_transfer_id
+      FROM bookings b
+      LEFT JOIN booking_settlements s ON s.booking_id=b.booking_id
+      WHERE b.provider_connect_account_id=? AND b.payment_status='paid'
+      ORDER BY CASE WHEN b.booking_date IS NULL THEN 1 ELSE 0 END,b.booking_date ASC,b.booking_time ASC,b.id DESC
+    `).bind(account).all();
+    const bookings=rows.results||[];
+    const activeBookings=bookings.filter(b=>!["cancelled","refunded"].includes(String(b.status||"").toLowerCase()));
+    const totalBookingCents=activeBookings.reduce((sum,b)=>sum+Number(b.amount_cents||0),0);
+    const providerRevenueCents=activeBookings.reduce((sum,b)=>sum+Number(b.provider_amount_cents||0),0);
+    const availableCents=activeBookings.filter(b=>String(b.settlement_status||"")==="ready"&&isSettlementEventDue(b)).reduce((sum,b)=>sum+Number(b.provider_amount_cents||0),0);
+    const pendingCents=activeBookings.filter(b=>["pending","failed"].includes(String(b.settlement_status||""))).reduce((sum,b)=>sum+Number(b.provider_amount_cents||0),0);
+    const paidOutCents=activeBookings.filter(b=>String(b.settlement_status||"")==="transferred"||String(b.stripe_transfer_id||"")).reduce((sum,b)=>sum+Number(b.provider_amount_cents||0),0);
+    const upcoming=activeBookings.filter(b=>String(b.status||"").toLowerCase()==="confirmed"&&parseBookingDateTime(b.booking_date,b.booking_time)?.getTime()>=Date.now()).slice(0,50);
+    const recent=[...activeBookings].sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||""))).slice(0,50);
+    return providerJson({
+      provider:provider||{connect_account_id:account},
+      stats:{
+        bookings:activeBookings.length,
+        grossRevenueCents:totalBookingCents,
+        providerRevenueCents,
+        availableCents,
+        pendingCents,
+        paidOutCents,
+        currency:"eur"
+      },
+      upcomingBookings:upcoming,
+      recentBookings:recent
+    });
+  }catch(error){
+    console.error("FiiViu provider overview failed",error);
+    return providerJson({error:error?.message||"Provider overview failed."},500);
+  }
+}
+\nasync function handleProviderBookings(request,env){if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});if(!providerAuth(request,env))return providerJson({error:"Unauthorized"},401);if(request.method!=="GET")return providerJson({error:"Method Not Allowed"},405);if(!env.DB)return providerJson({error:"D1 database not configured"},500);const account=providerAccountForRequest(request,env);if(!account)return providerJson({error:"No Stripe Connect account is assigned to this provider."},409);try{await ensureBookingLookupTable(env);const result=await env.DB.prepare(`SELECT booking_id,status,payment_status,customer_name,customer_email,experience_name,booking_date,booking_time,guests,amount_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude FROM bookings WHERE provider_connect_account_id=? AND payment_status='paid' AND status NOT IN ('cancelled','refunded') ORDER BY CASE WHEN booking_date IS NULL THEN 1 ELSE 0 END, booking_date ASC, booking_time ASC, id DESC`).bind(account).all();return providerJson({bookings:result.results||[]})}catch(error){return providerJson({error:error?.message||"Server error"},500)}}
 async function handleBookingLookup(request,env){if(!env.DB)return providerJson({error:"D1 database not configured"},500);const params=new URL(request.url).searchParams,bookingId=String(params.get("id")||"").trim(),token=String(params.get("token")||"").trim();if(!bookingId||!token)return providerJson({error:"Missing booking access credentials"},400);try{await ensureBookingLookupTable(env);const booking=await env.DB.prepare(`SELECT booking_id,status,payment_status,customer_name,customer_language,experience_name,booking_date,booking_time,guests,amount_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1`).bind(bookingId).first();if(!booking)return providerJson({error:"Booking not found"},404);if(!booking.booking_access_token||token!==booking.booking_access_token)return providerJson({error:"Booking access denied"},403);if(booking.payment_status!=="paid"||["cancelled","refunded"].includes(booking.status))return providerJson({error:"Booking is not active"},404);delete booking.booking_access_token;return providerJson({booking})}catch(error){return providerJson({error:error?.message||"Server error"},500)}}
 async function handleBookingAccessUrl(request,env){if(!env.DB)return providerJson({error:"D1 database not configured"},500);const url=new URL(request.url),bookingId=String(url.searchParams.get("id")||"").trim(),expected=String(env.ADMIN_PAYOUT_KEY||env.PROVIDER_ADMIN_KEY||"").trim(),provided=request.headers.get("Authorization")||"";if(!expected||provided!=="Bearer "+expected)return providerJson({error:"Unauthorized"},401);if(!bookingId)return providerJson({error:"Missing booking id"},400);try{await ensureBookingLookupTable(env);const booking=await env.DB.prepare("SELECT booking_id,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();if(!booking)return providerJson({error:"Booking not found"},404);if(!booking.booking_access_token)return providerJson({error:"Booking access token not ready"},409);const base=String(env.PUBLIC_APP_URL||"https://fiiviu.ro").replace(/\/$/,"");return providerJson({booking_id:booking.booking_id,booking_url:`${base}/booking.html?id=${encodeURIComponent(booking.booking_id)}&token=${encodeURIComponent(booking.booking_access_token)}`})}catch(error){return providerJson({error:error?.message||"Server error"},500)}}
 async function ensurePaidBookingAccessToken(env,paymentIntentId){if(!env.DB||!paymentIntentId)return;try{await ensureBookingLookupTable(env);for(let attempt=0;attempt<12;attempt++){const booking=await env.DB.prepare("SELECT id,booking_id,booking_access_token FROM bookings WHERE payment_intent_id=? LIMIT 1").bind(paymentIntentId).first();if(booking){if(!booking.booking_access_token){const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);const token=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");await env.DB.prepare("UPDATE bookings SET booking_access_token=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND booking_access_token IS NULL").bind(token,booking.id).run()}return}await new Promise(resolve=>setTimeout(resolve,250))}}catch(error){console.error("FiiViu booking access token generation failed",error)}}
