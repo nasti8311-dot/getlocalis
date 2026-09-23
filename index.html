@@ -2894,6 +2894,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Re-bind in case a future render replaces the category cards.
     bindCategoryCards();
 
+    // Keep the SPA navigation inside browser history so the normal
+    // browser back button moves through FiiViu's views instead of
+    // leaving the site immediately.
+    history.replaceState(
+        {
+            view: "home-view",
+            category: "",
+            tour: ""
+        },
+        "",
+        window.location.href
+    );
+
     if (cardElement) {
 
         setTimeout(() => {
@@ -2915,7 +2928,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    VIEW NAVIGATION
 ============================================================ */
 
-function showView(viewId) {
+function showView(viewId, { pushHistory = true } = {}) {
 
     document.querySelectorAll(".view-section")
         .forEach(el => el.classList.add("hidden"));
@@ -2926,12 +2939,54 @@ function showView(viewId) {
         target.classList.remove("hidden");
     }
 
+    if (pushHistory) {
+        history.pushState(
+            {
+                view: viewId,
+                category: currentCategoryKey || "",
+                tour: currentTourKey || ""
+            },
+            "",
+            window.location.href
+        );
+    }
+
     window.scrollTo({
         top: 0,
         behavior: "smooth"
     });
 
 }
+
+function restoreViewFromHistory(state) {
+
+    const viewId = state?.view || "home-view";
+    const categoryKey = state?.category || "";
+    const tourKey = state?.tour || "";
+
+    if (viewId === "category-view" && categoryKey) {
+        showCategory(categoryKey, { pushHistory: false });
+        return;
+    }
+
+    if (viewId === "detail-view" && categoryKey && tourKey) {
+        showDetail(categoryKey, tourKey, { pushHistory: false });
+        return;
+    }
+
+    if (viewId === "checkout-view" && categoryKey && tourKey) {
+        currentCategoryKey = categoryKey;
+        currentTourKey = tourKey;
+        proceedToCheckout({ pushHistory: false });
+        return;
+    }
+
+    showView("home-view", { pushHistory: false });
+}
+
+window.addEventListener("popstate", event => {
+    restoreViewFromHistory(event.state);
+});
 
 
 function toggleMobileMenu() {
@@ -3034,7 +3089,7 @@ function renderFeatured() {
    CATEGORY
 ============================================================ */
 
-function showCategory(categoryKey) {
+function showCategory(categoryKey, { pushHistory = true } = {}) {
 
     const category = categoriesData[categoryKey];
 
@@ -3172,7 +3227,7 @@ function createExperienceCard(item, categoryKey) {
    DETAIL
 ============================================================ */
 
-function showDetail(categoryKey, itemId) {
+function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
     const category = categoriesData[categoryKey];
 
@@ -3610,7 +3665,7 @@ function changeLanguage(lang) {
    CHECKOUT
 ============================================================ */
 
-function proceedToCheckout() {
+function proceedToCheckout({ pushHistory = true } = {}) {
 
     const category =
         categoriesData[currentCategoryKey];
