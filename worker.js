@@ -258,7 +258,9 @@ if (url.pathname === "/api/offers") {
         const existing=await env.DB.prepare("SELECT partner_ref FROM partner_accounts WHERE lower(email)=? AND partner_ref!=? LIMIT 1").bind(email,partnerRef).first();
         if(existing)return json({error:"Diese E-Mail-Adresse ist bereits einem anderen Partner zugeordnet."},409,corsHeaders);
         await env.DB.prepare("INSERT INTO partner_accounts (partner_ref,email,password_salt,password_hash,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(partner_ref) DO UPDATE SET email=excluded.email,password_salt=excluded.password_salt,password_hash=excluded.password_hash,updated_at=CURRENT_TIMESTAMP").bind(partnerRef,email,salt,passwordHash).run();
-        return json({success:true,partnerRef,email,temporaryPassword:password,loginUrl:"/partner.html"},200,corsHeaders);
+        if(!env.EMAIL)return json({error:"E-Mail-Versand ist noch nicht konfiguriert.",partnerRef,email},500,corsHeaders);
+        await sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl:"https://fiiviu.ro/partner.html"});
+        return json({success:true,partnerRef,email,emailSent:true,temporaryPassword:password,loginUrl:"/partner.html"},200,corsHeaders);
       }catch(error){return json({error:error?.message||"Login-Zugang konnte nicht erzeugt werden."},500,corsHeaders)}
     }
 
@@ -511,6 +513,43 @@ async function ensureOffersTable(env){
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_point_name_ro TEXT").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_instructions_en TEXT").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_instructions_ro TEXT").run()}catch(e){}
+}
+
+async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
+  const safe=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  const subject="Ihr FiiViu Partner-Zugang";
+  const text=[
+    "Willkommen bei FiiViu.",
+    "",
+    "Ihr Partner-Zugang wurde eingerichtet.",
+    "Partner-Code: "+partnerRef,
+    "E-Mail: "+email,
+    "Temporäres Passwort: "+password,
+    "",
+    "Login: "+loginUrl,
+    "",
+    "Bitte ändern Sie das Passwort nach dem ersten Login, sobald diese Funktion verfügbar ist.",
+    "Viele Grüße",
+    "FiiViu"
+  ].join("\n");
+  const html=`<!doctype html><html lang="de"><body style="font-family:Arial,sans-serif;line-height:1.6;color:#222">
+    <h2>Ihr FiiViu Partner-Zugang</h2>
+    <p>Willkommen bei FiiViu. Ihr Partner-Zugang wurde eingerichtet.</p>
+    <p><strong>Partner-Code:</strong> ${safe(partnerRef)}<br>
+    <strong>E-Mail:</strong> ${safe(email)}<br>
+    <strong>Temporäres Passwort:</strong> ${safe(password)}</p>
+    <p><a href="${safe(loginUrl)}" style="display:inline-block;padding:12px 18px;background:#d95d1f;color:#fff;text-decoration:none;border-radius:6px">Zum Partner-Login</a></p>
+    <p>Login-Link: ${safe(loginUrl)}</p>
+    <p>Bitte bewahren Sie das temporäre Passwort sicher auf.</p>
+    <p>Viele Grüße<br>FiiViu</p>
+  </body></html>`;
+  await env.EMAIL.send({
+    from:"noreply@fiiviu.ro",
+    to:email,
+    subject,
+    text,
+    html
+  });
 }
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
