@@ -244,7 +244,14 @@ if (url.pathname === "/api/offers") {
         const partner=await env.DB.prepare("SELECT partner_ref,contact_email,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
         if(!partner)return json({error:"Partner nicht gefunden"},404,corsHeaders);
         if(Number(partner.active)!==1)return json({error:"Dieser Partner ist deaktiviert."},400,corsHeaders);
-        const email=String(body.email||body.contactEmail||partner.contact_email||"").trim().toLowerCase();
+        const submittedEmail=String(body.email||body.contactEmail||"").trim().toLowerCase();
+        const storedEmail=String(partner.contact_email||"").trim().toLowerCase();
+        const email=submittedEmail||storedEmail;
+        if(submittedEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(submittedEmail))return json({error:"Bitte eine gültige E-Mail-Adresse eingeben."},400,corsHeaders);
+        if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return json({error:"Für diesen Partner muss zuerst eine gültige E-Mail-Adresse hinterlegt werden."},400,corsHeaders);
+        if(submittedEmail && submittedEmail!==storedEmail){
+          await env.DB.prepare("UPDATE partners SET contact_email=? WHERE partner_ref=?").bind(submittedEmail,partnerRef).run();
+        }
         if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return json({error:"Für diesen Partner muss zuerst eine gültige E-Mail-Adresse hinterlegt werden."},400,corsHeaders);
         const password=generateTemporaryPassword();
         const salt=randomHex(16), passwordHash=await hashPassword(password,salt);
