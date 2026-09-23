@@ -15,16 +15,17 @@
     </div>
     <div id="message" class="rounded-2xl bg-white p-6 shadow-sm mb-6">Se încarcă datele partenerului …</div>
     <form id="login" class="hidden rounded-2xl bg-white p-6 shadow-sm mb-6">
-      <div class="font-bold text-lg">Partner-Zugang</div>
-      <p class="text-sm text-gray-600 mt-2">Bitte gib deinen persönlichen Zugangstoken ein. Der Partner-Code ist nur zur Zuordnung gedacht und ersetzt keine Anmeldung.</p>
-      <div class="flex flex-col md:flex-row gap-3 mt-4">
-        <input id="token" type="password" autocomplete="current-password" placeholder="Zugangstoken" class="flex-1 rounded-xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-orange-200">
-        <button class="rounded-xl bg-black text-white px-5 py-3 font-semibold">Anmelden</button>
+      <div class="font-bold text-lg">Partner-Login</div>
+      <p class="text-sm text-gray-600 mt-2">Melde dich mit deiner Partner-E-Mail-Adresse und deinem persönlichen Passwort an.</p>
+      <div class="grid md:grid-cols-2 gap-3 mt-4">
+        <input id="email" type="email" autocomplete="username" placeholder="E-Mail-Adresse" class="rounded-xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-orange-200">
+        <input id="password" type="password" autocomplete="current-password" placeholder="Passwort" class="rounded-xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-orange-200">
       </div>
+      <button class="mt-3 rounded-xl bg-black text-white px-5 py-3 font-semibold">Anmelden</button>
       <div id="login-error" class="text-sm text-red-600 mt-3"></div>
     </form>
     <section id="dashboard" class="hidden">
-      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6"><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6 flex items-center justify-between gap-4"><div><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div><button onclick="logout()" class="rounded-xl border border-gray-200 px-4 py-2 font-semibold">Abmelden</button></div>
       <div class="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">QR-/Link-Aufrufe</div><div id="scan-count" class="text-3xl font-bold mt-2">0</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Eindeutige Besucher</div><div id="unique-visitors" class="text-3xl font-bold mt-2">0</div></div>
@@ -47,11 +48,11 @@
   <script>
     const params=new URLSearchParams(window.location.search);
     const ref=params.get('ref')?.trim()||'';
-    const fragment=new URLSearchParams(window.location.hash.replace(/^#/,''));
     const message=document.getElementById('message');
     const dashboard=document.getElementById('dashboard');
     const login=document.getElementById('login');
-    const tokenInput=document.getElementById('token');
+    const emailInput=document.getElementById('email');
+    const passwordInput=document.getElementById('password');
     const loginError=document.getElementById('login-error');
     const tokenKey='fiiviu_partner_token_'+ref;
     function euro(value){return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(value)||0)}
@@ -81,30 +82,12 @@
       }).join('');
     }
     async function loadPartner(){
-      if(!ref){message.textContent='Nu a fost furnizat niciun cod de partener. Deschide panoul cu ?ref=CODUL-TAU.';return}
-      const fragmentToken=fragment.get('token')?.trim()||'';
-      const storedToken=localStorage.getItem(tokenKey)||'';
-      const token=fragmentToken||storedToken;
-      if(fragmentToken){
-        localStorage.setItem(tokenKey,fragmentToken);
-        history.replaceState(null,'',window.location.pathname+window.location.search);
-      }
-      if(!token){
-        message.classList.add('hidden');
-        login.classList.remove('hidden');
-        return;
-      }
       try{
-        const response=await fetch('/api/partner-stats?ref='+encodeURIComponent(ref),{headers:{Authorization:'Bearer '+token}});
+        const response=await fetch('/api/partner-stats'+(ref?'?ref='+encodeURIComponent(ref):''),{credentials:'same-origin'});
         const data=await response.json();
-        if(response.status===401){
-          localStorage.removeItem(tokenKey);
-          message.classList.add('hidden');
-          login.classList.remove('hidden');
-          loginError.textContent='Ungültiger oder abgelaufener Zugangstoken.';
-          return;
-        }
-        if(!response.ok)throw new Error(data.error||'Datele partenerului nu au putut fi încărcate.');
+        if(response.status===401){message.classList.add('hidden');login.classList.remove('hidden');return}
+        if(!response.ok)throw new Error(data.error||'Die Partnerdaten konnten nicht geladen werden.');
+        if(ref&&data.partnerRef!==ref)throw new Error('Ungültiger Partnerzugang.');
         document.getElementById('partner-ref').textContent=data.partnerRef;
         document.getElementById('scan-count').textContent=Number(data.scanCount||0).toLocaleString('de-DE');
         document.getElementById('unique-visitors').textContent=Number(data.uniqueVisitors||0).toLocaleString('de-DE');
@@ -114,18 +97,26 @@
         document.getElementById('pending-commission').textContent=euro(data.pendingCommission);
         document.getElementById('paid-commission').textContent=euro(data.paidCommission);
         renderBookings(Array.isArray(data.bookingDetails)?data.bookingDetails:[]);
-        message.classList.add('hidden');
-        dashboard.classList.remove('hidden');
-      }catch(error){message.textContent=error.message||'Datele partenerului nu au putut fi încărcate.'}
+        message.classList.add('hidden'); login.classList.add('hidden'); dashboard.classList.remove('hidden');
+      }catch(error){message.textContent=error.message||'Die Partnerdaten konnten nicht geladen werden.'}
     }
-    document.getElementById('login').addEventListener('submit',event=>{
+    document.getElementById('login').addEventListener('submit',async event=>{
       event.preventDefault();
-      const value=tokenInput.value.trim();
-      if(!value){loginError.textContent='Bitte Token eingeben.';return}
-      localStorage.setItem(tokenKey,value);
+      const email=emailInput.value.trim(), password=passwordInput.value;
       loginError.textContent='';
-      loadPartner();
+      if(!email||!password){loginError.textContent='Bitte E-Mail und Passwort eingeben.';return}
+      try{
+        const response=await fetch('/api/partner-login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email,password})});
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.error||'Login fehlgeschlagen.');
+        window.history.replaceState(null,'','/partner.html');
+        window.location.reload();
+      }catch(error){loginError.textContent=error.message}
     });
+    async function logout(){
+      await fetch('/api/partner-logout',{method:'POST',credentials:'same-origin'});
+      window.location.reload();
+    }
     loadPartner();
   </script>
 </body>
