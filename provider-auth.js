@@ -20,11 +20,11 @@ export async function ensureProviderAuthTables(env){
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_provider_sessions_expires_at ON provider_sessions(expires_at)").run();
 }
 export function providerSessionCookie(value,maxAge=2592000){
-  return "fiiviu_provider_session="+encodeURIComponent(String(value||""))+"; Path=/; Domain=fiiviu.ro; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
+  return "fiiviu_provider_session="+encodeURIComponent(String(value||""))+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 export function providerSessionFromRequest(request){
   const authorization=String(request.headers.get("Authorization")||"");
-  const bearer=authorization.match(/^Bearer\\s+(.+)$/i);
+  const bearer=authorization.match(/^Bearer\s+(.+)$/i);
   if(bearer?.[1])return String(bearer[1]).trim();
   const cookie=String(request.headers.get("Cookie")||"");
   const match=cookie.match(/(?:^|;\\s*)fiiviu_provider_session=([^;]+)/);
