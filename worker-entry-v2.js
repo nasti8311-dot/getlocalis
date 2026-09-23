@@ -38,7 +38,7 @@ export default {
 const providerCors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 function providerJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...providerCors,"Content-Type":"application/json"}})}
 async function providerAuth(request,env){
-  if(authenticateProviderSession(request,env)) return true;
+  if(await authenticateProviderSession(request,env)) return true;
   const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\\s+/,"").trim();
   const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();
   if(expected&&auth===expected)return true;
@@ -53,7 +53,11 @@ async function providerAuth(request,env){
   return false;
 }
 async function providerAccountForRequest(request,env){
-  const sessionRef=authenticateProviderSession(request,env); if(sessionRef) return await sessionRef;
+  const sessionRef=await authenticateProviderSession(request,env);
+  if(sessionRef){
+    const row=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(sessionRef).first();
+    return String(row?.connect_account_id||"");
+  }
   const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\s+/,"").trim();
   if(!auth)return "";
   try{
