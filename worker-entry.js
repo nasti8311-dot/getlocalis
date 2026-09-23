@@ -1581,64 +1581,40 @@ async function handleAdminProviderPassword(request,env){
     // organizer session from remaining valid after an admin reset.
     await env.DB.prepare("DELETE FROM provider_sessions WHERE provider_ref=?").bind(providerRef).run();
 
-    if(!env.EMAIL){
-      return json({
-        success:true,
-        providerRef,
-        email,
-        emailSent:false,
-        temporaryPassword:password,
-        message:"Zugang wurde erstellt. Der E-Mail-Versand ist nicht konfiguriert; das temporäre Passwort wird einmalig angezeigt."
-      });
-    }
+    const safe=(value)=>String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+    const subject="Ihr FiiViu Veranstalter-Zugang";
+    const text=[
+      "Willkommen bei FiiViu.",
+      "",
+      "Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.",
+      "Veranstalter: "+provider.name,
+      "E-Mail: "+email,
+      "Temporäres Passwort: "+password,
+      "",
+      "Login: https://fiiviu.ro/provider.html",
+      "",
+      "FiiViu"
+    ].join("\n");
+    const html="<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+safe(provider.name)+"<br><strong>E-Mail:</strong> "+safe(email)+"<br><strong>Temporäres Passwort:</strong> "+safe(password)+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>";
 
     try{
-      await env.EMAIL.send({
-        from:"noreply@fiiviu.ro",
-        to:email,
-        subject:"Ihr FiiViu Veranstalter-Zugang",
-        text:[
-          "Willkommen bei FiiViu.",
-          "",
-          "Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.",
-          "Veranstalter: "+provider.name,
-          "E-Mail: "+email,
-          "Temporäres Passwort: "+password,
-          "",
-          "Login: https://fiiviu.ro/provider.html",
-          "",
-          "FiiViu"
-        ].join("\\n"),
-        html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+String(provider.name).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"<br><strong>E-Mail:</strong> "+String(email).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"<br><strong>Temporäres Passwort:</strong> "+String(password).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"
-      });
-      return json({
-        success:true,
-        providerRef,
-        email,
-        emailSent:true,
-        message:"Zugang wurde erstellt und per E-Mail versendet."
-      });
+      if(env.RESEND_API_KEY){
+        const response=await fetch("https://api.resend.com/emails",{
+          method:"POST",
+          headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},
+          body:JSON.stringify({from:"FiiViu <noreply@fiiviu.ro>",to:[email],subject,html,text})
+        });
+        const result=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(result?.message||result?.error||("Resend HTTP "+response.status));
+      }else if(env.EMAIL){
+        await env.EMAIL.send({from:"noreply@fiiviu.ro",to:email,subject,text,html});
+      }else{
+        throw new Error("Kein E-Mail-Versand konfiguriert.");
+      }
+      return json({success:true,providerRef,email,emailSent:true,message:"Zugang wurde erstellt und per E-Mail versendet."});
     }catch(emailError){
-      console.error("FiiViu provider access email delivery failed",{
-        code:emailError?.code||"",
-        message:emailError?.message||"",
-        providerRef,
-        email
-      });
-
-      // Cloudflare Email Service may reject a recipient that is not a
-      // verified destination address. The account itself is still valid, so
-      // do not return HTTP 500 and do not discard the generated credentials.
-      return json({
-        success:true,
-        providerRef,
-        email,
-        emailSent:false,
-        emailErrorCode:emailError?.code||"EMAIL_SEND_FAILED",
-        emailError:String(emailError?.message||"E-Mail konnte nicht versendet werden."),
-        temporaryPassword:password,
-        message:"Zugang wurde erstellt, aber die E-Mail konnte nicht versendet werden. Das temporäre Passwort wird einmalig angezeigt."
-      });
+      console.error("FiiViu provider access email delivery failed",{code:emailError?.code||"",message:emailError?.message||"",providerRef,email});
+      return json({success:true,providerRef,email,emailSent:false,emailErrorCode:emailError?.code||"EMAIL_SEND_FAILED",emailError:String(emailError?.message||"E-Mail konnte nicht versendet werden."),temporaryPassword:password,message:"Zugang wurde erstellt, aber die E-Mail konnte nicht versendet werden. Das temporäre Passwort wird einmalig angezeigt."});
     }
   }catch(error){
     console.error("FiiViu provider password setup failed",error);
