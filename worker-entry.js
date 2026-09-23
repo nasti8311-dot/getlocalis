@@ -1633,7 +1633,7 @@ async function handleProviderLogin(request,env){
     if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return json({error:"E-Mail oder Passwort ist falsch."},401);
     if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return json({error:"E-Mail oder Passwort ist falsch."},401);
     const session=await createProviderSession(env,String(account.provider_ref));
-    const response=json({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id}});
+    const response=json({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id},sessionToken:session.raw});
     response.headers.set("Set-Cookie",providerSessionCookie(session.raw));
     return response;
   }catch(error){return json({error:error?.message||"Login fehlgeschlagen."},500)}
