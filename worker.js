@@ -17,6 +17,7 @@ export default {
         await ensurePartnerTrackingTable(env);
         const partner=await env.DB.prepare("SELECT partner_ref,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
         if(!partner||Number(partner.active)!==1)return json({error:"Unknown partner"},404,corsHeaders);
+        await env.DB.prepare("INSERT INTO partner_scan_events (partner_ref) VALUES (?)").bind(partnerRef).run();
         await env.DB.prepare("INSERT OR IGNORE INTO partner_visitors (partner_ref,visitor_id,first_seen_at,last_seen_at) VALUES (?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)").bind(partnerRef,visitorId).run();
         await env.DB.prepare("UPDATE partner_visitors SET last_seen_at=CURRENT_TIMESTAMP WHERE partner_ref=? AND visitor_id=?").bind(partnerRef,visitorId).run();
         return json({success:true},200,corsHeaders);
