@@ -376,7 +376,22 @@
             }
         }
     </style>
-</head>
+<style id="fiiviu-premium-design">
+:root{--fv-orange:#E86F2D;--fv-ink:#151515;--fv-cream:#F8F6F1;--fv-sand:#EDE7DC}
+html{scroll-behavior:smooth}body{background:var(--fv-cream)!important;color:var(--fv-ink);-webkit-font-smoothing:antialiased}
+header{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(248,246,241,.88)!important;border-bottom:1px solid rgba(21,21,21,.07);box-shadow:0 8px 30px rgba(21,21,21,.05)}
+section{scroll-margin-top:90px}
+.hero,.hero-section{isolation:isolate}
+button,a{transition:transform .22s ease,box-shadow .22s ease,background-color .22s ease,opacity .22s ease}
+button:hover{transform:translateY(-2px)}
+[class*="rounded-3xl"],[class*="rounded-2xl"]{box-shadow:0 14px 40px rgba(21,21,21,.07);border-color:rgba(21,21,21,.07)}
+img{transition:transform .5s ease,filter .5s ease}
+.group:hover img{transform:scale(1.035)}
+input,select,textarea{border-color:rgba(21,21,21,.13)!important;box-shadow:0 4px 16px rgba(21,21,21,.04);transition:border-color .2s,box-shadow .2s,transform .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--fv-orange)!important;box-shadow:0 0 0 4px rgba(232,111,45,.12)!important;outline:0}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:#cfc7ba;border-radius:99px}::-webkit-scrollbar-track{background:transparent}
+@media(max-width:768px){header{background:rgba(248,246,241,.96)!important}}
+</style></head>
 
 <body class="text-fii-black font-sans min-h-screen flex flex-col">
 
