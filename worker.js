@@ -210,7 +210,7 @@ if (url.pathname === "/api/offers") {
         if(env.DB){
           await ensurePartnerSessionsTable(env);
           const cookie=String(request.headers.get("Cookie")||"");
-          const match=cookie.match(/(?:^|;\\s*)fiiviu_partner_session=([^;]+)/);
+          const match=cookie.match(/(?:^|;\s*)fiiviu_partner_session=([^;]+)/);
           if(match)await env.DB.prepare("DELETE FROM partner_sessions WHERE session_hash=?").bind(await hashText(decodeURIComponent(match[1]))).run();
         }
       }catch(_){}
@@ -614,7 +614,7 @@ async function authenticatePartner(request,env){
   if(!env.DB)return null;
   await ensurePartnerSessionsTable(env);
   const cookie=String(request.headers.get("Cookie")||"");
-  const match=cookie.match(/(?:^|;\\s*)fiiviu_partner_session=([^;]+)/);
+  const match=cookie.match(/(?:^|;\s*)fiiviu_partner_session=([^;]+)/);
   const session=match?decodeURIComponent(match[1]):"";
   if(!session)return null;
   const hash=await hashText(session);
