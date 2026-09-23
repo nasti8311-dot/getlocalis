@@ -187,7 +187,7 @@
             isolation: isolate;
         }
 
-        .hero-bg::after {
+        .hero-bg::before {\n            content: "";\n            position: absolute;\n            inset: 0;\n            z-index: -1;\n            background: linear-gradient(90deg, rgba(0,0,0,.30), transparent 62%);\n            pointer-events: none;\n        }\n\n        .hero-bg::after {
             content: "";
             position: absolute;
             inset: 0;
@@ -210,13 +210,13 @@
 
         .category-card {
             box-shadow: var(--fii-shadow-card);
-            border: 1px solid rgba(255,255,255,.16);
-            transition: transform .35s ease, box-shadow .35s ease, border-color .35s ease;
+            border: 1px solid rgba(255,255,255,.24);
+            transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease, border-color .35s ease;
         }
 
         .category-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 24px 55px rgba(21,21,21,.15);
+            box-shadow: 0 30px 70px rgba(21,21,21,.20);
             border-color: rgba(255,255,255,.32);
         }
 
@@ -498,7 +498,7 @@
 
                     <button
                         onclick="scrollToMoments()"
-                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-7 py-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2">
+                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-8 py-4 rounded-full transition shadow-xl flex items-center justify-center gap-2">
                         <span data-i18n="hero_cta">
                             Erlebnisse entdecken
                         </span>
@@ -537,7 +537,7 @@
         <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
             <div data-category="explore"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[390px] rounded-[28px] overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
                     src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=900"
@@ -560,7 +560,7 @@
 
 
             <div data-category="relax"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[390px] rounded-[28px] overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
                     src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=900"
