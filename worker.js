@@ -623,7 +623,7 @@ async function authenticatePartner(request,env){
   return String(partner.partner_ref||"");
 }
 function partnerSessionCookie(value,maxAge=2592000){
-  return "fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
+  return "fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Domain=fiiviu.ro; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
