@@ -1,5 +1,5 @@
 import legacyWorker from "./worker.js";
-import {hashProviderPassword,providerRandomHex,ensureProviderAuthTables,createProviderSession,providerSessionCookie,authenticateProviderSession,providerSessionFromRequest} from "./provider-auth.js";
+import {hashProviderPassword,hashProviderSession,providerRandomHex,ensureProviderAuthTables,createProviderSession,providerSessionCookie,authenticateProviderSession,providerSessionFromRequest} from "./provider-auth.js";
 // FiiViu deployment sync: EmailJS private-key sender
 
 const EMAILJS_SERVICE_ID = "service_0fqphlf";
@@ -1599,7 +1599,7 @@ async function handleProviderSession(request,env){
 
 async function handleProviderLogout(request,env){
   if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
-  try{if(env.DB){await ensureProviderAuthTables(env);const raw=providerSessionFromRequest(request);if(raw)await env.DB.prepare("DELETE FROM provider_sessions WHERE session_hash=?").bind(await (await import("./provider-auth.js")).hashProviderSession(raw)).run();}}catch(_){}
+  try{if(env.DB){await ensureProviderAuthTables(env);const raw=providerSessionFromRequest(request);if(raw)await env.DB.prepare("DELETE FROM provider_sessions WHERE session_hash=?").bind(await hashProviderSession(raw)).run();}}catch(_){}
   const response=providerJson({success:true}); response.headers.set("Set-Cookie",providerSessionCookie("",0)); return response;
 }
 
