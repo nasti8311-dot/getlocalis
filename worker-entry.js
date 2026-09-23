@@ -54,7 +54,7 @@ export default {
 
     if (url.pathname === "/api/provider-login") return handleProviderLogin(request, env);
     if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
-    if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
+    if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);\n    if (url.pathname === "/api/provider/overview") return handleProviderOverview(request, env);\n    if (url.pathname === "/api/provider/connect-status") return handleProviderConnectStatus(request, env);\n    if (url.pathname === "/api/provider/connect-onboarding") return handleProviderConnectOnboarding(request, env);
 
     if (url.pathname === "/api/admin/provider-payout") {
       return handleAdminProviderPayout(request, env);
