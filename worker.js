@@ -557,7 +557,7 @@ async function hashText(value){
 }
 async function hashPassword(password,salt){
   const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(String(password||"")),{name:"PBKDF2"},false,["deriveBits"]);
-  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(String(salt||"")),iterations:120000,hash:"SHA-256"},key,256);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(String(salt||"")),iterations:100000,hash:"SHA-256"},key,256);
   return Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,"0")).join("");
 }
 function generateTemporaryPassword(){
