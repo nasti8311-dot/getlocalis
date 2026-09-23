@@ -55,7 +55,7 @@ async function handleProviderRoute(request,env,ctx){
       meeting_instructions=excluded.meeting_instructions,arrival_minutes_before=excluded.arrival_minutes_before,
       meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,
       status=excluded.status,updated_at=CURRENT_TIMESTAMP
-    `).bind(account,String(body.providerName||"").trim()||null,title,priceCents,currency,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,latitude||null,longitude||null,status).run();
+    `).bind(experienceId,account,String(body.providerName||"").trim()||null,title,priceCents,currency,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,latitude||null,longitude||null,status).run();
     const experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
     return json({success:true,experience});
   }catch(error){return json({error:error?.message||"Server error"},500)}
