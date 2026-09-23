@@ -63,8 +63,8 @@ button{border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:
 
     <section class="card p-6 md:p-8">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><h2 class="text-xl font-black">Erlebnisse / Angebote</h2><p class="muted text-sm mt-1">Die Erstellung und Veröffentlichung von Erlebnissen erfolgt jetzt ausschließlich im FiiViu Provider-Bereich. Dieser Bereich zeigt nur die bereits vorhandenen Inserate.</p></div>
-        <a href="/provider.html" class="primary inline-flex items-center justify-center no-underline">Zum Provider-Bereich →</a>
+        <div><h2 class="text-xl font-black">Erlebnisse / Angebote</h2><p class="muted text-sm mt-1">Hier verwaltest du die Inserate der angelegten Veranstalter. Veranstalter-Zuordnung, Angebote und Foto-Uploads bleiben in diesem Bereich erhalten.</p></div>
+        <button id="newOfferBtn" class="primary">+ Erlebnis anlegen</button>
       </div>
       <form id="offerForm" class="hidden grid md:grid-cols-2 gap-4 mt-6 p-5 rounded-2xl bg-[#F8F6F1]">
         <input type="hidden" id="offerId">
@@ -219,7 +219,7 @@ async function loadOffers(){
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${o.active?"Aktiv":"Deaktiviert"}</div></div>
-        <span class="text-sm font-bold text-gray-500">Verwaltung: Provider-Bereich</span>
+        <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Bearbeiten</button>
       </div>`).join(""):"<p class='muted'>Noch keine Angebote angelegt.</p>";
   }catch(e){showMessage(e.message,true)}
 }
