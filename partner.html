@@ -25,7 +25,9 @@
     </form>
     <section id="dashboard" class="hidden">
       <div class="bg-white rounded-2xl p-5 shadow-sm mb-6"><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div>
-      <div class="grid md:grid-cols-5 gap-4">
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">QR-/Link-Aufrufe</div><div id="scan-count" class="text-3xl font-bold mt-2">0</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Eindeutige Besucher</div><div id="unique-visitors" class="text-3xl font-bold mt-2">0</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Rezervări</div><div id="bookings" class="text-3xl font-bold mt-2">0</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Valoarea rezervărilor</div><div id="revenue" class="text-3xl font-bold mt-2">0,00 €</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Comision disponibil</div><div id="open-commission" class="text-3xl font-bold mt-2">0,00 €</div></div>
@@ -34,12 +36,12 @@
       </div>
 
       <div class="bg-white rounded-2xl p-6 shadow-sm mt-6">
-        <div class="flex items-center justify-between gap-4 mb-4"><div><h2 class="font-bold text-lg">Rezervările tale</h2><p class="text-sm text-gray-500 mt-1">Fiecare rezervare reușită, cu valoarea și comisionul tău de 3%.</p></div><div id="booking-count" class="text-sm text-gray-500"></div></div>
+        <div class="flex items-center justify-between gap-4 mb-4"><div><h2 class="font-bold text-lg">Rezervările tale</h2><p class="text-sm text-gray-500 mt-1">Fiecare rezervare reușită, cu valoarea și comisionul tău de 5%.</p></div><div id="booking-count" class="text-sm text-gray-500"></div></div>
         <div id="booking-list" class="space-y-3"></div>
         <div id="no-bookings" class="hidden rounded-xl bg-gray-50 p-5 text-sm text-gray-600">Nu există încă rezervări reușite prin acest cod de partener.</div>
       </div>
 
-      <div class="bg-white rounded-2xl p-6 shadow-sm mt-6"><h2 class="font-bold text-lg">Comisionul tău</h2><p class="text-gray-600 mt-2">Primești un comision de 3% pentru fiecare rezervare intermediată cu succes. Pentru protecție în cazul anulărilor, comisionul este disponibil pentru plată după 14 zile.</p><div class="mt-4 rounded-xl bg-gray-50 p-4 text-sm"><b>Plată</b><br>Comisioanele disponibile pot fi plătite după expirarea perioadei de așteptare. Comisioanele aflate în așteptare nu pot fi încă plătite.</div></div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm mt-6"><h2 class="font-bold text-lg">Comisionul tău</h2><p class="text-gray-600 mt-2">Primești un comision de 5% pentru fiecare rezervare intermediată cu succes. Pentru protecție în cazul anulărilor, comisionul este disponibil pentru plată după 14 zile.</p><div class="mt-4 rounded-xl bg-gray-50 p-4 text-sm"><b>Plată</b><br>Comisioanele disponibile pot fi plătite după expirarea perioadei de așteptare. Comisioanele aflate în așteptare nu pot fi încă plătite.</div></div>
     </section>
   </main>
   <script>
@@ -104,6 +106,8 @@
         }
         if(!response.ok)throw new Error(data.error||'Datele partenerului nu au putut fi încărcate.');
         document.getElementById('partner-ref').textContent=data.partnerRef;
+        document.getElementById('scan-count').textContent=Number(data.scanCount||0).toLocaleString('de-DE');
+        document.getElementById('unique-visitors').textContent=Number(data.uniqueVisitors||0).toLocaleString('de-DE');
         document.getElementById('bookings').textContent=data.bookings;
         document.getElementById('revenue').textContent=euro(data.revenue);
         document.getElementById('open-commission').textContent=euro(data.openCommission);
