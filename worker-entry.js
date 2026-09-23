@@ -50,6 +50,10 @@ export default {
       return handleAdminProviderPassword(request, env);
     }
 
+    if (url.pathname === "/api/provider-login") return handleProviderLogin(request, env);
+    if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
+    if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
+
     if (url.pathname === "/api/admin/provider-payout") {
       return handleAdminProviderPayout(request, env);
     }
@@ -1541,6 +1545,62 @@ async function stripeGet(env, path) {
   }
 
   return data;
+}
+
+
+async function handleAdminProviderPassword(request,env){
+  if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key is not configured."},500);
+  if(!isAdminRequest(request,env))return json({error:"Unauthorized"},401);
+  if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({error:"D1 database not configured."},500);
+  try{
+    await ensureProvidersTable(env); await ensureProviderAuthTables(env);
+    const body=await request.json(), providerRef=clean(body.providerRef).toUpperCase();
+    const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
+    if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
+    if(Number(provider.active)!==1)return json({error:"Dieser Veranstalter ist deaktiviert."},400);
+    const email=clean(body.email||provider.contact_email).toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Eine gültige Veranstalter-E-Mail-Adresse ist erforderlich."},400);
+    const existing=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? AND provider_ref<>? LIMIT 1").bind(email,providerRef).first();
+    if(existing)return json({error:"Diese E-Mail-Adresse ist bereits einem anderen Veranstalter zugeordnet."},409);
+    const salt=providerRandomHex(16),password=providerRandomHex(9),hash=await hashProviderPassword(password,salt);
+    await env.DB.prepare("INSERT INTO provider_accounts (provider_ref,email,password_salt,password_hash,active,updated_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(provider_ref) DO UPDATE SET email=excluded.email,password_salt=excluded.password_salt,password_hash=excluded.password_hash,active=1,updated_at=CURRENT_TIMESTAMP").bind(providerRef,email,salt,hash).run();
+    if(!env.EMAIL)return json({error:"E-Mail-Versand ist nicht konfiguriert."},500);
+    await env.EMAIL.send({from:"noreply@fiiviu.ro",to:email,subject:"Ihr FiiViu Veranstalter-Zugang",text:["Willkommen bei FiiViu.","","Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.","Veranstalter: "+provider.name,"E-Mail: "+email,"Temporäres Passwort: "+password,"","Login: https://fiiviu.ro/provider.html","","FiiViu"].join("\n"),html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+clean(provider.name)+"<br><strong>E-Mail:</strong> "+clean(email)+"<br><strong>Temporäres Passwort:</strong> "+password+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"});
+    return json({success:true,providerRef,email,message:"Zugang wurde erstellt und per E-Mail versendet."});
+  }catch(error){console.error("FiiViu provider password setup failed",error);return json({error:error?.message||"Zugang konnte nicht erstellt werden."},500)}
+}
+
+async function handleProviderLogin(request,env){
+  if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
+  if(!env.DB)return providerJson({error:"D1 database not configured"},500);
+  try{
+    await ensureProvidersTable(env); await ensureProviderAuthTables(env);
+    const body=await request.json(),email=clean(body.email).toLowerCase(),password=String(body.password||"");
+    if(!email||!password)return providerJson({error:"E-Mail und Passwort sind erforderlich."},400);
+    const account=await env.DB.prepare("SELECT a.provider_ref,a.password_salt,a.password_hash,a.active,p.name,p.connect_account_id,p.active AS provider_active FROM provider_accounts a JOIN providers p ON p.provider_ref=a.provider_ref WHERE lower(a.email)=? LIMIT 1").bind(email).first();
+    if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return providerJson({error:"E-Mail oder Passwort ist falsch."},401);
+    if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return providerJson({error:"E-Mail oder Passwort ist falsch."},401);
+    const session=await createProviderSession(env,String(account.provider_ref));
+    const response=providerJson({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id}});
+    response.headers.set("Set-Cookie",providerSessionCookie(session.raw));
+    return response;
+  }catch(error){return providerJson({error:error?.message||"Login fehlgeschlagen."},500)}
+}
+
+async function handleProviderSession(request,env){
+  if(request.method!=="GET")return providerJson({error:"Method Not Allowed"},405);
+  const providerRef=await authenticateProviderSession(request,env);
+  if(!providerRef)return providerJson({authenticated:false},401);
+  const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
+  if(!provider||Number(provider.active)!==1)return providerJson({authenticated:false},401);
+  return providerJson({authenticated:true,provider});
+}
+
+async function handleProviderLogout(request,env){
+  if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);
+  try{if(env.DB){await ensureProviderAuthTables(env);const raw=providerSessionFromRequest(request);if(raw)await env.DB.prepare("DELETE FROM provider_sessions WHERE session_hash=?").bind(await (await import("./provider-auth.js")).hashProviderSession(raw)).run();}}catch(_){}
+  const response=providerJson({success:true}); response.headers.set("Set-Cookie",providerSessionCookie("",0)); return response;
 }
 
 async function handleAdminProviders(request, env) {
