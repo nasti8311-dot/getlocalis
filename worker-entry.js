@@ -1,4 +1,5 @@
 import legacyWorker from "./worker.js";
+import {hashProviderPassword,providerRandomHex,ensureProviderAuthTables,createProviderSession,providerSessionCookie,authenticateProviderSession,providerSessionFromRequest} from "./provider-auth.js";
 // FiiViu deployment sync: EmailJS private-key sender
 
 const EMAILJS_SERVICE_ID = "service_0fqphlf";
@@ -43,6 +44,10 @@ export default {
 
     if (url.pathname === "/api/admin/providers") {
       return handleAdminProviders(request, env);
+    }
+
+    if (url.pathname === "/api/admin/provider-password") {
+      return handleAdminProviderPassword(request, env);
     }
 
     if (url.pathname === "/api/admin/provider-payout") {
