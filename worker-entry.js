@@ -1685,8 +1685,8 @@ async function handleProviderConnectOnboarding(request,env){
         country:"RO",
         email:String(provider.contact_email||"").trim(),
         business_type:"individual",
-        capabilities[card_payments][requested]:"true",
-        capabilities[transfers][requested]:"true"
+        "capabilities[card_payments][requested]":"true",
+        "capabilities[transfers][requested]":"true"
       });
       accountId=String(account.id||"").trim();
       if(!/^acct_[A-Za-z0-9]+$/.test(accountId))throw new Error("Stripe-Konto konnte nicht erstellt werden.");
