@@ -165,6 +165,205 @@
             background: linear-gradient(135deg, #E86F2D, #F29A62);
         }
     </style>
+
+<style id="fiiviu-visual-only-theme">
+/* =========================================================
+   FIIVIU — VISUAL ONLY THEME
+   No HTML structure, JavaScript, booking logic or translations changed.
+   ========================================================= */
+
+:root{
+  --fv-cyan:#12d8f4;
+  --fv-blue:#1677ff;
+  --fv-pink:#ff4fae;
+  --fv-orange:#ff9b3d;
+  --fv-purple:#7447ff;
+  --fv-ink:#101a3a;
+  --fv-soft:#f7f9ff;
+}
+
+/* Overall palette */
+body{
+  background:var(--fv-soft) !important;
+  color:var(--fv-ink) !important;
+}
+
+/* Header: clean white glass over the new visual language */
+header.sticky{
+  background:rgba(255,255,255,.88) !important;
+  border-bottom:1px solid rgba(16,26,58,.08) !important;
+  box-shadow:0 8px 30px rgba(16,26,58,.06);
+}
+header.sticky .logo-mark{
+  background:linear-gradient(135deg,var(--fv-cyan) 0%,var(--fv-blue) 38%,var(--fv-pink) 72%,var(--fv-orange) 100%) !important;
+  border-radius:14px !important;
+  box-shadow:0 10px 28px rgba(23,119,255,.24) !important;
+}
+header.sticky .text-fii-orange,
+header.sticky .hover\:text-fii-orange:hover{
+  color:var(--fv-pink) !important;
+}
+
+/* Parliament hero — visual treatment only */
+.hero-bg{
+  min-height:720px !important;
+  position:relative;
+  isolation:isolate;
+  background:
+    linear-gradient(118deg,
+      rgba(10,224,247,.88) 0%,
+      rgba(20,145,255,.68) 27%,
+      rgba(117,70,255,.48) 53%,
+      rgba(255,71,174,.63) 76%,
+      rgba(255,145,57,.78) 100%),
+    linear-gradient(180deg,rgba(8,16,45,.04) 0%,rgba(8,16,45,.58) 100%),
+    url("https://images.unsplash.com/photo-1639397973513-85e60de5eed5?auto=format&fit=crop&fm=jpg&q=88&w=2400")
+    center 43% / cover no-repeat !important;
+}
+.hero-bg::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(circle at 13% 18%,rgba(255,255,255,.22),transparent 26%),
+    radial-gradient(circle at 88% 18%,rgba(255,113,194,.28),transparent 30%),
+    linear-gradient(180deg,transparent 45%,rgba(8,16,45,.52) 100%);
+  pointer-events:none;
+}
+
+/* Hero typography */
+.hero-bg h1{
+  letter-spacing:-.055em !important;
+  text-shadow:0 10px 34px rgba(0,0,0,.18);
+}
+.hero-bg h1,
+.hero-bg p,
+.hero-bg .inline-flex{
+  position:relative;
+  z-index:2;
+}
+.hero-bg h1::first-line{
+  color:#fff;
+}
+.hero-bg .inline-flex{
+  background:rgba(255,255,255,.16) !important;
+  border:1px solid rgba(255,255,255,.32) !important;
+  box-shadow:0 12px 30px rgba(8,16,45,.12);
+}
+.hero-bg .inline-flex .bg-fii-orange{
+  background:linear-gradient(135deg,var(--fv-cyan),var(--fv-pink)) !important;
+}
+
+/* CTA */
+.hero-bg button{
+  background:linear-gradient(90deg,var(--fv-pink),var(--fv-orange)) !important;
+  border:0 !important;
+  box-shadow:0 16px 34px rgba(255,79,174,.30) !important;
+}
+.hero-bg button:hover{
+  background:linear-gradient(90deg,var(--fv-orange),var(--fv-pink)) !important;
+  transform:translateY(-1px);
+}
+
+/* Main content section */
+#home-view > section:not(.hero-bg){
+  background:#fff !important;
+  max-width:none !important;
+  position:relative;
+  margin-top:0 !important;
+}
+#home-view > section:not(.hero-bg)::before{
+  content:"";
+  display:block;
+  position:absolute;
+  top:-38px;
+  left:0;
+  width:100%;
+  height:76px;
+  background:#fff;
+  border-radius:50% 50% 0 0 / 100% 100% 0 0;
+}
+
+/* Section typography */
+#home-view > section:not(.hero-bg) .text-fii-orange{
+  color:var(--fv-pink) !important;
+}
+#home-view > section:not(.hero-bg) h2{
+  color:var(--fv-ink) !important;
+  letter-spacing:-.04em !important;
+}
+
+/* Experience/category cards */
+.category-card,
+.experience-card{
+  border-radius:28px !important;
+  box-shadow:0 18px 48px rgba(16,26,58,.12) !important;
+}
+.category-card{
+  overflow:hidden !important;
+}
+.category-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(18,216,244,.05),rgba(255,79,174,.10));
+  pointer-events:none;
+}
+.category-card:hover{
+  transform:translateY(-7px);
+  box-shadow:0 28px 58px rgba(16,26,58,.17) !important;
+}
+.category-card .bg-gradient-to-t{
+  background:linear-gradient(to top,rgba(9,16,43,.86),rgba(9,16,43,.08),transparent) !important;
+}
+
+/* Existing white cards / panels */
+.glass{
+  background:rgba(255,255,255,.90) !important;
+  border:1px solid rgba(16,26,58,.07);
+  box-shadow:0 16px 42px rgba(16,26,58,.08);
+}
+
+/* Existing orange Tailwind utility classes: recolor visually only */
+.bg-fii-orange{
+  background:linear-gradient(135deg,var(--fv-pink),var(--fv-orange)) !important;
+}
+.hover\:bg-fii-orangeDark:hover{
+  background:linear-gradient(135deg,var(--fv-orange),var(--fv-pink)) !important;
+}
+.text-fii-orange{
+  color:var(--fv-pink) !important;
+}
+.border-fii-orange{
+  border-color:var(--fv-pink) !important;
+}
+
+/* Form / booking visuals — functionality untouched */
+.time-slot-btn:hover{
+  border-color:var(--fv-pink) !important;
+}
+.time-slot-btn.active{
+  background:linear-gradient(135deg,var(--fv-blue),var(--fv-purple)) !important;
+  border-color:transparent !important;
+}
+.StripeElement--focus{
+  border-color:var(--fv-cyan) !important;
+  box-shadow:0 0 0 2px rgba(18,216,244,.18) !important;
+}
+
+/* Responsive */
+@media (max-width:768px){
+  .hero-bg{
+    min-height:650px !important;
+    background-position:center center !important;
+  }
+  .hero-bg h1{
+    font-size:clamp(3rem,13vw,5rem) !important;
+  }
+}
+</style>
+
 </head>
 
 <body class="text-fii-black font-sans min-h-screen flex flex-col">
