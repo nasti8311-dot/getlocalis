@@ -2773,7 +2773,8 @@ function mapPublicOffer(offer) {
     const images = [image, ...galleryUrls.filter(url => url !== image)].filter(Boolean);
 
     return {
-        id: "offer-" + String(offer.id),
+        id: offer.source === "experience" ? String(offer.experience_id || "experience-" + offer.id) : "offer-" + String(offer.id),
+        experienceId: offer.source === "experience" ? String(offer.experience_id || "") : "",
         providerRef: String(offer.provider_ref || ""),
         providerName: String(offer.provider_name || "").trim(),
         badge: categoryBadges[categoryKey],
