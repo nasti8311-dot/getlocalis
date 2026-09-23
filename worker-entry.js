@@ -9,7 +9,9 @@ const DEFAULT_APP_URL = "https://fiiviu.ro";
 const CANCELLATION_HOURS = 24;
 const BOOKING_TIME_ZONE = "Europe/Bucharest";
 
-export { authenticateProviderSession, providerSessionFromRequest };\n\nexport default {
+export { authenticateProviderSession, providerSessionFromRequest };
+
+export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
@@ -1606,7 +1608,8 @@ async function handleAdminProviderPassword(request,env){
           "Login: https://fiiviu.ro/provider.html",
           "",
           "FiiViu"
-        ].join("\n"),
+        ].join("
+"),
         html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+String(provider.name).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"<br><strong>E-Mail:</strong> "+String(email).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"<br><strong>Temporäres Passwort:</strong> "+String(password).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"
       });
       return json({
