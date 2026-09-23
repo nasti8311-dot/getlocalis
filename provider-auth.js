@@ -24,7 +24,7 @@ export function providerSessionCookie(value,maxAge=2592000){
 }
 export function providerSessionFromRequest(request){
   const cookie=String(request.headers.get("Cookie")||"");
-  const match=cookie.match(/(?:^|;\\s*)fiiviu_provider_session=([^;]+)/);
+  const match=cookie.match(/(?:^|;\s*)fiiviu_provider_session=([^;]+)/);
   return match?decodeURIComponent(match[1]):"";
 }
 export async function createProviderSession(env,providerRef){
