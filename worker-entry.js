@@ -1949,8 +1949,8 @@ async function recordBookingSettlement(env, booking) {
 
   const partnerRef = clean(booking.partner_ref);
   const hasPartner = Boolean(partnerRef);
-  const providerAmountCents = Math.round(totalCents * 0.85);
-  const partnerAmountCents = hasPartner ? Math.round(totalCents * 0.03) : 0;
+  const providerAmountCents = Math.round(totalCents * 0.825);
+  const partnerAmountCents = hasPartner ? Math.round(totalCents * 0.05) : 0;
   const fiiviuAmountCents =
     totalCents - providerAmountCents - partnerAmountCents;
 
