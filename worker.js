@@ -6,6 +6,23 @@ export default {
     const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, PATCH, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
+    if (url.pathname === "/api/partner-visit") {
+      if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
+      if(!env.DB)return json({error:"D1 database not configured"},500,corsHeaders);
+      try{
+        const body=await request.json();
+        const partnerRef=String(body.ref||"").trim().toUpperCase();
+        const visitorId=String(body.visitorId||"").trim();
+        if(!partnerRef||!visitorId||visitorId.length>128)return json({error:"Invalid partner visit"},400,corsHeaders);
+        await ensurePartnerTrackingTable(env);
+        const partner=await env.DB.prepare("SELECT partner_ref,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
+        if(!partner||Number(partner.active)!==1)return json({error:"Unknown partner"},404,corsHeaders);
+        await env.DB.prepare("INSERT OR IGNORE INTO partner_visitors (partner_ref,visitor_id,first_seen_at,last_seen_at) VALUES (?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)").bind(partnerRef,visitorId).run();
+        await env.DB.prepare("UPDATE partner_visitors SET last_seen_at=CURRENT_TIMESTAMP WHERE partner_ref=? AND visitor_id=?").bind(partnerRef,visitorId).run();
+        return json({success:true},200,corsHeaders);
+      }catch(error){return json({error:error?.message||"Partner tracking failed"},500,corsHeaders)}
+    }
+
     if (url.pathname === "/api/stripe/webhook") {
       return handleStripeWebhook(request, env);
     }
@@ -436,6 +453,13 @@ async function ensureOffersTable(env){
 }
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
+async function ensurePartnerTrackingTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_scan_events (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_scan_events_partner_ref ON partner_scan_events(partner_ref)").run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_visitors (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,visitor_id TEXT NOT NULL,first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(partner_ref,visitor_id))`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_visitors_partner_ref ON partner_visitors(partner_ref)").run();
+}
+
 async function ensurePartnersTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'Hotel',partner_ref TEXT NOT NULL UNIQUE,contact_name TEXT,contact_email TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
   try{await env.DB.prepare("ALTER TABLE partners ADD COLUMN active INTEGER NOT NULL DEFAULT 1").run()}catch(e){}
@@ -515,6 +539,7 @@ function getBookingEventTimestamp(dateValue,timeValue){
 function getPartnerHoldDays(env){const value=Number(env.PARTNER_COMMISSION_HOLD_DAYS??14);return Number.isFinite(value)?Math.max(0,Math.min(Math.floor(value),90)):14}
 async function getPartnerStats(env,partnerRef){
   if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
+  if(env.DB)await ensurePartnerTrackingTable(env);
   const payments=await searchPartnerPayments(env,partnerRef);
   const successful=payments.filter(payment=>payment.status==="succeeded");
   const holdDays=getPartnerHoldDays(env);
@@ -554,7 +579,7 @@ async function getPartnerStats(env,partnerRef){
     });
   }
   bookingDetails.sort((a,b)=>b.created-a.created);
-  const commissionCents=Math.round(revenueCents*0.03);
+  const commissionCents=Math.round(revenueCents*0.05);
   let paidCents=0;
   if(env.DB){
     await ensurePayoutsTable(env);
@@ -562,7 +587,15 @@ async function getPartnerStats(env,partnerRef){
     paidCents=Number(payoutResult?.paid_cents||0);
   }
   const openCommissionCents=availableCommissionCents-paidCents;
-  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,currency:"eur",bookingDetails};
+  let scanCount=0;
+  let uniqueVisitors=0;
+  if(env.DB){
+    const scanResult=await env.DB.prepare("SELECT COUNT(*) AS scan_count FROM partner_scan_events WHERE partner_ref=?").bind(partnerRef).first();
+    scanCount=Number(scanResult?.scan_count||0);
+    const visitorResult=await env.DB.prepare("SELECT COUNT(*) AS visitor_count FROM partner_visitors WHERE partner_ref=?").bind(partnerRef).first();
+    uniqueVisitors=Number(visitorResult?.visitor_count||0);
+  }
+  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,scanCount,uniqueVisitors,currency:"eur",bookingDetails};
 }
 async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
 async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
