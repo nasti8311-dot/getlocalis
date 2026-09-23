@@ -3798,7 +3798,17 @@ async function createPaymentIntent({
     customerLanguage,
     bookingDate,
     bookingTime,
-    offerId
+    offerId,
+    experienceId,
+    providerName,
+    meetingPointName,
+    meetingAddress,
+    meetingCity,
+    meetingCountry,
+    meetingInstructions,
+    arrivalMinutesBefore,
+    meetingLatitude,
+    meetingLongitude
 }) {
 
     const partnerRef =
@@ -3834,6 +3844,16 @@ const response =
                 bookingDate: normalizeBookingDateValue(bookingDate),
                 bookingTime: bookingTime,
                 offerId: offerId || "",
+                experienceId: experienceId || "",
+                providerName: providerName || "",
+                meetingPointName: meetingPointName || "",
+                meetingAddress: meetingAddress || "",
+                meetingCity: meetingCity || "",
+                meetingCountry: meetingCountry || "",
+                meetingInstructions: meetingInstructions || "",
+                arrivalMinutesBefore: arrivalMinutesBefore ?? null,
+                meetingLatitude: meetingLatitude || "",
+                meetingLongitude: meetingLongitude || "",
                 partnerRef: partnerRef
             })
         });
@@ -3959,8 +3979,17 @@ async function processBooking(event) {
                 customerLanguage: currentLang,
                 bookingDate: date,
                 bookingTime: selectedTourTime,
-                offerId: String(currentTourKey || "").replace(/^offer-/, ""),
-                experienceId: String(currentTourKey || "").trim()
+                offerId: item.experienceId ? "" : String(currentTourKey || "").replace(/^offer-/, ""),
+                experienceId: String(item.experienceId || "").trim(),
+                providerName: String(item.providerName || "").trim(),
+                meetingPointName: String(item.meetingPoint?.name || "").trim(),
+                meetingAddress: String(item.meetingAddress || item.meetingPoint?.address || "").trim(),
+                meetingCity: String(item.meetingCity || item.meetingPoint?.city || "").trim(),
+                meetingCountry: String(item.meetingCountry || item.meetingPoint?.country || "").trim(),
+                meetingInstructions: String(item.meetingInstructions?.[currentLang] || item.meetingInstructions || item.meetingPoint?.instructions || "").trim(),
+                arrivalMinutesBefore: item.arrivalMinutesBefore ?? item.meetingPoint?.arrivalMinutesBefore ?? null,
+                meetingLatitude: String(item.meetingPoint?.latitude || "").trim(),
+                meetingLongitude: String(item.meetingPoint?.longitude || "").trim()
             });
 
 
