@@ -3,7 +3,8 @@ import partnerWorker from "./worker.js";
 
 const CORS={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 
-export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(url.pathname==="/api/provider/experiences")return handleProviderRoute(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
+export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="GET"&&url.pathname==="/api/offers")return handlePublicOffers(request,env);
+if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(url.pathname==="/api/provider/experiences")return handleProviderRoute(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
 
 async function handleProviderRoute(request,env,ctx){
   const url=new URL(request.url);
@@ -28,6 +29,11 @@ async function handleProviderRoute(request,env,ctx){
     const meetingCity=String(body.meetingCity||"").trim();
     const meetingCountry=String(body.meetingCountry||"").trim();
     const meetingInstructions=String(body.meetingInstructions||"").trim();
+    const category=String(body.category||"explore").trim().toLowerCase();
+    const description=String(body.description||"").trim();
+    const imageUrl=String(body.imageUrl||"").trim();
+    const galleryUrls=String(body.galleryUrls||"").trim();
+    const availableTimes=String(body.availableTimes||"").trim();
     const arrival=Number(body.arrivalMinutesBefore);
     const arrivalMinutesBefore=Number.isInteger(arrival)&&arrival>=0&&arrival<=180?arrival:null;
     const latitude=String(body.meetingLatitude||"").trim();
@@ -37,30 +43,58 @@ async function handleProviderRoute(request,env,ctx){
     if(!title)return json({error:"Titel fehlt."},400);
     if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Preis muss mindestens 0,50 betragen."},400);
     if(!["eur","ron","usd","gbp"].includes(currency))return json({error:"Nicht unterstützte Währung."},400);
+    if(!["explore","relax","nightlife","adventure","vip"].includes(category))return json({error:"Ungültige Kategorie."},400);
     if(publish){
       if(!meetingPointName||!meetingAddress||!meetingCity||!meetingCountry)return json({error:"Veröffentlichung blockiert: Treffpunkt, Adresse, Stadt und Land sind erforderlich."},400);
     }
     const status=publish?"published":"draft";
+    let providerName=String(body.providerName||"").trim();
+    if(!providerName){
+      const provider=await env.DB.prepare("SELECT name FROM providers WHERE connect_account_id=? AND active=1 LIMIT 1").bind(account).first();
+      providerName=String(provider?.name||"").trim();
+    }
     await env.DB.prepare(`INSERT INTO experiences (
-      experience_id,provider_connect_account_id,provider_name,title,price_cents,currency,
-      meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,
+      experience_id,provider_connect_account_id,provider_name,title,description,category,image_url,gallery_urls,available_times,
+      price_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,
       arrival_minutes_before,meeting_latitude,meeting_longitude,status,created_at,updated_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
     ON CONFLICT(experience_id) DO UPDATE SET
       provider_connect_account_id=excluded.provider_connect_account_id,
-      provider_name=excluded.provider_name,
-      title=excluded.title,price_cents=excluded.price_cents,currency=excluded.currency,
-      meeting_point_name=excluded.meeting_point_name,meeting_address=excluded.meeting_address,
-      meeting_city=excluded.meeting_city,meeting_country=excluded.meeting_country,
+      provider_name=excluded.provider_name,title=excluded.title,description=excluded.description,category=excluded.category,
+      image_url=excluded.image_url,gallery_urls=excluded.gallery_urls,available_times=excluded.available_times,
+      price_cents=excluded.price_cents,currency=excluded.currency,meeting_point_name=excluded.meeting_point_name,
+      meeting_address=excluded.meeting_address,meeting_city=excluded.meeting_city,meeting_country=excluded.meeting_country,
       meeting_instructions=excluded.meeting_instructions,arrival_minutes_before=excluded.arrival_minutes_before,
-      meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,
-      status=excluded.status,updated_at=CURRENT_TIMESTAMP
-    `).bind(experienceId,account,String(body.providerName||"").trim()||null,title,priceCents,currency,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,latitude||null,longitude||null,status).run();
+      meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,status=excluded.status,
+      updated_at=CURRENT_TIMESTAMP
+    `).bind(experienceId,account,providerName||null,title,description||null,category,imageUrl||null,galleryUrls||null,availableTimes||null,priceCents,currency,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,latitude||null,longitude||null,status).run();
     const experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
     return json({success:true,experience});
   }catch(error){return json({error:error?.message||"Server error"},500)}
 }
 function resolveProviderAccount(request,env){const authorization=String(request.headers.get("Authorization")||"");const token=authorization.startsWith("Bearer ")?authorization.slice(7).trim():"";if(!token)return "";const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();if(!raw)return "";let map;try{map=JSON.parse(raw)}catch(_){return ""}const account=typeof map?.[token]==="string"?map[token].trim():"";return /^acct_[A-Za-z0-9]+$/.test(account)?account:""}
+
+async function handlePublicOffers(request,env){
+  if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({offers:[]});
+  try{
+    await ensureExperiencesTable(env);
+    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.active FROM offers o LEFT JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
+    const experiences=await env.DB.prepare("SELECT id,experience_id,provider_connect_account_id,provider_name,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,status FROM experiences WHERE status='published'").all();
+    const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
+    const providerExperiences=(experiences.results||[]).map(x=>({
+      id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
+      title:x.title,title_en:"",title_ro:"",description:x.description||"",description_en:"",description_ro:"",
+      price_cents:x.price_cents,currency:x.currency||"eur",available_times:x.available_times||"",
+      meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:"",meeting_point_name_ro:"",
+      meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
+      meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:"",meeting_instructions_ro:"",
+      arrival_minutes_before:x.arrival_minutes_before,category:x.category||"explore",image_url:x.image_url||"",
+      gallery_urls:x.gallery_urls||"",active:1,source:"experience"
+    }));
+    return json({offers:[...legacyOffers,...providerExperiences]});
+  }catch(error){return json({offers:[],error:error?.message||"Catalog failed"});}
+}
 
 async function createMarketplacePaymentIntent(request,env,ctx){
   let body;
@@ -200,5 +234,20 @@ async function recordPartnerScan(env,ref){
   }catch(error){console.error("FiiViu partner scan tracking failed",error)}
 }
 function isHtml(response,url){if(url.pathname.startsWith("/api/"))return false;return(response.headers.get("content-type")||"").includes("text/html")}
-async function ensureExperiencesTable(env){await env.DB.prepare(`CREATE TABLE IF NOT EXISTS experiences (id INTEGER PRIMARY KEY AUTOINCREMENT,experience_id TEXT NOT NULL UNIQUE,provider_connect_account_id TEXT,provider_name TEXT,title TEXT NOT NULL,price_cents INTEGER NOT NULL DEFAULT 0 CHECK(price_cents>=0),currency TEXT NOT NULL DEFAULT 'eur',meeting_point_name TEXT,meeting_address TEXT,meeting_city TEXT,meeting_country TEXT,meeting_instructions TEXT,arrival_minutes_before INTEGER,meeting_latitude TEXT,meeting_longitude TEXT,status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();try{await env.DB.prepare("ALTER TABLE experiences ADD COLUMN price_cents INTEGER NOT NULL DEFAULT 0").run()}catch(_){}try{await env.DB.prepare("ALTER TABLE experiences ADD COLUMN currency TEXT NOT NULL DEFAULT 'eur'").run()}catch(_){}try{await env.DB.prepare("ALTER TABLE experiences ADD COLUMN provider_name TEXT").run()}catch(_){}await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_provider ON experiences(provider_connect_account_id)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_status ON experiences(status)").run()}
+async function ensureExperiencesTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, experience_id TEXT NOT NULL UNIQUE,
+    provider_connect_account_id TEXT, provider_name TEXT, title TEXT NOT NULL, description TEXT,
+    category TEXT NOT NULL DEFAULT 'explore', image_url TEXT, gallery_urls TEXT, available_times TEXT,
+    price_cents INTEGER NOT NULL DEFAULT 0 CHECK(price_cents>=0), currency TEXT NOT NULL DEFAULT 'eur',
+    meeting_point_name TEXT, meeting_address TEXT, meeting_city TEXT, meeting_country TEXT,
+    meeting_instructions TEXT, arrival_minutes_before INTEGER, meeting_latitude TEXT, meeting_longitude TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+  const columns=[["price_cents","INTEGER NOT NULL DEFAULT 0"],["currency","TEXT NOT NULL DEFAULT 'eur'"],["provider_name","TEXT"],["description","TEXT"],["category","TEXT NOT NULL DEFAULT 'explore'"],["image_url","TEXT"],["gallery_urls","TEXT"],["available_times","TEXT"]];
+  for(const [name,type] of columns){try{await env.DB.prepare("ALTER TABLE experiences ADD COLUMN "+name+" "+type).run()}catch(_){}}
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_provider ON experiences(provider_connect_account_id)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_status ON experiences(status)").run();
+}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json"}})}
