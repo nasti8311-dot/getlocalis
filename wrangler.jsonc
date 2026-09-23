@@ -4,6 +4,12 @@
   "main": "./secure-entry.js",
   "compatibility_date": "2026-09-14",
   "triggers": { "crons": ["*/15 * * * *"] },
+  "routes": [
+    {
+      "pattern": "fiiviu.ro/api/*",
+      "zone_name": "fiiviu.ro"
+    }
+  ],
   "assets": {
     "directory": ".",
     "exclude": [".git/**", ".wrangler/**", "node_modules/**"],
