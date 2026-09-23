@@ -1565,7 +1565,7 @@ async function handleAdminProviderPassword(request,env){
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
     if(Number(provider.active)!==1)return json({error:"Dieser Veranstalter ist deaktiviert."},400);
 
-    const email=clean(body.email||provider.contact_email).toLowerCase();
+    const email=String(clean(body.email||provider.contact_email)||"").toLowerCase();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Eine gültige Veranstalter-E-Mail-Adresse ist erforderlich."},400);
 
     const existing=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? AND provider_ref<>? LIMIT 1").bind(email,providerRef).first();
