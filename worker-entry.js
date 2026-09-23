@@ -1607,7 +1607,7 @@ async function handleAdminProviderPassword(request,env){
           "",
           "FiiViu"
         ].join("\n"),
-        html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+escapeHtml(provider.name)+"<br><strong>E-Mail:</strong> "+escapeHtml(email)+"<br><strong>Temporäres Passwort:</strong> "+escapeHtml(password)+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"
+        html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+String(provider.name).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"<br><strong>E-Mail:</strong> "+String(email).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"<br><strong>Temporäres Passwort:</strong> "+String(password).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"
       });
       return json({
         success:true,
