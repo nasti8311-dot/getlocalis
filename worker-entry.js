@@ -1654,6 +1654,113 @@ async function handleProviderLogout(request,env){
   const response=json({success:true}); response.headers.set("Set-Cookie",providerSessionCookie("",0)); return response;
 }
 
+async function stripePostForm(env,path,params){
+  const body=new URLSearchParams();
+  for(const [key,value] of Object.entries(params||{})) body.set(key,String(value??""));
+  const response=await fetch("https://api.stripe.com"+path,{method:"POST",headers:{Authorization:"Bearer "+String(env.STRIPE_SECRET_KEY||""),"Content-Type":"application/x-www-form-urlencoded"},body});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data?.error?.message||"Stripe request failed");
+  return data;
+}
+
+async function providerRefFromSession(request,env){
+  return await authenticateProviderSession(request,env);
+}
+
+async function handleProviderConnectOnboarding(request,env){
+  if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
+  if(!env.DB||!env.STRIPE_SECRET_KEY)return json({error:"Stripe Connect ist nicht konfiguriert."},500);
+  const providerRef=await providerRefFromSession(request,env);
+  if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+  try{
+    const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
+    if(!provider||Number(provider.active)!==1)return json({error:"Veranstalter nicht gefunden oder deaktiviert."},404);
+    let accountId=String(provider.connect_account_id||"").trim();
+    if(!/^acct_[A-Za-z0-9]+$/.test(accountId)){
+      const account=await stripePostForm(env,"/v1/accounts",{
+        type:"express",
+        country:"RO",
+        email:String(provider.contact_email||"").trim(),
+        business_type:"individual",
+        capabilities[card_payments][requested]:"true",
+        capabilities[transfers][requested]:"true"
+      });
+      accountId=String(account.id||"").trim();
+      if(!/^acct_[A-Za-z0-9]+$/.test(accountId))throw new Error("Stripe-Konto konnte nicht erstellt werden.");
+      await env.DB.prepare("UPDATE providers SET connect_account_id=? WHERE provider_ref=?").bind(accountId,providerRef).run();
+    }
+    const link=await stripePostForm(env,"/v1/account_links",{
+      account:accountId,
+      refresh_url:"https://fiiviu.ro/provider.html?connect=refresh",
+      return_url:"https://fiiviu.ro/provider.html?connect=return",
+      type:"account_onboarding"
+    });
+    return json({success:true,accountId,onboarding:{url:link.url}});
+  }catch(error){
+    console.error("FiiViu provider Connect onboarding failed",error);
+    return json({error:error?.message||"Stripe-Onboarding konnte nicht gestartet werden."},500);
+  }
+}
+
+async function handleProviderConnectStatus(request,env){
+  if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
+  if(!env.DB||!env.STRIPE_SECRET_KEY)return json({error:"Stripe Connect ist nicht konfiguriert."},500);
+  const providerRef=await providerRefFromSession(request,env);
+  if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+  try{
+    const provider=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
+    const accountId=String(provider?.connect_account_id||"").trim();
+    if(!accountId)return json({error:"Noch kein Stripe Connect-Konto angelegt. Bitte zuerst „Stripe-Onboarding öffnen“ wählen."},400);
+    const account=await stripeGet(env,"/v1/accounts/"+encodeURIComponent(accountId));
+    return json({account:{
+      id:account.id,
+      detailsSubmitted:!!account.details_submitted,
+      payoutsEnabled:!!account.payouts_enabled,
+      transfersEnabled:!!account.capabilities?.transfers,
+      currentlyDue:Array.isArray(account.requirements?.currently_due)?account.requirements.currently_due:[],
+      pastDue:Array.isArray(account.requirements?.past_due)?account.requirements.past_due:[]
+    }});
+  }catch(error){
+    return json({error:error?.message||"Stripe-Status konnte nicht geladen werden."},500);
+  }
+}
+
+async function handleProviderOverview(request,env){
+  if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({error:"D1 database not configured"},500);
+  const providerRef=await providerRefFromSession(request,env);
+  if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+  try{
+    await ensureBookingSettlementsTable(env);
+    await ensureBookingColumns(env);
+    const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
+    if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
+    const rows=await env.DB.prepare(`
+      SELECT s.booking_id,s.provider_amount_cents,s.settlement_status,s.stripe_transfer_id,
+             b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,b.experience_name,b.customer_name,b.guests
+      FROM booking_settlements s
+      LEFT JOIN bookings b ON b.booking_id=s.booking_id
+      WHERE s.provider_ref=?
+      ORDER BY b.booking_date DESC,b.booking_time DESC,s.id DESC
+    `).bind(providerRef).all();
+    const all=rows.results||[];
+    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
+    const paidOutCents=all.filter(r=>r.stripe_transfer_id||r.settlement_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
+    const availableCents=all.filter(r=>isSettlementEventDue(r)&&r.settlement_status==="ready"&&r.status==="confirmed"&&r.payment_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
+    const pendingCents=Math.max(0,grossRevenueCents-availableCents-paidOutCents);
+    const upcoming=all.filter(r=>String(r.booking_date||"")>=new Date().toISOString().slice(0,10)&&r.status==="confirmed").slice(0,10);
+    return json({
+      provider,
+      stats:{bookings:all.length,grossRevenueCents,providerRevenueCents:grossRevenueCents,availableCents,pendingCents,paidOutCents},
+      upcomingBookings:upcoming,
+      recentBookings:all.slice(0,20)
+    });
+  }catch(error){
+    console.error("FiiViu provider overview failed",error);
+    return json({error:error?.message||"Dashboard konnte nicht geladen werden."},500);
+  }
+}
+
 async function handleAdminProviders(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
