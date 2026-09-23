@@ -221,10 +221,13 @@ if (url.pathname === "/api/offers") {
       if(request.method!=="GET")return json({error:"Method Not Allowed"},405,corsHeaders);
       try{
         const requestedRef=url.searchParams.get("ref")?.trim()||"";
-        if(!requestedRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);
-        if(isAdmin(request,env))return json(await getPartnerStats(env,requestedRef),200,corsHeaders);
+        if(isAdmin(request,env)){
+          if(!requestedRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);
+          return json(await getPartnerStats(env,requestedRef),200,corsHeaders);
+        }
         const authenticatedRef=await authenticatePartner(request,env);
-        if(!authenticatedRef||authenticatedRef!==requestedRef)return json({error:"Unauthorized"},401,corsHeaders);
+        if(!authenticatedRef)return json({error:"Unauthorized"},401,corsHeaders);
+        if(requestedRef&&authenticatedRef!==requestedRef)return json({error:"Unauthorized"},401,corsHeaders);
         return json(await getPartnerStats(env,authenticatedRef),200,corsHeaders);
       }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
     }
