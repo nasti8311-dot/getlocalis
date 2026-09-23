@@ -517,31 +517,31 @@ async function ensureOffersTable(env){
 
 async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   const safe=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-  const subject="Ihr FiiViu Partner-Zugang";
+  const subject="Accesul dumneavoastră de partener FiiViu";
   const text=[
-    "Willkommen bei FiiViu.",
+    "Bun venit la FiiViu.",
     "",
-    "Ihr Partner-Zugang wurde eingerichtet.",
-    "Partner-Code: "+partnerRef,
+    "Accesul dumneavoastră de partener a fost configurat.",
+    "Cod partener: "+partnerRef,
     "E-Mail: "+email,
-    "Temporäres Passwort: "+password,
+    "Parolă temporară: "+password,
     "",
     "Login: "+loginUrl,
     "",
-    "Bitte ändern Sie das Passwort nach dem ersten Login, sobald diese Funktion verfügbar ist.",
-    "Viele Grüße",
+    "Vă rugăm să păstrați parola temporară într-un loc sigur.",
+    "Cu stimă,",
     "FiiViu"
   ].join("\n");
   const html=`<!doctype html><html lang="de"><body style="font-family:Arial,sans-serif;line-height:1.6;color:#222">
     <h2>Ihr FiiViu Partner-Zugang</h2>
-    <p>Willkommen bei FiiViu. Ihr Partner-Zugang wurde eingerichtet.</p>
-    <p><strong>Partner-Code:</strong> ${safe(partnerRef)}<br>
+    <p>Bun venit la FiiViu. Accesul dumneavoastră de partener a fost configurat.</p>
+    <p><strong>Cod partener:</strong> ${safe(partnerRef)}<br>
     <strong>E-Mail:</strong> ${safe(email)}<br>
-    <strong>Temporäres Passwort:</strong> ${safe(password)}</p>
-    <p><a href="${safe(loginUrl)}" style="display:inline-block;padding:12px 18px;background:#d95d1f;color:#fff;text-decoration:none;border-radius:6px">Zum Partner-Login</a></p>
-    <p>Login-Link: ${safe(loginUrl)}</p>
-    <p>Bitte bewahren Sie das temporäre Passwort sicher auf.</p>
-    <p>Viele Grüße<br>FiiViu</p>
+    <strong>Parolă temporară:</strong> ${safe(password)}</p>
+    <p><a href="${safe(loginUrl)}" style="display:inline-block;padding:12px 18px;background:#d95d1f;color:#fff;text-decoration:none;border-radius:6px">Autentificare partener</a></p>
+    <p>Link de autentificare: ${safe(loginUrl)}</p>
+    <p>Vă rugăm să păstrați parola temporară într-un loc sigur.</p>
+    <p>Cu stimă,<br>FiiViu</p>
   </body></html>`;
   await env.EMAIL.send({
     from:"noreply@fiiviu.ro",
