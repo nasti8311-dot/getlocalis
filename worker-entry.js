@@ -1554,21 +1554,94 @@ async function handleAdminProviderPassword(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured."},500);
   try{
-    await ensureProvidersTable(env); await ensureProviderAuthTables(env);
-    const body=await request.json(), providerRef=clean(body.providerRef).toUpperCase();
+    await ensureProvidersTable(env);
+    await ensureProviderAuthTables(env);
+
+    const body=await request.json();
+    const providerRef=clean(body.providerRef).toUpperCase();
     const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
     if(Number(provider.active)!==1)return json({error:"Dieser Veranstalter ist deaktiviert."},400);
+
     const email=clean(body.email||provider.contact_email).toLowerCase();
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({error:"Eine gültige Veranstalter-E-Mail-Adresse ist erforderlich."},400);
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return json({error:"Eine gültige Veranstalter-E-Mail-Adresse ist erforderlich."},400);
+
     const existing=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? AND provider_ref<>? LIMIT 1").bind(email,providerRef).first();
     if(existing)return json({error:"Diese E-Mail-Adresse ist bereits einem anderen Veranstalter zugeordnet."},409);
-    const salt=providerRandomHex(16),password=providerRandomHex(9),hash=await hashProviderPassword(password,salt);
+
+    const salt=providerRandomHex(16);
+    const password=providerRandomHex(9);
+    const hash=await hashProviderPassword(password,salt);
+
     await env.DB.prepare("INSERT INTO provider_accounts (provider_ref,email,password_salt,password_hash,active,updated_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(provider_ref) DO UPDATE SET email=excluded.email,password_salt=excluded.password_salt,password_hash=excluded.password_hash,active=1,updated_at=CURRENT_TIMESTAMP").bind(providerRef,email,salt,hash).run();
-    if(!env.EMAIL)return json({error:"E-Mail-Versand ist nicht konfiguriert."},500);
-    await env.EMAIL.send({from:"noreply@fiiviu.ro",to:email,subject:"Ihr FiiViu Veranstalter-Zugang",text:["Willkommen bei FiiViu.","","Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.","Veranstalter: "+provider.name,"E-Mail: "+email,"Temporäres Passwort: "+password,"","Login: https://fiiviu.ro/provider.html","","FiiViu"].join("\n"),html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+clean(provider.name)+"<br><strong>E-Mail:</strong> "+clean(email)+"<br><strong>Temporäres Passwort:</strong> "+password+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"});
-    return json({success:true,providerRef,email,message:"Zugang wurde erstellt und per E-Mail versendet."});
-  }catch(error){console.error("FiiViu provider password setup failed",error);return json({error:error?.message||"Zugang konnte nicht erstellt werden."},500)}
+
+    // A password reset replaces the previous session. This prevents an old
+    // organizer session from remaining valid after an admin reset.
+    await env.DB.prepare("DELETE FROM provider_sessions WHERE provider_ref=?").bind(providerRef).run();
+
+    if(!env.EMAIL){
+      return json({
+        success:true,
+        providerRef,
+        email,
+        emailSent:false,
+        temporaryPassword:password,
+        message:"Zugang wurde erstellt. Der E-Mail-Versand ist nicht konfiguriert; das temporäre Passwort wird einmalig angezeigt."
+      });
+    }
+
+    try{
+      await env.EMAIL.send({
+        from:"noreply@fiiviu.ro",
+        to:email,
+        subject:"Ihr FiiViu Veranstalter-Zugang",
+        text:[
+          "Willkommen bei FiiViu.",
+          "",
+          "Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.",
+          "Veranstalter: "+provider.name,
+          "E-Mail: "+email,
+          "Temporäres Passwort: "+password,
+          "",
+          "Login: https://fiiviu.ro/provider.html",
+          "",
+          "FiiViu"
+        ].join("\n"),
+        html:"<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+escapeHtml(provider.name)+"<br><strong>E-Mail:</strong> "+escapeHtml(email)+"<br><strong>Temporäres Passwort:</strong> "+escapeHtml(password)+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>"
+      });
+      return json({
+        success:true,
+        providerRef,
+        email,
+        emailSent:true,
+        message:"Zugang wurde erstellt und per E-Mail versendet."
+      });
+    }catch(emailError){
+      console.error("FiiViu provider access email delivery failed",{
+        code:emailError?.code||"",
+        message:emailError?.message||"",
+        providerRef,
+        email
+      });
+
+      // Cloudflare Email Service may reject a recipient that is not a
+      // verified destination address. The account itself is still valid, so
+      // do not return HTTP 500 and do not discard the generated credentials.
+      return json({
+        success:true,
+        providerRef,
+        email,
+        emailSent:false,
+        emailErrorCode:emailError?.code||"EMAIL_SEND_FAILED",
+        emailError:String(emailError?.message||"E-Mail konnte nicht versendet werden."),
+        temporaryPassword:password,
+        message:"Zugang wurde erstellt, aber die E-Mail konnte nicht versendet werden. Das temporäre Passwort wird einmalig angezeigt."
+      });
+    }
+  }catch(error){
+    console.error("FiiViu provider password setup failed",error);
+    return json({error:error?.message||"Zugang konnte nicht erstellt werden."},500);
+  }
 }
 
 async function handleProviderLogin(request,env){
