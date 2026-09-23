@@ -616,7 +616,7 @@ async function authenticatePartner(request,env){
   const cookie=String(request.headers.get("Cookie")||"");
   const match=cookie.match(/(?:^|;\s*)fiiviu_partner_session=([^;]+)/);
   const bearer=String(request.headers.get("Authorization")||"");
-  const bearerMatch=bearer.match(/^Bearer\\s+(.+)$/i);
+  const bearerMatch=bearer.match(/^Bearer\s+(.+)$/i);
   const session=bearerMatch?String(bearerMatch[1]).trim():(match?decodeURIComponent(match[1]):"");
   if(!session)return null;
   const hash=await hashText(session);
