@@ -883,15 +883,24 @@
             display: none !important;
         }
 
-        .hero-bg h1::after {
-            content: "Discover ";
-            color: #fff;
-        }
+        .hero-bg h1::before { display: none !important; }
 
-        .hero-bg h1::before {
-            content: "Bucharest";
-            color: var(--fv-cyan-bright);
-            display: inline;
+        .hero-bg h1::after {
+            content: "Discover Bucharest like a local.";
+            display: block;
+            background: linear-gradient(
+                90deg,
+                #fff 0%,
+                #fff 16%,
+                var(--fv-cyan-bright) 16%,
+                var(--fv-cyan-bright) 43%,
+                #fff 43%,
+                #fff 100%
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
         }
 
         /* Add remaining visual phrase after the pseudo-highlight. */
