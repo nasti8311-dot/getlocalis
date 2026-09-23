@@ -61,7 +61,7 @@ export default {
     const rows = await env.DB.prepare("SELECT id,title,description,meeting_point_name,meeting_instructions,title_en,title_ro,description_en,description_ro,meeting_point_name_en,meeting_point_name_ro,meeting_instructions_en,meeting_instructions_ro FROM offers").all();
     let updated = 0;
     for (const row of (rows.results || [])) {
-      const translated = await translateOfferFields(row);
+      const translated = await translateOfferFields(row, { force: true });
       const missing = !String(row.title_en || "").trim() || !String(row.title_ro || "").trim() ||
         !String(row.description_en || "").trim() || !String(row.description_ro || "").trim() ||
         !String(row.meeting_point_name_en || "").trim() || !String(row.meeting_point_name_ro || "").trim() ||
@@ -360,7 +360,8 @@ async function translateOfferText(text, target) {
   // Never silently store German as an "EN/RO translation".
   return "";
 }
-async function translateOfferFields(source) {
+async function translateOfferFields(source, options = {}) {
+  const force = options.force === true;
   const title = String(source.title || "").trim();
   const description = String(source.description || "").trim();
   const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
@@ -368,14 +369,14 @@ async function translateOfferFields(source) {
 
   // If the admin/provider already supplied EN/RO text, use it directly.
   // Translation is only a fallback for fields that are still empty.
-  let titleEn = String(source.titleEn || source.title_en || "").trim();
-  let titleRo = String(source.titleRo || source.title_ro || "").trim();
-  let descriptionEn = String(source.descriptionEn || source.description_en || "").trim();
-  let descriptionRo = String(source.descriptionRo || source.description_ro || "").trim();
-  let pointEn = String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
-  let pointRo = String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
-  let instructionsEn = String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
-  let instructionsRo = String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
+  let titleEn = force ? "" : String(source.titleEn || source.title_en || "").trim();
+  let titleRo = force ? "" : String(source.titleRo || source.title_ro || "").trim();
+  let descriptionEn = force ? "" : String(source.descriptionEn || source.description_en || "").trim();
+  let descriptionRo = force ? "" : String(source.descriptionRo || source.description_ro || "").trim();
+  let pointEn = force ? "" : String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
+  let pointRo = force ? "" : String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
+  let instructionsEn = force ? "" : String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
+  let instructionsRo = force ? "" : String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
 
   const jobs = [];
   if (title && !titleEn) jobs.push(translateOfferText(title, "en").then(v => { titleEn = v; }));
