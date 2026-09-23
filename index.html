@@ -53,8 +53,59 @@
             scroll-behavior: smooth;
         }
 
+        /* Subtle FiiViu atmosphere: warm, abstract shapes kept behind all content. */
         body {
-            background: #F8F6F1;
+            position: relative;
+            overflow-x: hidden;
+            background:
+                radial-gradient(circle at 8% 18%, rgba(232,111,45,.10) 0, rgba(232,111,45,0) 24rem),
+                radial-gradient(circle at 92% 42%, rgba(201,88,29,.07) 0, rgba(201,88,29,0) 26rem),
+                #F8F6F1;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            z-index: -1;
+            pointer-events: none;
+            border-radius: 999px;
+            filter: blur(2px);
+            opacity: .7;
+        }
+
+        body::before {
+            width: 34rem;
+            height: 34rem;
+            left: -18rem;
+            top: 38rem;
+            background: radial-gradient(circle, rgba(232,111,45,.13) 0, rgba(232,111,45,.045) 42%, transparent 72%);
+            transform: rotate(-18deg);
+        }
+
+        body::after {
+            width: 30rem;
+            height: 30rem;
+            right: -16rem;
+            top: 86rem;
+            background: radial-gradient(circle, rgba(201,88,29,.10) 0, rgba(201,88,29,.035) 44%, transparent 72%);
+            transform: rotate(22deg);
+        }
+
+        main {
+            position: relative;
+            isolation: isolate;
+        }
+
+        main::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse at 78% 8%, rgba(232,111,45,.055), transparent 28%),
+                radial-gradient(ellipse at 20% 52%, rgba(237,231,220,.72), transparent 32%);
         }
 
         .hero-bg {
