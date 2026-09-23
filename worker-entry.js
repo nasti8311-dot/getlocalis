@@ -9,7 +9,7 @@ const DEFAULT_APP_URL = "https://fiiviu.ro";
 const CANCELLATION_HOURS = 24;
 const BOOKING_TIME_ZONE = "Europe/Bucharest";
 
-export default {
+export { authenticateProviderSession, providerSessionFromRequest };\n\nexport default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
