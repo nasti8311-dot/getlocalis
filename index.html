@@ -1004,6 +1004,12 @@
                     Fülle die Daten aus und sende deine Buchungsanfrage.
                 </p>
 
+                <div id="checkout-provider"
+                     class="mt-3 text-sm text-gray-600">
+                    <span class="font-semibold" data-i18n="provider_label">Veranstalter:</span>
+                    <span id="checkout-provider-name"></span>
+                </div>
+
             </div>
 
 
@@ -3647,6 +3653,24 @@ function proceedToCheckout() {
 
     document.getElementById("selected-tour-display").value =
         title;
+
+    const checkoutProviderName = String(item.providerName || "").trim();
+    const checkoutProviderEl = document.getElementById("checkout-provider");
+    const checkoutProviderNameEl = document.getElementById("checkout-provider-name");
+    const checkoutProviderLabelEl = checkoutProviderEl?.querySelector("[data-i18n='provider_label']");
+
+    if (checkoutProviderNameEl) {
+        checkoutProviderNameEl.textContent = checkoutProviderName;
+    }
+
+    if (checkoutProviderLabelEl) {
+        checkoutProviderLabelEl.textContent =
+            currentLang === "ro" ? "Furnizor: " :
+            currentLang === "en" ? "Provider: " :
+            "Veranstalter: ";
+    }
+
+    checkoutProviderEl?.classList.toggle("hidden", !checkoutProviderName);
 
     document.getElementById("checkout-summary-title").innerText =
         title;
