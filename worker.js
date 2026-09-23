@@ -200,7 +200,7 @@ if (url.pathname === "/api/offers") {
         const candidate=await hashPassword(password,account.password_salt);
         if(candidate!==String(account.password_hash||""))return json({error:"E-Mail oder Passwort ist falsch."},401,corsHeaders);
         const session=await createPartnerSession(env,String(account.partner_ref));
-        return new Response(JSON.stringify({success:true,partnerRef:String(account.partner_ref)}),{status:200,headers:{"Content-Type":"application/json",...corsHeaders,"Set-Cookie":partnerSessionCookie(session.raw)}});
+        return new Response(JSON.stringify({success:true,partnerRef:String(account.partner_ref),sessionToken:session.raw}),{status:200,headers:{"Content-Type":"application/json",...corsHeaders,"Set-Cookie":partnerSessionCookie(session.raw)}});
       }catch(error){return json({error:error?.message||"Login fehlgeschlagen."},500,corsHeaders)}
     }
 
@@ -615,7 +615,9 @@ async function authenticatePartner(request,env){
   await ensurePartnerSessionsTable(env);
   const cookie=String(request.headers.get("Cookie")||"");
   const match=cookie.match(/(?:^|;\s*)fiiviu_partner_session=([^;]+)/);
-  const session=match?decodeURIComponent(match[1]):"";
+  const bearer=String(request.headers.get("Authorization")||"");
+  const bearerMatch=bearer.match(/^Bearer\\s+(.+)$/i);
+  const session=bearerMatch?String(bearerMatch[1]).trim():(match?decodeURIComponent(match[1]):"");
   if(!session)return null;
   const hash=await hashText(session);
   const partner=await env.DB.prepare("SELECT p.partner_ref,p.active FROM partner_sessions s JOIN partners p ON p.partner_ref=s.partner_ref WHERE s.session_hash=? AND s.expires_at>? LIMIT 1").bind(hash,Math.floor(Date.now()/1000)).first();
