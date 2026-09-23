@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="ro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FiiViu – Veranstalterbereich</title>
+<title>FiiViu – Panoul organizatorului</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 body{background:#F8F6F1;color:#151515}.card{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:24px;box-shadow:0 12px 35px rgba(0,0,0,.06)}
@@ -16,45 +16,45 @@ button{border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:
   <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
     <div>
       <div class="text-sm font-black tracking-widest uppercase text-orange-600">FiiViu</div>
-      <h1 class="text-3xl md:text-4xl font-black mt-1">Veranstalterbereich</h1>
-      <p class="muted mt-2">Veranstalter anlegen, Buchungen prüfen und fällige Auszahlungen verwalten.</p>
+      <h1 class="text-3xl md:text-4xl font-black mt-1">Panoul organizatorului</h1>
+      <p class="muted mt-2">Creează organizatori, verifică rezervările și gestionează plățile scadente.</p>
     </div>
-    <button id="logoutBtn" class="hidden border border-black/10 bg-white">Schlüssel entfernen</button>
+    <button id="logoutBtn" class="hidden border border-black/10 bg-white">Elimină cheia</button>
   </header>
 
   <section id="loginCard" class="card p-6 md:p-8 max-w-xl">
-    <h2 class="text-xl font-black">Admin-Zugang</h2>
-    <p class="muted mt-2">Der Admin-Schlüssel wird nur für diese Sitzung im Browser gespeichert.</p>
+    <h2 class="text-xl font-black">Acces administrator</h2>
+    <p class="muted mt-2">Cheia de administrator este păstrată în browser doar pentru această sesiune.</p>
     <div class="mt-5">
-      <label class="text-sm font-bold">Admin-Schlüssel</label>
-      <input id="adminKey" type="password" autocomplete="off" class="mt-2" placeholder="Bearer-Schlüssel eingeben">
+      <label class="text-sm font-bold">Cheie administrator</label>
+      <input id="adminKey" type="password" autocomplete="off" class="mt-2" placeholder="Introdu cheia Bearer">
     </div>
-    <button id="loginBtn" class="primary mt-4">Bereich öffnen</button>
+    <button id="loginBtn" class="primary mt-4">Deschide panoul</button>
     <p id="loginError" class="danger text-sm mt-3 hidden"></p>
   </section>
 
   <main id="app" class="hidden space-y-8">
     <section class="grid md:grid-cols-3 gap-4">
-      <div class="card p-5"><div class="text-sm muted">Veranstalter</div><div id="statProviders" class="text-3xl font-black mt-1">–</div></div>
-      <div class="card p-5"><div class="text-sm muted">Buchungen</div><div id="statBookings" class="text-3xl font-black mt-1">–</div></div>
-      <div class="card p-5"><div class="text-sm muted">Auszahlbar</div><div id="statAvailable" class="text-3xl font-black mt-1">–</div></div>
+      <div class="card p-5"><div class="text-sm muted">Organizatori</div><div id="statProviders" class="text-3xl font-black mt-1">–</div></div>
+      <div class="card p-5"><div class="text-sm muted">Rezervări</div><div id="statBookings" class="text-3xl font-black mt-1">–</div></div>
+      <div class="card p-5"><div class="text-sm muted">Disponibil pentru plată</div><div id="statAvailable" class="text-3xl font-black mt-1">–</div></div>
     </section>
 
     <section class="card p-6 md:p-8">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><h2 class="text-xl font-black">Veranstalter</h2><p class="muted text-sm mt-1">Hier legst du deine Anbieter zunächst selbst an.</p></div>
-        <button id="newProviderBtn" class="primary">+ Veranstalter anlegen</button>
+        <div><h2 class="text-xl font-black">Organizatori</h2><p class="muted text-sm mt-1">Aici îți creezi mai întâi singur furnizorii.</p></div>
+        <button id="newProviderBtn" class="primary">+ Organizatori anlegen</button>
       </div>
 
       <form id="providerForm" class="hidden grid md:grid-cols-2 gap-4 mt-6 p-5 rounded-2xl bg-[#F8F6F1]">
         <input type="hidden" id="providerId">
-        <div><label class="text-sm font-bold">Name</label><input id="providerName" class="mt-2" required></div>
-        <div><label class="text-sm font-bold">Organizer-Code</label><input id="providerRef" class="mt-2" placeholder="z.B. ORG-BUCHARESTKART"></div>
-        <div><label class="text-sm font-bold">Kontakt-E-Mail</label><input id="providerEmail" type="email" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Stripe Connect Konto</label><input id="providerConnect" class="mt-2" placeholder="acct_..."></div>
+        <div><label class="text-sm font-bold">Nume</label><input id="providerNume" class="mt-2" required></div>
+        <div><label class="text-sm font-bold">Cod organizator</label><input id="providerRef" class="mt-2" placeholder="ex. ORG-BUCHARESTKART"></div>
+        <div><label class="text-sm font-bold">E-mail de contact</label><input id="providerEmail" type="email" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Cont Stripe Connect</label><input id="providerConnect" class="mt-2" placeholder="acct_..."></div>
         <div class="md:col-span-2 flex gap-3">
-          <button type="submit" class="primary">Speichern</button>
-          <button type="button" id="cancelProviderBtn" class="bg-white border border-black/10">Abbrechen</button>
+          <button type="submit" class="primary">Salvează</button>
+          <button type="button" id="cancelProviderBtn" class="bg-white border border-black/10">Anulează</button>
         </div>
       </form>
 
@@ -63,65 +63,65 @@ button{border-radius:12px;padding:11px 16px;font-weight:800}.primary{background:
 
     <section class="card p-6 md:p-8">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><h2 class="text-xl font-black">Erlebnisse / Angebote</h2><p class="muted text-sm mt-1">Hier verwaltest du die Inserate der angelegten Veranstalter. Veranstalter-Zuordnung, Angebote und Foto-Uploads bleiben in diesem Bereich erhalten.</p></div>
-        <button id="newOfferBtn" class="primary">+ Erlebnis anlegen</button>
+        <div><h2 class="text-xl font-black">Experiențe / Oferte</h2><p class="muted text-sm mt-1">Hier verwaltest du die Inserate der angelegten Organizatori. Organizatori-Zuordnung, Angebote und Foto-Uploads bleiben in diesem Bereich erhalten.</p></div>
+        <button id="newOfferBtn" class="primary">+ Creează experiență</button>
       </div>
       <form id="offerForm" class="hidden grid md:grid-cols-2 gap-4 mt-6 p-5 rounded-2xl bg-[#F8F6F1]">
         <input type="hidden" id="offerId">
-        <div><label class="text-sm font-bold">Veranstalter</label><select id="offerProvider" class="mt-2" required></select></div>
-        <div><label class="text-sm font-bold">Titel · DE</label><input id="offerTitle" class="mt-2" required></div>
-        <div><label class="text-sm font-bold">Titel · EN</label><input id="offerTitleEn" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Titel · RO</label><input id="offerTitleRo" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Kategorie</label><select id="offerCategory" class="mt-2"><option value="explore">Explore</option><option value="relax">Relax</option><option value="nightlife">Nightlife</option><option value="adventure">Adventure</option><option value="vip">VIP</option></select></div>
-        <div><label class="text-sm font-bold">Preis (€)</label><input id="offerPrice" type="number" min="0.50" step="0.01" class="mt-2" required></div>
-        <div><label class="text-sm font-bold">Startzeiten</label><input id="offerTimes" class="mt-2" placeholder="10:00, 15:00, 18:00"></div>
-        <div class="md:col-span-2"><label class="text-sm font-bold">Beschreibung · DE</label><textarea id="offerDescription" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
-        <div class="md:col-span-2"><label class="text-sm font-bold">Beschreibung · EN</label><textarea id="offerDescriptionEn" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
-        <div class="md:col-span-2"><label class="text-sm font-bold">Beschreibung · RO</label><textarea id="offerDescriptionRo" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
+        <div><label class="text-sm font-bold">Organizatori</label><select id="offerProvider" class="mt-2" required></select></div>
+        <div><label class="text-sm font-bold">Titlu · DE</label><input id="offerTitle" class="mt-2" required></div>
+        <div><label class="text-sm font-bold">Titlu · EN</label><input id="offerTitleEn" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Titlu · RO</label><input id="offerTitleRo" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Categorie</label><select id="offerCategory" class="mt-2"><option value="explore">Explore</option><option value="relax">Relax</option><option value="nightlife">Nightlife</option><option value="adventure">Adventure</option><option value="vip">VIP</option></select></div>
+        <div><label class="text-sm font-bold">Preț (€)</label><input id="offerPrice" type="number" min="0.50" step="0.01" class="mt-2" required></div>
+        <div><label class="text-sm font-bold">Ore de început</label><input id="offerTimes" class="mt-2" placeholder="10:00, 15:00, 18:00"></div>
+        <div class="md:col-span-2"><label class="text-sm font-bold">Descriere · DE</label><textarea id="offerDescription" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
+        <div class="md:col-span-2"><label class="text-sm font-bold">Descriere · EN</label><textarea id="offerDescriptionEn" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
+        <div class="md:col-span-2"><label class="text-sm font-bold">Descriere · RO</label><textarea id="offerDescriptionRo" rows="3" class="w-full border border-gray-200 rounded-xl p-3 mt-2"></textarea></div>
         <div class="md:col-span-2">
-          <label class="text-sm font-bold">Titelbild</label>
+          <label class="text-sm font-bold">Imagine principală</label>
           <input id="offerImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="mt-2">
           <div id="offerImagePreview" class="mt-3"></div>
-          <p class="text-xs muted mt-1">JPG, PNG, WebP oder GIF · maximal 10 MB.</p>
+          <p class="text-xs muted mt-1">JPG, PNG, WebP sau GIF · maximum 10 MB.</p>
         </div>
         <div class="md:col-span-2">
-          <label class="text-sm font-bold">Weitere Fotos</label>
+          <label class="text-sm font-bold">Alte fotografii</label>
           <input id="offerGalleryFiles" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" class="mt-2">
           <div id="offerGalleryPreview" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3"></div>
-          <p class="text-xs muted mt-1">Mehrere Bilder auswählen · maximal 10 MB je Bild.</p>
+          <p class="text-xs muted mt-1">Selectează mai multe imagini · maximum 10 MB pentru fiecare.</p>
         </div>
-        <div><label class="text-sm font-bold">Treffpunkt · DE</label><input id="offerMeetingName" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Treffpunkt · EN</label><input id="offerMeetingNameEn" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Treffpunkt · RO</label><input id="offerMeetingNameRo" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Adresse</label><input id="offerAddress" class="mt-2"></div>
-        <div><label class="text-sm font-bold">Stadt</label><input id="offerCity" class="mt-2" value="București"></div>
-        <div><label class="text-sm font-bold">Land</label><input id="offerCountry" class="mt-2" value="Romania"></div>
-        <div><label class="text-sm font-bold">Minuten vor Start</label><input id="offerArrival" type="number" min="0" class="mt-2" value="15"></div>
-        <div><label class="text-sm font-bold">Anweisungen · DE</label><textarea id="offerInstructions" rows="2" class="mt-2 w-full border border-gray-200 rounded-xl p-3"></textarea></div>
-        <div><label class="text-sm font-bold">Anweisungen · EN</label><textarea id="offerInstructionsEn" rows="2" class="mt-2 w-full border border-gray-200 rounded-xl p-3"></textarea></div>
-        <div><label class="text-sm font-bold">Anweisungen · RO</label><textarea id="offerInstructionsRo" rows="2" class="mt-2 w-full border border-gray-200 rounded-xl p-3"></textarea></div>
-        <div class="md:col-span-2 flex gap-3"><button type="submit" class="primary">Speichern</button><button type="button" id="cancelOfferBtn" class="bg-white border border-black/10">Abbrechen</button></div>
+        <div><label class="text-sm font-bold">Punct de întâlnire · DE</label><input id="offerMeetingNume" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Punct de întâlnire · EN</label><input id="offerMeetingNumeEn" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Punct de întâlnire · RO</label><input id="offerMeetingNumeRo" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Adresă</label><input id="offerAddress" class="mt-2"></div>
+        <div><label class="text-sm font-bold">Oraș</label><input id="offerCity" class="mt-2" value="București"></div>
+        <div><label class="text-sm font-bold">Țară</label><input id="offerCountry" class="mt-2" value="Romania"></div>
+        <div><label class="text-sm font-bold">Minute înainte de începere</label><input id="offerArrival" type="number" min="0" class="mt-2" value="15"></div>
+        <div><label class="text-sm font-bold">Instrucțiuni · DE</label><textarea id="offerInstructions" rows="2" class="mt-2 w-full border border-gray-200 rounded-xl p-3"></textarea></div>
+        <div><label class="text-sm font-bold">Instrucțiuni · EN</label><textarea id="offerInstructionsEn" rows="2" class="mt-2 w-full border border-gray-200 rounded-xl p-3"></textarea></div>
+        <div><label class="text-sm font-bold">Instrucțiuni · RO</label><textarea id="offerInstructionsRo" rows="2" class="mt-2 w-full border border-gray-200 rounded-xl p-3"></textarea></div>
+        <div class="md:col-span-2 flex gap-3"><button type="submit" class="primary">Salvează</button><button type="button" id="cancelOfferBtn" class="bg-white border border-black/10">Anulează</button></div>
       </form>
       <div id="offersList" class="mt-6 space-y-3"></div>
     </section>
 
     <section id="detailCard" class="card p-6 md:p-8 hidden">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><h2 id="detailName" class="text-xl font-black">–</h2><p id="detailMeta" class="muted text-sm mt-1"></p></div>
-        <div class="flex gap-2"><button id="providerLoginBtn" class="primary">Login-Zugang erstellen</button><button id="refreshDetailBtn" class="bg-white border border-black/10">Aktualisieren</button></div>
+        <div><h2 id="detailNume" class="text-xl font-black">–</h2><p id="detailMeta" class="muted text-sm mt-1"></p></div>
+        <div class="flex gap-2"><button id="providerLoginBtn" class="primary">Creează acces de autentificare</button><button id="refreshDetailBtn" class="bg-white border border-black/10">Actualizează</button></div>
       </div>
       <div id="detailStats" class="grid md:grid-cols-3 gap-4 mt-6"></div>
       <div class="mt-8">
-        <h3 class="font-black">Buchungen & Settlement</h3>
+        <h3 class="font-black">Rezervări & Settlement</h3>
         <div class="overflow-x-auto mt-3">
           <table class="w-full text-sm">
-            <thead><tr class="text-left border-b"><th class="py-3 pr-4">Buchung</th><th class="py-3 pr-4">Erlebnis</th><th class="py-3 pr-4">Datum</th><th class="py-3 pr-4">Veranstalter-Anteil</th><th class="py-3">Status</th></tr></thead>
+            <thead><tr class="text-left border-b"><th class="py-3 pr-4">Buchung</th><th class="py-3 pr-4">Erlebnis</th><th class="py-3 pr-4">Datum</th><th class="py-3 pr-4">Organizatori-Anteil</th><th class="py-3">Status</th></tr></thead>
             <tbody id="bookingRows"></tbody>
           </table>
         </div>
       </div>
       <div class="mt-8">
-        <h3 class="font-black">Auszahlungen</h3>
+        <h3 class="font-black">Plăți</h3>
         <div id="payoutList" class="mt-3 space-y-2"></div>
       </div>
     </section>
@@ -144,7 +144,7 @@ async function api(path,options={}){
   try{
     res=await fetch(API+path,{...options,headers:{...authHeaders(),...(options.headers||{})}});
   }catch(err){
-    throw new Error("Netzwerkfehler: "+(err?.message||"Failed to fetch"));
+    throw new Error("Eroare de rețea: "+(err?.message||"Failed to fetch"));
   }
   const raw=await res.text();
   let data={};
@@ -156,12 +156,12 @@ async function api(path,options={}){
   return data;
 }
 function euro(cents){return (Number(cents||0)/100).toFixed(2)+" €"}
-function showMessage(text,error=false){const el=document.getElementById("message");el.textContent=text;el.className="text-sm "+(error?"danger":"text-green-700")}
+function showMessage(text,error=false){const el=document.getElementById("message");el.textContent=text;el.classNume="text-sm "+(error?"danger":"text-green-700")}
 function openApp(){document.getElementById("loginCard").classList.add("hidden");document.getElementById("app").classList.remove("hidden");document.getElementById("logoutBtn").classList.remove("hidden");loadProviders();refreshOffersRaw()}
 function resetForm(){document.getElementById("providerForm").reset();document.getElementById("providerId").value="";document.getElementById("providerForm").classList.add("hidden")}
 function editProvider(p){
   document.getElementById("providerId").value=p.id;
-  document.getElementById("providerName").value=p.name||"";
+  document.getElementById("providerNume").value=p.name||"";
   document.getElementById("providerRef").value=p.provider_ref||"";
   document.getElementById("providerEmail").value=p.contact_email||"";
   document.getElementById("providerConnect").value=p.connect_account_id||"";
@@ -178,39 +178,39 @@ async function loadProviders(){
     populateOfferProviders(document.getElementById("offerProvider")?.value||"");
     document.getElementById("providersList").innerHTML=providers.length?providers.map(p=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><div class="font-black">${escapeHtml(p.name)}</div><div class="text-sm muted mt-1">${escapeHtml(p.provider_ref)} · ${p.active?"Aktiv":"Deaktiviert"}${p.contact_email?" · "+escapeHtml(p.contact_email):""}</div></div>
-        <div class="flex gap-2"><button class="bg-white border border-black/10" onclick="editProviderById(${p.id})">Bearbeiten</button><button class="dark" onclick="selectProvider('${escapeJs(p.provider_ref)}')">Buchungen</button></div>
-      </div>`).join(""):"<p class='muted'>Noch keine Veranstalter angelegt.</p>";
+        <div><div class="font-black">${escapeHtml(p.name)}</div><div class="text-sm muted mt-1">${escapeHtml(p.provider_ref)} · ${p.active?"Activ":"Dezactivat"}${p.contact_email?" · "+escapeHtml(p.contact_email):""}</div></div>
+        <div class="flex gap-2"><button class="bg-white border border-black/10" onclick="editProviderById(${p.id})">Editează</button><button class="dark" onclick="selectProvider('${escapeJs(p.provider_ref)}')">Rezervări</button></div>
+      </div>`).join(""):"<p class='muted'>Noch keine Organizatori angelegt.</p>";
   }catch(e){showMessage(e.message,true)}
 }
 function editProviderById(id){const p=providers.find(x=>x.id===id);if(p)editProvider(p)}
 async function selectProvider(ref){selectedRef=ref;document.getElementById("detailCard").classList.remove("hidden");await loadDetail()}
-async function createProviderLogin(){if(!selectedRef)return;const provider=providers.find(p=>String(p.provider_ref)===String(selectedRef));if(!provider)return;const email=String(provider.contact_email||'').trim();if(!email){showMessage('Bitte zuerst eine Kontakt-E-Mail beim Veranstalter hinterlegen.',true);return}if(!confirm('Login-Zugang für '+email+' erstellen? Ein temporäres Passwort wird per E-Mail versendet.'))return;try{const d=await api('/api/admin/provider-password',{method:'POST',body:JSON.stringify({providerRef:selectedRef,email})});if(d.emailSent===false&&d.temporaryPassword){showMessage((d.message||'Zugang wurde erstellt.')+' Temporäres Passwort: '+d.temporaryPassword+' — bitte sicher an den Veranstalter weitergeben.',false);}else{showMessage(d.message||'Login-Zugang wurde erstellt.');}}catch(e){showMessage(e.message,true)}}
+async function createProviderLogin(){if(!selectedRef)return;const provider=providers.find(p=>String(p.provider_ref)===String(selectedRef));if(!provider)return;const email=String(provider.contact_email||'').trim();if(!email){showMessage('Bitte zuerst eine E-mail de contact beim Organizatori hinterlegen.',true);return}if(!confirm('Creezi accesul de autentificare pentru '+email+'? O parolă temporară va fi trimisă prin e-mail.'))return;try{const d=await api('/api/admin/provider-password',{method:'POST',body:JSON.stringify({providerRef:selectedRef,email})});if(d.emailSent===false&&d.temporaryPassword){showMessage((d.message||'Accesul a fost creat.')+' Parolă temporară: '+d.temporaryPassword+' — bitte sicher an den Organizatori weitergeben.',false);}else{showMessage(d.message||'Login-Accesul a fost creat.');}}catch(e){showMessage(e.message,true)}}
 
 async function loadDetail(){
   if(!selectedRef)return;
   try{
     const d=await api("/api/admin/provider-payout?ref="+encodeURIComponent(selectedRef));
-    document.getElementById("detailName").textContent=d.provider.name;
-    document.getElementById("detailMeta").textContent=d.provider.provider_ref+(d.provider.connect_account_id?" · "+d.provider.connect_account_id:" · Noch kein Stripe Connect Konto");
+    document.getElementById("detailNume").textContent=d.provider.name;
+    document.getElementById("detailMeta").textContent=d.provider.provider_ref+(d.provider.connect_account_id?" · "+d.provider.connect_account_id:" · Noch kein Cont Stripe Connect");
     document.getElementById("statAvailable").textContent=euro(d.availableAmountCents);
     document.getElementById("statBookings").textContent=(d.bookings||[]).length;
     document.getElementById("detailStats").innerHTML=[
-      ["Auszahlbar",euro(d.availableAmountCents)],
-      ["Connect",d.provider.connect_account_id||"Nicht hinterlegt"],
-      ["Kontakt",d.provider.contact_email||"–"]
+      ["Disponibil pentru plată",euro(d.availableAmountCents)],
+      ["Connect",d.provider.connect_account_id||"Nu este configurat"],
+      ["Contact",d.provider.contact_email||"–"]
     ].map(x=>`<div class="bg-[#F8F6F1] rounded-2xl p-4"><div class="text-xs muted">${x[0]}</div><div class="font-black mt-1 break-all">${escapeHtml(String(x[1]))}</div></div>`).join("");
     document.getElementById("bookingRows").innerHTML=(d.bookings||[]).length?(d.bookings||[]).map(b=>`
-      <tr class="border-b border-black/5"><td class="py-3 pr-4 font-bold">${escapeHtml(b.booking_id)}</td><td class="py-3 pr-4">${escapeHtml(b.experience_name||"–")}</td><td class="py-3 pr-4">${escapeHtml((b.booking_date||"")+" "+(b.booking_time||""))}</td><td class="py-3 pr-4">${euro(b.provider_amount_cents)}</td><td class="py-3">${escapeHtml(b.settlement_status||"–")}</td></tr>`).join(""):"<tr><td colspan='5' class='py-4 muted'>Keine Buchungen.</td></tr>";
-    document.getElementById("payoutList").innerHTML=(d.payouts||[]).length?(d.payouts||[]).map(p=>`<div class="border border-black/5 rounded-xl p-3 flex justify-between gap-4"><span><b>${escapeHtml(p.booking_id)}</b><br><span class="text-xs muted">${escapeHtml(p.payout_date||"")}</span></span><span class="font-black">${euro(p.amount_cents)}</span></div>`).join(""):"<p class='muted'>Noch keine Auszahlungen.</p>";
+      <tr class="border-b border-black/5"><td class="py-3 pr-4 font-bold">${escapeHtml(b.booking_id)}</td><td class="py-3 pr-4">${escapeHtml(b.experience_name||"–")}</td><td class="py-3 pr-4">${escapeHtml((b.booking_date||"")+" "+(b.booking_time||""))}</td><td class="py-3 pr-4">${euro(b.provider_amount_cents)}</td><td class="py-3">${escapeHtml(b.settlement_status||"–")}</td></tr>`).join(""):"<tr><td colspan='5' class='py-4 muted'>Keine Rezervări.</td></tr>";
+    document.getElementById("payoutList").innerHTML=(d.payouts||[]).length?(d.payouts||[]).map(p=>`<div class="border border-black/5 rounded-xl p-3 flex justify-between gap-4"><span><b>${escapeHtml(p.booking_id)}</b><br><span class="text-xs muted">${escapeHtml(p.payout_date||"")}</span></span><span class="font-black">${euro(p.amount_cents)}</span></div>`).join(""):"<p class='muted'>Noch keine Plăți.</p>";
   }catch(e){showMessage(e.message,true)}
 }
 async function autoTranslateExistingOffers(){
   try {
     const result = await api("/api/admin/translate-offers", { method: "POST", body: JSON.stringify({}) });
-    if (result && Number(result.updated || 0) > 0) showMessage(result.updated + " bestehende Angebote automatisch übersetzt.");
+    if (result && Number(result.updated || 0) > 0) showMessage(result.updated + " oferte existente au fost traduse automat.");
   } catch (e) {
-    console.warn("Automatische Nachübersetzung fehlgeschlagen:", e.message);
+    console.warn("Traducerea automată a eșuat:", e.message);
   }
 }
 async function loadOffers(){
@@ -220,9 +220,9 @@ async function loadOffers(){
     const offers=d.offers||[];
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${o.active?"Aktiv":"Deaktiviert"}</div></div>
-        <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Bearbeiten</button>
-      </div>`).join(""):"<p class='muted'>Noch keine Angebote angelegt.</p>";
+        <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${o.active?"Activ":"Dezactivat"}</div></div>
+        <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Editează</button>
+      </div>`).join(""):"<p class='muted'>Nu există încă oferte.</p>";
   }catch(e){showMessage(e.message,true)}
 }
 let offers=[];
@@ -238,7 +238,7 @@ function editOfferById(id){
   document.getElementById("offerImagePreview").innerHTML=o.image_url?'<img src="'+escapeHtml(o.image_url)+'" class="h-32 w-48 object-cover rounded-xl border">':"";
   const gallery=o.gallery_urls?String(o.gallery_urls).split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean):[];
   document.getElementById("offerGalleryPreview").innerHTML=gallery.map(url=>'<img src="'+escapeHtml(url)+'" class="h-24 w-full object-cover rounded-xl border">').join("");
-  document.getElementById("offerMeetingName").value=o.meeting_point_name||""; document.getElementById("offerMeetingNameEn").value=o.meeting_point_name_en||""; document.getElementById("offerMeetingNameRo").value=o.meeting_point_name_ro||""; document.getElementById("offerAddress").value=o.meeting_address||"";
+  document.getElementById("offerMeetingNume").value=o.meeting_point_name||""; document.getElementById("offerMeetingNumeEn").value=o.meeting_point_name_en||""; document.getElementById("offerMeetingNumeRo").value=o.meeting_point_name_ro||""; document.getElementById("offerAddress").value=o.meeting_address||"";
   document.getElementById("offerCity").value=o.meeting_city||""; document.getElementById("offerCountry").value=o.meeting_country||"";
   document.getElementById("offerArrival").value=o.arrival_minutes_before??15; document.getElementById("offerInstructions").value=o.meeting_instructions||""; document.getElementById("offerInstructionsEn").value=o.meeting_instructions_en||""; document.getElementById("offerInstructionsRo").value=o.meeting_instructions_ro||"";
   document.getElementById("offerForm").classList.remove("hidden");
@@ -247,7 +247,7 @@ function populateOfferProviders(selectedRef){
   const select=document.getElementById("offerProvider");
   if(!select)return;
   const activeProviders=(providers||[]).filter(p=>Number(p.active)!==0);
-  select.innerHTML='<option value="">Veranstalter auswählen…</option>'+activeProviders.map(p=>'<option value="'+escapeHtml(p.provider_ref)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.provider_ref)+'</option>').join("");
+  select.innerHTML='<option value="">Organizatori auswählen…</option>'+activeProviders.map(p=>'<option value="'+escapeHtml(p.provider_ref)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.provider_ref)+'</option>').join("");
   select.value=selectedRef||"";
 }
 async function newOffer(){
@@ -275,25 +275,25 @@ document.getElementById("providerForm").onsubmit=async(e)=>{
   e.preventDefault();
   try{
     const id=document.getElementById("providerId").value;
-    const body={name:document.getElementById("providerName").value.trim(),providerRef:document.getElementById("providerRef").value.trim(),contactEmail:document.getElementById("providerEmail").value.trim(),connectAccountId:document.getElementById("providerConnect").value.trim()};
+    const body={name:document.getElementById("providerNume").value.trim(),providerRef:document.getElementById("providerRef").value.trim(),contactEmail:document.getElementById("providerEmail").value.trim(),connectAccountId:document.getElementById("providerConnect").value.trim()};
     if(id){body.id=Number(id);await api("/api/admin/providers",{method:"PATCH",body:JSON.stringify(body)})}
     else await api("/api/admin/providers",{method:"POST",body:JSON.stringify(body)});
-    resetForm();showMessage("Veranstalter gespeichert.");await loadProviders();if(selectedRef)await loadDetail();
+    resetForm();showMessage("Organizatori gespeichert.");await loadProviders();if(selectedRef)await loadDetail();
   }catch(e){showMessage(e.message,true)}
 };
 async function uploadImage(file,offerId,kind){
-  const cloudName = window.CLOUDINARY_CLOUD_NAME || "";
+  const cloudNume = window.CLOUDINARY_CLOUD_NAME || "";
   const uploadPreset = window.CLOUDINARY_UPLOAD_PRESET || "";
-  if(!cloudName || !uploadPreset) throw new Error("Cloudinary ist noch nicht konfiguriert.");
-  if(!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)) throw new Error("Erlaubt sind JPG, PNG, WebP und GIF.");
-  if(file.size > 10 * 1024 * 1024) throw new Error("Das Bild darf maximal 10 MB groß sein.");
+  if(!cloudNume || !uploadPreset) throw new Error("Cloudinary nu este încă configurat.");
+  if(!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)) throw new Error("Sunt permise JPG, PNG, WebP și GIF.");
+  if(file.size > 10 * 1024 * 1024) throw new Error("Imaginea poate avea maximum 10 MB.");
   const form = new FormData();
   form.append("file",file);
   form.append("upload_preset",uploadPreset);
   form.append("folder","getlocalis/offers/"+String(offerId||"new"));
-  const res = await fetch("https://api.cloudinary.com/v1_1/"+encodeURIComponent(cloudName)+"/image/upload",{method:"POST",body:form});
+  const res = await fetch("https://api.cloudinary.com/v1_1/"+encodeURIComponent(cloudNume)+"/image/upload",{method:"POST",body:form});
   const data = await res.json().catch(()=>({}));
-  if(!res.ok || !data.secure_url) throw new Error(data.error?.message||"Cloudinary-Upload fehlgeschlagen");
+  if(!res.ok || !data.secure_url) throw new Error(data.error?.message||"Încărcarea în Cloudinary a eșuat");
   return {url:data.secure_url,publicId:data.public_id||"",size:file.size,contentType:file.type};
 }
 document.getElementById("offerImageFile").onchange=()=>{const f=document.getElementById("offerImageFile").files[0];document.getElementById("offerImagePreview").innerHTML=f?'<div class="text-sm muted">'+escapeHtml(f.name)+'</div>':""};
@@ -307,7 +307,7 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
   e.preventDefault();
   try{
     const id=document.getElementById("offerId").value;
-    const body={autoTranslate:true,providerRef:document.getElementById("offerProvider").value,title:document.getElementById("offerTitle").value.trim(),titleEn:document.getElementById("offerTitleEn").value.trim(),titleRo:document.getElementById("offerTitleRo").value.trim(),category:document.getElementById("offerCategory").value,priceCents:Math.round(Number(document.getElementById("offerPrice").value)*100),availableTimes:document.getElementById("offerTimes").value.trim(),description:document.getElementById("offerDescription").value.trim(),descriptionEn:document.getElementById("offerDescriptionEn").value.trim(),descriptionRo:document.getElementById("offerDescriptionRo").value.trim(),meetingPointName:document.getElementById("offerMeetingName").value.trim(),meetingPointNameEn:document.getElementById("offerMeetingNameEn").value.trim(),meetingPointNameRo:document.getElementById("offerMeetingNameRo").value.trim(),meetingAddress:document.getElementById("offerAddress").value.trim(),meetingCity:document.getElementById("offerCity").value.trim(),meetingCountry:document.getElementById("offerCountry").value.trim(),arrivalMinutesBefore:Number(document.getElementById("offerArrival").value),meetingInstructions:document.getElementById("offerInstructions").value.trim(),meetingInstructionsEn:document.getElementById("offerInstructionsEn").value.trim(),meetingInstructionsRo:document.getElementById("offerInstructionsRo").value.trim()};
+    const body={autoTranslate:true,providerRef:document.getElementById("offerProvider").value,title:document.getElementById("offerTitle").value.trim(),titleEn:document.getElementById("offerTitleEn").value.trim(),titleRo:document.getElementById("offerTitleRo").value.trim(),category:document.getElementById("offerCategory").value,priceCents:Math.round(Number(document.getElementById("offerPrice").value)*100),availableTimes:document.getElementById("offerTimes").value.trim(),description:document.getElementById("offerDescription").value.trim(),descriptionEn:document.getElementById("offerDescriptionEn").value.trim(),descriptionRo:document.getElementById("offerDescriptionRo").value.trim(),meetingPointNume:document.getElementById("offerMeetingNume").value.trim(),meetingPointNumeEn:document.getElementById("offerMeetingNumeEn").value.trim(),meetingPointNumeRo:document.getElementById("offerMeetingNumeRo").value.trim(),meetingAddress:document.getElementById("offerAddress").value.trim(),meetingCity:document.getElementById("offerCity").value.trim(),meetingCountry:document.getElementById("offerCountry").value.trim(),arrivalMinutesBefore:Number(document.getElementById("offerArrival").value),meetingInstructions:document.getElementById("offerInstructions").value.trim(),meetingInstructionsEn:document.getElementById("offerInstructionsEn").value.trim(),meetingInstructionsRo:document.getElementById("offerInstructionsRo").value.trim()};
     if(id){body.id=Number(id);}
     const titleFile=document.getElementById("offerImageFile").files[0];
     const galleryFiles=Array.from(document.getElementById("offerGalleryFiles").files||[]);
@@ -318,7 +318,7 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     if(id) await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)});
     else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
     await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
-    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert."); await refreshOffersRaw();
+    document.getElementById("offerForm").classList.add("hidden"); showMessage("Experiența a fost salvată."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
 if(adminKey){document.getElementById("adminKey").value=adminKey;openApp()}
