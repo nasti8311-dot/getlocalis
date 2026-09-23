@@ -11,6 +11,24 @@ body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 20p
 <section><h2>Admin-Zugang</h2><label for="token">Admin-Schlüssel</label><input id="token" type="password" autocomplete="off" placeholder="Cloudflare Admin-Schlüssel"><div class="hint" style="margin-top:8px;margin-bottom:0">Der Schlüssel wird nicht gespeichert.</div></section>
 <section><h2>Neuen Partner anlegen</h2><div class="grid"><div><label for="name">Hotel / Apartment</label><input id="name" placeholder="z. B. Hotel Bucharest Central"></div><div><label for="type">Typ</label><select id="type"><option>Hotel</option><option>Apartment</option><option>Hostel</option><option>Sonstiges</option></select></div><div><label for="contactName">Kontaktperson (optional)</label><input id="contactName" placeholder="Name"></div><div><label for="contactEmail">E-Mail (optional)</label><input id="contactEmail" type="email" placeholder="partner@example.com"></div><div><label for="partnerRef">Partner-Code (optional)</label><input id="partnerRef" placeholder="Leer lassen = automatisch"></div></div><button id="create">Partner anlegen</button><div id="createResult"></div></section>
 <section><h2>Partner & QR-Codes</h2><button id="reload" class="secondary">Liste aktualisieren</button><div id="partners" style="margin-top:12px">Noch keine Liste geladen.</div></section>
+<section><h2>Partner-Aktivitäten</h2>
+<div class="balance">
+  <div>Partner gesamt<strong id="activityPartners">0</strong></div>
+  <div>QR-/Link-Aufrufe<strong id="activityScans">0</strong></div>
+  <div>Eindeutige Besucher<strong id="activityVisitors">0</strong></div>
+  <div>Buchungen über Partner<strong id="activityBookings">0</strong></div>
+  <div>Vermittelter Umsatz<strong id="activityRevenue">0,00 €</strong></div>
+  <div>Provision gesamt<strong id="activityCommission">0,00 €</strong></div>
+</div>
+<div id="activityMessage" class="muted" style="margin-top:14px">Noch keine Aktivitätsdaten geladen.</div>
+<div style="overflow-x:auto;margin-top:18px">
+<table class="history" style="margin-top:0;border-top:0">
+<thead><tr><th>Partner</th><th>Aufrufe</th><th>Besucher</th><th>Buchungen</th><th>Umsatz</th><th>Provision</th></tr></thead>
+<tbody id="activityRows"></tbody>
+</table>
+</div>
+<button id="refreshActivity" class="secondary">Aktivitäten aktualisieren</button>
+</section>
 <section><h2>Auszahlung</h2><div class="grid"><div><label for="payoutPartner">Partner</label><select id="payoutPartner"><option value="">Partner auswählen…</option></select></div><div><label for="amount">Auszahlungsbetrag (€)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="Betrag"></div><div><label for="date">Auszahlungsdatum</label><input id="date" type="date"></div><div><label for="reference">Referenz (optional)</label><input id="reference" placeholder="z. B. Überweisung 15.10.2026"></div></div>
 <div id="payoutBalance" class="balance" style="display:none"><div>Vermittelter Umsatz<strong id="payoutRevenue">0,00 €</strong></div><div>Bereits ausgezahlt<strong id="payoutPaid">0,00 €</strong></div><div>Offene Provision<strong id="payoutOpen">0,00 €</strong></div></div>
 <button id="maxPayout" class="secondary" style="display:none">Maximal offenen Betrag einsetzen</button><button id="payout" disabled>Auszahlung speichern</button><div id="payoutResult"></div><div id="payoutHistory" class="history" style="display:none"></div></section>
@@ -25,6 +43,39 @@ function openQr(url){window.open(url,'_blank','noopener');}function printQr(url,
 async function loadPayoutDetails(ref){const balance=document.getElementById('payoutBalance'),history=document.getElementById('payoutHistory'),maxBtn=document.getElementById('maxPayout'),payoutBtn=document.getElementById('payout');if(!ref){balance.style.display='none';history.style.display='none';maxBtn.style.display='none';payoutBtn.disabled=true;selectedStats=null;return;}try{const [statsR,histR]=await Promise.all([fetch(WORKER+'/api/partner-stats?ref='+encodeURIComponent(ref),{headers:headers()}),fetch(WORKER+'/api/admin/partner-payout?ref='+encodeURIComponent(ref),{headers:headers()})]);const stats=await statsR.json();const hist=await histR.json();if(!statsR.ok)throw new Error(stats.error||'Provisionsdaten konnten nicht geladen werden.');if(!histR.ok)throw new Error(hist.error||'Auszahlungshistorie konnte nicht geladen werden.');selectedStats=stats;document.getElementById('payoutRevenue').textContent=euro(stats.revenue);document.getElementById('payoutPaid').textContent=euro(stats.paidCommission);document.getElementById('payoutOpen').textContent=euro(stats.openCommission);balance.style.display='grid';maxBtn.style.display=stats.openCommission>0?'inline-block':'none';payoutBtn.disabled=stats.openCommission<=0;document.getElementById('amount').max=Math.max(0,stats.openCommission).toFixed(2);const rows=hist.payouts||[];history.style.display='block';history.innerHTML='<h3>Auszahlungshistorie</h3>'+(rows.length?'<table><thead><tr><th>Datum</th><th>Betrag</th><th>Referenz</th><th>Status</th></tr></thead><tbody>'+rows.map(p=>`<tr><td>${escapeHtml(new Date(p.payout_date+'T12:00:00').toLocaleDateString('de-DE'))}</td><td>${euro(p.amount)}</td><td>${escapeHtml(p.reference||'–')}</td><td>${escapeHtml(p.status)}</td></tr>`).join('')+'</tbody></table>':'<div class="muted">Noch keine Auszahlungen erfasst.</div>');}catch(e){selectedStats=null;balance.style.display='none';history.style.display='none';payoutBtn.disabled=true;show('payoutResult',e.message);}}
 document.getElementById('payoutPartner').onchange=async e=>{document.getElementById('payoutResult').textContent='';await loadPayoutDetails(e.target.value);};document.getElementById('maxPayout').onclick=()=>{if(selectedStats)document.getElementById('amount').value=Math.max(0,selectedStats.openCommission).toFixed(2);};
 document.getElementById('create').onclick=async()=>{const body={name:document.getElementById('name').value.trim(),type:document.getElementById('type').value,contactName:document.getElementById('contactName').value.trim(),contactEmail:document.getElementById('contactEmail').value.trim(),partnerRef:document.getElementById('partnerRef').value.trim()};if(!body.name){show('createResult','Bitte einen Hotel-/Apartment-Namen eingeben.');return;}try{const r=await fetch(WORKER+'/api/admin/partners',{method:'POST',headers:headers(),body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Partner konnte nicht angelegt werden.');show('createResult','Partner angelegt.\nCode: '+data.partner.partnerRef+'\nLink: '+data.partner.link,true);['name','partnerRef','contactName','contactEmail'].forEach(id=>document.getElementById(id).value='');await loadPartners();}catch(e){show('createResult',e.message);}};
-document.getElementById('reload').onclick=loadPartners;
+
+async function loadPartnerActivity(){
+  const msg=document.getElementById('activityMessage');
+  const rows=document.getElementById('activityRows');
+  msg.textContent='Aktivitätsdaten werden geladen…';
+  rows.innerHTML='';
+  try{
+    if(!partnerData.length) await loadPartners();
+    const activePartners=partnerData.filter(p=>Number(p.active)!==0);
+    const results=await Promise.all(activePartners.map(async p=>{
+      const r=await fetch(WORKER+'/api/partner-stats?ref='+encodeURIComponent(p.partner_ref),{headers:headers()});
+      const data=await r.json();
+      if(!r.ok) throw new Error(data.error||('Statistik für '+p.partner_ref+' konnte nicht geladen werden.'));
+      return {partner:p,stats:data};
+    }));
+    const totals=results.reduce((a,x)=>({
+      scans:a.scans+Number(x.stats.scanCount||0),
+      visitors:a.visitors+Number(x.stats.uniqueVisitors||0),
+      bookings:a.bookings+Number(x.stats.bookings||0),
+      revenue:a.revenue+Number(x.stats.revenue||0),
+      commission:a.commission+Number(x.stats.commission||0)
+    }),{scans:0,visitors:0,bookings:0,revenue:0,commission:0});
+    document.getElementById('activityPartners').textContent=activePartners.length.toLocaleString('de-DE');
+    document.getElementById('activityScans').textContent=totals.scans.toLocaleString('de-DE');
+    document.getElementById('activityVisitors').textContent=totals.visitors.toLocaleString('de-DE');
+    document.getElementById('activityBookings').textContent=totals.bookings.toLocaleString('de-DE');
+    document.getElementById('activityRevenue').textContent=euro(totals.revenue);
+    document.getElementById('activityCommission').textContent=euro(totals.commission);
+    rows.innerHTML=results.length?results.map(x=>'<tr><td><b>'+escapeHtml(x.partner.partner_ref)+'</b><br><span class="muted">'+escapeHtml(x.partner.name)+'</span></td><td>'+Number(x.stats.scanCount||0).toLocaleString('de-DE')+'</td><td>'+Number(x.stats.uniqueVisitors||0).toLocaleString('de-DE')+'</td><td>'+Number(x.stats.bookings||0).toLocaleString('de-DE')+'</td><td>'+euro(x.stats.revenue)+'</td><td>'+euro(x.stats.commission)+'</td></tr>').join(''):'<tr><td colspan="6" class="muted">Noch keine aktiven Partner vorhanden.</td></tr>';
+    msg.textContent='Aktivitätsdaten aktualisiert.';
+  }catch(e){msg.textContent=e.message||'Aktivitätsdaten konnten nicht geladen werden.';}
+}
+document.getElementById('refreshActivity').onclick=loadPartnerActivity;
+document.getElementById('reload').onclick=async()=>{await loadPartners();await loadPartnerActivity();};
 document.getElementById('payout').onclick=async()=>{const amount=Number(document.getElementById('amount').value),ref=document.getElementById('payoutPartner').value;const body={partnerRef:ref,amountCents:Math.round(amount*100),payoutDate:document.getElementById('date').value,reference:document.getElementById('reference').value.trim()};if(!ref||!Number.isFinite(amount)||amount<=0||!body.payoutDate){show('payoutResult','Bitte Partner, Betrag und Datum korrekt ausfüllen.');return;}if(selectedStats&&amount>Number(selectedStats.openCommission)+0.001){show('payoutResult','Der Betrag ist höher als die offene Provision.');return;}try{const r=await fetch(WORKER+'/api/admin/partner-payout',{method:'POST',headers:headers(),body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Auszahlung konnte nicht gespeichert werden.');show('payoutResult','Auszahlung gespeichert.\nPartner: '+data.partnerRef+'\nBetrag: '+euro(data.amount)+'\nDatum: '+data.payoutDate+'\nAuszahlung-ID: '+data.payoutId,true);document.getElementById('amount').value='';document.getElementById('reference').value='';await loadPayoutDetails(ref);}catch(e){show('payoutResult',e.message);}};
 </script></body></html>
