@@ -16,7 +16,8 @@ async function handleProviderRoute(request,env,ctx){
     await ensureExperiencesTable(env);
     if(request.method==="GET"){
       const rows=await env.DB.prepare("SELECT * FROM experiences WHERE provider_connect_account_id=? ORDER BY updated_at DESC,id DESC").bind(account).all();
-      return json({experiences:rows.results||[]});
+      const provider=await env.DB.prepare("SELECT id,name,type,provider_ref,contact_name,contact_email,connect_account_id,active FROM providers WHERE connect_account_id=? AND active=1 ORDER BY id ASC LIMIT 1").bind(account).first();
+      return json({experiences:rows.results||[],provider:provider||null,provider_connect_account_id:account});
     }
     if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
     const body=await request.json();
