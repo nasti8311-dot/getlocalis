@@ -175,6 +175,7 @@ async function loadProviders(){
     const data=await api("/api/admin/providers");
     providers=data.providers||[];
     document.getElementById("statProviders").textContent=providers.length;
+    populateOfferProviders(document.getElementById("offerProvider")?.value||"");
     document.getElementById("providersList").innerHTML=providers.length?providers.map(p=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div><div class="font-black">${escapeHtml(p.name)}</div><div class="text-sm muted mt-1">${escapeHtml(p.provider_ref)} · ${p.active?"Aktiv":"Deaktiviert"}${p.contact_email?" · "+escapeHtml(p.contact_email):""}</div></div>
@@ -247,7 +248,8 @@ function populateOfferProviders(selectedRef){
   select.innerHTML='<option value="">Veranstalter auswählen…</option>'+activeProviders.map(p=>'<option value="'+escapeHtml(p.provider_ref)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.provider_ref)+'</option>').join("");
   select.value=selectedRef||"";
 }
-function newOffer(){
+async function newOffer(){
+  await loadProviders();
   document.getElementById("offerForm").reset(); document.getElementById("offerId").value="";
   document.getElementById("offerProvider").disabled=false;
   document.getElementById("offerImageFile").value="";
@@ -314,7 +316,7 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     if(id) await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)});
     else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
     await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
-    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert und Übersetzungen aktualisiert."); await refreshOffersRaw();
+    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis gespeichert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
 if(adminKey){document.getElementById("adminKey").value=adminKey;openApp()}
