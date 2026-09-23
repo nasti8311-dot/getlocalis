@@ -1260,7 +1260,7 @@ async function sendEmailJsConfirmation(
     arrival_minutes: arrival,
     meeting_instructions:
       localizedInstructions,
-    map_link: "",
+    map_link: mapLink,
     cancel_url: cancellationUrl,
     cancel_link: cancellationUrl,
     bookingTime: bookingTime,
@@ -1284,7 +1284,7 @@ async function sendEmailJsConfirmation(
     cancel_hours: cancellationHours,
     cancelHoursBefore: cancellationHours,
     refund_hours: cancellationHours,
-    mapLink: ""
+    mapLink
   };
 
   const response = await fetch(
