@@ -164,6 +164,277 @@
         .logo-mark {
             background: linear-gradient(135deg, #E86F2D, #F29A62);
         }
+    
+        /* =========================================================
+           FiiViu visual refresh — presentation only
+           No booking, payment, data or navigation logic changed.
+        ========================================================= */
+
+        .fii-hero-content {
+            padding-top: 7rem;
+        }
+
+        .fii-hero-kicker {
+            background: rgba(255,255,255,.13);
+            border-color: rgba(255,255,255,.24);
+            box-shadow: 0 12px 35px rgba(0,0,0,.12);
+        }
+
+        .fii-hero-title {
+            text-wrap: balance;
+            max-width: 980px;
+            letter-spacing: -.055em;
+        }
+
+        .fii-hero-subtitle {
+            max-width: 650px;
+        }
+
+        .fii-hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem;
+            margin-top: 1.1rem;
+        }
+
+        .fii-hero-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .7rem 1rem;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 999px;
+            background: rgba(255,255,255,.10);
+            color: rgba(255,255,255,.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: .78rem;
+            font-weight: 800;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease;
+        }
+
+        .fii-hero-chip:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,.18);
+            border-color: rgba(255,255,255,.35);
+        }
+
+        .fii-section-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: .55rem;
+        }
+
+        .fii-section-kicker::before {
+            content: "";
+            width: 28px;
+            height: 2px;
+            border-radius: 999px;
+            background: #E86F2D;
+        }
+
+        .fii-discovery-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .fii-discovery-grid .category-card {
+            height: 420px;
+            border-radius: 2rem;
+            box-shadow: 0 12px 40px rgba(21,21,21,.08);
+        }
+
+        .fii-discovery-grid .category-card:nth-child(1) {
+            grid-column: span 7;
+        }
+
+        .fii-discovery-grid .category-card:nth-child(2) {
+            grid-column: span 5;
+        }
+
+        .fii-discovery-grid .category-card:nth-child(3) {
+            grid-column: span 5;
+            height: 360px;
+        }
+
+        .fii-discovery-grid .category-card:nth-child(4) {
+            grid-column: span 7;
+            height: 360px;
+        }
+
+        .fii-discovery-grid .category-card:nth-child(5) {
+            grid-column: 4 / span 6;
+            height: 390px;
+        }
+
+        .fii-discovery-grid .category-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .fii-discovery-grid .category-card h3 {
+            letter-spacing: -.035em;
+        }
+
+        .fii-discovery-grid .category-card .category-arrow {
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity .25s ease, transform .25s ease;
+        }
+
+        .fii-discovery-grid .category-card:hover .category-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .fii-today {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem;
+        }
+
+        .fii-today button {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            border: 1px solid rgba(21,21,21,.10);
+            background: #fff;
+            padding: .75rem 1rem;
+            border-radius: 999px;
+            font-size: .82rem;
+            font-weight: 800;
+            color: #151515;
+            box-shadow: 0 6px 18px rgba(21,21,21,.04);
+            transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .fii-today button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(232,111,45,.35);
+            box-shadow: 0 10px 25px rgba(21,21,21,.08);
+        }
+
+        .fii-featured {
+            background: linear-gradient(180deg, #fff 0%, #fbfaf7 100%);
+        }
+
+        .fii-featured-header {
+            align-items: end;
+        }
+
+        #featured-grid .experience-card {
+            border-color: rgba(21,21,21,.07);
+            box-shadow: 0 10px 35px rgba(21,21,21,.06);
+        }
+
+        #featured-grid .experience-card:hover {
+            box-shadow: 0 22px 55px rgba(21,21,21,.12);
+        }
+
+        #featured-grid .experience-card > div:first-child {
+            height: 270px;
+        }
+
+        #featured-grid .experience-card h3 {
+            letter-spacing: -.025em;
+        }
+
+        .fii-why {
+            background: #F1EDE4;
+        }
+
+        .fii-why-card {
+            background: rgba(255,255,255,.72);
+            border: 1px solid rgba(21,21,21,.06);
+            border-radius: 1.35rem;
+            padding: 1.35rem;
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .fii-why-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 35px rgba(21,21,21,.08);
+        }
+
+        .fii-why-icon {
+            width: 2.7rem;
+            height: 2.7rem;
+            border-radius: .9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #151515;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .fii-philosophy-image {
+            box-shadow: 0 28px 70px rgba(21,21,21,.14);
+        }
+
+        .fii-final-cta {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fii-final-cta::before {
+            content: "";
+            position: absolute;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            background: rgba(232,111,45,.12);
+            filter: blur(8px);
+            top: -260px;
+            right: -120px;
+        }
+
+        @media (max-width: 1023px) {
+            .fii-discovery-grid .category-card,
+            .fii-discovery-grid .category-card:nth-child(n) {
+                grid-column: span 6;
+                height: 380px;
+            }
+
+            .fii-discovery-grid .category-card:nth-child(5) {
+                grid-column: 4 / span 6;
+            }
+        }
+
+        @media (max-width: 639px) {
+            .fii-hero-content {
+                padding-top: 4rem;
+            }
+
+            .fii-hero-title {
+                font-size: clamp(3rem, 15vw, 4.6rem);
+            }
+
+            .fii-discovery-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .fii-discovery-grid .category-card,
+            .fii-discovery-grid .category-card:nth-child(n) {
+                grid-column: 1;
+                height: 330px;
+            }
+
+            .fii-discovery-grid .category-card:nth-child(5) {
+                grid-column: 1;
+            }
+
+            #featured-grid .experience-card > div:first-child {
+                height: 235px;
+            }
+        }
+
     </style>
 </head>
 
@@ -324,47 +595,56 @@
 
 <div id="home-view" class="view-section">
 
-    <section class="hero-bg min-h-[680px] md:min-h-[720px] flex items-end text-white">
-
-        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-20 md:pb-24">
-
-            <div class="max-w-3xl fade-up">
-
-                <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest mb-6">
+    <section class="hero-bg min-h-[720px] md:min-h-[780px] flex items-end text-white relative overflow-hidden">
+        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-16 md:pb-20 fii-hero-content">
+            <div class="max-w-5xl fade-up">
+                <div class="fii-hero-kicker inline-flex items-center gap-2 border rounded-full px-4 py-2 text-xs font-black uppercase tracking-[.18em] mb-6">
                     <span class="w-2 h-2 rounded-full bg-fii-orange"></span>
                     Bucharest · Romania
                 </div>
 
-                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[.92] mb-7"
+                <h1 class="fii-hero-title text-5xl md:text-7xl lg:text-8xl font-black leading-[.9] mb-7"
                     data-i18n="hero_title">
                     Oprește timpul.<br>
                     Trăiește momentul.
                 </h1>
 
-                <p class="text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed mb-9"
+                <p class="fii-hero-subtitle text-lg md:text-xl text-white/85 leading-relaxed mb-8"
                    data-i18n="hero_subtitle">
                     FiiViu bringt dich zu den Momenten, die du später nicht vergessen willst.
                     Entdecke Bukarest anders.
                 </p>
 
-                <div class="flex flex-col sm:flex-row gap-3">
+                <button
+                    onclick="scrollToMoments()"
+                    class="bg-fii-orange hover:bg-fii-orangeDark text-white font-black px-7 py-4 rounded-2xl transition shadow-2xl flex items-center justify-center gap-2">
+                    <span data-i18n="hero_cta">Erlebnisse entdecken</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
 
-                    <button
-                        onclick="scrollToMoments()"
-                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-7 py-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2">
-                        <span data-i18n="hero_cta">
-                            Erlebnisse entdecken
-                        </span>
-                        <i class="fa-solid fa-arrow-right"></i>
+                <div class="fii-hero-actions" aria-label="Kategorien">
+                    <button class="fii-hero-chip" onclick="showCategory('explore')">
+                        <i class="fa-solid fa-compass"></i> Explore
                     </button>
-
+                    <button class="fii-hero-chip" onclick="showCategory('relax')">
+                        <i class="fa-solid fa-spa"></i> Relax
+                    </button>
+                    <button class="fii-hero-chip" onclick="showCategory('nightlife')">
+                        <i class="fa-solid fa-martini-glass-citrus"></i> Nightlife
+                    </button>
+                    <button class="fii-hero-chip" onclick="showCategory('adventure')">
+                        <i class="fa-solid fa-person-hiking"></i> Adventure
+                    </button>
+                    <button class="fii-hero-chip" onclick="showCategory('vip')">
+                        <i class="fa-solid fa-gem"></i> VIP
+                    </button>
                 </div>
             </div>
         </div>
     </section>
 
 
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-24">
 
         <div class="max-w-2xl mb-12">
 
@@ -387,149 +667,106 @@
         </div>
 
 
-        <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="mb-8">
+            <span class="fii-section-kicker text-fii-orange font-black text-xs uppercase tracking-[.2em]"
+                  data-i18n="intro_label">FiiViu Moments</span>
 
-            <div data-category="explore"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+            <h2 class="text-4xl md:text-6xl font-black tracking-tight mt-4 max-w-4xl"
+                data-i18n="intro_title">
+                Nicht einfach etwas unternehmen. Etwas erleben.
+            </h2>
 
-                <img
-                    src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Bucharest">
+            <p class="text-gray-600 mt-5 leading-relaxed max-w-2xl"
+               data-i18n="intro_text">
+                Von kleinen lokalen Entdeckungen bis zu besonderen Tagen:
+                FiiViu kuratiert Erlebnisse, die sich nach Urlaub anfühlen.
+            </p>
 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+            <div class="fii-today" aria-label="Schnellzugriff">
+                <button onclick="showCategory('explore')"><i class="fa-solid fa-compass text-fii-orange"></i> Entdecken</button>
+                <button onclick="showCategory('relax')"><i class="fa-solid fa-spa text-fii-orange"></i> Entspannen</button>
+                <button onclick="showCategory('nightlife')"><i class="fa-solid fa-martini-glass-citrus text-fii-orange"></i> Heute Abend</button>
+                <button onclick="showCategory('adventure')"><i class="fa-solid fa-bolt text-fii-orange"></i> Etwas Neues</button>
+                <button onclick="showCategory('vip')"><i class="fa-solid fa-gem text-fii-orange"></i> Etwas Besonderes</button>
+            </div>
+        </div>
 
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        01
+        <div id="moments" class="fii-discovery-grid">
+
+            <div data-category="explore" role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1200" class="absolute inset-0 w-full h-full object-cover" alt="Bucharest">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div>
+                <div class="absolute inset-x-0 bottom-0 p-7 md:p-9 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs uppercase tracking-[.18em] font-black text-white/65">01 · City</div>
+                        <i class="category-arrow fa-solid fa-arrow-right"></i>
                     </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_explore">
-                        Explore
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_explore_desc">
-                        Geschichte, Kultur & lokale Geschichten.
-                    </p>
+                    <h3 class="text-3xl md:text-4xl font-black" data-i18n="cat_explore">Explore</h3>
+                    <p class="text-sm md:text-base text-white/75 mt-2 max-w-md" data-i18n="cat_explore_desc">Geschichte, Kultur & lokale Geschichten.</p>
                 </div>
             </div>
 
-
-            <div data-category="relax"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Wellness">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        02
+            <div data-category="relax" role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1000" class="absolute inset-0 w-full h-full object-cover" alt="Wellness">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"></div>
+                <div class="absolute inset-x-0 bottom-0 p-7 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs uppercase tracking-[.18em] font-black text-white/65">02 · Wellness</div>
+                        <i class="category-arrow fa-solid fa-arrow-right"></i>
                     </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_relax">
-                        Relax
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_relax_desc">
-                        Spa, Therme & Momente zum Abschalten.
-                    </p>
+                    <h3 class="text-3xl font-black" data-i18n="cat_relax">Relax</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_relax_desc">Spa, Therme & Momente zum Abschalten.</p>
                 </div>
             </div>
 
-
-            <div data-category="nightlife"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Nightlife">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        03
+            <div data-category="nightlife" role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=1000" class="absolute inset-0 w-full h-full object-cover" alt="Nightlife">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"></div>
+                <div class="absolute inset-x-0 bottom-0 p-7 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs uppercase tracking-[.18em] font-black text-white/65">03 · Night</div>
+                        <i class="category-arrow fa-solid fa-arrow-right"></i>
                     </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_nightlife">
-                        Nightlife
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_nightlife_desc">
-                        Drinks, Clubs & besondere Nächte.
-                    </p>
+                    <h3 class="text-3xl font-black" data-i18n="cat_nightlife">Nightlife</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_nightlife_desc">Drinks, Clubs & besondere Nächte.</p>
                 </div>
             </div>
 
-
-            <div data-category="adventure"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="Adventure">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        04
+            <div data-category="adventure" role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=1100" class="absolute inset-0 w-full h-full object-cover" alt="Adventure">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent"></div>
+                <div class="absolute inset-x-0 bottom-0 p-7 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs uppercase tracking-[.18em] font-black text-white/65">04 · Action</div>
+                        <i class="category-arrow fa-solid fa-arrow-right"></i>
                     </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_adventure">
-                        Adventure
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_adventure_desc">
-                        Adrenalin, Action & neue Erfahrungen.
-                    </p>
+                    <h3 class="text-3xl font-black" data-i18n="cat_adventure">Adventure</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_adventure_desc">Adrenalin, Action & neue Erfahrungen.</p>
                 </div>
             </div>
 
-
-            <div data-category="vip"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-
-                <img
-                    src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    alt="VIP">
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-
-                <div class="absolute bottom-0 p-7 text-white">
-                    <div class="text-xs uppercase tracking-widest font-bold text-white/70 mb-2">
-                        05
+            <div data-category="vip" role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1100" class="absolute inset-0 w-full h-full object-cover" alt="VIP">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/88 via-black/20 to-transparent"></div>
+                <div class="absolute inset-x-0 bottom-0 p-7 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-xs uppercase tracking-[.18em] font-black text-white/65">05 · Select</div>
+                        <i class="category-arrow fa-solid fa-arrow-right"></i>
                     </div>
-                    <h3 class="text-3xl font-black"
-                        data-i18n="cat_vip">
-                        VIP
-                    </h3>
-                    <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_vip_desc">
-                        Komfort, Stil & besondere Zugänge.
-                    </p>
+                    <h3 class="text-3xl font-black" data-i18n="cat_vip">VIP</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_vip_desc">Komfort, Stil & besondere Zugänge.</p>
                 </div>
             </div>
-
-
-
 
         </div>
     </section>
 
 
-    <section class="bg-white py-20 border-y border-black/5">
+    <section class="fii-featured py-20 md:py-24 border-y border-black/5">
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            <div class="flex flex-col md:flex-row justify-between md:items-end gap-5 mb-10">
+            <div class="fii-featured-header flex flex-col md:flex-row justify-between gap-5 mb-10">
 
                 <div>
                     <span class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
@@ -609,7 +846,7 @@
                 <img
                     src="https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?q=85&w=1200"
                     alt="Bucharest experience"
-                    class="w-full h-[520px] object-cover rounded-[2rem]">
+                    class="fii-philosophy-image w-full h-[520px] object-cover rounded-[2rem]">
 
                 <div class="absolute -bottom-6 -left-4 md:-left-8 bg-white shadow-2xl rounded-2xl p-5 max-w-xs">
 
@@ -641,7 +878,36 @@
     </section>
 
 
-    <section class="bg-fii-black text-white">
+    
+    <section class="fii-why py-20 md:py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-2xl mb-10">
+                <span class="fii-section-kicker text-fii-orange font-black text-xs uppercase tracking-[.2em]">Warum FiiViu</span>
+                <h2 class="text-4xl md:text-5xl font-black tracking-tight mt-4">Weniger suchen. Mehr erleben.</h2>
+                <p class="text-gray-600 mt-4 leading-relaxed">Bukarest hat unzählige Möglichkeiten. FiiViu macht daraus eine Auswahl, die sich leicht entdecken und buchen lässt.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="fii-why-card">
+                    <div class="fii-why-icon"><i class="fa-solid fa-location-dot"></i></div>
+                    <h3 class="text-xl font-black">Lokal kuratiert</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed mt-2">Besondere Erlebnisse mit echtem Bukarest-Gefühl – nicht einfach eine Liste von Sehenswürdigkeiten.</p>
+                </div>
+                <div class="fii-why-card">
+                    <div class="fii-why-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h3 class="text-xl font-black">Besonders ausgewählt</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed mt-2">Von entspannten Momenten bis zu besonderen Nächten: Entdecke Ideen, die aus einem Aufenthalt mehr machen.</p>
+                </div>
+                <div class="fii-why-card">
+                    <div class="fii-why-icon"><i class="fa-solid fa-bolt"></i></div>
+                    <h3 class="text-xl font-black">Einfach erleben</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed mt-2">Auswählen, Termin festlegen und deinen nächsten Moment buchen – ohne unnötige Umwege.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+<section class="fii-final-cta bg-fii-black text-white">
 
         <div class="max-w-5xl mx-auto px-4 sm:px-6 py-20 text-center">
 
