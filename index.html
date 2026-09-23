@@ -164,6 +164,68 @@
         .logo-mark {
             background: linear-gradient(135deg, #E86F2D, #F29A62);
         }
+
+        /* Mobile-friendly language dropdown — visual/control presentation only */
+        #lang-select {
+            position: relative;
+            display: inline-flex !important;
+            align-items: center;
+            padding: 0 !important;
+            border-radius: 12px !important;
+            overflow: hidden;
+        }
+
+        #lang-select::before {
+            content: "🌐";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 38px;
+            font-size: 15px;
+            pointer-events: none;
+        }
+
+        #lang-select .lang-btn {
+            display: none !important;
+        }
+
+        #lang-select::after {
+            content: "DE ▾";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            height: 38px;
+            padding: 0 9px;
+            color: #374151;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        @media (max-width: 639px) {
+            #lang-select {
+                width: 82px;
+                flex: 0 0 82px;
+            }
+
+            #lang-select::before {
+                width: 30px;
+            }
+
+            #lang-select::after {
+                min-width: 52px;
+                padding: 0 6px;
+            }
+        }
+
+        @media (min-width: 640px) {
+            #lang-select {
+                min-width: 82px;
+            }
+        }
     </style>
 </head>
 
