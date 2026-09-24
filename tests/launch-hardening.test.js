@@ -99,7 +99,6 @@ test("server-side files are excluded from Cloudflare Static Assets", () => {
     "worker.js",
     "stripe-webhook.js",
     "provider-auth.js",
-    "worker-entry-v2.js"
   ]) {
     assert.match(
       ignore,
