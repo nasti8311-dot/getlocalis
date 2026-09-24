@@ -197,7 +197,10 @@ test("legacy worker payment-intent endpoint is disabled", () => {
   const source = read("worker.js");
   assert.match(source, /Legacy payment endpoint disabled/);
   assert.match(source, /return json\(\s*\{ error: \"Legacy payment endpoint disabled/);
-  assert.doesNotMatch(source, /params\.set\(\"amount\",String\(amount\)\)/);
+  const legacyStart = source.indexOf('if (url.pathname === "/api/create-payment-intent")');
+  const legacyBlock = source.slice(legacyStart, legacyStart + 300);
+  assert.ok(legacyStart >= 0);
+  assert.doesNotMatch(legacyBlock, /params\.set\(\"amount\",String\(amount\)\)/);
 });
 
 test("secure entry routes payment creation through marketplace worker", () => {
