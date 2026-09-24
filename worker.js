@@ -503,7 +503,7 @@ async function ensureOffersTable(env){
   )`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)").run();
-
+}
 
 async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   const safe=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
