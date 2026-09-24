@@ -1052,6 +1052,14 @@ async function finalizePaidBooking(
 
     await recordBookingSettlement(env, booking);
 
+    // Notify the organizer independently from the customer confirmation.
+    // A provider notification failure must never block the booking itself.
+    try {
+      await sendProviderBookingNotification(env, booking);
+    } catch (error) {
+      console.error("FiiViu provider booking notification failed", error);
+    }
+
     if (!booking || booking.confirmation_email_sent_at) {
       return;
     }
@@ -1105,6 +1113,102 @@ async function finalizePaidBooking(
       throw error;
     }
   }
+}
+
+async function sendProviderBookingNotification(env, booking) {
+  if (!env.DB || !booking) return;
+
+  const alreadySent = booking.provider_notification_email_sent_at;
+  if (alreadySent) return;
+
+  const provider = await env.DB.prepare(
+    "SELECT provider_ref,name,contact_email,active FROM providers WHERE (provider_ref=? OR name=?) AND active=1 LIMIT 1"
+  ).bind(
+    clean(booking.partner_ref) || "",
+    clean(booking.provider_name) || ""
+  ).first();
+
+  const recipient = clean(provider?.contact_email);
+  if (!recipient) {
+    await env.DB.prepare(
+      "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
+    ).bind(
+      "Keine Veranstalter-E-Mail hinterlegt.",
+      booking.payment_intent_id
+    ).run();
+    return;
+  }
+
+  const safe = value => String(value ?? "").replace(/[&<>"]/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
+  }[c]));
+  const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const subject = "Neue Buchung – " + String(booking.experience_name || "FiiViu-Erlebnis");
+  const text = [
+    "Neue Buchung bei FiiViu",
+    "",
+    "Erlebnis: " + (booking.experience_name || ""),
+    "Buchung: " + (booking.booking_id || ""),
+    "Datum: " + (booking.booking_date || ""),
+    "Uhrzeit: " + (booking.booking_time || ""),
+    "Personen: " + (booking.guests || 1),
+    "Gast: " + (booking.customer_name || ""),
+    "E-Mail des Gastes: " + (booking.customer_email || ""),
+    "Telefon: " + (booking.customer_phone || ""),
+    "Umsatz: " + amount,
+    "",
+    "Treffpunkt: " + (booking.meeting_point_name || ""),
+    "Adresse: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
+    "",
+    "FiiViu"
+  ].join("\n");
+
+  const html = "<h2>Neue Buchung bei FiiViu</h2>" +
+    "<p><strong>Erlebnis:</strong> " + safe(booking.experience_name) + "<br>" +
+    "<strong>Buchung:</strong> " + safe(booking.booking_id) + "<br>" +
+    "<strong>Datum:</strong> " + safe(booking.booking_date) + "<br>" +
+    "<strong>Uhrzeit:</strong> " + safe(booking.booking_time) + "<br>" +
+    "<strong>Personen:</strong> " + safe(booking.guests) + "<br>" +
+    "<strong>Umsatz:</strong> " + safe(amount) + "</p>" +
+    "<p><strong>Gast:</strong> " + safe(booking.customer_name) + "<br>" +
+    "<strong>E-Mail:</strong> " + safe(booking.customer_email) + "<br>" +
+    "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
+    "<p><strong>Treffpunkt:</strong> " + safe(booking.meeting_point_name) + "<br>" +
+    "<strong>Adresse:</strong> " + safe([booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", ")) + "</p>";
+
+  if (!env.RESEND_API_KEY) {
+    await env.DB.prepare(
+      "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
+    ).bind("RESEND_API_KEY ist nicht konfiguriert.", booking.payment_intent_id).run();
+    return;
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + env.RESEND_API_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: "FiiViu <noreply@fiiviu.ro>",
+      to: [recipient],
+      subject,
+      html,
+      text
+    })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = String(result?.message || result?.error || ("Resend HTTP " + response.status)).slice(0, 1000);
+    await env.DB.prepare(
+      "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
+    ).bind(message, booking.payment_intent_id).run();
+    throw new Error(message);
+  }
+
+  await env.DB.prepare(
+    "UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL"
+  ).bind(booking.payment_intent_id).run();
 }
 
 async function sendConfirmationWithRetry(
@@ -2304,6 +2408,8 @@ async function ensureBookingColumns(env) {
     ["partner_ref", "TEXT"],
     ["provider_name", "TEXT"],
     ["provider_connect_account_id", "TEXT"],
+    ["provider_notification_email_sent_at", "TEXT"],
+    ["provider_notification_email_error", "TEXT"],
     ["confirmation_email_sent_at", "TEXT"],
     ["confirmation_email_error", "TEXT"],
     ["cancellation_token", "TEXT"],
