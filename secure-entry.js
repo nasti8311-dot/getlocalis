@@ -10,11 +10,6 @@ if (!globalThis.__fiiviuSecureEmailPatch) {
         const params = payload?.template_params || {};
         const bookingId = String(params.booking_id || "").trim();
         if (bookingId) {
-          try {
-            await globalThis.__fiiviuDB
-              .prepare("ALTER TABLE bookings ADD COLUMN booking_access_token TEXT")
-              .run();
-          } catch (_) {}
           const booking = await globalThis.__fiiviuDB
             .prepare("SELECT id,booking_id,booking_access_token FROM bookings WHERE booking_id=? LIMIT 1")
             .bind(bookingId)
