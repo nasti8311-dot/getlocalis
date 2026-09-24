@@ -2557,6 +2557,49 @@ async function recordBookingSettlement(env, booking) {
     booking.provider_connect_account_id
   );
 
+  // Stripe's payment_intent.succeeded webhook creates the authoritative
+  // settlement row with a release_at timestamp. Finalization can race that
+  // webhook, so never turn an existing pending settlement into "ready" here.
+  const existing = await env.DB.prepare(
+    "SELECT settlement_status,release_at FROM booking_settlements WHERE booking_id=? LIMIT 1"
+  ).bind(booking.booking_id).first();
+
+  if (existing) {
+    await env.DB.prepare(`
+      UPDATE booking_settlements SET
+        payment_intent_id=?,
+        total_amount_cents=?,
+        provider_amount_cents=?,
+        fiiviu_amount_cents=?,
+        partner_amount_cents=?,
+        partner_ref=?,
+        provider_ref=?,
+        provider_name=?,
+        provider_connect_account_id=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE booking_id=?
+    `).bind(
+      booking.payment_intent_id,
+      totalCents,
+      providerAmountCents,
+      fiiviuAmountCents,
+      partnerAmountCents,
+      partnerRef,
+      provider?.provider_ref || null,
+      provider?.name || clean(booking.provider_name) || null,
+      provider?.connect_account_id || clean(booking.provider_connect_account_id) || null,
+      booking.booking_id
+    ).run();
+    return;
+  }
+
+  // If finalization wins the race and creates the settlement first, keep it
+  // pending and set the same release policy used by the webhook path.
+  const releaseAt = calculateSettlementReleaseAt(
+    booking.booking_date,
+    booking.booking_time
+  );
+
   await env.DB.prepare(`
     INSERT INTO booking_settlements (
       booking_id,
@@ -2570,20 +2613,11 @@ async function recordBookingSettlement(env, booking) {
       provider_name,
       provider_connect_account_id,
       settlement_status,
+      release_at,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT(booking_id) DO UPDATE SET
-      payment_intent_id=excluded.payment_intent_id,
-      total_amount_cents=excluded.total_amount_cents,
-      provider_amount_cents=excluded.provider_amount_cents,
-      fiiviu_amount_cents=excluded.fiiviu_amount_cents,
-      partner_amount_cents=excluded.partner_amount_cents,
-      partner_ref=excluded.partner_ref,
-      provider_ref=excluded.provider_ref,
-      provider_name=excluded.provider_name,
-      provider_connect_account_id=excluded.provider_connect_account_id,
-      updated_at=CURRENT_TIMESTAMP
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(booking_id) DO NOTHING
   `).bind(
     booking.booking_id,
     booking.payment_intent_id,
@@ -2594,7 +2628,8 @@ async function recordBookingSettlement(env, booking) {
     partnerRef,
     provider?.provider_ref || null,
     provider?.name || clean(booking.provider_name) || null,
-    provider?.connect_account_id || clean(booking.provider_connect_account_id) || null
+    provider?.connect_account_id || clean(booking.provider_connect_account_id) || null,
+    releaseAt
   ).run();
 }
 
