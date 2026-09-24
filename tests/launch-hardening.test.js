@@ -76,8 +76,8 @@ test("launch paths do not mutate D1 schema at request time", () => {
     "provider-auth.js"
   ]) {
     const source = read(path);
-    assert.doesNotMatch(source, /\\bCREATE\\s+(?:TABLE|INDEX)\\s+IF\\s+NOT\\s+EXISTS\\b/i, path + " still contains runtime CREATE IF NOT EXISTS");
-    assert.doesNotMatch(source, /\\bALTER\\s+TABLE\\b/i, path + " still contains runtime ALTER TABLE");
+    assert.doesNotMatch(source, /\bCREATE\s+(?:TABLE|INDEX)\s+IF\s+NOT\s+EXISTS\b/i, path + " still contains runtime CREATE IF NOT EXISTS");
+    assert.doesNotMatch(source, /\bALTER\s+TABLE\b/i, path + " still contains runtime ALTER TABLE");
   }
   const migrations = read("migrations/009_launch_runtime_schemas.sql") + read("migrations/010_legacy_partner_schema.sql");
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS bookings/);
@@ -312,4 +312,14 @@ test("sandbox settlement rows with a test transfer are not reprocessed", () => {
   const source = read("stripe-webhook.js");
   assert.match(source, /settlement_status='pending'.*provider_transfer_id IS NULL.*settlement_test_transfer_id IS NULL/);
   assert.match(source, /settlement_test_transfer_id IS NULL ORDER BY id ASC LIMIT 50/);
+});
+
+
+test("Stripe webhook schema checks are read-only and migration-owned", () => {
+  const source = read("stripe-webhook.js");
+  assert.match(source, /PRAGMA table_info\(/);
+  assert.match(source, /Required D1 table is missing/);
+  assert.match(source, /D1 table schema is incomplete/);
+  assert.doesNotMatch(source, /\bCREATE\s+(?:TABLE|INDEX)\s+/i);
+  assert.doesNotMatch(source, /\bALTER\s+TABLE\b/i);
 });
