@@ -503,15 +503,7 @@ async function ensureOffersTable(env){
   )`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)").run();
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN title_en TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN title_ro TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN description_en TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN description_ro TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_point_name_en TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_point_name_ro TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_instructions_en TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN meeting_instructions_ro TEXT").run()}catch(e){}
-}
+
 
 async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   const safe=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
