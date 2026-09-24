@@ -254,8 +254,7 @@ async function ensureExperiencesTable(env){
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`).run();
-  const columns=[["price_cents","INTEGER NOT NULL DEFAULT 0"],["currency","TEXT NOT NULL DEFAULT 'eur'"],["provider_name","TEXT"],["description","TEXT"],["category","TEXT NOT NULL DEFAULT 'explore'"],["image_url","TEXT"],["gallery_urls","TEXT"],["available_times","TEXT"]];
-  for(const [name,type] of columns){try{await env.DB.prepare("ALTER TABLE experiences ADD COLUMN "+name+" "+type).run()}catch(_){}}
+  // experiences schema is managed by migrations; production runtime must not mutate DDL.
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_provider ON experiences(provider_connect_account_id)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_status ON experiences(status)").run();
 }
