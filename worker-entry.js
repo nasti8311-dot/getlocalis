@@ -2728,32 +2728,10 @@ async function ensureBookingColumns(env) {
     ["cancellation_refund_id", "TEXT"],
     ["created_at", "TEXT"],
     ["updated_at", "TEXT"]
-  ];
-
-  for (const [name, type] of requiredColumns) {
-    if (existingColumns.has(name)) continue;
-    try {
-      await env.DB
-        .prepare("ALTER TABLE bookings ADD COLUMN " + name + " " + type)
-        .run();
-      existingColumns.add(name);
-    } catch (error) {
-      console.error("FiiViu booking schema migration failed", name, error);
-      throw error;
-    }
-  }
-
-  await env.DB
-    .prepare(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cancellation_token ON bookings(cancellation_token)"
-    )
-    .run();
-
-  await env.DB
-    .prepare(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(booking_access_token) WHERE booking_access_token IS NOT NULL"
-    )
-    .run();
+  ];  // Booking schema is managed by migrations; runtime requests must not mutate DDL.
+  const requiredSchema = ["booking_id","payment_intent_id","status","payment_status","booking_access_token","cancellation_token"];
+  const missing = requiredSchema.filter((name) => !existingColumns.has(name));
+  if (missing.length) throw new Error("Bookings schema is missing required columns: " + missing.join(", "));
 }
 
 function normalizeLanguage(value) {
