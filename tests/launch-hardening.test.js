@@ -290,7 +290,7 @@ test("secure admin CORS permits the organizer DELETE action", () => {
 });
 
 test("provider API requires an authenticated cookie session", () => {
-  const source = read("worker-entry-v2.js");
+  const source = read("worker-entry.js");
   const start = source.indexOf("async function providerAuth");
   const end = source.indexOf("async function handleProviderOverview", start);
   const block = source.slice(start, end);
