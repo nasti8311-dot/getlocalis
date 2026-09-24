@@ -56,6 +56,7 @@ export default {
     if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
     if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
     if (url.pathname === "/api/provider-test-booking") return handleProviderTestBooking(request, env);
+    if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
     if (url.pathname === "/api/provider/overview") return handleProviderOverview(request, env);
     if (url.pathname === "/api/provider/connect-status") return handleProviderConnectStatus(request, env);
     if (url.pathname === "/api/provider/connect-onboarding") return handleProviderConnectOnboarding(request, env);
@@ -1965,6 +1966,45 @@ async function stripePostForm(env,path,params){
 
 async function providerRefFromSession(request,env){
   return await authenticateProviderSession(request,env);
+}
+
+async function handleProviderExperiences(request,env){
+  if(!env.DB)return json({error:"D1 database not configured"},500);
+  const providerRef=await providerRefFromSession(request,env);
+  if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+  try{
+    await ensureOffersTable(env);
+    const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
+    if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
+    if(request.method==="GET"){
+      const rows=await env.DB.prepare("SELECT * FROM offers WHERE provider_ref=? ORDER BY active DESC,title ASC,id ASC").bind(providerRef).all();
+      return json({provider,experiences:(rows.results||[]).map(x=>({...x,status:Number(x.active)===1?"published":"draft"}))});
+    }
+    if(request.method==="POST"){
+      const body=await request.json().catch(()=>({}));
+      const experienceId=String(body.experienceId||"").trim();
+      const title=String(body.title||"").trim();
+      const priceCents=Number(body.priceCents);
+      if(!experienceId||!title)return json({error:"Experience-ID und Titel sind erforderlich."},400);
+      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 eingeben."},400);
+      const existing=await env.DB.prepare("SELECT id FROM offers WHERE provider_ref=? AND lower(title)=lower(?) LIMIT 1").bind(providerRef,title).first();
+      if(existing)return json({error:"Ein Erlebnis mit diesem Titel existiert bereits."},409);
+      const active=body.publish===true?1:0;
+      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
+        providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),
+        String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
+        String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,
+        Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",
+        String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active
+      ).run();
+      const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
+      return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?experienceId:null}},201);
+    }
+    return json({error:"Method Not Allowed"},405);
+  }catch(error){
+    console.error("FiiViu provider experiences failed",error);
+    return json({error:error?.message||"Erlebnis konnte nicht geladen werden."},500);
+  }
 }
 
 async function handleProviderConnectOnboarding(request,env){
