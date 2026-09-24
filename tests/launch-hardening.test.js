@@ -142,7 +142,7 @@ test("marketplace checkout rejects invalid or past booking times", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich/);
   assert.match(source, /bookingStart\.getTime\(\)<=Date\.now\(\)/);
-  assert.match(source, /Europe\\\/Bucharest/);
+  assert.match(source, /Europe\/Bucharest/);
 });
 
 
