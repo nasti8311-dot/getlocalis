@@ -23,10 +23,8 @@ export function providerSessionCookie(value,maxAge=2592000){
   return "fiiviu_provider_session="+encodeURIComponent(String(value||""))+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 export function providerSessionFromRequest(request){
-  const authorization=String(request.headers.get("Authorization")||"");
-  if(/^Bearer\s+/i.test(authorization))return authorization.replace(/^Bearer\s+/i,"").trim();
   const cookie=String(request.headers.get("Cookie")||"");
-  const match=cookie.match(/(?:^|;\s*)fiiviu_provider_session=([^;]+)/);
+  const match=cookie.match(/(?:^|;\\s*)fiiviu_provider_session=([^;]+)/);
   return match?decodeURIComponent(match[1]):"";
 }
 export async function createProviderSession(env,providerRef){
