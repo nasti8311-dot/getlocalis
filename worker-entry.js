@@ -1964,36 +1964,11 @@ async function providerRefFromSession(request,env){
 }
 
 async function ensureOffersTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    provider_ref TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    price_cents INTEGER NOT NULL CHECK (price_cents >= 50),
-    currency TEXT NOT NULL DEFAULT 'eur',
-    available_times TEXT,
-    meeting_point_name TEXT,
-    meeting_address TEXT,
-    meeting_city TEXT,
-    meeting_country TEXT,
-    meeting_instructions TEXT,
-    arrival_minutes_before INTEGER,
-    title_en TEXT,
-    title_ro TEXT,
-    description_en TEXT,
-    description_ro TEXT,
-    meeting_point_name_en TEXT,
-    meeting_point_name_ro TEXT,
-    meeting_instructions_en TEXT,
-    meeting_instructions_ro TEXT,
-    image_url TEXT,
-    gallery_urls TEXT,
-    category TEXT NOT NULL DEFAULT 'explore',
-    active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
+  const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
+  const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active"];
+  const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
 async function handleProviderExperiences(request,env){
   if(!env.DB)return json({error:"D1 database not configured"},500);
@@ -2597,62 +2572,11 @@ async function recordBookingSettlement(env, booking) {
 }
 
 async function ensureBookingColumns(env) {
-  await env.DB
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        booking_id TEXT NOT NULL UNIQUE,
-        payment_intent_id TEXT UNIQUE,
-        status TEXT NOT NULL DEFAULT 'pending',
-        payment_status TEXT NOT NULL DEFAULT 'pending',
-        customer_name TEXT NOT NULL,
-        customer_email TEXT NOT NULL,
-        customer_phone TEXT,
-        customer_language TEXT NOT NULL DEFAULT 'en',
-        experience_name TEXT NOT NULL,
-        booking_date TEXT,
-        booking_time TEXT,
-        guests INTEGER NOT NULL DEFAULT 1,
-        amount_cents INTEGER NOT NULL DEFAULT 0,
-        currency TEXT NOT NULL DEFAULT 'eur',
-        meeting_point_name TEXT,
-        meeting_address TEXT,
-        meeting_city TEXT,
-        meeting_country TEXT,
-        meeting_instructions TEXT,
-        arrival_minutes_before INTEGER,
-        meeting_latitude TEXT,
-        meeting_longitude TEXT,
-        partner_ref TEXT,
-        provider_name TEXT,
-        provider_connect_account_id TEXT,
-        booking_access_token TEXT,
-        confirmation_email_sent_at TEXT,
-        confirmation_email_error TEXT,
-        cancellation_token TEXT,
-        cancelled_at TEXT,
-        cancellation_refund_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`
-    )
-    .run();
-
-  // Older D1 databases may already have a bookings table from an earlier
-  // version of the app. CREATE TABLE IF NOT EXISTS does not migrate such a
-  // table, so make sure every column used by finalization exists.
-  const columns = await env.DB
-    .prepare("PRAGMA table_info(bookings)")
-    .all();
-
-  const existingColumns = new Set(
-    (columns.results || []).map(row => String(row.name || ""))
-  );
-
-  // Booking schema is managed by migrations; runtime requests must not mutate DDL.
-  const requiredSchema = ["booking_id","payment_intent_id","status","payment_status","booking_access_token","cancellation_token"];
-  const missing = requiredSchema.filter((name) => !existingColumns.has(name));
-  if (missing.length) throw new Error("Bookings schema is missing required columns: " + missing.join(", "));
+  const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
+  const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
 }
 
 function normalizeLanguage(value) {
