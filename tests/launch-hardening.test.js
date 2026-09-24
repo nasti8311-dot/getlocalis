@@ -84,6 +84,10 @@ test("launch paths do not mutate D1 schema at request time", () => {
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS experiences/);
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS partner_sessions/);
   assert.match(read("migrations/003_settlement_ledger.sql"), /CREATE TABLE IF NOT EXISTS stripe_webhook_events/);
+  const settlementMigration = read("migrations/011_settlement_runtime_fields.sql");
+  for (const column of ["provider_ref","provider_name","release_at","settlement_error","settlement_test_transfer_id","settlement_last_attempt_at"]) {
+    assert.match(settlementMigration, new RegExp("ADD COLUMN " + column));
+  }
 });
 
 test("server-side files are excluded from Cloudflare Static Assets", () => {
