@@ -203,7 +203,16 @@ test("admin CORS is restricted to configured first-party origins", () => {
   assert.doesNotMatch(source, /const CORS = \{[\\s\\S]*Access-Control-Allow-Origin.*\*.*\}/);
 });
 
-test("provider sessions do not accept bearer tokens", () => {\n  const source = read("provider-auth.js");\n  const start = source.indexOf("export function providerSessionFromRequest");\n  const end = source.indexOf("export async function createProviderSession", start);\n  const block = source.slice(start, end);\n  assert.doesNotMatch(block, /Authorization/);\n  assert.match(block, /fiiviu_provider_session/);\n});\n\ntest("provider login keeps the session token cookie-only", () => {
+test("provider sessions do not accept bearer tokens", () => {
+  const source = read("provider-auth.js");
+  const start = source.indexOf("export function providerSessionFromRequest");
+  const end = source.indexOf("export async function createProviderSession", start);
+  const block = source.slice(start, end);
+  assert.doesNotMatch(block, /Authorization/);
+  assert.match(block, /fiiviu_provider_session/);
+});
+
+test("provider login keeps the session token cookie-only", () => {
   const source = read("worker-entry.js");
   assert.match(source, /Set-Cookie.*providerSessionCookie/s);
   const loginStart = source.indexOf("async function handleProviderLogin");
