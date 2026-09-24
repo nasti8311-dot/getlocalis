@@ -67,13 +67,6 @@ CREATE TABLE IF NOT EXISTS experiences (
 CREATE INDEX IF NOT EXISTS idx_experiences_provider ON experiences(provider_connect_account_id);
 CREATE INDEX IF NOT EXISTS idx_experiences_status ON experiences(status);
 
-CREATE TABLE IF NOT EXISTS partner_scan_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  partner_ref TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_partner_scan_events_partner_ref ON partner_scan_events(partner_ref);
-
 -- stripe_webhook_events is owned by migrations/003_settlement_ledger.sql.
 -- stripe_payment_events is owned by migrations/003_settlement_ledger.sql.
 -- stripe_refund_events is owned by migrations/003_settlement_ledger.sql.
