@@ -13,7 +13,7 @@ test("Stripe webhook claims events atomically", () => {
 
 test("refund reconciliation is wired to settlement ledger", () => {
   const source = read("stripe-webhook.js");
-  assert.match(source, /syncChargeRefunds\(env,\s*chargeId\)/);
+  assert.match(source, /syncChargeRefunds\(env,\s*(?:latest)?ChargeId\)/);
   assert.match(source, /stripe_refund_events/);
   assert.match(source, /applyRefundToSettlement\(env,\s*paymentIntentId\)/);
   assert.match(source, /reverseProviderTransfer\(env,\s*settlement\.provider_transfer_id/);
