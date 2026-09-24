@@ -94,3 +94,25 @@ test("cancellation policy enforces the 24-hour boundary", () => {
   assert.equal(getCancellationState({ booking_date: "2020-06-15", booking_time: "14:30" }).allowed, false);
   assert.equal(getCancellationState({ booking_date: "not-a-date", booking_time: "14:30" }).allowed, false);
 });
+
+
+test("legacy manual payout path is disabled", () => {
+  const source = read("worker-entry.js");
+  assert.match(source, /Manual .*Auszahlungen sind deaktiviert/);
+  assert.match(source, /}, 410\\);/);
+});
+
+test("production settlement scheduler is configured", () => {
+  const config = read("wrangler.jsonc");
+  assert.match(config, /"crons"\\s*:\\s*\\["\\*\\/15 \\* \\* \\* \\* "\\]/);
+  const source = read("secure-entry.js");
+  assert.match(source, /async scheduled\\(controller, env, ctx\\)/);
+  assert.match(source, /releaseDueProviderSettlements\\(env\\)/);
+});
+
+test("Stripe mode mismatch is guarded", () => {
+  const source = read("worker-entry.js");
+  assert.match(source, /configuredTestMode/);
+  assert.match(source, /eventIsTestMode/);
+  assert.match(source, /mode mismatch/);
+});
