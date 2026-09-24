@@ -298,3 +298,11 @@ test("provider API requires an authenticated cookie session", () => {
   assert.doesNotMatch(source, /STRIPE_PROVIDER_CONNECT_ACCOUNT_ID/);
   assert.match(source, /if\(\!\(await providerAuth\(request,env\)\)\)return providerJson\(\{error:"Unauthorized"\},401\)/);
 });
+
+
+test("marketplace catalog and checkout require an active provider", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
+  assert.match(source, /INNER JOIN providers p ON p\.provider_ref=o\.provider_ref AND p\.active=1 WHERE o\.active=1/);
+  assert.match(source, /INNER JOIN providers p ON p\.connect_account_id=e\.provider_connect_account_id AND p\.active=1 WHERE e\.status='published'/);
+});
