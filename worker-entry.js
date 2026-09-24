@@ -1839,7 +1839,7 @@ async function handleProviderTestBooking(request, env) {
   try {
     const body = await request.json().catch(() => ({}));
     const customerEmail = clean(body.customerEmail);
-    if (!customerEmail || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(customerEmail)) {
+    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       return json({ error: "Bitte eine gültige Test-E-Mail-Adresse eingeben." }, 400);
     }
 
@@ -1929,7 +1929,7 @@ async function handleProviderTestBooking(request, env) {
     }
 
     await env.DB.prepare(
-      "UPDATE booking_settlements SET settlement_status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      "UPDATE booking_settlements SET settlement_status='ready',updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
     ).bind(booking.booking_id).run();
 
     return json({
