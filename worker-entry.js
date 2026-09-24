@@ -9,7 +9,7 @@ const DEFAULT_APP_URL = "https://fiiviu.ro";
 const CANCELLATION_HOURS = 24;
 const BOOKING_TIME_ZONE = "Europe/Bucharest";
 
-export { authenticateProviderSession, providerSessionFromRequest };
+export { authenticateProviderSession, providerSessionFromRequest, getCancellationState, parseBookingDateTime };
 
 export default {
   async fetch(request, env, ctx) {
@@ -26,14 +26,19 @@ export default {
         url.pathname === "/api/admin/offers" ||
         url.pathname === "/api/admin/translate-offers")
     ) {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      });
+      const origin = String(request.headers.get("Origin") || "").trim();
+      const allowedOrigins = new Set([
+        String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\/$/, ""),
+        "https://fiiviu.ro",
+        "https://www.fiiviu.ro",
+      ]);
+      const headers = {
+        "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Vary": "Origin",
+      };
+      if (origin && allowedOrigins.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+      return new Response(null, { status: 204, headers });
     }
 
     if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
@@ -68,10 +73,11 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/finalize-booking") {
       try {
         const body = await request.json();
-        const paymentIntentId = String(body?.paymentIntentId || "").trim();
+        const paymentIntentId = String(body?.paymentIntentId || body?.payment_intent || body?.id || "").trim();
+        const clientSecret = String(body?.clientSecret || body?.client_secret || "").trim();
 
-        if (!paymentIntentId) {
-          return json({ error: "paymentIntentId is required." }, 400);
+        if (!paymentIntentId || !clientSecret) {
+          return json({ error: "paymentIntentId and clientSecret are required." }, 400);
         }
 
         if (!env.DB || !env.STRIPE_SECRET_KEY) {
@@ -88,6 +94,10 @@ export default {
             error: "Payment is not completed.",
             status: paymentIntent?.status || "unknown"
           }, 409);
+        }
+
+        if (String(paymentIntent?.client_secret || "") !== clientSecret) {
+          return json({ error: "Payment confirmation credentials do not match." }, 403);
         }
 
         await finalizePaidBooking(env, paymentIntent);
@@ -195,13 +205,46 @@ export default {
         data.meetingLongitude = data.meetingLongitude || "";
         data.providerConnectAccountId = data.providerConnectAccountId || "";
 
-        const response = await legacyWorker.fetch(
-          new Request(request, {
-            body: JSON.stringify(data)
-          }),
-          env,
-          ctx
-        );
+        if (!env.STRIPE_SECRET_KEY) {
+          return json({error:"Stripe secret not configured"},500);
+        }
+
+        const amount=Number(data.amount);
+        const currency=String(data.currency||"eur").toLowerCase();
+        if (!Number.isInteger(amount) || amount < 50) {
+          return json({error:"Invalid amount"},400);
+        }
+
+        const params=new URLSearchParams();
+        params.set("amount",String(amount));
+        params.set("currency",currency);
+        params.set("metadata[booking_id]",String(data.bookingId||""));
+        params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
+        params.set("metadata[experience_id]",String(data.experienceId||""));
+        params.set("metadata[guests]",String(data.guests||1));
+        params.set("metadata[offer_id]",String(data.offerId||""));
+        params.set("metadata[customer_name]",String(data.customerName||""));
+        params.set("metadata[customer_email]",String(data.customerEmail||""));
+        params.set("metadata[booking_date]",String(data.bookingDate||""));
+        params.set("metadata[booking_time]",String(data.bookingTime||""));
+        params.set("metadata[provider_connect_account_id]",String(data.providerConnectAccountId||""));
+        params.set("automatic_payment_methods[enabled]","true");
+
+        const stripeResponse=await fetch("https://api.stripe.com/v1/payment_intents",{
+          method:"POST",
+          headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},
+          body:params
+        });
+        const stripeData=await stripeResponse.json();
+        if(!stripeResponse.ok){
+          return json({error:stripeData?.error?.message||"Stripe error"},stripeResponse.status);
+        }
+
+        const response=json({
+          clientSecret:stripeData.client_secret,
+          paymentIntentId:stripeData.id,
+          partnerRef:""
+        },200);
 
         if (response.ok && env.STRIPE_SECRET_KEY) {
           try {
@@ -466,13 +509,6 @@ async function handleCancellation(request, env) {
           "UPDATE bookings SET status='cancelled', payment_status='refunded', cancelled_at=CURRENT_TIMESTAMP, cancellation_refund_id=?, updated_at=CURRENT_TIMESTAMP WHERE cancellation_token=? AND status='cancellation_processing'"
         )
         .bind(refund.id, token)
-        .run();
-
-      await env.DB
-        .prepare(
-          "UPDATE booking_settlements SET settlement_status='refunded', updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
-        )
-        .bind(booking.booking_id)
         .run();
 
       return json(
@@ -1451,8 +1487,6 @@ async function sendEmailJsConfirmation(
     address_country:
       booking.meeting_country || "",
     arrival_minutes: arrival,
-    meeting_instructions:
-      localizedInstructions,
     map_link: mapLink,
     cancel_url: cancellationUrl,
     cancel_link: cancellationUrl,
@@ -1471,7 +1505,6 @@ async function sendEmailJsConfirmation(
     addressLine: address,
     arrival: arrival,
     arrivalMinutes: arrival,
-    arrival_minutes: arrival,
     cancelHours: cancellationHours,
     cancellationHours: cancellationHours,
     cancel_hours: cancellationHours,
@@ -1815,7 +1848,7 @@ async function handleProviderLogin(request,env){
     if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return json({error:"E-Mail oder Passwort ist falsch."},401);
     if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return json({error:"E-Mail oder Passwort ist falsch."},401);
     const session=await createProviderSession(env,String(account.provider_ref));
-    const response=json({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id},sessionToken:session.raw});
+    const response=json({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id}});
     response.headers.set("Set-Cookie",providerSessionCookie(session.raw));
     return response;
   }catch(error){return json({error:error?.message||"Login fehlgeschlagen."},500)}
@@ -1964,36 +1997,11 @@ async function providerRefFromSession(request,env){
 }
 
 async function ensureOffersTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    provider_ref TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    price_cents INTEGER NOT NULL CHECK (price_cents >= 50),
-    currency TEXT NOT NULL DEFAULT 'eur',
-    available_times TEXT,
-    meeting_point_name TEXT,
-    meeting_address TEXT,
-    meeting_city TEXT,
-    meeting_country TEXT,
-    meeting_instructions TEXT,
-    arrival_minutes_before INTEGER,
-    title_en TEXT,
-    title_ro TEXT,
-    description_en TEXT,
-    description_ro TEXT,
-    meeting_point_name_en TEXT,
-    meeting_point_name_ro TEXT,
-    meeting_instructions_en TEXT,
-    meeting_instructions_ro TEXT,
-    image_url TEXT,
-    gallery_urls TEXT,
-    category TEXT NOT NULL DEFAULT 'explore',
-    active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
+  const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
+  const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active"];
+  const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
 async function handleProviderExperiences(request,env){
   if(!env.DB)return json({error:"D1 database not configured"},500);
@@ -2103,23 +2111,30 @@ async function handleProviderOverview(request,env){
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
 
-    // The provider dashboard must work even when no settlement table exists yet.
-    // Bookings are the source of truth here; payout/settlement data is optional.
+    // Financial dashboard values come from the settlement ledger, not raw booking
+    // amounts. This keeps provider revenue/payout figures consistent with Stripe.
     const rows=await env.DB.prepare(`
       SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
              b.experience_name,b.customer_name,b.guests,b.amount_cents,
-             b.amount_cents AS provider_amount_cents,
-             NULL AS total_amount_cents,NULL AS settlement_status,NULL AS stripe_transfer_id
+             s.payment_intent_id,s.total_amount_cents,s.provider_amount_cents,
+             s.provider_transfer_amount_cents,s.settlement_status,s.provider_transfer_id,
+             s.release_at,s.settlement_error,s.settlement_test_transfer_id
       FROM bookings b
+      LEFT JOIN booking_settlements s ON s.booking_id=b.booking_id
       WHERE b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
       ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
     `).bind(provider.name,providerRef).all();
     const all=rows.results||[];
 
-    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
-    const paidOutCents=all.filter(r=>r.stripe_transfer_id||r.settlement_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
-    const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&(r.settlement_status==="ready"||String(r.payment_intent_id||"").startsWith("test_pi_"))).reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
-    const pendingCents=Math.max(0,grossRevenueCents-availableCents-paidOutCents);
+    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
+    const paidOutCents=all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
+      .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||0),0);
+    const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&
+      (r.settlement_status==="pending"||r.settlement_test_transfer_id))
+      .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||r.provider_amount_cents||0),0);
+    const pendingCents=Math.max(0,grossRevenueCents-availableCents-
+      all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
+        .reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0));
     const today=new Date().toISOString().slice(0,10);
     const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed").slice(0,10);
     return json({
@@ -2240,7 +2255,7 @@ async function handleAdminProviderPayout(request, env) {
 
       const rows = await env.DB.prepare(`
         SELECT s.booking_id,s.payment_intent_id,s.total_amount_cents,s.provider_amount_cents,
-               s.settlement_status,s.stripe_transfer_id,b.booking_date,b.booking_time,
+               s.settlement_status,s.provider_transfer_id,b.booking_date,b.booking_time,
                b.status,b.payment_status,b.currency,b.experience_name
         FROM booking_settlements s
         LEFT JOIN bookings b ON b.booking_id=s.booking_id
@@ -2249,7 +2264,7 @@ async function handleAdminProviderPayout(request, env) {
       `).bind(providerRef).all();
 
       const available = (rows.results || [])
-        .filter(row => isSettlementEventDue(row) && row.settlement_status === "ready" && row.status === "confirmed" && row.payment_status === "paid")
+        .filter(row => isSettlementEventDue(row) && row.settlement_status === "pending" && row.status === "confirmed" && row.payment_status === "paid")
         .reduce((sum,row) => sum + Number(row.provider_amount_cents || 0), 0);
 
       const payouts = await env.DB.prepare(
@@ -2266,6 +2281,10 @@ async function handleAdminProviderPayout(request, env) {
     }
 
     if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+
+    return json({
+      error: "Manual Organizer-Auszahlungen sind deaktiviert. Auszahlungen werden ausschließlich über das Settlement-System freigegeben."
+    }, 410);
 
     const body = await request.json();
     const bookingId = clean(body.bookingId);
@@ -2291,10 +2310,10 @@ async function handleAdminProviderPayout(request, env) {
     `).bind(bookingId,providerRef).first();
 
     if (!settlement) return json({ error: "Settlement für diese Buchung nicht gefunden." }, 404);
-    if (settlement.settlement_status === "transferred" || settlement.stripe_transfer_id) {
-      return json({ error: "Diese Buchung wurde bereits an den Organizer ausgezahlt.", stripeTransferId: settlement.stripe_transfer_id }, 409);
+    if (settlement.settlement_status === "transferred" || settlement.provider_transfer_id) {
+      return json({ error: "Diese Buchung wurde bereits an den Organizer ausgezahlt.", stripeTransferId: settlement.provider_transfer_id }, 409);
     }
-    if (settlement.settlement_status !== "ready") {
+    if (settlement.settlement_status !== "pending") {
       return json({ error: "Diese Buchung ist aktuell nicht auszahlbar.", settlementStatus: settlement.settlement_status }, 409);
     }
     if (settlement.booking_status !== "confirmed" || settlement.payment_status !== "paid") {
@@ -2364,7 +2383,7 @@ async function handleAdminProviderPayout(request, env) {
     ).run();
 
     await env.DB.prepare(
-      "UPDATE booking_settlements SET settlement_status='transferred',stripe_transfer_id=?,provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      "UPDATE booking_settlements SET settlement_status='transferred',provider_transfer_id=?,provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
     ).bind(transfer.id,destination,bookingId).run();
 
     return json({
@@ -2394,81 +2413,24 @@ function isSettlementEventDue(settlement) {
 }
 
 async function ensureProvidersTable(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS providers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      provider_ref TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      connect_account_id TEXT,
-      contact_email TEXT,
-      active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
-  await env.DB.prepare(
-    "CREATE INDEX IF NOT EXISTS idx_providers_connect_account ON providers(connect_account_id)"
-  ).run();
+  const rows = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='providers'").all();
+  if (!rows.results?.length) throw new Error("Providers schema is missing. Apply the providers migration.");
+  const indexes = await env.DB.prepare("PRAGMA table_info(providers)").all();
+  const required = new Set(["provider_ref","name","connect_account_id","contact_email","active"]);
+  const missing = [...required].filter(name => !(indexes.results || []).some(row => String(row.name || "") === name));
+  if (missing.length) throw new Error("Providers schema is incomplete: " + missing.join(", "));
 }
 
 async function ensureProviderPayoutsTable(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS provider_payouts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      booking_id TEXT NOT NULL UNIQUE,
-      provider_ref TEXT NOT NULL,
-      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
-      payout_date TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'paid'
-        CHECK (status IN ('paid','failed','cancelled')),
-      stripe_transfer_id TEXT UNIQUE,
-      reference TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
-  await env.DB.prepare(
-    "CREATE INDEX IF NOT EXISTS idx_provider_payouts_provider_ref ON provider_payouts(provider_ref)"
-  ).run();
+  const rows = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='provider_payouts'").all();
+  if (!rows.results?.length) throw new Error("Legacy provider_payouts schema is missing.");
 }
 
 async function ensureBookingSettlementsTable(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS booking_settlements (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      booking_id TEXT NOT NULL UNIQUE,
-      payment_intent_id TEXT UNIQUE,
-      total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),
-      provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),
-      fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),
-      partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),
-      partner_ref TEXT,
-      provider_ref TEXT,
-      provider_name TEXT,
-      provider_connect_account_id TEXT,
-      stripe_transfer_id TEXT UNIQUE,
-      settlement_status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
-  for (const statement of [
-    "ALTER TABLE booking_settlements ADD COLUMN provider_ref TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN provider_name TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN provider_connect_account_id TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN stripe_transfer_id TEXT"
-  ]) {
-    try {
-      await env.DB.prepare(statement).run();
-    } catch (_) {}
-  }
-
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_provider_ref ON booking_settlements(provider_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
+  const rows = await env.DB.prepare("PRAGMA table_info(booking_settlements)").all();
+  const required = new Set(["booking_id","payment_intent_id","total_amount_cents","provider_amount_cents","fiiviu_amount_cents","provider_connect_account_id","provider_transfer_id","settlement_status","release_at","settlement_error","settlement_test_transfer_id"]);
+  const missing = [...required].filter(name => !(rows.results || []).some(row => String(row.name || "") === name));
+  if (missing.length) throw new Error("Booking settlement schema is incomplete: " + missing.join(", "));
 }
 
 function providerRefFromName(name) {
@@ -2535,6 +2497,15 @@ async function getOrCreateProvider(env, name, connectAccountId = "") {
   ).bind(result.meta?.last_row_id).first();
 }
 
+function calculateSettlementReleaseAt(dateValue, timeValue) {
+  const start = parseBookingDateTime(dateValue, timeValue);
+  if (!start) return null;
+  // Provider settlement is released after the experience starts. The
+  // customer cancellation deadline is 24h before start and must never
+  // coincide with provider payout.
+  return start.toISOString().replace("T", " ").replace("Z", "");
+}
+
 async function recordBookingSettlement(env, booking) {
   if (!env.DB || !booking?.booking_id) return;
 
@@ -2557,6 +2528,49 @@ async function recordBookingSettlement(env, booking) {
     booking.provider_connect_account_id
   );
 
+  // Stripe's payment_intent.succeeded webhook creates the authoritative
+  // settlement row with a release_at timestamp. Finalization can race that
+  // webhook, so never turn an existing pending settlement into "ready" here.
+  const existing = await env.DB.prepare(
+    "SELECT settlement_status,release_at FROM booking_settlements WHERE booking_id=? LIMIT 1"
+  ).bind(booking.booking_id).first();
+
+  if (existing) {
+    await env.DB.prepare(`
+      UPDATE booking_settlements SET
+        payment_intent_id=?,
+        total_amount_cents=?,
+        provider_amount_cents=?,
+        fiiviu_amount_cents=?,
+        partner_amount_cents=?,
+        partner_ref=?,
+        provider_ref=?,
+        provider_name=?,
+        provider_connect_account_id=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE booking_id=?
+    `).bind(
+      booking.payment_intent_id,
+      totalCents,
+      providerAmountCents,
+      fiiviuAmountCents,
+      partnerAmountCents,
+      partnerRef,
+      provider?.provider_ref || null,
+      provider?.name || clean(booking.provider_name) || null,
+      provider?.connect_account_id || clean(booking.provider_connect_account_id) || null,
+      booking.booking_id
+    ).run();
+    return;
+  }
+
+  // If finalization wins the race and creates the settlement first, keep it
+  // pending and set the same release policy used by the webhook path.
+  const releaseAt = calculateSettlementReleaseAt(
+    booking.booking_date,
+    booking.booking_time
+  );
+
   await env.DB.prepare(`
     INSERT INTO booking_settlements (
       booking_id,
@@ -2570,20 +2584,11 @@ async function recordBookingSettlement(env, booking) {
       provider_name,
       provider_connect_account_id,
       settlement_status,
+      release_at,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT(booking_id) DO UPDATE SET
-      payment_intent_id=excluded.payment_intent_id,
-      total_amount_cents=excluded.total_amount_cents,
-      provider_amount_cents=excluded.provider_amount_cents,
-      fiiviu_amount_cents=excluded.fiiviu_amount_cents,
-      partner_amount_cents=excluded.partner_amount_cents,
-      partner_ref=excluded.partner_ref,
-      provider_ref=excluded.provider_ref,
-      provider_name=excluded.provider_name,
-      provider_connect_account_id=excluded.provider_connect_account_id,
-      updated_at=CURRENT_TIMESTAMP
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(booking_id) DO NOTHING
   `).bind(
     booking.booking_id,
     booking.payment_intent_id,
@@ -2594,116 +2599,17 @@ async function recordBookingSettlement(env, booking) {
     partnerRef,
     provider?.provider_ref || null,
     provider?.name || clean(booking.provider_name) || null,
-    provider?.connect_account_id || clean(booking.provider_connect_account_id) || null
+    provider?.connect_account_id || clean(booking.provider_connect_account_id) || null,
+    releaseAt
   ).run();
 }
 
 async function ensureBookingColumns(env) {
-  await env.DB
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        booking_id TEXT NOT NULL UNIQUE,
-        payment_intent_id TEXT UNIQUE,
-        status TEXT NOT NULL DEFAULT 'pending',
-        payment_status TEXT NOT NULL DEFAULT 'pending',
-        customer_name TEXT NOT NULL,
-        customer_email TEXT NOT NULL,
-        customer_phone TEXT,
-        customer_language TEXT NOT NULL DEFAULT 'en',
-        experience_name TEXT NOT NULL,
-        booking_date TEXT,
-        booking_time TEXT,
-        guests INTEGER NOT NULL DEFAULT 1,
-        amount_cents INTEGER NOT NULL DEFAULT 0,
-        currency TEXT NOT NULL DEFAULT 'eur',
-        meeting_point_name TEXT,
-        meeting_address TEXT,
-        meeting_city TEXT,
-        meeting_country TEXT,
-        meeting_instructions TEXT,
-        arrival_minutes_before INTEGER,
-        meeting_latitude TEXT,
-        meeting_longitude TEXT,
-        partner_ref TEXT,
-        provider_name TEXT,
-        provider_connect_account_id TEXT,
-        confirmation_email_sent_at TEXT,
-        confirmation_email_error TEXT,
-        cancellation_token TEXT,
-        cancelled_at TEXT,
-        cancellation_refund_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`
-    )
-    .run();
-
-  // Older D1 databases may already have a bookings table from an earlier
-  // version of the app. CREATE TABLE IF NOT EXISTS does not migrate such a
-  // table, so make sure every column used by finalization exists.
-  const columns = await env.DB
-    .prepare("PRAGMA table_info(bookings)")
-    .all();
-
-  const existingColumns = new Set(
-    (columns.results || []).map(row => String(row.name || ""))
-  );
-
-  const requiredColumns = [
-    ["payment_intent_id", "TEXT"],
-    ["status", "TEXT"],
-    ["payment_status", "TEXT"],
-    ["customer_name", "TEXT"],
-    ["customer_email", "TEXT"],
-    ["customer_phone", "TEXT"],
-    ["customer_language", "TEXT"],
-    ["experience_name", "TEXT"],
-    ["booking_date", "TEXT"],
-    ["booking_time", "TEXT"],
-    ["guests", "INTEGER"],
-    ["amount_cents", "INTEGER"],
-    ["currency", "TEXT"],
-    ["meeting_point_name", "TEXT"],
-    ["meeting_address", "TEXT"],
-    ["meeting_city", "TEXT"],
-    ["meeting_country", "TEXT"],
-    ["meeting_instructions", "TEXT"],
-    ["arrival_minutes_before", "INTEGER"],
-    ["meeting_latitude", "TEXT"],
-    ["meeting_longitude", "TEXT"],
-    ["partner_ref", "TEXT"],
-    ["provider_name", "TEXT"],
-    ["provider_connect_account_id", "TEXT"],
-    ["provider_notification_email_sent_at", "TEXT"],
-    ["provider_notification_email_error", "TEXT"],
-    ["confirmation_email_sent_at", "TEXT"],
-    ["confirmation_email_error", "TEXT"],
-    ["cancellation_token", "TEXT"],
-    ["cancelled_at", "TEXT"],
-    ["cancellation_refund_id", "TEXT"],
-    ["created_at", "TEXT"],
-    ["updated_at", "TEXT"]
-  ];
-
-  for (const [name, type] of requiredColumns) {
-    if (existingColumns.has(name)) continue;
-    try {
-      await env.DB
-        .prepare("ALTER TABLE bookings ADD COLUMN " + name + " " + type)
-        .run();
-      existingColumns.add(name);
-    } catch (error) {
-      console.error("FiiViu booking schema migration failed", name, error);
-      throw error;
-    }
-  }
-
-  await env.DB
-    .prepare(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cancellation_token ON bookings(cancellation_token)"
-    )
-    .run();
+  const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
+  const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
 }
 
 function normalizeLanguage(value) {

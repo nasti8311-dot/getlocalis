@@ -1,0 +1,37 @@
+name: Audit production D1 schema
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install --no-save wrangler@4
+
+      - name: Inspect production D1 schema
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          echo "===== MIGRATION HISTORY ====="
+          npx wrangler d1 execute fiiviu-payouts --remote --json --command "SELECT * FROM d1_migrations ORDER BY id;"
+          echo "===== DATABASE TABLES ====="
+          npx wrangler d1 execute fiiviu-payouts --remote --json --command "SELECT name,sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' ORDER BY name;"
+          for table in bookings booking_settlements experiences providers provider_payouts offers partners stripe_webhook_events stripe_payment_events stripe_refund_events stripe_transfer_reversal_events stripe_partner_reversal_events; do
+            echo "===== TABLE: $table ====="
+            npx wrangler d1 execute fiiviu-payouts --remote --json --command "PRAGMA table_info($table);"
+          done

@@ -3993,8 +3993,25 @@ async function processBooking(event) {
 
     // Use the canonical ISO date selected on the experience page.
     // The checkout field is display-only and must never be the source of truth.
+    const selectedDateFromPicker = detailDatePickerInstance?.selectedDates?.[0];
+    const pickerDateIso = selectedDateFromPicker
+        ? selectedDateFromPicker.getFullYear() + "-" +
+          String(selectedDateFromPicker.getMonth() + 1).padStart(2, "0") + "-" +
+          String(selectedDateFromPicker.getDate()).padStart(2, "0")
+        : "";
+
     const date =
-        normalizeBookingDateValue(selectedDetailDate);
+        normalizeBookingDateValue(selectedDetailDate || pickerDateIso);
+
+    const time =
+        String(selectedTourTime || "").trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+        cardErrors.textContent =
+            "Bitte wähle zuerst ein gültiges Buchungsdatum und eine gültige Uhrzeit.";
+        submitButton.disabled = false;
+        return;
+    }
 
     const guests =
         parseInt(
@@ -4063,7 +4080,7 @@ async function processBooking(event) {
                 customerEmail: email,
                 customerLanguage: currentLang,
                 bookingDate: date,
-                bookingTime: selectedTourTime,
+                bookingTime: time,
                 offerId: item.experienceId ? "" : String(currentTourKey || "").replace(/^offer-/, ""),
                 experienceId: String(item.experienceId || "").trim(),
                 providerName: String(item.providerName || "").trim(),
@@ -4125,13 +4142,23 @@ async function processBooking(event) {
 
         // Finalize the booking immediately. The Stripe webhook remains
         // as a second idempotent safety net.
+        const finalizedPaymentIntentId = String(paymentResult?.paymentIntent?.id || "").trim();
+        const finalizedClientSecret = String(
+            paymentResult?.paymentIntent?.client_secret || paymentData?.clientSecret || ""
+        ).trim();
+
+        if (!finalizedPaymentIntentId || !finalizedClientSecret) {
+            throw new Error("Stripe hat keine gültigen Zahlungsdaten für die Buchungsbestätigung zurückgegeben.");
+        }
+
         const finalizeResponse = await fetch(
             "/api/finalize-booking",
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    paymentIntentId: paymentResult.paymentIntent.id
+                    paymentIntentId: finalizedPaymentIntentId,
+                    clientSecret: finalizedClientSecret
                 })
             }
         );
@@ -4202,19 +4229,18 @@ function normalizeBookingDateValue(dateText) {
     const value = String(dateText || "").trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
 
-    if (/^\\d{1,2}\\.\\d{1,2}\\.\\d{4}$/.test(value)) {
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value)) {
         const [day, month, year] = value.split(".");
-        return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
     }
 
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
         const [month, day, year] = value.split("/");
-        return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
     }
 
     return value;
 }
-
 function formatDisplayBookingDate(dateText) {
     const iso = normalizeBookingDateValue(dateText);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return dateText || "";

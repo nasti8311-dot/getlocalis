@@ -198,12 +198,24 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const guests=Number(body.guests||1);
     if(!Number.isInteger(guests)||guests<1||guests>50)return json({error:"Invalid guest count"},400);
 
+    const bookingDate=String(body.bookingDate||"").trim();
+    const bookingTime=String(body.bookingTime||"").trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(bookingTime)){
+      return json({error:"Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich."},400);
+    }
+    const bookingStart=toBucharestDate(bookingDate,bookingTime);
+    if(!bookingStart||bookingStart.getTime()<=Date.now())return json({error:"Das Erlebnisdatum muss in der Zukunft liegen."},409);
+
     const unitPrice=Number(experience.price_cents);
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
 
     const totalAmount=unitPrice*guests;
     if(!Number.isSafeInteger(totalAmount)||totalAmount<50)return json({error:"Invalid calculated amount"},409);
 
+    // Never trust a client-supplied booking ID: it is persisted as a unique
+    // booking identifier after payment succeeds. Generate it server-side so a
+    // forged ID cannot collide with or interfere with an existing booking.
+    body.bookingId = "FV-" + crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase();
     body.experienceId=experienceId;
     body.offerId=offerIdRaw || (experienceId.startsWith("offer-") ? experienceId.slice(6) : "");
     body.providerConnectAccountId=validProviderAccount;
@@ -227,6 +239,16 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     return json({error:error?.message||"Marketplace payment routing failed"},500);
   }
 }
+function toBucharestDate(dateValue,timeValue){
+  const date=String(dateValue||"").trim(), time=String(timeValue||"").trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))return null;
+  const [y,m,d]=date.split("-").map(Number),[hh,mm]=time.split(":").map(Number);
+  const guess=Date.UTC(y,m-1,d,hh,mm);
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Bucharest",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(guess));
+  const v=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+  const offset=Date.UTC(Number(v.year),Number(v.month)-1,Number(v.day),Number(v.hour),Number(v.minute),Number(v.second))-guess;
+  return new Date(guess-offset);
+}
 async function handleMarketplaceWebhook(request,env,ctx){let body;try{body=await request.text();const event=JSON.parse(body);if(event?.type==="payment_intent.succeeded"){const provider=String(event?.data?.object?.metadata?.provider_connect_account_id||"").trim();if(!/^acct_[A-Za-z0-9]+$/.test(provider))return json({error:"Payment succeeded without a valid provider Connect account"},400)}}catch(_){return json({error:"Invalid webhook payload"},400)}const response=await baseWorker.fetch(new Request(request,{method:"POST",headers:request.headers,body}),env,ctx);if(response.ok){try{const event=JSON.parse(body);if(event?.type==="payment_intent.succeeded")ctx.waitUntil(persistMarketplaceBookingProvider(env,event))}catch(_){}}return response}
 async function persistMarketplaceBookingProvider(env,event){if(!env.DB)return;const paymentIntentId=String(event?.data?.object?.id||"").trim(),provider=String(event?.data?.object?.metadata?.provider_connect_account_id||"").trim();if(!paymentIntentId||!/^acct_[A-Za-z0-9]+$/.test(provider))return;try{for(let attempt=0;attempt<12;attempt++){try{const result=await env.DB.prepare("UPDATE bookings SET provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(provider,paymentIntentId).run();if(Number(result?.meta?.changes||0)>0)return}catch(error){if(attempt===11)throw error}await new Promise(resolve=>setTimeout(resolve,250))}}catch(error){console.error("FiiViu marketplace provider booking sync failed",error)}}
 async function injectMarketplaceCheckoutBridge(response,url){const html=await response.text();const tracking=url.pathname==="/"&&url.searchParams.get("ref")?`<script>(function(){try{var ref=new URLSearchParams(window.location.search).get("ref");if(!ref)return;var key="fiiviu_partner_visitor_id";var visitorId=localStorage.getItem(key);if(!visitorId){visitorId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2));localStorage.setItem(key,visitorId)}fetch("/api/partner-visit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ref:ref,visitorId:visitorId}),keepalive:true}).catch(function(){})}catch(_){}})();</script>`:"";const bridge=tracking+`<script>(function(){var previousFetch=window.fetch.bind(window);window.fetch=function(input,init){try{var target=typeof input==='string'?input:(input&&input.url)||'';if(target.indexOf('/api/create-payment-intent')!==-1&&init&&typeof init.body==='string'){var data=JSON.parse(init.body);var key=(typeof currentTourKey!=='undefined'?String(currentTourKey||'').trim():'');if(key)data.experienceId=key.toLowerCase();init.body=JSON.stringify(data)}}catch(_){}return previousFetch(input,init)}})();</script>`;const marker="</body>";const output=html.includes(marker)?html.replace(marker,bridge+marker):html+bridge;const headers=new Headers(response.headers);headers.delete("content-length");headers.set("cache-control","no-cache");return new Response(output,{status:response.status,statusText:response.statusText,headers})}
@@ -237,26 +259,15 @@ async function recordPartnerScan(env,ref){
   try{
     const partner=await env.DB.prepare("SELECT partner_ref,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
     if(!partner||Number(partner.active)!==1)return;
-    await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_scan_events (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
-    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_scan_events_partner_ref ON partner_scan_events(partner_ref)").run();
     await env.DB.prepare("INSERT INTO partner_scan_events (partner_ref) VALUES (?)").bind(partnerRef).run();
   }catch(error){console.error("FiiViu partner scan tracking failed",error)}
 }
 function isHtml(response,url){if(url.pathname.startsWith("/api/"))return false;return(response.headers.get("content-type")||"").includes("text/html")}
 async function ensureExperiencesTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS experiences (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, experience_id TEXT NOT NULL UNIQUE,
-    provider_connect_account_id TEXT, provider_name TEXT, title TEXT NOT NULL, description TEXT,
-    category TEXT NOT NULL DEFAULT 'explore', image_url TEXT, gallery_urls TEXT, available_times TEXT,
-    price_cents INTEGER NOT NULL DEFAULT 0 CHECK(price_cents>=0), currency TEXT NOT NULL DEFAULT 'eur',
-    meeting_point_name TEXT, meeting_address TEXT, meeting_city TEXT, meeting_country TEXT,
-    meeting_instructions TEXT, arrival_minutes_before INTEGER, meeting_latitude TEXT, meeting_longitude TEXT,
-    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  const columns=[["price_cents","INTEGER NOT NULL DEFAULT 0"],["currency","TEXT NOT NULL DEFAULT 'eur'"],["provider_name","TEXT"],["description","TEXT"],["category","TEXT NOT NULL DEFAULT 'explore'"],["image_url","TEXT"],["gallery_urls","TEXT"],["available_times","TEXT"]];
-  for(const [name,type] of columns){try{await env.DB.prepare("ALTER TABLE experiences ADD COLUMN "+name+" "+type).run()}catch(_){}}
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_provider ON experiences(provider_connect_account_id)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_status ON experiences(status)").run();
+  const columns=await env.DB.prepare("PRAGMA table_info(experiences)").all();
+  const required=["experience_id","provider_connect_account_id","provider_name","title","description","category","image_url","gallery_urls","available_times","price_cents","currency","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status"];
+  const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Experiences schema is incomplete: "+missing.join(", "));
 }
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json"}})}
