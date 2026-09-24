@@ -4142,14 +4142,23 @@ async function processBooking(event) {
 
         // Finalize the booking immediately. The Stripe webhook remains
         // as a second idempotent safety net.
+        const finalizedPaymentIntentId = String(paymentResult?.paymentIntent?.id || "").trim();
+        const finalizedClientSecret = String(
+            paymentResult?.paymentIntent?.client_secret || paymentData?.clientSecret || ""
+        ).trim();
+
+        if (!finalizedPaymentIntentId || !finalizedClientSecret) {
+            throw new Error("Stripe hat keine gültigen Zahlungsdaten für die Buchungsbestätigung zurückgegeben.");
+        }
+
         const finalizeResponse = await fetch(
             "/api/finalize-booking",
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    paymentIntentId: paymentResult.paymentIntent.id,
-                    clientSecret: paymentData.clientSecret
+                    paymentIntentId: finalizedPaymentIntentId,
+                    clientSecret: finalizedClientSecret
                 })
             }
         );
