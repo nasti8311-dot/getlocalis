@@ -1968,6 +1968,38 @@ async function providerRefFromSession(request,env){
   return await authenticateProviderSession(request,env);
 }
 
+async function ensureOffersTable(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider_ref TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    price_cents INTEGER NOT NULL CHECK (price_cents >= 50),
+    currency TEXT NOT NULL DEFAULT 'eur',
+    available_times TEXT,
+    meeting_point_name TEXT,
+    meeting_address TEXT,
+    meeting_city TEXT,
+    meeting_country TEXT,
+    meeting_instructions TEXT,
+    arrival_minutes_before INTEGER,
+    title_en TEXT,
+    title_ro TEXT,
+    description_en TEXT,
+    description_ro TEXT,
+    meeting_point_name_en TEXT,
+    meeting_point_name_ro TEXT,
+    meeting_instructions_en TEXT,
+    meeting_instructions_ro TEXT,
+    image_url TEXT,
+    gallery_urls TEXT,
+    category TEXT NOT NULL DEFAULT 'explore',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
+}
 async function handleProviderExperiences(request,env){
   if(!env.DB)return json({error:"D1 database not configured"},500);
   const providerRef=await providerRefFromSession(request,env);
