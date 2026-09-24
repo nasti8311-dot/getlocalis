@@ -76,8 +76,168 @@ td,th{border-bottom:1px solid #eee9e1}
 <section><h2>Organizator și oferte</h2><p class="muted">Creează organizatori, asociază oferte și gestionează fotografiile.</p><p><a href="/organizer-admin.html" style="color:#d95d1f;font-weight:700;text-decoration:underline">Creează organizatori și gestionează ofertele →</a></p></section><section><h2>Autentificare organizator</h2><p class="muted">Autentifică-te cu accesul tău personal FiiViu. Datele tale sunt vizibile doar pentru organizatorul tău.</p><form id="providerLoginForm"><label for="providerEmail">E-mail</label><input id="providerEmail" type="email" autocomplete="username" placeholder="name@beispiel.de" required><label for="providerPassword">Parolă</label><input id="providerPassword" type="password" autocomplete="current-password" placeholder="Parolă" required><button type="submit">Autentificare</button><button type="button" id="providerLogout" class="secondary" style="display:none">Deconectare</button><div id="providerLoginError" class="result error" style="display:none"></div></form><div id="providerIdentity" class="muted" style="margin-top:12px"></div></section>
 <section><h2>Panoul organizatorului</h2><p class="muted">Rezervări, venituri și plăți pentru organizatorul tău.</p><div class="grid" id="providerStatsCards" style="margin-top:14px"><div class="card"><strong>Rezervări</strong><div id="providerStatBookings">–</div></div><div class="card"><strong>Venit total</strong><div id="providerStatRevenue">–</div></div><div class="card"><strong>Câștigul organizatorului</strong><div id="providerStatProviderRevenue">–</div></div><div class="card"><strong>Disponibil pentru plată</strong><div id="providerStatAvailable">–</div></div><div class="card"><strong>În procesare</strong><div id="providerStatPending">–</div></div><div class="card"><strong>Plătit deda</strong><div id="providerStatPaid">–</div></div></div><div class="card" style="margin-top:18px"><h3>Kommende Rezervări</h3><div id="providerUpcoming" class="muted" style="margin-top:10px">Nu a fost încă încărcat.</div></div><div class="card" style="margin-top:18px"><h3>Letzte Rezervări</h3><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Rezervare</th><th style="text-align:left;padding:8px">Experiență</th><th style="text-align:left;padding:8px">Data</th><th style="text-align:right;padding:8px">Persoane</th><th style="text-align:right;padding:8px">Venit</th><th style="text-align:left;padding:8px">Status</th></tr></thead><tbody id="providerRecentRows"></tbody></table></div></div></section><section><h2>Testbuchung</h2><p class="muted">Erstellt eine interne Testbuchung und versendet Kunden- und Veranstalter-E-Mail. Es wird kein echtes Geld bewegt.</p><label for="providerTestEmail">Test-E-Mail des Gastes</label><input id="providerTestEmail" type="email" placeholder="deine-testadresse@beispiel.de" autocomplete="email"><button type="button" id="providerTestBooking">Testbuchung erstellen &amp; E-Mails senden</button><div id="providerTestResult" class="result" style="display:none"></div></section><section><h2>Stripe Connect</h2><p class="muted">Stripe Connect wird nur für Auszahlungen benötigt. Buchungen und Umsätze werden auch ohne hinterlegtes Connect-Konto angezeigt.</p><button id="connectOnboarding">Stripe Connect einrichten</button><button id="connectStatus" class="secondary">Verifică statusul</button><div id="connectResult" class="result" style="display:none"></div></section>
 <section><h2>Meine Experiențăse</h2><button id="reload" class="secondary">Actualizează</button><div id="list" class="muted" style="margin-top:14px">Nu a fost încă încărcat.</div></section>
-<script>const headers=()=>({'Content-Type':'application/json'});const money=c=>{const n=Number(c||0)/100;return n.toLocaleString('de-DE',{style:'currency',currency:'EUR'});};const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));const providerStatus=s=>({confirmed:'Bestätigt',paid:'Bezahlt',pending:'Offen',cancelled:'Storniert',refunded:'Erstattet',completed:'Abgeschlossen'}[String(s||'').toLowerCase()]||String(s||'–'));const OVERVIEW_API='/api/provider/overview';async function loadProviderOverview(){try{const r=await fetch(OVERVIEW_API,{headers:headers()});const d=await r.json();if(!r.ok)throw Error(d.error||'Panoul nu a putut fi încărcat.');const s=d.stats||{};document.getElementById('providerStatBookings').textContent=String(s.bookings??0);document.getElementById('providerStatRevenue').textContent=money(s.grossRevenueCents);document.getElementById('providerStatProviderRevenue').textContent=money(s.providerRevenueCents);document.getElementById('providerStatAvailable').textContent=money(s.availableCents);document.getElementById('providerStatPending').textContent=money(s.pendingCents);document.getElementById('providerStatPaid').textContent=money(s.paidOutCents);const upcoming=d.upcomingBookings||[];document.getElementById('providerUpcoming').innerHTML=upcoming.length?upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' Pers. · '+money(b.amount_cents!=null?b.amount_cents:(b.provider_amount_cents||b.total_amount_cents||0))+'</div><div class="muted">'+esc(b.customer_name||'')+'</div></div>').join(''):'Keine kommenden Rezervări.';const recent=d.recentBookings||[];document.getElementById('providerRecentRows').innerHTML=recent.length?recent.map(b=>'<tr style="border-top:1px solid #eee"><td style="padding:8px">'+esc(b.booking_id)+'</td><td style="padding:8px">'+esc(b.experience_name||'–')+'</td><td style="padding:8px">'+esc((b.booking_date||'')+' '+(b.booking_time||''))+'</td><td style="padding:8px;text-align:right">'+esc(String(b.guests||1))+'</td><td style="padding:8px;text-align:right">'+money(b.amount_cents)+'</td><td style="padding:8px">'+esc(providerStatus(b.status))+'</td></tr>').join(''):'<tr><td colspan="6" class="muted" style="padding:10px">Keine Rezervări.</td></tr>'}catch(e){document.getElementById('providerUpcoming').textContent=e.message;document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="6" class="error" style="padding:10px">'+esc(e.message)+'</td></tr>'}}function show(t,ok=false){const e=document.getElementById('result');e.className='result '+(ok?'ok':'error');e.textContent=t;}
-async function save(publish){try{const body=data();const titleFile=document.getElementById("offerImageFile").files[0];const galleryFiles=Array.from(document.getElementById("offerGalleryFiles").files||[]);if(titleFile)body.imageUrl=await uploadImage(titleFile,body.experienceId);if(galleryFiles.length){const urls=[];for(const file of galleryFiles)urls.push(await uploadImage(file,body.experienceId));body.galleryUrls=urls.join("\n");}if(!body.experienceId||!body.title)throw Error('Experience-ID und Titel sind erforderlich.');if(!Number.isInteger(body.priceCents)||body.priceCents<50)throw Error('Bitte einen Preis von mindestens 0,50 eingeben.');const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify({...body,publish})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Speichern fehlgeschlagen.');show((publish?'Veröffentlicht':'Entwurf gespeichert')+'.\n'+(d.experience?.experience_id||''),true);await load();}catch(e){show(e.message)}}
-async function load(){const box=document.getElementById('list');const info=document.getElementById('providerInfo');box.textContent='Se încarcă...';try{const r=await fetch(API,{headers:headers()});const d=await r.json();if(!r.ok)throw Error(d.error||'Încărcarea a eșuat.');if(info){info.style.display='block';info.className='result ok';info.textContent=d.provider?('Veranstalter: '+String(d.provider.name||'')+' · '+String(d.provider.provider_ref||'')+' · Stripe Connect: '+String(d.provider.connect_account_id||d.provider_connect_account_id||'')):('Stripe Connect: '+String(d.provider_connect_account_id||''));}const rows=d.experiences||[];if(!rows.length){box.textContent='Noch keine Experiențăse.';return}box.innerHTML=rows.map(x=>`<div class="card"><strong>${esc(x.title)}</strong><div>${esc(x.experience_id)}</div><div>${esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')}</div><div class="status ${x.status==='published'?'published':'draft'}">${esc(x.status)}</div><div class="muted">${esc(x.meeting_point_name||'Fără punct de întâlnire')} · ${esc(x.meeting_address||'Fără adresă')}</div></div>`).join('')}catch(e){box.textContent=e.message}}document.getElementById('save').onclick=()=>save(false);document.getElementById('publish').onclick=()=>save(true);document.getElementById('reload').onclick=()=>{load();loadProviderOverview()};
-const connectResult=document.getElementById('connectResult');function connectShow(t,ok=false){connectResult.style.display='block';connectResult.className='result '+(ok?'ok':'error');connectResult.textContent=t}
-async function connectStatus(){try{const r=await fetch('/api/provider/connect-status',{headers:headers()});const d=await r.json();if(!r.ok)throw Error(d.error||'Statusul nu a putut fi încărcat.');const a=d.account;connectShow('Cont: '+a.id+'\\nDate trimise: '+(a.detailsSubmitted?'da':'nu')+'\\nPlăți: '+(a.payoutsEnabled?'activ':'noch nicht activ')+'\\nTransfers: '+(a.transfersEnabled?'activ':'noch nicht activ')+'\\nInformații lipsă: '+(a.currentlyDue.length+a.pastDue.length),true)}catch(e){connectShow(e.message)}}async function connectOnboarding(){try{const r=await fetch('/api/provider/connect-onboarding',{method:'POST',credentials:'same-origin',headers:headers()});const d=await r.json();if(!r.ok)throw Error(d.error||'Configurarea nu a putut fi pornită.');window.location.href=d.onboarding.url}catch(e){connectShow(e.message)}}document.getElementById('connectOnboarding').onclick=connectOnboarding;document.getElementById('connectStatus').onclick=connectStatus;if(new URLSearchParams(location.search).get('connect')==='return')connectStatus();const providerTestBooking=document.getElementById('providerTestBooking');if(providerTestBooking){providerTestBooking.onclick=async()=>{const result=document.getElementById('providerTestResult');const email=document.getElementById('providerTestEmail')?.value.trim();if(!result||!email)return;result.style.display='none';try{const r=await fetch('/api/provider-test-booking',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerEmail:email})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Testbuchung fehlgeschlagen.');result.className='result '+(d.email_errors?.length?'error':'ok');result.textContent=d.message+'\nBuchungs-ID: '+d.booking_id+(d.provider_email?'\nVeranstalter-Mail: '+d.provider_email:'')+(d.email_errors?.length?'\n\n'+d.email_errors.join('\n'):'');result.style.display='block';loadProviderOverview()}catch(err){result.className='result error';result.textContent=err.message;result.style.display='block'}}};loadProviderSession().then(ok=>{if(ok){loadProviderOverview();load();}});</script></body></html>
+<script>
+const API='/api/provider/experiences';
+const OVERVIEW_API='/api/provider/overview';
+const headers=()=>({'Content-Type':'application/json'});
+const money=c=>{const n=Number(c||0)/100;return n.toLocaleString('de-DE',{style:'currency',currency:'EUR'});};
+const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const providerStatus=s=>({confirmed:'Bestätigt',paid:'Bezahlt',pending:'Offen',cancelled:'Storniert',refunded:'Erstattet',completed:'Abgeschlossen'}[String(s||'').toLowerCase()]||String(s||'–'));
+
+const loginForm=document.getElementById('providerLoginForm');
+const loginError=document.getElementById('providerLoginError');
+const logoutButton=document.getElementById('providerLogout');
+const identity=document.getElementById('providerIdentity');
+const loginSection=loginForm?.closest('section');
+const protectedSections=Array.from(document.querySelectorAll('body>section')).slice(2);
+
+function setAuthenticatedUI(authenticated,provider){
+  protectedSections.forEach(section=>section.style.display=authenticated?'':'none');
+  if(loginForm) loginForm.style.display=authenticated?'none':'';
+  if(logoutButton) logoutButton.style.display=authenticated?'':'none';
+  if(identity){
+    identity.textContent=authenticated&&provider
+      ? 'Angemeldet als: '+String(provider.name||provider.provider_ref||'')
+      : '';
+  }
+}
+
+async function loadProviderSession(){
+  try{
+    const r=await fetch('/api/provider-session',{method:'GET',credentials:'same-origin',headers:headers()});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.authenticated){
+      setAuthenticatedUI(false,null);
+      return false;
+    }
+    setAuthenticatedUI(true,d.provider||null);
+    return true;
+  }catch(error){
+    setAuthenticatedUI(false,null);
+    return false;
+  }
+}
+
+loginForm?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  loginError.style.display='none';
+  const email=document.getElementById('providerEmail')?.value.trim();
+  const password=document.getElementById('providerPassword')?.value||'';
+  try{
+    const r=await fetch('/api/provider-login',{
+      method:'POST',
+      credentials:'same-origin',
+      headers:headers(),
+      body:JSON.stringify({email,password})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw Error(d.error||'Login fehlgeschlagen.');
+    if(document.getElementById('providerPassword')) document.getElementById('providerPassword').value='';
+    setAuthenticatedUI(true,d.provider||null);
+    await loadProviderOverview();
+    await load();
+  }catch(error){
+    loginError.textContent=error.message;
+    loginError.style.display='block';
+  }
+});
+
+logoutButton?.addEventListener('click',async()=>{
+  try{await fetch('/api/provider-logout',{method:'POST',credentials:'same-origin',headers:headers()});}catch(_){}
+  setAuthenticatedUI(false,null);
+});
+
+async function loadProviderOverview(){
+  try{
+    const r=await fetch(OVERVIEW_API,{headers:headers(),credentials:'same-origin'});
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||'Panoul nu a putut fi încărcat.');
+    const s=d.stats||{};
+    document.getElementById('providerStatBookings').textContent=String(s.bookings??0);
+    document.getElementById('providerStatRevenue').textContent=money(s.grossRevenueCents);
+    document.getElementById('providerStatProviderRevenue').textContent=money(s.providerRevenueCents);
+    document.getElementById('providerStatAvailable').textContent=money(s.availableCents);
+    document.getElementById('providerStatPending').textContent=money(s.pendingCents);
+    document.getElementById('providerStatPaid').textContent=money(s.paidOutCents);
+    const upcoming=d.upcomingBookings||[];
+    document.getElementById('providerUpcoming').innerHTML=upcoming.length
+      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' Pers. · '+money(b.amount_cents!=null?b.amount_cents:(b.provider_amount_cents||b.total_amount_cents||0))+'</div><div class="muted">'+esc(b.customer_name||'')+'</div></div>').join('')
+      : 'Keine kommenden Reservări.';
+    const recent=d.recentBookings||[];
+    document.getElementById('providerRecentRows').innerHTML=recent.length
+      ? recent.map(b=>'<tr style="border-top:1px solid #eee"><td style="padding:8px">'+esc(b.booking_id)+'</td><td style="padding:8px">'+esc(b.experience_name||'–')+'</td><td style="padding:8px">'+esc((b.booking_date||'')+' '+(b.booking_time||''))+'</td><td style="padding:8px;text-align:right">'+esc(String(b.guests||1))+'</td><td style="padding:8px;text-align:right">'+money(b.amount_cents)+'</td><td style="padding:8px">'+esc(providerStatus(b.status))+'</td></tr>').join('')
+      : '<tr><td colspan="6" class="muted" style="padding:10px">Keine Reservări.</td></tr>';
+  }catch(e){
+    document.getElementById('providerUpcoming').textContent=e.message;
+    document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="6" class="error" style="padding:10px">'+esc(e.message)+'</td></tr>';
+  }
+}
+
+async function load(){
+  const box=document.getElementById('list');
+  if(!box) return;
+  box.textContent='Se încarcă...';
+  try{
+    const r=await fetch(API,{headers:headers(),credentials:'same-origin'});
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||'Încărcarea a eșuat.');
+    const rows=d.experiences||[];
+    if(!rows.length){box.textContent='Noch keine Experiențăse.';return;}
+    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(x.status)+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
+  }catch(e){
+    box.textContent=e.message;
+  }
+}
+
+document.getElementById('reload')?.addEventListener('click',()=>{load();loadProviderOverview();});
+
+const connectResult=document.getElementById('connectResult');
+function connectShow(t,ok=false){
+  connectResult.style.display='block';
+  connectResult.className='result '+(ok?'ok':'error');
+  connectResult.textContent=t;
+}
+async function connectStatus(){
+  try{
+    const r=await fetch('/api/provider/connect-status',{headers:headers(),credentials:'same-origin'});
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||'Statusul nu a putut fi încărcat.');
+    const a=d.account;
+    connectShow('Cont: '+a.id+'\\nDate trimise: '+(a.detailsSubmitted?'da':'nu')+'\\nPlăți: '+(a.payoutsEnabled?'activ':'noch nicht activ')+'\\nTransfers: '+(a.transfersEnabled?'activ':'noch nicht activ')+'\\nInformații lipsă: '+(a.currentlyDue.length+a.pastDue.length),true);
+  }catch(e){connectShow(e.message);}
+}
+async function connectOnboarding(){
+  try{
+    const r=await fetch('/api/provider/connect-onboarding',{method:'POST',credentials:'same-origin',headers:headers()});
+    const d=await r.json();
+    if(!r.ok) throw Error(d.error||'Configurarea nu a putut fi pornită.');
+    window.location.href=d.onboarding.url;
+  }catch(e){connectShow(e.message);}
+}
+document.getElementById('connectOnboarding')?.addEventListener('click',connectOnboarding);
+document.getElementById('connectStatus')?.addEventListener('click',connectStatus);
+if(new URLSearchParams(location.search).get('connect')==='return') connectStatus();
+
+document.getElementById('providerTestBooking')?.addEventListener('click',async()=>{
+  const result=document.getElementById('providerTestResult');
+  const email=document.getElementById('providerTestEmail')?.value.trim();
+  if(!result) return;
+  if(!email){result.className='result error';result.textContent='Bitte eine Test-E-Mail-Adresse eingeben.';result.style.display='block';return;}
+  result.style.display='none';
+  try{
+    const r=await fetch('/api/provider-test-booking',{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify({customerEmail:email})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw Error(d.error||'Testbuchung fehlgeschlagen.');
+    result.className='result '+(d.email_errors?.length?'error':'ok');
+    result.textContent=(d.message||'Testbuchung erstellt.')+'\nBuchungs-ID: '+d.booking_id+(d.provider_email?'\nVeranstalter-Mail: '+d.provider_email:'')+(d.email_errors?.length?'\n\n'+d.email_errors.join('\n'):'');
+    result.style.display='block';
+    await loadProviderOverview();
+  }catch(err){
+    result.className='result error';
+    result.textContent=err.message;
+    result.style.display='block';
+  }
+});
+
+loadProviderSession().then(ok=>{if(ok){loadProviderOverview();load();}});
+</script></body></html>
