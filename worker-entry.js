@@ -2405,80 +2405,24 @@ function isSettlementEventDue(settlement) {
 }
 
 async function ensureProvidersTable(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS providers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      provider_ref TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      connect_account_id TEXT,
-      contact_email TEXT,
-      active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
-  await env.DB.prepare(
-    "CREATE INDEX IF NOT EXISTS idx_providers_connect_account ON providers(connect_account_id)"
-  ).run();
+  const rows = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='providers'").all();
+  if (!rows.results?.length) throw new Error("Providers schema is missing. Apply the providers migration.");
+  const indexes = await env.DB.prepare("PRAGMA table_info(providers)").all();
+  const required = new Set(["provider_ref","name","connect_account_id","contact_email","active"]);
+  const missing = [...required].filter(name => !(indexes.results || []).some(row => String(row.name || "") === name));
+  if (missing.length) throw new Error("Providers schema is incomplete: " + missing.join(", "));
 }
 
 async function ensureProviderPayoutsTable(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS provider_payouts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      booking_id TEXT NOT NULL UNIQUE,
-      provider_ref TEXT NOT NULL,
-      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
-      payout_date TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'paid'
-        CHECK (status IN ('paid','failed','cancelled')),
-      provider_transfer_id TEXT UNIQUE,
-      reference TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
-  await env.DB.prepare(
-    "CREATE INDEX IF NOT EXISTS idx_provider_payouts_provider_ref ON provider_payouts(provider_ref)"
-  ).run();
+  const rows = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='provider_payouts'").all();
+  if (!rows.results?.length) throw new Error("Legacy provider_payouts schema is missing.");
 }
 
 async function ensureBookingSettlementsTable(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS booking_settlements (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      booking_id TEXT NOT NULL UNIQUE,
-      payment_intent_id TEXT UNIQUE,
-      total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),
-      provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),
-      fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),
-      partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),
-      partner_ref TEXT,
-      provider_ref TEXT,
-      provider_name TEXT,
-      provider_connect_account_id TEXT,
-      provider_transfer_amount_cents INTEGER,
-      provider_transfer_currency TEXT,
-      provider_transfer_id TEXT UNIQUE,
-      settlement_status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (settlement_status IN ('pending','transferred','failed','refunded','cancelled')),
-      release_at TEXT,
-      settlement_error TEXT,
-      settlement_last_attempt_at TEXT,
-      settlement_test_transfer_id TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-
-  // Legacy columns are retained by existing D1 rows; new deployments create the
-  // complete settlement schema above. Production migrations should be applied
-  // explicitly before removing any legacy runtime compatibility.
-
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_provider_ref ON booking_settlements(provider_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
+  const rows = await env.DB.prepare("PRAGMA table_info(booking_settlements)").all();
+  const required = new Set(["booking_id","payment_intent_id","total_amount_cents","provider_amount_cents","fiiviu_amount_cents","provider_connect_account_id","provider_transfer_id","settlement_status","release_at","settlement_error","settlement_test_transfer_id"]);
+  const missing = [...required].filter(name => !(rows.results || []).some(row => String(row.name || "") === name));
+  if (missing.length) throw new Error("Booking settlement schema is incomplete: " + missing.join(", "));
 }
 
 function providerRefFromName(name) {
