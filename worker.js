@@ -151,6 +151,30 @@ if (url.pathname === "/api/offers") {
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
           return json({success:true,offer},201,corsHeaders);
         }
+        if(request.method==="DELETE"){
+          const id=Number(body.id);
+          if(!Number.isInteger(id)||id<=0)return json({error:"Ungültige Angebots-ID."},400,corsHeaders);
+          const current=await env.DB.prepare("SELECT id,title,provider_ref,active FROM offers WHERE id=? LIMIT 1").bind(id).first();
+          if(!current)return json({error:"Angebot nicht gefunden."},404,corsHeaders);
+          const provider=await env.DB.prepare("SELECT name FROM providers WHERE provider_ref=? LIMIT 1")
+            .bind(String(current.provider_ref||"")).first();
+          const booking=await env.DB.prepare(
+            "SELECT booking_id FROM bookings WHERE experience_name=? AND provider_name=? LIMIT 1"
+          ).bind(String(current.title||""),String(provider?.name||"")).first();
+          if(booking){
+            await env.DB.prepare(
+              "UPDATE offers SET active=0,updated_at=CURRENT_TIMESTAMP WHERE id=?"
+            ).bind(id).run();
+            return json({
+              success:true,
+              deleted:false,
+              deactivated:true,
+              message:"Dieses Inserat ist mit einer bestehenden Buchung verknüpft und wurde deshalb nur deaktiviert."
+            },200,corsHeaders);
+          }
+          await env.DB.prepare("DELETE FROM offers WHERE id=?").bind(id).run();
+          return json({success:true,deleted:true,deactivated:false,offer_id:id},200,corsHeaders);
+        }
         if(request.method==="PATCH"){
           const id=Number(body.id); if(!Number.isInteger(id)||id<=0)return json({error:"Ungültige Angebots-ID."},400,corsHeaders);
           const current=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first(); if(!current)return json({error:"Angebot nicht gefunden."},404,corsHeaders);
