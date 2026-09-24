@@ -27,6 +27,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
+          echo "===== MIGRATION HISTORY ====="
+          npx wrangler d1 execute fiiviu-payouts --remote --json --command "SELECT * FROM d1_migrations ORDER BY id;"
+          echo "===== DATABASE TABLES ====="
           npx wrangler d1 execute fiiviu-payouts --remote --json --command "SELECT name,sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' ORDER BY name;"
           for table in bookings booking_settlements experiences providers provider_payouts offers partners stripe_webhook_events stripe_payment_events stripe_refund_events stripe_transfer_reversal_events stripe_partner_reversal_events; do
             echo "===== TABLE: $table ====="
