@@ -2103,23 +2103,30 @@ async function handleProviderOverview(request,env){
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
 
-    // The provider dashboard must work even when no settlement table exists yet.
-    // Bookings are the source of truth here; payout/settlement data is optional.
+    // Financial dashboard values come from the settlement ledger, not raw booking
+    // amounts. This keeps provider revenue/payout figures consistent with Stripe.
     const rows=await env.DB.prepare(`
       SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
              b.experience_name,b.customer_name,b.guests,b.amount_cents,
-             b.amount_cents AS provider_amount_cents,
-             NULL AS total_amount_cents,NULL AS settlement_status,NULL AS stripe_transfer_id
+             s.payment_intent_id,s.total_amount_cents,s.provider_amount_cents,
+             s.provider_transfer_amount_cents,s.settlement_status,s.provider_transfer_id,
+             s.release_at,s.settlement_error,s.settlement_test_transfer_id
       FROM bookings b
+      LEFT JOIN booking_settlements s ON s.booking_id=b.booking_id
       WHERE b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
       ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
     `).bind(provider.name,providerRef).all();
     const all=rows.results||[];
 
-    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
-    const paidOutCents=all.filter(r=>r.stripe_transfer_id||r.settlement_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
-    const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&(r.settlement_status==="ready"||String(r.payment_intent_id||"").startsWith("test_pi_"))).reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
-    const pendingCents=Math.max(0,grossRevenueCents-availableCents-paidOutCents);
+    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
+    const paidOutCents=all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
+      .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||0),0);
+    const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&
+      (r.settlement_status==="pending"||r.settlement_test_transfer_id))
+      .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||r.provider_amount_cents||0),0);
+    const pendingCents=Math.max(0,grossRevenueCents-availableCents-
+      all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
+        .reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0));
     const today=new Date().toISOString().slice(0,10);
     const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed").slice(0,10);
     return json({
@@ -2447,9 +2454,15 @@ async function ensureBookingSettlementsTable(env) {
       provider_ref TEXT,
       provider_name TEXT,
       provider_connect_account_id TEXT,
+      provider_transfer_amount_cents INTEGER,
+      provider_transfer_currency TEXT,
       stripe_transfer_id TEXT UNIQUE,
       settlement_status TEXT NOT NULL DEFAULT 'pending'
         CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),
+      release_at TEXT,
+      settlement_error TEXT,
+      settlement_last_attempt_at TEXT,
+      settlement_test_transfer_id TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -2459,7 +2472,13 @@ async function ensureBookingSettlementsTable(env) {
     "ALTER TABLE booking_settlements ADD COLUMN provider_ref TEXT",
     "ALTER TABLE booking_settlements ADD COLUMN provider_name TEXT",
     "ALTER TABLE booking_settlements ADD COLUMN provider_connect_account_id TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN stripe_transfer_id TEXT"
+    "ALTER TABLE booking_settlements ADD COLUMN provider_transfer_amount_cents INTEGER",
+    "ALTER TABLE booking_settlements ADD COLUMN provider_transfer_currency TEXT",
+    "ALTER TABLE booking_settlements ADD COLUMN stripe_transfer_id TEXT",
+    "ALTER TABLE booking_settlements ADD COLUMN release_at TEXT",
+    "ALTER TABLE booking_settlements ADD COLUMN settlement_error TEXT",
+    "ALTER TABLE booking_settlements ADD COLUMN settlement_last_attempt_at TEXT",
+    "ALTER TABLE booking_settlements ADD COLUMN settlement_test_transfer_id TEXT"
   ]) {
     try {
       await env.DB.prepare(statement).run();
@@ -2538,9 +2557,10 @@ async function getOrCreateProvider(env, name, connectAccountId = "") {
 function calculateSettlementReleaseAt(dateValue, timeValue) {
   const start = parseBookingDateTime(dateValue, timeValue);
   if (!start) return null;
-  return new Date(
-    start.getTime() - CANCELLATION_HOURS * 60 * 60 * 1000
-  ).toISOString().replace("T", " ").replace("Z", "");
+  // Provider settlement is released after the experience starts. The
+  // customer cancellation deadline is 24h before start and must never
+  // coincide with provider payout.
+  return start.toISOString().replace("T", " ").replace("Z", "");
 }
 
 async function recordBookingSettlement(env, booking) {
