@@ -205,13 +205,46 @@ export default {
         data.meetingLongitude = data.meetingLongitude || "";
         data.providerConnectAccountId = data.providerConnectAccountId || "";
 
-        const response = await legacyWorker.fetch(
-          new Request(request, {
-            body: JSON.stringify(data)
-          }),
-          env,
-          ctx
-        );
+        if (!env.STRIPE_SECRET_KEY) {
+          return json({error:"Stripe secret not configured"},500);
+        }
+
+        const amount=Number(data.amount);
+        const currency=String(data.currency||"eur").toLowerCase();
+        if (!Number.isInteger(amount) || amount < 50) {
+          return json({error:"Invalid amount"},400);
+        }
+
+        const params=new URLSearchParams();
+        params.set("amount",String(amount));
+        params.set("currency",currency);
+        params.set("metadata[booking_id]",String(data.bookingId||""));
+        params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
+        params.set("metadata[experience_id]",String(data.experienceId||""));
+        params.set("metadata[guests]",String(data.guests||1));
+        params.set("metadata[offer_id]",String(data.offerId||""));
+        params.set("metadata[customer_name]",String(data.customerName||""));
+        params.set("metadata[customer_email]",String(data.customerEmail||""));
+        params.set("metadata[booking_date]",String(data.bookingDate||""));
+        params.set("metadata[booking_time]",String(data.bookingTime||""));
+        params.set("metadata[provider_connect_account_id]",String(data.providerConnectAccountId||""));
+        params.set("automatic_payment_methods[enabled]","true");
+
+        const stripeResponse=await fetch("https://api.stripe.com/v1/payment_intents",{
+          method:"POST",
+          headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},
+          body:params
+        });
+        const stripeData=await stripeResponse.json();
+        if(!stripeResponse.ok){
+          return json({error:stripeData?.error?.message||"Stripe error"},stripeResponse.status);
+        }
+
+        const response=json({
+          clientSecret:stripeData.client_secret,
+          paymentIntentId:stripeData.id,
+          partnerRef:""
+        },200);
 
         if (response.ok && env.STRIPE_SECRET_KEY) {
           try {
