@@ -24,6 +24,19 @@ jobs:
       - name: Install Wrangler
         run: npm install --no-save wrangler@4
 
+      - name: Syntax check Worker modules
+        run: |
+          node --check secure-entry.js
+          node --check marketplace-entry.js
+          node --check worker-entry.js
+          node --check worker-entry-v2.js
+          node --check worker.js
+          node --check stripe-webhook.js
+          node --check provider-auth.js
+
+      - name: Validate Wrangler bundle
+        run: npx wrangler deploy --dry-run --config wrangler.jsonc
+
       - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
