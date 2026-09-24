@@ -204,6 +204,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const totalAmount=unitPrice*guests;
     if(!Number.isSafeInteger(totalAmount)||totalAmount<50)return json({error:"Invalid calculated amount"},409);
 
+    // Never trust a client-supplied booking ID: it is persisted as a unique
+    // booking identifier after payment succeeds. Generate it server-side so a
+    // forged ID cannot collide with or interfere with an existing booking.
+    body.bookingId = "FV-" + crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase();
     body.experienceId=experienceId;
     body.offerId=offerIdRaw || (experienceId.startsWith("offer-") ? experienceId.slice(6) : "");
     body.providerConnectAccountId=validProviderAccount;
