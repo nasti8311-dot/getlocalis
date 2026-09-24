@@ -10,8 +10,8 @@ jobs:
   syntax:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Validate JavaScript syntax
@@ -21,5 +21,7 @@ jobs:
           while IFS= read -r -d '' file; do
             node --check "$file"
           done < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+      - name: Run launch hardening regression tests
+        run: node --test tests/launch-hardening.test.js
       - name: Validate Wrangler configuration and worker bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
