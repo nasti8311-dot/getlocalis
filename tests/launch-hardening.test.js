@@ -211,7 +211,8 @@ test("provider sessions do not accept bearer tokens", () => {
   assert.doesNotMatch(block, /Authorization/);
   assert.match(block, /fiiviu_provider_session/);
 });
-\ntest("provider login keeps the session token cookie-only", () => {
+
+test("provider login keeps the session token cookie-only", () => {
   const source = read("worker-entry.js");
   assert.match(source, /Set-Cookie.*providerSessionCookie/s);
   const loginStart = source.indexOf("async function handleProviderLogin");
