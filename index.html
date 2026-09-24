@@ -53,59 +53,8 @@
             scroll-behavior: smooth;
         }
 
-        /* Subtle FiiViu atmosphere: warm, abstract shapes kept behind all content. */
         body {
-            position: relative;
-            overflow-x: hidden;
-            background:
-                radial-gradient(circle at 8% 18%, rgba(232,111,45,.10) 0, rgba(232,111,45,0) 24rem),
-                radial-gradient(circle at 92% 42%, rgba(201,88,29,.07) 0, rgba(201,88,29,0) 26rem),
-                #F8F6F1;
-        }
-
-        body::before,
-        body::after {
-            content: "";
-            position: fixed;
-            z-index: -1;
-            pointer-events: none;
-            border-radius: 999px;
-            filter: blur(2px);
-            opacity: .7;
-        }
-
-        body::before {
-            width: 34rem;
-            height: 34rem;
-            left: -18rem;
-            top: 38rem;
-            background: radial-gradient(circle, rgba(232,111,45,.13) 0, rgba(232,111,45,.045) 42%, transparent 72%);
-            transform: rotate(-18deg);
-        }
-
-        body::after {
-            width: 30rem;
-            height: 30rem;
-            right: -16rem;
-            top: 86rem;
-            background: radial-gradient(circle, rgba(201,88,29,.10) 0, rgba(201,88,29,.035) 44%, transparent 72%);
-            transform: rotate(22deg);
-        }
-
-        main {
-            position: relative;
-            isolation: isolate;
-        }
-
-        main::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: -1;
-            pointer-events: none;
-            background:
-                radial-gradient(ellipse at 78% 8%, rgba(232,111,45,.055), transparent 28%),
-                radial-gradient(ellipse at 20% 52%, rgba(237,231,220,.72), transparent 32%);
+            background: #F8F6F1;
         }
 
         .hero-bg {
@@ -216,6 +165,133 @@
             background: linear-gradient(135deg, #E86F2D, #F29A62);
         }
 
+        /* ---------------------------------------------------------
+           FiiViu visual polish — design only
+           --------------------------------------------------------- */
+        :root {
+            --fii-shadow-soft: 0 12px 35px rgba(21,21,21,.07);
+            --fii-shadow-card: 0 18px 45px rgba(21,21,21,.09);
+        }
+
+        body {
+            color: #151515;
+            letter-spacing: -0.01em;
+        }
+
+        header {
+            box-shadow: 0 1px 0 rgba(21,21,21,.02), 0 8px 28px rgba(21,21,21,.035);
+        }
+
+        .hero-bg {
+            position: relative;
+            isolation: isolate;
+        }
+
+        .hero-bg::before {\n            content: "";\n            position: absolute;\n            inset: 0;\n            z-index: -1;\n            background: linear-gradient(90deg, rgba(0,0,0,.30), transparent 62%);\n            pointer-events: none;\n        }\n\n        .hero-bg::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 78% 22%, rgba(232,111,45,.16), transparent 34%),
+                linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.10));
+            pointer-events: none;
+        }
+
+        .logo-mark {
+            box-shadow: 0 10px 24px rgba(232,111,45,.22) !important;
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .logo-mark:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 13px 28px rgba(232,111,45,.28) !important;
+        }
+
+        .category-card {
+            box-shadow: var(--fii-shadow-card);
+            border: 1px solid rgba(255,255,255,.24);
+            transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease, border-color .35s ease;
+        }
+
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 70px rgba(21,21,21,.20);
+            border-color: rgba(255,255,255,.32);
+        }
+
+        .category-card .absolute.bottom-0 {
+            padding: 1.75rem;
+        }
+
+        .experience-card {
+            border: 1px solid rgba(21,21,21,.055);
+            box-shadow: var(--fii-shadow-soft);
+        }
+
+        .experience-card:hover {
+            box-shadow: 0 24px 55px rgba(21,21,21,.13);
+        }
+
+        button,
+        select,
+        input,
+        textarea {
+            transition-property: background-color, border-color, box-shadow, transform, opacity;
+            transition-duration: .2s;
+            transition-timing-function: ease;
+        }
+
+        .bg-fii-orange {
+            box-shadow: 0 10px 24px rgba(232,111,45,.16);
+        }
+
+        .bg-fii-orange:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 13px 28px rgba(232,111,45,.22);
+        }
+
+        #currency-select,
+        #lang-select {
+            box-shadow: 0 4px 14px rgba(21,21,21,.035);
+        }
+
+        #currency-select:hover,
+        #lang-select:hover {
+            border-color: rgba(232,111,45,.35);
+        }
+
+        .glass {
+            border: 1px solid rgba(255,255,255,.58);
+            box-shadow: 0 18px 50px rgba(21,21,21,.08);
+        }
+
+        .time-slot-btn:hover {
+            background: #FFF9F5;
+            box-shadow: 0 6px 16px rgba(232,111,45,.08);
+            transform: translateY(-1px);
+        }
+
+        .StripeElement {
+            box-shadow: 0 5px 16px rgba(21,21,21,.035);
+        }
+
+        ::selection {
+            background: rgba(232,111,45,.18);
+            color: #151515;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+            }
+        }
+
         /* Mobile-friendly language dropdown */
         #lang-select {
             width: 88px;
@@ -249,181 +325,6 @@
             }
         }
     </style>
-<style id="fiiviu-premium-design">
-:root{--fv-orange:#E86F2D;--fv-ink:#151515;--fv-cream:#F8F6F1;--fv-sand:#EDE7DC}
-html{scroll-behavior:smooth}body{background:var(--fv-cream)!important;color:var(--fv-ink);-webkit-font-smoothing:antialiased}
-header{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:rgba(248,246,241,.88)!important;border-bottom:1px solid rgba(21,21,21,.07);box-shadow:0 8px 30px rgba(21,21,21,.05)}
-section{scroll-margin-top:90px}
-.hero,.hero-section{isolation:isolate}
-button,a{transition:transform .22s ease,box-shadow .22s ease,background-color .22s ease,opacity .22s ease}
-button:hover{transform:translateY(-2px)}
-[class*="rounded-3xl"],[class*="rounded-2xl"]{box-shadow:0 14px 40px rgba(21,21,21,.07);border-color:rgba(21,21,21,.07)}
-img{transition:transform .5s ease,filter .5s ease}
-.group:hover img{transform:scale(1.035)}
-input,select,textarea{border-color:rgba(21,21,21,.13)!important;box-shadow:0 4px 16px rgba(21,21,21,.04);transition:border-color .2s,box-shadow .2s,transform .2s}
-input:focus,select:focus,textarea:focus{border-color:var(--fv-orange)!important;box-shadow:0 0 0 4px rgba(232,111,45,.12)!important;outline:0}
-::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:#cfc7ba;border-radius:99px}::-webkit-scrollbar-track{background:transparent}
-@media(max-width:768px){header{background:rgba(248,246,241,.96)!important}}
-</style>
-<style id="fiiviu-home-reference-design">
-/* Homepage visual direction: vivid travel marketplace, inspired by the supplied reference. */
-body{background:#f7f9fb!important}
-header{
-  position:absolute!important;top:0;left:0;right:0;
-  background:linear-gradient(180deg,rgba(0,25,45,.34),transparent)!important;
-  border-bottom:1px solid rgba(255,255,255,.12)!important;
-  box-shadow:none!important;
-  color:#fff;
-}
-header nav a{color:rgba(255,255,255,.94)!important}
-header nav a:hover{color:#fff!important}
-header .text-gray-500{color:rgba(255,255,255,.72)!important}
-header .logo-mark{
-  background:linear-gradient(135deg,#12c8d8 0%,#f72e8a 58%,#ffad3d 100%)!important;
-  border:1px solid rgba(255,255,255,.35);
-  box-shadow:0 10px 28px rgba(0,0,0,.18)!important;
-}
-header button.flex.items-center .text-xl{color:#fff!important}
-header #currency-select,header #lang-select{
-  background:rgba(255,255,255,.13)!important;
-  color:#fff!important;
-  border-color:rgba(255,255,255,.28)!important;
-  box-shadow:none!important;
-  backdrop-filter:blur(12px);
-}
-header #currency-select option,header #lang-select option{color:#222;background:#fff}
-
-.hero-bg{
-  position:relative!important;
-  min-height:780px!important;
-  align-items:center!important;
-  overflow:hidden;
-  background:
-    linear-gradient(90deg,rgba(0,180,204,.80) 0%,rgba(0,163,194,.56) 32%,rgba(18,92,156,.24) 58%,rgba(242,49,128,.43) 100%),
-    linear-gradient(180deg,rgba(3,38,67,.04) 0%,rgba(3,20,38,.12) 100%),
-    url('https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=90&w=2200') center/cover no-repeat!important;
-}
-.hero-bg::before{
-  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:
-    radial-gradient(circle at 7% 24%,rgba(53,235,255,.30),transparent 18%),
-    radial-gradient(circle at 88% 20%,rgba(255,179,61,.32),transparent 24%),
-    radial-gradient(circle at 74% 72%,rgba(255,32,151,.30),transparent 30%);
-}
-.hero-bg::after{
-  content:"";position:absolute;z-index:3;pointer-events:none;
-  left:-8%;right:-8%;bottom:-132px;height:205px;
-  background:#f7f9fb;border-radius:50% 50% 0 0/100% 100% 0 0;
-}
-.hero-bg>div{position:relative;z-index:4;padding-top:58px}
-.hero-bg .max-w-3xl{max-width:760px}
-.hero-bg .inline-flex{
-  background:transparent!important;border:0!important;
-  padding:0!important;border-radius:0!important;
-  letter-spacing:.28em;
-}
-.hero-bg .inline-flex .w-2{background:#62efff!important}
-.hero-bg h1{
-  font-size:clamp(3.4rem,7vw,6.9rem)!important;
-  line-height:.91!important;
-  letter-spacing:-.055em!important;
-  text-shadow:0 10px 35px rgba(0,0,0,.16);
-}
-.hero-bg h1::first-line{color:#fff}
-.hero-bg p{max-width:620px!important;color:rgba(255,255,255,.92)!important;font-size:1.12rem!important}
-.hero-bg .bg-fii-orange{
-  background:linear-gradient(100deg,#11c8dc,#ef2c91)!important;
-  border:1px solid rgba(255,255,255,.35);
-  box-shadow:0 14px 32px rgba(17,200,220,.28)!important;
-  padding:15px 28px!important;
-}
-.hero-bg .bg-fii-orange:hover{
-  background:linear-gradient(100deg,#08b8cd,#df207f)!important;
-  box-shadow:0 18px 38px rgba(239,44,145,.30)!important;
-}
-
-.hero-bg + section{
-  position:relative;
-  z-index:5;
-  margin-top:-36px!important;
-  padding-top:74px!important;
-  background:#f7f9fb!important;
-  border-radius:48% 48% 0 0/7% 7% 0 0;
-}
-.hero-bg + section .max-w-2xl{max-width:700px}
-.hero-bg + section .text-fii-orange{
-  color:#ef2c91!important;
-}
-.hero-bg + section h2{
-  color:#17364d;
-  letter-spacing:-.045em;
-}
-#moments{
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  gap:18px!important;
-}
-.category-card{
-  height:340px!important;
-  border-radius:18px!important;
-  box-shadow:0 18px 38px rgba(13,48,72,.14)!important;
-  border:1px solid rgba(255,255,255,.35)!important;
-}
-.category-card:hover{transform:translateY(-7px)!important;box-shadow:0 28px 54px rgba(13,48,72,.22)!important}
-.category-card img{filter:saturate(1.08) contrast(1.02)}
-.category-card .absolute.bottom-0{padding:22px!important}
-.category-card h3{font-size:1.35rem!important;letter-spacing:-.02em}
-.category-card p{color:rgba(255,255,255,.84)!important}
-.category-card::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(180deg,transparent 38%,rgba(0,15,30,.76) 100%);
-}
-.category-card .absolute.bottom-0{z-index:2}
-
-.hero-bg + section + section{
-  background:#fff!important;
-  border:0!important;
-  padding-top:78px!important;
-  position:relative;
-}
-.hero-bg + section + section .text-fii-orange{color:#ef2c91!important}
-.hero-bg + section + section h2{color:#17364d;letter-spacing:-.04em}
-#featured-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:18px!important}
-#featured-grid .experience-card{
-  border-radius:18px!important;
-  overflow:hidden;
-  border:0!important;
-  box-shadow:0 14px 35px rgba(13,48,72,.12)!important;
-}
-#featured-grid .experience-card:hover{transform:translateY(-6px)!important;box-shadow:0 24px 48px rgba(13,48,72,.19)!important}
-.hero-bg + section + section button{
-  color:#05aeca!important;
-  border:1px solid rgba(5,174,202,.35);
-  border-radius:999px!important;
-  padding:11px 18px;
-}
-.hero-bg + section + section button:hover{background:rgba(5,174,202,.06);text-decoration:none!important}
-
-@media(max-width:1024px){
-  #moments,#featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-}
-@media(max-width:768px){
-  header{position:absolute!important;background:linear-gradient(180deg,rgba(0,25,45,.46),transparent)!important}
-  .hero-bg{min-height:720px!important}
-  .hero-bg>div{padding-top:92px}
-  .hero-bg::after{bottom:-112px;height:170px}
-  .hero-bg + section{
-    margin-top:-28px!important;
-    border-radius:40% 40% 0 0/4% 4% 0 0;
-  }
-  #moments,#featured-grid{grid-template-columns:1fr!important}
-  .category-card{height:320px!important}
-}
-@media(max-width:480px){
-  .hero-bg h1{font-size:3.25rem!important}
-  .hero-bg p{font-size:1rem!important}
-}
-</style>
-
 </head>
 
 <body class="text-fii-black font-sans min-h-screen flex flex-col">
@@ -597,7 +498,7 @@ header #currency-select option,header #lang-select option{color:#222;background:
 
                     <button
                         onclick="scrollToMoments()"
-                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-7 py-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2">
+                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-8 py-4 rounded-full transition shadow-xl flex items-center justify-center gap-2">
                         <span data-i18n="hero_cta">
                             Erlebnisse entdecken
                         </span>
@@ -636,7 +537,7 @@ header #currency-select option,header #lang-select option{color:#222;background:
         <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
             <div data-category="explore"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[390px] rounded-[28px] overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
                     src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=900"
@@ -659,7 +560,7 @@ header #currency-select option,header #lang-select option{color:#222;background:
 
 
             <div data-category="relax"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[390px] rounded-[28px] overflow-hidden cursor-pointer pointer-events-auto">
 
                 <img
                     src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=900"
