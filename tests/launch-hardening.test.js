@@ -104,7 +104,7 @@ test("legacy manual payout path is disabled", () => {
 
 test("production settlement scheduler is configured", () => {
   const config = read("wrangler.jsonc");
-  assert.match(config, /"crons"\s*:\s*\["\*\/15 \* \* \* \* "\]/);
+  assert.match(config, /"crons"\s*:\s*\[\s*"\*\/15 \* \* \* \*"/);
   const source = read("secure-entry.js");
   assert.match(source, /async scheduled\(controller, env, ctx\)/);
   assert.match(source, /releaseDueProviderSettlements\(env\)/);
