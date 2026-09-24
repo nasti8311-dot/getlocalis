@@ -29,7 +29,6 @@ jobs:
           node --check secure-entry.js
           node --check marketplace-entry.js
           node --check worker-entry.js
-          node --check worker-entry-v2.js
           node --check worker.js
           node --check stripe-webhook.js
           node --check provider-auth.js
