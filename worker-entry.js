@@ -1444,8 +1444,6 @@ async function sendEmailJsConfirmation(
     address_country:
       booking.meeting_country || "",
     arrival_minutes: arrival,
-    meeting_instructions:
-      localizedInstructions,
     map_link: mapLink,
     cancel_url: cancellationUrl,
     cancel_link: cancellationUrl,
@@ -1464,7 +1462,6 @@ async function sendEmailJsConfirmation(
     addressLine: address,
     arrival: arrival,
     arrivalMinutes: arrival,
-    arrival_minutes: arrival,
     cancelHours: cancellationHours,
     cancellationHours: cancellationHours,
     cancel_hours: cancellationHours,
