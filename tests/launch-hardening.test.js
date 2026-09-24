@@ -116,3 +116,13 @@ test("Stripe mode mismatch is guarded", () => {
   assert.match(source, /eventIsTestMode/);
   assert.match(source, /mode mismatch/);
 });
+
+
+test("marketplace checkout recalculates price and owns booking identity", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /const totalAmount=unitPrice\*guests/);
+  assert.match(source, /body\.amount=totalAmount/);
+  assert.match(source, /body\.bookingId\s*=\s*"FV-"/);
+  assert.match(source, /crypto\.randomUUID\(\)/);
+  assert.match(source, /provider_connect_account_id/);
+});
