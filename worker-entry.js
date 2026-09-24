@@ -1219,23 +1219,96 @@ async function sendConfirmationWithRetry(
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      await sendEmailJsConfirmation(env, booking);
+      if (String(env.RESEND_API_KEY || "").trim()) {
+        await sendResendConfirmation(env, booking);
+      } else {
+        await sendEmailJsConfirmation(env, booking);
+      }
       return;
     } catch (error) {
       lastError = error;
-
       if (attempt < 2) {
-        await new Promise(resolve =>
-          setTimeout(resolve, 750 * (attempt + 1))
-        );
+        await new Promise(resolve => setTimeout(resolve, 750 * (attempt + 1)));
       }
     }
   }
 
-  throw (
-    lastError ||
-    new Error("EmailJS confirmation failed")
-  );
+  throw lastError || new Error("Confirmation email failed");
+}
+
+async function sendResendConfirmation(env, booking) {
+  const recipient = clean(booking.customer_email);
+  if (!recipient) throw new Error("Keine Kunden-E-Mail-Adresse vorhanden.");
+
+  const language = normalizeLanguage(booking.customer_language);
+  const experience = String(booking.experience_name || "FiiViu Erlebnis");
+  const bookingDate = String(booking.booking_date || "");
+  const bookingTime = clean(booking.booking_time) || extractTime(experience) || "";
+  const guests = String(booking.guests || 1);
+  const total = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const bookingId = String(booking.booking_id || "");
+  const provider = String(booking.provider_name || "FiiViu");
+  const meetingPoint = String(booking.meeting_point_name || "");
+  const address = String(booking.meeting_address || "");
+  const cancellationHours = String(CANCELLATION_HOURS);
+  const appUrl = String(env.PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\\/$/, "");
+  const cancellationUrl = booking.cancellation_token
+    ? appUrl + "/cancel.html?token=" + encodeURIComponent(booking.cancellation_token)
+    : "";
+
+  const subject = language === "de"
+    ? "Buchung bestätigt – " + experience
+    : language === "ro"
+      ? "Rezervare confirmată – " + experience
+      : "Booking confirmed – " + experience;
+
+  const greeting = language === "de" ? "Hallo" : language === "ro" ? "Bună" : "Hello";
+  const labels = language === "de"
+    ? {confirmed:"Buchung bestätigt",date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",id:"Buchungs-ID",meeting:"Treffpunkt",address:"Adresse",provider:"Angeboten von",cancel:"Buchung stornieren",policy:"Kostenlose Stornierung bis " + cancellationHours + " Stunden vor Beginn."}
+    : language === "ro"
+      ? {confirmed:"Rezervare confirmată",date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",id:"ID rezervare",meeting:"Punct de întâlnire",address:"Adresă",provider:"Oferit de",cancel:"Anulează rezervarea",policy:"Anulare gratuită până la " + cancellationHours + " ore înainte de începere."}
+      : {confirmed:"Booking confirmed",date:"Date",time:"Start time",guests:"Guests",total:"Total price",id:"Booking ID",meeting:"Meeting point",address:"Address",provider:"Provided by",cancel:"Cancel booking",policy:"Free cancellation up to " + cancellationHours + " hours before the start."};
+
+  const text = [
+    greeting + " " + String(booking.customer_name || "") + ",",
+    "",
+    labels.confirmed,
+    "",
+    experience,
+    labels.date + ": " + bookingDate,
+    labels.time + ": " + bookingTime,
+    labels.guests + ": " + guests,
+    labels.total + ": " + total,
+    labels.id + ": " + bookingId,
+    "",
+    labels.provider + ": " + provider,
+    labels.meeting + ": " + meetingPoint,
+    labels.address + ": " + address,
+    "",
+    cancellationUrl ? labels.cancel + ": " + cancellationUrl : "",
+    labels.policy,
+    "",
+    "FiiViu"
+  ].filter(Boolean).join("\\n");
+
+  const html = text.split("\\n").map(line => line ? "<p style=\\"margin:0 0 8px\\">" + String(line).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch])) + "</p>" : "<br>").join("");
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + env.RESEND_API_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: "FiiViu <noreply@fiiviu.ro>",
+      to: [recipient],
+      subject,
+      html,
+      text
+    })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(String(result?.message || result?.error || ("Resend HTTP " + response.status)).slice(0, 1000));
 }
 
 async function sendEmailJsConfirmation(
