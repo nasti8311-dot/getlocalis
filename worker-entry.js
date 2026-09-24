@@ -468,13 +468,6 @@ async function handleCancellation(request, env) {
         .bind(refund.id, token)
         .run();
 
-      await env.DB
-        .prepare(
-          "UPDATE booking_settlements SET settlement_status='refunded', updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
-        )
-        .bind(booking.booking_id)
-        .run();
-
       return json(
         {
           success: true,
