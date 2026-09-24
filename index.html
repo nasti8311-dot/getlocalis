@@ -4131,7 +4131,8 @@ async function processBooking(event) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    paymentIntentId: paymentResult.paymentIntent.id
+                    paymentIntentId: paymentResult.paymentIntent.id,
+                    clientSecret: paymentData.clientSecret
                 })
             }
         );
