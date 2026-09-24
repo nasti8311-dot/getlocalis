@@ -235,6 +235,7 @@ test("admin CORS is restricted in worker-entry too", () => {
 
 test("legacy worker payment-intent endpoint is disabled", () => {
   const source = read("worker.js");
+  const entry = read("worker-entry.js");
   assert.match(source, /Legacy payment endpoint disabled/);
   assert.match(source, /return json\(\s*\{ error: \"Legacy payment endpoint disabled/);
   const legacyStart = source.indexOf('if (url.pathname === "/api/create-payment-intent")');
@@ -267,4 +268,17 @@ test("provider marketplace schemas are migration-owned", () => {
   }
   assert.match(source, /Providers schema is missing/);
   assert.match(source, /Booking settlement schema is incomplete/);
+});
+
+
+test("admin offer deletion is safe around existing bookings", () => {
+  const source = read("worker.js");
+  assert.match(source, /request\.method==="DELETE"/);
+  assert.match(source, /SELECT id,title,provider_ref,active FROM offers/);
+  assert.match(source, /FROM bookings WHERE experience_name=\? AND provider_name=\?/);
+  assert.match(source, /UPDATE offers SET active=0,updated_at=CURRENT_TIMESTAMP/);
+  assert.match(source, /DELETE FROM offers WHERE id=\?/);
+  const admin = read("organizer-admin.html");
+  assert.match(admin, /deleteOfferById/);
+  assert.match(admin, /method:"DELETE"/);
 });
