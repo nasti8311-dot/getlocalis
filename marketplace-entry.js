@@ -200,7 +200,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
     const bookingDate=String(body.bookingDate||"").trim();
     const bookingTime=String(body.bookingTime||"").trim();
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(bookingDate)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(bookingTime)){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(bookingTime)){
       return json({error:"Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich."},400);
     }
     const bookingStart=toBucharestDate(bookingDate,bookingTime);
@@ -241,7 +241,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 }
 function toBucharestDate(dateValue,timeValue){
   const date=String(dateValue||"").trim(), time=String(timeValue||"").trim();
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))return null;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))return null;
   const [y,m,d]=date.split("-").map(Number),[hh,mm]=time.split(":").map(Number);
   const guess=Date.UTC(y,m-1,d,hh,mm);
   const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Bucharest",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(guess));
