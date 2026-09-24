@@ -2264,6 +2264,10 @@ async function handleAdminProviderPayout(request, env) {
 
     if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
 
+    return json({
+      error: "Manual Organizer-Auszahlungen sind deaktiviert. Auszahlungen werden ausschließlich über das Settlement-System freigegeben."
+    }, 410);
+
     const body = await request.json();
     const bookingId = clean(body.bookingId);
     const payoutDate = clean(body.payoutDate) || new Date().toISOString().slice(0,10);
