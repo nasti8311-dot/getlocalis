@@ -2720,6 +2720,7 @@ async function ensureBookingColumns(env) {
     ["provider_connect_account_id", "TEXT"],
     ["provider_notification_email_sent_at", "TEXT"],
     ["provider_notification_email_error", "TEXT"],
+    ["booking_access_token", "TEXT"],
     ["confirmation_email_sent_at", "TEXT"],
     ["confirmation_email_error", "TEXT"],
     ["cancellation_token", "TEXT"],
@@ -2745,6 +2746,12 @@ async function ensureBookingColumns(env) {
   await env.DB
     .prepare(
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cancellation_token ON bookings(cancellation_token)"
+    )
+    .run();
+
+  await env.DB
+    .prepare(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(booking_access_token) WHERE booking_access_token IS NOT NULL"
     )
     .run();
 }
