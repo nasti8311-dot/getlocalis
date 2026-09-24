@@ -2535,6 +2535,14 @@ async function getOrCreateProvider(env, name, connectAccountId = "") {
   ).bind(result.meta?.last_row_id).first();
 }
 
+function calculateSettlementReleaseAt(dateValue, timeValue) {
+  const start = parseBookingDateTime(dateValue, timeValue);
+  if (!start) return null;
+  return new Date(
+    start.getTime() - CANCELLATION_HOURS * 60 * 60 * 1000
+  ).toISOString().replace("T", " ").replace("Z", "");
+}
+
 async function recordBookingSettlement(env, booking) {
   if (!env.DB || !booking?.booking_id) return;
 
