@@ -1257,16 +1257,38 @@ async function sendConfirmationWithRetry(
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      if (String(env.RESEND_API_KEY || "").trim()) {
+      // Customer confirmations use the existing EmailJS template so the
+      // branded FiiViu HTML design is preserved. Resend remains a fallback.
+      if (String(env.EMAILJS_PRIVATE_KEY || "").trim()) {
+        await sendEmailJsConfirmation(env, booking);
+      } else if (String(env.RESEND_API_KEY || "").trim()) {
         await sendResendConfirmation(env, booking);
       } else {
-        await sendEmailJsConfirmation(env, booking);
+        throw new Error("Kein E-Mail-Versand ist konfiguriert.");
       }
       return;
     } catch (error) {
       lastError = error;
+
+      // If EmailJS is configured but unavailable, fall back to Resend before
+      // retrying. This keeps confirmations deliverable without losing the
+      // preferred branded template.
+      if (
+        String(env.RESEND_API_KEY || "").trim() &&
+        String(env.EMAILJS_PRIVATE_KEY || "").trim()
+      ) {
+        try {
+          await sendResendConfirmation(env, booking);
+          return;
+        } catch (fallbackError) {
+          lastError = fallbackError;
+        }
+      }
+
       if (attempt < 2) {
-        await new Promise(resolve => setTimeout(resolve, 750 * (attempt + 1)));
+        await new Promise(resolve =>
+          setTimeout(resolve, 750 * (attempt + 1))
+        );
       }
     }
   }
