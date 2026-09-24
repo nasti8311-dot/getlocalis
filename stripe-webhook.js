@@ -80,10 +80,10 @@ function webhookJson(data){return new Response(JSON.stringify(data),{status:200,
 export async function releaseDueProviderSettlements(env){
   if(!env.DB||!env.STRIPE_SECRET_KEY)return {processed:0,transferred:0,tested:0};
   await ensureBookingSettlementsTable(env);
-  const rows=await env.DB.prepare("SELECT * FROM booking_settlements WHERE settlement_status='pending' AND release_at IS NOT NULL AND release_at<=CURRENT_TIMESTAMP AND provider_transfer_id IS NULL ORDER BY id ASC LIMIT 50").all();
+  const rows=await env.DB.prepare("SELECT * FROM booking_settlements WHERE settlement_status='pending' AND release_at IS NOT NULL AND release_at<=CURRENT_TIMESTAMP AND provider_transfer_id IS NULL AND settlement_test_transfer_id IS NULL ORDER BY id ASC LIMIT 50").all();
   let transferred=0,tested=0,processed=0;
   for(const candidate of rows.results||[]){
-    const claim=await env.DB.prepare("UPDATE booking_settlements SET settlement_status='releasing',settlement_last_attempt_at=CURRENT_TIMESTAMP,settlement_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='pending' AND provider_transfer_id IS NULL").bind(candidate.id).run();
+    const claim=await env.DB.prepare("UPDATE booking_settlements SET settlement_status='releasing',settlement_last_attempt_at=CURRENT_TIMESTAMP,settlement_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='pending' AND provider_transfer_id IS NULL AND settlement_test_transfer_id IS NULL").bind(candidate.id).run();
     if(Number(claim.meta?.changes||0)!==1)continue;
     processed++;
     const row=await env.DB.prepare("SELECT * FROM booking_settlements WHERE id=? LIMIT 1").bind(candidate.id).first();

@@ -180,7 +180,7 @@ test("marketplace checkout rejects invalid or past booking times", () => {
 test("settlement release uses an atomic releasing claim and restores pending on failure", () => {
   const source = read("stripe-webhook.js");
   assert.match(source, /settlement_status='releasing'/);
-  assert.match(source, /WHERE id=\? AND settlement_status='pending' AND provider_transfer_id IS NULL/);
+  assert.match(source, /WHERE id=\? AND settlement_status='pending' AND provider_transfer_id IS NULL AND settlement_test_transfer_id IS NULL/);
   assert.match(source, /settlement_status='pending',settlement_error=.*WHERE id=\? AND settlement_status='releasing'/);
   assert.match(source, /Idempotency-Key.*provider-transfer-\$\{paymentIntentId\}/s);
 });
@@ -291,11 +291,14 @@ test("secure admin CORS permits the organizer DELETE action", () => {
 
 test("provider API requires an authenticated cookie session", () => {
   const source = read("worker-entry-v2.js");
-  assert.match(source, /async function providerAuth\(request,env\)/);
-  assert.match(source, /return !!\(await authenticateProviderSession\(request,env\)\)/);
-  assert.doesNotMatch(source, /PROVIDER_ACCOUNT_MAP_JSON/);
-  assert.doesNotMatch(source, /PROVIDER_ADMIN_KEY/);
-  assert.doesNotMatch(source, /STRIPE_PROVIDER_CONNECT_ACCOUNT_ID/);
+  const start = source.indexOf("async function providerAuth");
+  const end = source.indexOf("async function handleProviderOverview", start);
+  const block = source.slice(start, end);
+  assert.match(block, /async function providerAuth\(request,env\)/);
+  assert.match(block, /return !!\(await authenticateProviderSession\(request,env\)\)/);
+  assert.doesNotMatch(block, /PROVIDER_ACCOUNT_MAP_JSON/);
+  assert.doesNotMatch(block, /PROVIDER_ADMIN_KEY/);
+  assert.doesNotMatch(block, /STRIPE_PROVIDER_CONNECT_ACCOUNT_ID/);
   assert.match(source, /if\(\!\(await providerAuth\(request,env\)\)\)return providerJson\(\{error:"Unauthorized"\},401\)/);
 });
 
@@ -305,4 +308,11 @@ test("marketplace catalog and checkout require an active provider", () => {
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
   assert.match(source, /INNER JOIN providers p ON p\.provider_ref=o\.provider_ref AND p\.active=1 WHERE o\.active=1/);
   assert.match(source, /INNER JOIN providers p ON p\.connect_account_id=e\.provider_connect_account_id AND p\.active=1 WHERE e\.status='published'/);
+});
+
+
+test("sandbox settlement rows with a test transfer are not reprocessed", () => {
+  const source = read("stripe-webhook.js");
+  assert.match(source, /settlement_status='pending'.*provider_transfer_id IS NULL.*settlement_test_transfer_id IS NULL/);
+  assert.match(source, /settlement_test_transfer_id IS NULL ORDER BY id ASC LIMIT 50/);
 });
