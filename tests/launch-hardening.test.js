@@ -204,7 +204,7 @@ test("provider login keeps the session token cookie-only", () => {
 
 test("admin CORS is restricted in worker-entry too", () => {
   const source = read("worker-entry.js");
-  const adminStart = source.indexOf('request.method==="OPTIONS"');
+  const adminStart = source.indexOf('request.method === "OPTIONS"');
   const adminEnd = source.indexOf('if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation")', adminStart);
   const block = source.slice(adminStart, adminEnd);
   assert.match(block, /PUBLIC_APP_URL/);
