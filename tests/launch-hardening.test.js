@@ -218,3 +218,13 @@ test("provider auth schema is migration-owned, not runtime-created", () => {
   assert.match(migration, /CREATE TABLE IF NOT EXISTS provider_accounts/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS provider_sessions/);
 });
+test("provider marketplace schemas are migration-owned", () => {
+  const source = read("worker-entry.js");
+  const migration = read("migrations/008_provider_marketplace_schema.sql");
+  for (const table of ["providers","offers","provider_payouts"]) {
+    assert.doesNotMatch(source, new RegExp("CREATE TABLE IF NOT EXISTS " + table));
+    assert.match(migration, new RegExp("CREATE TABLE IF NOT EXISTS " + table));
+  }
+  assert.match(source, /Providers schema is missing/);
+  assert.match(source, /Booking settlement schema is incomplete/);
+});
