@@ -235,6 +235,7 @@ test("admin CORS is restricted in worker-entry too", () => {
 
 test("legacy worker payment-intent endpoint is disabled", () => {
   const source = read("worker.js");
+  const entry = read("worker-entry.js");
   assert.match(source, /Legacy payment endpoint disabled/);
   assert.match(source, /return json\(\s*\{ error: \"Legacy payment endpoint disabled/);
   const legacyStart = source.indexOf('if (url.pathname === "/api/create-payment-intent")');
