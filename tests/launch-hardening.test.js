@@ -171,3 +171,18 @@ test("admin CORS is restricted to configured first-party origins", () => {
   assert.match(source, /headers\[\"Access-Control-Allow-Origin\"\] = origin/);
   assert.doesNotMatch(source, /const CORS = \{[\\s\\S]*Access-Control-Allow-Origin.*\*.*\}/);
 });
+
+
+test("legacy worker payment-intent endpoint is disabled", () => {
+  const source = read("worker.js");
+  assert.match(source, /Legacy payment endpoint disabled/);
+  assert.match(source, /return json\(\s*\{ error: \"Legacy payment endpoint disabled/);
+  assert.doesNotMatch(source, /params\.set\(\"amount\",String\(amount\)\)/);
+});
+
+test("secure entry routes payment creation through marketplace worker", () => {
+  const source = read("secure-entry.js");
+  const marketplaceIndex = source.indexOf('const { default: marketplaceWorker }');
+  const fallbackIndex = source.indexOf('return marketplaceWorker.fetch(request, env, ctx);');
+  assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
+});
