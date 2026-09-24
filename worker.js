@@ -29,27 +29,11 @@ export default {
     }
 
     if (url.pathname === "/api/create-payment-intent") {
-      if (request.method !== "POST") return json({error:"Method Not Allowed"},405,corsHeaders);
-      try {
-        const body=await request.json(); const amount=Number(body.amount); const currency=String(body.currency||"eur").toLowerCase();
-        const bookingId=String(body.bookingId||""); const tourName=String(body.tourName||""); const guests=Number(body.guests||1); const offerId=String(body.offerId||"").trim();
-        const bodyPartnerRef=typeof body.partnerRef==="string"?body.partnerRef.trim():""; const urlPartnerRef=url.searchParams.get("ref")?.trim()||""; let partnerRef=bodyPartnerRef||urlPartnerRef;
-        if(!Number.isInteger(amount)||amount<50)return json({error:"Invalid amount"},400,corsHeaders);
-        if(!env.STRIPE_SECRET_KEY)return json({error:"Stripe secret not configured"},500,corsHeaders);
-        if(partnerRef && env.DB){
-          await ensurePartnersTable(env);
-          const partner=await env.DB.prepare("SELECT active FROM partners WHERE partner_ref = ? LIMIT 1").bind(partnerRef).first();
-          if(!partner || Number(partner.active)!==1) partnerRef="";
-        }
-        const params=new URLSearchParams(); params.set("amount",String(amount)); params.set("currency",currency); params.set("metadata[booking_id]",bookingId); params.set("metadata[tour_name]",tourName); params.set("metadata[guests]",String(guests)); if(offerId) params.set("metadata[offer_id]",offerId);
-        if(partnerRef)params.set("metadata[partner_ref]",partnerRef);
-        const configuredProvider=String(env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID||"").trim();
-        if(configuredProvider)params.set("metadata[provider_connect_account_id]",configuredProvider);
-        params.set("automatic_payment_methods[enabled]","true");
-        const stripeResponse=await fetch("https://api.stripe.com/v1/payment_intents",{method:"POST",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY,"Content-Type":"application/x-www-form-urlencoded"},body:params});
-        const data=await stripeResponse.json(); if(!stripeResponse.ok)return json({error:data?.error?.message||"Stripe error"},stripeResponse.status,corsHeaders);
-        return json({clientSecret:data.client_secret,paymentIntentId:data.id,partnerRef:data.metadata?.partner_ref||""},200,corsHeaders);
-      }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
+      return json(
+        { error: "Legacy payment endpoint disabled. Use the marketplace checkout." },
+        410,
+        corsHeaders
+      );
     }
 
     if (url.pathname === "/api/admin/translate-offers") {
