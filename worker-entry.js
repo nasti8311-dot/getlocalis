@@ -73,8 +73,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/finalize-booking") {
       try {
         const body = await request.json();
-        const paymentIntentId = String(body?.paymentIntentId || "").trim();
-        const clientSecret = String(body?.clientSecret || "").trim();
+        const paymentIntentId = String(body?.paymentIntentId || body?.payment_intent || body?.id || "").trim();
+        const clientSecret = String(body?.clientSecret || body?.client_secret || "").trim();
 
         if (!paymentIntentId || !clientSecret) {
           return json({ error: "paymentIntentId and clientSecret are required." }, 400);
