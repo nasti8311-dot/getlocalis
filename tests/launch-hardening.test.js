@@ -144,3 +144,20 @@ test("marketplace checkout rejects invalid or past booking times", () => {
   assert.match(source, /bookingStart\.getTime\(\)<=Date\.now\(\)/);
   assert.match(source, /Europe\\\/Bucharest/);
 });
+
+
+test("settlement release uses an atomic releasing claim and restores pending on failure", () => {
+  const source = read("stripe-webhook.js");
+  assert.match(source, /settlement_status='releasing'/);
+  assert.match(source, /WHERE id=\? AND settlement_status='pending' AND provider_transfer_id IS NULL/);
+  assert.match(source, /settlement_status='pending',settlement_error=.*WHERE id=\? AND settlement_status='releasing'/);
+  assert.match(source, /Idempotency-Key.*provider-transfer-\$\{paymentIntentId\}/s);
+});
+
+test("settlement release checks refunds before provider transfer", () => {
+  const source = read("stripe-webhook.js");
+  const claim = source.indexOf("settlement_status='releasing'");
+  const transfer = source.indexOf("createProviderTransfer", claim);
+  const refund = source.indexOf("Refund detected before provider transfer", claim);
+  assert.ok(claim >= 0 && refund >= 0 && transfer > refund);
+});
