@@ -229,12 +229,30 @@ async function loadOffers(){
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${o.active?"Activ":"Dezactivat"}</div></div>
-        <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Editează</button>
+        <div class="flex gap-2">
+          <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Editează</button>
+          <button class="danger border border-red-200 bg-white" onclick="deleteOfferById(${o.id})">${o.active?"Löschen":"Deaktiviert"}</button>
+        </div>
       </div>`).join(""):"<p class='muted'>Nu există încă oferte.</p>";
   }catch(e){showMessage(e.message,true)}
 }
 let offers=[];
 async function refreshOffersRaw(){const d=await api("/api/admin/offers");offers=d.offers||[];await loadOffers()}
+async function deleteOfferById(id){
+  const offer=offers.find(x=>Number(x.id)===Number(id));
+  if(!offer)return;
+  const action=offer.active
+    ?"Das Inserat wird gelöscht, sofern keine Buchung daran hängt. Bei bestehenden Buchungen wird es stattdessen deaktiviert. Fortfahren?"
+    :"Dieses Inserat ist bereits deaktiviert. Endgültig löschen?";
+  if(!confirm(action))return;
+  try{
+    const d=await api("/api/admin/offers",{method:"DELETE",body:JSON.stringify({id:Number(id)})});
+    showMessage(d.deleted
+      ?"Das Inserat wurde gelöscht."
+      :"Das Inserat wurde deaktiviert, weil eine bestehende Buchung daran hängt.");
+    await refreshOffersRaw();
+  }catch(e){showMessage(e.message,true)}
+}
 function editOfferById(id){
   const o=offers.find(x=>x.id===id); if(!o)return;
   document.getElementById("offerId").value=o.id; document.getElementById("offerProvider").value=o.provider_ref; document.getElementById("offerCategory").value=o.category||"explore";
