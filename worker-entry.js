@@ -26,14 +26,19 @@ export default {
         url.pathname === "/api/admin/offers" ||
         url.pathname === "/api/admin/translate-offers")
     ) {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      });
+      const origin = String(request.headers.get("Origin") || "").trim();
+      const allowedOrigins = new Set([
+        String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\/$/, ""),
+        "https://fiiviu.ro",
+        "https://www.fiiviu.ro",
+      ]);
+      const headers = {
+        "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Vary": "Origin",
+      };
+      if (origin && allowedOrigins.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+      return new Response(null, { status: 204, headers });
     }
 
     if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
