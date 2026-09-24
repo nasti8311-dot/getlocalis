@@ -34,6 +34,9 @@ jobs:
           node --check stripe-webhook.js
           node --check provider-auth.js
 
+      - name: Run launch hardening regression tests
+        run: node --test tests/launch-hardening.test.js
+
       - name: Validate Wrangler bundle
         run: npx wrangler deploy --dry-run --config wrangler.jsonc
 
