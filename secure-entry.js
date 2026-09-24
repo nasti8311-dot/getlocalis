@@ -186,7 +186,7 @@ export default {
       }
     }
 
-    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || (url.pathname.startsWith("/api/provider/") && url.pathname !== "/api/provider/experiences")) {
+    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname.startsWith("/api/provider/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: CORS });
       }
