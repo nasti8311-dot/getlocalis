@@ -3,4 +3,16 @@ node_modules/
 .git/
 .github/
 *.md
-wrangler.jsonc
+*.sql
+*.jsonc
+*.yaml
+*.yml
+.gitignore
+.assetsignore
+secure-entry.js
+marketplace-entry.js
+worker-entry.js
+worker-entry-v2.js
+worker.js
+stripe-webhook.js
+provider-auth.js
