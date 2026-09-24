@@ -4014,6 +4014,14 @@ async function processBooking(event) {
     const tourName =
         document.getElementById("selected-tour-display").value;
 
+    // Resolve the currently selected experience again at payment time.
+    // The checkout view must never rely on a stale or undefined global item.
+    const currentCategory = categoriesData[currentCategoryKey];
+    const item = currentCategory?.items?.find(product => product.id === currentTourKey);
+    if (!item) {
+        throw new Error("Das ausgewählte Erlebnis konnte nicht geladen werden. Bitte zurückgehen und erneut auswählen.");
+    }
+
 
     const totalAmount =
         currentPriceEUR * guests;
