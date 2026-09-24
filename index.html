@@ -4006,7 +4006,7 @@ async function processBooking(event) {
     const time =
         String(selectedTourTime || "").trim();
 
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
         cardErrors.textContent =
             "Bitte wähle zuerst ein gültiges Buchungsdatum und eine gültige Uhrzeit.";
         submitButton.disabled = false;
