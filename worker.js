@@ -456,39 +456,12 @@ async function translateOfferFields(source, options = {}) {
 
 
 async function ensureOffersTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS offers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    provider_ref TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    price_cents INTEGER NOT NULL CHECK (price_cents >= 50),
-    currency TEXT NOT NULL DEFAULT 'eur',
-    available_times TEXT,
-    meeting_point_name TEXT,
-    meeting_address TEXT,
-    meeting_city TEXT,
-    meeting_country TEXT,
-    meeting_instructions TEXT,
-    arrival_minutes_before INTEGER,
-    title_en TEXT,
-    title_ro TEXT,
-    description_en TEXT,
-    description_ro TEXT,
-    meeting_point_name_en TEXT,
-    meeting_point_name_ro TEXT,
-    meeting_instructions_en TEXT,
-    meeting_instructions_ro TEXT,
-    image_url TEXT,
-    gallery_urls TEXT,
-    category TEXT NOT NULL DEFAULT 'explore',
-    active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)").run();
+  const rows=await env.DB.prepare("PRAGMA table_info(offers)").all();
+  const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
-
 async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   const safe=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const subject="Accesul dumneavoastră de partener FiiViu";
@@ -528,18 +501,26 @@ async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
 
 function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
 async function ensurePartnerTrackingTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_scan_events (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_scan_events_partner_ref ON partner_scan_events(partner_ref)").run();
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_visitors (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,visitor_id TEXT NOT NULL,first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(partner_ref,visitor_id))`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_visitors_partner_ref ON partner_visitors(partner_ref)").run();
+  for(const [table,required] of [["partner_scan_events",["partner_ref","created_at"]],["partner_visitors",["partner_ref","visitor_id","first_seen_at","last_seen_at"]]]){
+    const rows=await env.DB.prepare("PRAGMA table_info("+table+")").all();
+    const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+    const missing=required.filter(name=>!existing.has(name));
+    if(missing.length)throw new Error("Partner tracking schema is incomplete: "+table+" missing "+missing.join(", "));
+  }
 }
-
 async function ensurePartnersTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'Hotel',partner_ref TEXT NOT NULL UNIQUE,contact_name TEXT,contact_email TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  const rows=await env.DB.prepare("PRAGMA table_info(partners)").all();
+  const required=["name","type","partner_ref","contact_name","contact_email","active"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Partners schema is incomplete: "+missing.join(", "));
 }
 async function ensurePartnerAuthTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_auth_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL UNIQUE,token_hash TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_auth_tokens_hash ON partner_auth_tokens(token_hash)").run();
+  const rows=await env.DB.prepare("PRAGMA table_info(partner_auth_tokens)").all();
+  const required=["partner_ref","token_hash","created_at","updated_at"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Partner auth schema is incomplete: "+missing.join(", "));
 }
 function generatePartnerToken(){
   const bytes=new Uint8Array(32); crypto.getRandomValues(bytes);
@@ -551,13 +532,18 @@ async function hashPartnerToken(token){
   return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
 }
 async function ensurePartnerAccountsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL UNIQUE,email TEXT NOT NULL UNIQUE,password_salt TEXT NOT NULL,password_hash TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
-  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_partner_accounts_email ON partner_accounts(email)").run();
+  const rows=await env.DB.prepare("PRAGMA table_info(partner_accounts)").all();
+  const required=["partner_ref","email","password_salt","password_hash"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Partner account schema is incomplete: "+missing.join(", "));
 }
 async function ensurePartnerSessionsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,session_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_sessions_partner ON partner_sessions(partner_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_sessions_expires ON partner_sessions(expires_at)").run();
+  const rows=await env.DB.prepare("PRAGMA table_info(partner_sessions)").all();
+  const required=["partner_ref","session_hash","expires_at"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Partner session schema is incomplete: "+missing.join(", "));
 }
 function randomHex(bytesLength=32){
   const bytes=new Uint8Array(bytesLength); crypto.getRandomValues(bytes);
@@ -601,15 +587,18 @@ function partnerSessionCookie(value,maxAge=2592000){
   return "fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Domain=fiiviu.ro; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),payout_date TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'cancelled')),reference TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_partner_ref ON partner_payouts(partner_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_payouts_payout_date ON partner_payouts(payout_date)").run();
+  const rows=await env.DB.prepare("PRAGMA table_info(partner_payouts)").all();
+  const required=["partner_ref","amount_cents","payout_date","status","reference"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Partner payout schema is incomplete: "+missing.join(", "));
 }
 async function ensureBookingSettlementsTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS booking_settlements (id INTEGER PRIMARY KEY AUTOINCREMENT,booking_id TEXT NOT NULL UNIQUE,payment_intent_id TEXT UNIQUE,total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents > 0),provider_amount_cents INTEGER NOT NULL CHECK (provider_amount_cents >= 0),fiiviu_amount_cents INTEGER NOT NULL CHECK (fiiviu_amount_cents >= 0),partner_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (partner_amount_cents >= 0),partner_ref TEXT,settlement_status TEXT NOT NULL DEFAULT 'pending' CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_payment_intent ON booking_settlements(payment_intent_id)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_status ON booking_settlements(settlement_status)").run();
+  const rows=await env.DB.prepare("PRAGMA table_info(booking_settlements)").all();
+  const required=["booking_id","payment_intent_id","total_amount_cents","provider_amount_cents","fiiviu_amount_cents","partner_amount_cents","partner_ref","settlement_status"];
+  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Booking settlement schema is incomplete: "+missing.join(", "));
 }
 async function generatePartnerRef(env,name){const base=name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,8)||"PARTNER";for(let i=1;i<1000;i++){const candidate=base.slice(0,12)+String(i).padStart(3,"0");const existing=await env.DB.prepare("SELECT id FROM partners WHERE partner_ref = ? LIMIT 1").bind(candidate).first();if(!existing)return candidate}throw new Error("Kein freier Partner-Code verfügbar.")}
 function buildPartnerLink(partnerRef){return "https://fiiviu.ro/?ref="+encodeURIComponent(partnerRef)}
