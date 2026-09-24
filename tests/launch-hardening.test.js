@@ -59,6 +59,12 @@ test("runtime schema evolution is not used by launch paths", () => {
   }
 });
 
+test("production D1 audit workflow checks migration history", () => {
+  const source = read(".github/workflows/audit-d1-schema.yml");
+  assert.match(source, /SELECT \* FROM d1_migrations ORDER BY id/);
+  assert.match(source, /Inspect production D1 schema/);
+});
+
 test("launch paths do not mutate D1 schema at request time", () => {
   for (const path of [
     "stripe-webhook.js",
