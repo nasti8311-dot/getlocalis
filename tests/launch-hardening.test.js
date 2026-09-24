@@ -47,6 +47,7 @@ test("runtime schema evolution is not used by launch paths", () => {
     "worker-entry.js",
     "worker.js",
     "marketplace-entry.js",
+    "worker-entry-v2.js",
     "secure-entry.js"
   ]) {
     const source = read(path);
@@ -66,7 +67,8 @@ test("server-side files are excluded from Cloudflare Static Assets", () => {
     "worker-entry.js",
     "worker.js",
     "stripe-webhook.js",
-    "provider-auth.js"
+    "provider-auth.js",
+    "worker-entry-v2.js"
   ]) {
     assert.match(
       ignore,
