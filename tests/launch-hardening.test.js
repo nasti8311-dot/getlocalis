@@ -83,7 +83,7 @@ test("launch paths do not mutate D1 schema at request time", () => {
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS bookings/);
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS experiences/);
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS partner_sessions/);
-  assert.match(migrations, /CREATE TABLE IF NOT EXISTS stripe_webhook_events/);
+  assert.match(read("migrations/003_settlement_ledger.sql"), /CREATE TABLE IF NOT EXISTS stripe_webhook_events/);
 });
 
 test("server-side files are excluded from Cloudflare Static Assets", () => {
