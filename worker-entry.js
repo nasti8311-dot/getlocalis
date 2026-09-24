@@ -2451,7 +2451,7 @@ async function ensureBookingSettlementsTable(env) {
       provider_transfer_currency TEXT,
       stripe_transfer_id TEXT UNIQUE,
       settlement_status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (settlement_status IN ('pending','ready','transferred','failed','refunded','cancelled')),
+        CHECK (settlement_status IN ('pending','transferred','failed','refunded','cancelled')),
       release_at TEXT,
       settlement_error TEXT,
       settlement_last_attempt_at TEXT,
@@ -2461,22 +2461,9 @@ async function ensureBookingSettlementsTable(env) {
     )
   `).run();
 
-  for (const statement of [
-    "ALTER TABLE booking_settlements ADD COLUMN provider_ref TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN provider_name TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN provider_connect_account_id TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN provider_transfer_amount_cents INTEGER",
-    "ALTER TABLE booking_settlements ADD COLUMN provider_transfer_currency TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN stripe_transfer_id TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN release_at TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN settlement_error TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN settlement_last_attempt_at TEXT",
-    "ALTER TABLE booking_settlements ADD COLUMN settlement_test_transfer_id TEXT"
-  ]) {
-    try {
-      await env.DB.prepare(statement).run();
-    } catch (_) {}
-  }
+  // Legacy columns are retained by existing D1 rows; new deployments create the
+  // complete settlement schema above. Production migrations should be applied
+  // explicitly before removing any legacy runtime compatibility.
 
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_partner_ref ON booking_settlements(partner_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_booking_settlements_provider_ref ON booking_settlements(provider_ref)").run();
