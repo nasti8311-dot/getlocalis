@@ -59,6 +59,27 @@ test("runtime schema evolution is not used by launch paths", () => {
   }
 });
 
+test("launch paths do not mutate D1 schema at request time", () => {
+  for (const path of [
+    "stripe-webhook.js",
+    "worker-entry.js",
+    "worker-entry-v2.js",
+    "worker.js",
+    "marketplace-entry.js",
+    "secure-entry.js",
+    "provider-auth.js"
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(source, /\\bCREATE\\s+(?:TABLE|INDEX)\\s+IF\\s+NOT\\s+EXISTS\\b/i, path + " still contains runtime CREATE IF NOT EXISTS");
+    assert.doesNotMatch(source, /\\bALTER\\s+TABLE\\b/i, path + " still contains runtime ALTER TABLE");
+  }
+  const migrations = read("migrations/009_launch_runtime_schemas.sql") + read("migrations/010_legacy_partner_schema.sql");
+  assert.match(migrations, /CREATE TABLE IF NOT EXISTS bookings/);
+  assert.match(migrations, /CREATE TABLE IF NOT EXISTS experiences/);
+  assert.match(migrations, /CREATE TABLE IF NOT EXISTS partner_sessions/);
+  assert.match(migrations, /CREATE TABLE IF NOT EXISTS stripe_webhook_events/);
+});
+
 test("server-side files are excluded from Cloudflare Static Assets", () => {
   const ignore = read(".assetsignore");
   for (const path of [
