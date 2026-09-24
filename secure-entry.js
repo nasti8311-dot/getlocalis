@@ -45,11 +45,21 @@ const { default: marketplaceWorker } = await import("./marketplace-entry.js");
 const { default: adminWorker } = await import("./worker-entry.js");
 const { releaseDueProviderSettlements } = await import("./stripe-webhook.js");
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization"
-};
+function getAdminCors(request, env) {
+  const origin = String(request.headers.get("Origin") || "").trim();
+  const allowed = new Set([
+    String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\/$/, ""),
+    "https://fiiviu.ro",
+    "https://www.fiiviu.ro"
+  ]);
+  const headers = {
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Vary": "Origin"
+  };
+  if (origin && allowed.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
 
 export default {
   async scheduled(controller, env, ctx) {
@@ -63,62 +73,62 @@ export default {
 
     if (url.pathname === "/api/admin/settlement-run") {
       if (request.method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: CORS });
+        return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
       if (request.method !== "POST") {
         return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
           status: 405,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
       if (!env.ADMIN_PAYOUT_KEY || request.headers.get("Authorization") !== "Bearer " + String(env.ADMIN_PAYOUT_KEY)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
       try {
         const result = await releaseDueProviderSettlements(env);
         return new Response(JSON.stringify({ success: true, ...result }), {
           status: 200,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       } catch (error) {
         console.error("FiiViu manual settlement run failed", error);
         return new Response(JSON.stringify({ error: error?.message || "Settlement run failed." }), {
           status: 500,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
     }
 
     if (url.pathname === "/api/admin/settlement-status") {
       if (request.method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: CORS });
+        return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
       if (request.method !== "GET") {
         return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
           status: 405,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
       if (!env.ADMIN_PAYOUT_KEY || request.headers.get("Authorization") !== "Bearer " + String(env.ADMIN_PAYOUT_KEY)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
       if (!env.DB) {
         return new Response(JSON.stringify({ error: "D1 database not configured" }), {
           status: 500,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
       const bookingId = String(url.searchParams.get("booking_id") || "").trim();
       if (!bookingId) {
         return new Response(JSON.stringify({ error: "booking_id is required" }), {
           status: 400,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
       try {
@@ -146,7 +156,7 @@ export default {
         if (!row) {
           return new Response(JSON.stringify({ error: "Settlement not found", booking_id: bookingId }), {
             status: 404,
-            headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+            headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
           });
         }
         return new Response(JSON.stringify({
@@ -170,20 +180,20 @@ export default {
           }
         }), {
           status: 200,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       } catch (error) {
         console.error("FiiViu settlement status lookup failed", error);
         return new Response(JSON.stringify({ error: error?.message || "Settlement status lookup failed" }), {
           status: 500,
-          headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" }
+          headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
     }
 
     if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname.startsWith("/api/provider/")) {
       if (request.method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: CORS });
+        return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
       return adminWorker.fetch(request, env, ctx);
     }
