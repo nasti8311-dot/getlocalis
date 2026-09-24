@@ -21,15 +21,26 @@ export async function handleStripeWebhook(request, env) {
     await ensureStripeRefundEventsTable(env);
     await ensureStripeTransferReversalEventsTable(env);
     await ensureStripePartnerReversalEventsTable(env);
-    const existing = await env.DB.prepare("SELECT event_id FROM stripe_webhook_events WHERE event_id = ? LIMIT 1").bind(event.id).first();
-    if (existing) return webhookJson({ received: true, duplicate: true });
+    const claim = await env.DB.prepare(
+      "INSERT OR IGNORE INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP)"
+    ).bind(event.id,event.type).run();
+    if (Number(claim.meta?.changes || 0) !== 1) {
+      return webhookJson({ received: true, duplicate: true });
+    }
   }
   try {
     if (event.type === "payment_intent.succeeded") { await recordPaymentIntentEvent(env,event); await createBookingSettlement(env,event); }
     else if (event.type === "payment_intent.payment_failed") await recordPaymentIntentEvent(env,event);
     else if (["charge.refunded","charge.refund.updated","refund.created","refund.updated"].includes(event.type)) await recordRefundEvent(env,event);
-    if (env.DB) await env.DB.prepare("INSERT INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(event_id) DO NOTHING").bind(event.id,event.type).run();
-  } catch(error) { console.error("Stripe webhook processing failed",error); return webhookError(error?.message||"Webhook processing failed",500); }
+  } catch(error) {
+    if (env.DB) {
+      try {
+        await env.DB.prepare("DELETE FROM stripe_webhook_events WHERE event_id = ?").bind(event.id).run();
+      } catch (_) {}
+    }
+    console.error("Stripe webhook processing failed",error);
+    return webhookError(error?.message||"Webhook processing failed",500);
+  }
   return webhookJson({received:true});
 }
 
