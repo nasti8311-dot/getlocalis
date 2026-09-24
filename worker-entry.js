@@ -1916,13 +1916,19 @@ async function handleProviderOverview(request,env){
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
     const rows=await env.DB.prepare(`
-      SELECT s.booking_id,s.provider_amount_cents,s.settlement_status,s.stripe_transfer_id,
-             b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,b.experience_name,b.customer_name,b.guests
+      SELECT s.booking_id,
+             s.provider_amount_cents,
+             s.total_amount_cents,
+             s.settlement_status,
+             s.stripe_transfer_id,
+             b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
+             b.experience_name,b.customer_name,b.guests,b.amount_cents
       FROM booking_settlements s
       LEFT JOIN bookings b ON b.booking_id=s.booking_id
       WHERE s.provider_ref=?
+         OR (s.provider_ref IS NULL AND b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1))
       ORDER BY b.booking_date DESC,b.booking_time DESC,s.id DESC
-    `).bind(providerRef).all();
+    `).bind(providerRef,providerRef).all();
     const all=rows.results||[];
     const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
     const paidOutCents=all.filter(r=>r.stripe_transfer_id||r.settlement_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
