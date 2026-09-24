@@ -1846,8 +1846,9 @@ async function handleProviderTestBooking(request, env) {
 
     await ensureBookingColumns(env);
     await ensureProvidersTable(env);
-    await ensureBookingSettlementsTable(env);
 
+    // Provider test bookings intentionally stay independent of Stripe Connect.
+    // They simulate a paid booking while the platform remains in Stripe test mode.
     const provider = await env.DB.prepare(
       "SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1"
     ).bind(providerRef).first();
@@ -1907,8 +1908,6 @@ async function handleProviderTestBooking(request, env) {
       booking.provider_connect_account_id,booking.cancellation_token
     ).run();
 
-    await recordBookingSettlement(env, booking);
-
     const emailErrors = [];
     try {
       await sendProviderBookingNotification(env, booking);
@@ -1928,10 +1927,6 @@ async function handleProviderTestBooking(request, env) {
         "UPDATE bookings SET confirmation_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
       ).bind(message, booking.booking_id).run();
     }
-
-    await env.DB.prepare(
-      "UPDATE booking_settlements SET settlement_status='ready',updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
-    ).bind(booking.booking_id).run();
 
     return json({
       success: true,
@@ -2140,7 +2135,7 @@ async function handleProviderOverview(request,env){
 
     const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
     const paidOutCents=all.filter(r=>r.stripe_transfer_id||r.settlement_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
-    const availableCents=all.filter(r=>r.settlement_status==="ready"&&r.status==="confirmed"&&r.payment_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
+    const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&(r.settlement_status==="ready"||String(r.payment_intent_id||"").startsWith("test_pi_"))).reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
     const pendingCents=Math.max(0,grossRevenueCents-availableCents-paidOutCents);
     const today=new Date().toISOString().slice(0,10);
     const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed").slice(0,10);
