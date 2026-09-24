@@ -69,9 +69,10 @@ export default {
       try {
         const body = await request.json();
         const paymentIntentId = String(body?.paymentIntentId || "").trim();
+        const clientSecret = String(body?.clientSecret || "").trim();
 
-        if (!paymentIntentId) {
-          return json({ error: "paymentIntentId is required." }, 400);
+        if (!paymentIntentId || !clientSecret) {
+          return json({ error: "paymentIntentId and clientSecret are required." }, 400);
         }
 
         if (!env.DB || !env.STRIPE_SECRET_KEY) {
@@ -88,6 +89,10 @@ export default {
             error: "Payment is not completed.",
             status: paymentIntent?.status || "unknown"
           }, 409);
+        }
+
+        if (String(paymentIntent?.client_secret || "") !== clientSecret) {
+          return json({ error: "Payment confirmation credentials do not match." }, 403);
         }
 
         await finalizePaidBooking(env, paymentIntent);
