@@ -172,6 +172,26 @@ test("admin CORS is restricted to configured first-party origins", () => {
   assert.doesNotMatch(source, /const CORS = \{[\\s\\S]*Access-Control-Allow-Origin.*\*.*\}/);
 });
 
+test("provider login keeps the session token cookie-only", () => {
+  const source = read("worker-entry.js");
+  assert.match(source, /Set-Cookie.*providerSessionCookie/s);
+  const loginStart = source.indexOf("async function handleProviderLogin");
+  const loginEnd = source.indexOf("async function handleProviderSession", loginStart);
+  const loginBlock = source.slice(loginStart, loginEnd);
+  assert.doesNotMatch(loginBlock, /sessionToken\s*:/);
+});
+
+test("admin CORS is restricted in worker-entry too", () => {
+  const source = read("worker-entry.js");
+  const adminStart = source.indexOf('request.method==="OPTIONS"');
+  const adminEnd = source.indexOf('if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation")', adminStart);
+  const block = source.slice(adminStart, adminEnd);
+  assert.match(block, /PUBLIC_APP_URL/);
+  assert.match(block, /https:\\/\\/fiiviu\\.ro/);
+  assert.match(block, /Access-Control-Allow-Origin.*origin/s);
+  assert.doesNotMatch(block, /Access-Control-Allow-Origin.*\*/s);
+});
+
 
 test("legacy worker payment-intent endpoint is disabled", () => {
   const source = read("worker.js");
