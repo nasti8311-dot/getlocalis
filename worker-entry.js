@@ -55,6 +55,7 @@ export default {
     if (url.pathname === "/api/provider-login") return handleProviderLogin(request, env);
     if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
     if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
+    if (url.pathname === "/api/provider-test-booking") return handleProviderTestBooking(request, env);
     if (url.pathname === "/api/provider/overview") return handleProviderOverview(request, env);
     if (url.pathname === "/api/provider/connect-status") return handleProviderConnectStatus(request, env);
     if (url.pathname === "/api/provider/connect-onboarding") return handleProviderConnectOnboarding(request, env);
@@ -1826,6 +1827,125 @@ async function handleProviderSession(request,env){
   const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
   if(!provider||Number(provider.active)!==1)return json({authenticated:false},401);
   return json({authenticated:true,provider});
+}
+
+async function handleProviderTestBooking(request, env) {
+  if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.DB) return json({ error: "D1 database not configured" }, 500);
+
+  const providerRef = await providerRefFromSession(request, env);
+  if (!providerRef) return json({ error: "Unauthorized provider credentials" }, 401);
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const customerEmail = clean(body.customerEmail);
+    if (!customerEmail || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(customerEmail)) {
+      return json({ error: "Bitte eine gültige Test-E-Mail-Adresse eingeben." }, 400);
+    }
+
+    await ensureBookingColumns(env);
+    await ensureProvidersTable(env);
+    await ensureBookingSettlementsTable(env);
+
+    const provider = await env.DB.prepare(
+      "SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1"
+    ).bind(providerRef).first();
+    if (!provider) return json({ error: "Veranstalter nicht gefunden." }, 404);
+
+    const now = new Date();
+    const bookingId = "TEST-" + now.getTime().toString(36).toUpperCase() + "-" + providerRef;
+    const paymentIntentId = "test_pi_" + now.getTime().toString(36) + "_" + providerRef.toLowerCase();
+    const bookingDate = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+    const bookingTime = "18:00";
+    const cancellationToken = providerRandomHex(24);
+
+    const booking = {
+      booking_id: bookingId,
+      payment_intent_id: paymentIntentId,
+      status: "confirmed",
+      payment_status: "paid",
+      customer_name: "FiiViu Testgast",
+      customer_email: customerEmail,
+      customer_phone: "",
+      customer_language: "de",
+      experience_name: "FiiViu Testbuchung",
+      booking_date: bookingDate,
+      booking_time: bookingTime,
+      guests: 2,
+      amount_cents: 100,
+      currency: "eur",
+      meeting_point_name: "Test-Treffpunkt",
+      meeting_address: "Teststraße 1",
+      meeting_city: "Bucharest",
+      meeting_country: "Romania",
+      meeting_instructions: "Dies ist eine interne Testbuchung.",
+      arrival_minutes_before: 15,
+      meeting_latitude: "",
+      meeting_longitude: "",
+      partner_ref: null,
+      provider_name: provider.name,
+      provider_connect_account_id: provider.connect_account_id,
+      cancellation_token: cancellationToken
+    };
+
+    await env.DB.prepare(
+      `INSERT INTO bookings (
+        booking_id,payment_intent_id,status,payment_status,customer_name,customer_email,customer_phone,
+        customer_language,experience_name,booking_date,booking_time,guests,amount_cents,currency,
+        meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,
+        arrival_minutes_before,meeting_latitude,meeting_longitude,partner_ref,provider_name,
+        provider_connect_account_id,cancellation_token,created_at,updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`
+    ).bind(
+      booking.booking_id,booking.payment_intent_id,booking.status,booking.payment_status,
+      booking.customer_name,booking.customer_email,booking.customer_phone,booking.customer_language,
+      booking.experience_name,booking.booking_date,booking.booking_time,booking.guests,booking.amount_cents,
+      booking.currency,booking.meeting_point_name,booking.meeting_address,booking.meeting_city,
+      booking.meeting_country,booking.meeting_instructions,booking.arrival_minutes_before,
+      booking.meeting_latitude,booking.meeting_longitude,booking.partner_ref,booking.provider_name,
+      booking.provider_connect_account_id,booking.cancellation_token
+    ).run();
+
+    await recordBookingSettlement(env, booking);
+
+    const emailErrors = [];
+    try {
+      await sendProviderBookingNotification(env, booking);
+    } catch (error) {
+      emailErrors.push("Veranstalter-Mail: " + String(error?.message || error));
+    }
+
+    try {
+      await sendConfirmationWithRetry(env, booking);
+      await env.DB.prepare(
+        "UPDATE bookings SET confirmation_email_sent_at=CURRENT_TIMESTAMP,confirmation_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      ).bind(booking.booking_id).run();
+    } catch (error) {
+      const message = String(error?.message || error).slice(0, 1000);
+      emailErrors.push("Kunden-Mail: " + message);
+      await env.DB.prepare(
+        "UPDATE bookings SET confirmation_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      ).bind(message, booking.booking_id).run();
+    }
+
+    await env.DB.prepare(
+      "UPDATE booking_settlements SET settlement_status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+    ).bind(booking.booking_id).run();
+
+    return json({
+      success: true,
+      booking_id: booking.booking_id,
+      customer_email: customerEmail,
+      provider_email: clean(provider.contact_email),
+      email_errors: emailErrors,
+      message: emailErrors.length
+        ? "Testbuchung erstellt, aber mindestens eine E-Mail konnte nicht gesendet werden."
+        : "Testbuchung erstellt und E-Mails wurden versendet."
+    });
+  } catch (error) {
+    console.error("FiiViu provider test booking failed", error);
+    return json({ error: error?.message || "Testbuchung konnte nicht erstellt werden." }, 500);
+  }
 }
 
 async function handleProviderLogout(request,env){
