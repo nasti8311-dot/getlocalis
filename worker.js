@@ -503,9 +503,6 @@ async function ensureOffersTable(env){
   )`).run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_provider_ref ON offers(provider_ref)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_offers_active ON offers(active)").run();
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN category TEXT NOT NULL DEFAULT 'explore'").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN image_url TEXT").run()}catch(e){}
-  try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN gallery_urls TEXT").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN title_en TEXT").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN title_ro TEXT").run()}catch(e){}
   try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN description_en TEXT").run()}catch(e){}
@@ -563,7 +560,6 @@ async function ensurePartnerTrackingTable(env){
 
 async function ensurePartnersTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,type TEXT NOT NULL DEFAULT 'Hotel',partner_ref TEXT NOT NULL UNIQUE,contact_name TEXT,contact_email TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  try{await env.DB.prepare("ALTER TABLE partners ADD COLUMN active INTEGER NOT NULL DEFAULT 1").run()}catch(e){}
 }
 async function ensurePartnerAuthTable(env){
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_auth_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL UNIQUE,token_hash TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (partner_ref) REFERENCES partners(partner_ref))`).run();
