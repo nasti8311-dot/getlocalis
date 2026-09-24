@@ -1,3 +1,5 @@
+import { calculateSettlementReleaseAt } from "../stripe-webhook.js";
+import { getCancellationState, parseBookingDateTime } from "../worker-entry.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -71,4 +73,22 @@ test("server-side files are excluded from Cloudflare Static Assets", () => {
       new RegExp("^" + path.replace(".", "\\.") + "$", "m")
     );
   }
+});
+
+
+test("settlement release helper resolves to experience start", () => {
+  assert.equal(
+    calculateSettlementReleaseAt("2030-06-15", "14:30"),
+    "2030-06-15 11:30:00.000"
+  );
+});
+
+test("cancellation policy enforces the 24-hour boundary", () => {
+  const future = parseBookingDateTime("2030-06-15", "14:30");
+  const past = parseBookingDateTime("2020-06-15", "14:30");
+  assert.ok(future instanceof Date);
+  assert.ok(past instanceof Date);
+  assert.equal(getCancellationState({ booking_date: "2030-06-15", booking_time: "14:30" }).allowed, true);
+  assert.equal(getCancellationState({ booking_date: "2020-06-15", booking_time: "14:30" }).allowed, false);
+  assert.equal(getCancellationState({ booking_date: "not-a-date", booking_time: "14:30" }).allowed, false);
 });
