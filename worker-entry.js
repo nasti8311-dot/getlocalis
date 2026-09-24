@@ -1251,7 +1251,7 @@ async function sendResendConfirmation(env, booking) {
   const meetingPoint = String(booking.meeting_point_name || "");
   const address = String(booking.meeting_address || "");
   const cancellationHours = String(CANCELLATION_HOURS);
-  const appUrl = String(env.PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\\/$/, "");
+  const appUrl = String(env.PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/$/, "");
   const cancellationUrl = booking.cancellation_token
     ? appUrl + "/cancel.html?token=" + encodeURIComponent(booking.cancellation_token)
     : "";
