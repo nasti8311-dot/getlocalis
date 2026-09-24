@@ -38,40 +38,13 @@ export default {
 const providerCors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization"};
 function providerJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...providerCors,"Content-Type":"application/json"}})}
 async function providerAuth(request,env){
-  if(await authenticateProviderSession(request,env)) return true;
-  const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\\s+/,"").trim();
-  const expected=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();
-  if(expected&&auth===expected)return true;
-  try{
-    const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();
-    if(raw){
-      const map=JSON.parse(raw);
-      const account=String(map?.[auth]||"").trim();
-      if(/^acct_[A-Za-z0-9]+$/.test(account))return true;
-    }
-  }catch(_){}
-  return false;
+  return !!(await authenticateProviderSession(request,env));
 }
 async function providerAccountForRequest(request,env){
   const sessionRef=await authenticateProviderSession(request,env);
-  if(sessionRef){
-    const row=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(sessionRef).first();
-    return String(row?.connect_account_id||"");
-  }
-  const auth=String(request.headers.get("Authorization")||"").replace(/^Bearer\s+/,"").trim();
-  if(!auth)return "";
-  try{
-    const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();
-    if(raw){
-      const map=JSON.parse(raw);
-      const mapped=String(map?.[auth]||"").trim();
-      if(/^acct_[A-Za-z0-9]+$/.test(mapped))return mapped;
-    }
-  }catch(_){}
-  const admin=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();
-  const configured=String(env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID||"").trim();
-  if(auth===admin&&/^acct_[A-Za-z0-9]+$/.test(configured))return configured;
-  return "";
+  if(!sessionRef)return "";
+  const row=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(sessionRef).first();
+  return String(row?.connect_account_id||"");
 }
 function baseAppUrl(env){return String(env.PUBLIC_APP_URL||"https://fiiviu.ro").replace(/\/$/,"")}
 function b64url(bytes){return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
@@ -237,5 +210,5 @@ async function requireV2TableColumns(env,table,required){
 async function ensureBookingSettlementsTable(env){await requireV2TableColumns(env,"booking_settlements",["booking_id","payment_intent_id","total_amount_cents","provider_amount_cents","fiiviu_amount_cents","provider_connect_account_id","provider_transfer_id","settlement_status","release_at","settlement_error","settlement_test_transfer_id"]);}
 async function ensureBookingLookupTable(env){await requireV2TableColumns(env,"bookings",["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token"]);}
 
-async function handleProviderExperiences(request,env){if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});if(!(await providerAuth(request,env)))return providerJson({error:"Unauthorized"},401);if(!env.DB)return providerJson({error:"D1 database not configured"},500);try{await ensureExperiencesTable(env);if(request.method==="GET"){const rows=await env.DB.prepare("SELECT * FROM experiences ORDER BY updated_at DESC,id DESC").all();return providerJson({experiences:rows.results||[]})}if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);const body=await request.json();const experienceId=String(body.experienceId||"").trim().toLowerCase(),title=String(body.title||"").trim();const providerConnectAccountId=await providerAccountForRequest(request,env);const meetingPointName=String(body.meetingPointName||"").trim(),meetingAddress=String(body.meetingAddress||"").trim(),meetingCity=String(body.meetingCity||"").trim(),meetingCountry=String(body.meetingCountry||"").trim(),meetingInstructions=String(body.meetingInstructions||"").trim();const arrival=Number(body.arrivalMinutesBefore),arrivalMinutesBefore=Number.isInteger(arrival)&&arrival>=0?arrival:null;const lat=String(body.meetingLatitude||"").trim(),lon=String(body.meetingLongitude||"").trim(),publish=body.publish===true;if(!/^[a-z0-9][a-z0-9_-]{2,63}$/.test(experienceId))return providerJson({error:"Ungültige Experience-ID."},400);if(!title)return providerJson({error:"Titel fehlt."},400);if(publish){if(!providerConnectAccountId)return providerJson({error:"Veröffentlichung blockiert: Stripe Connect Account fehlt."},400);if(!meetingPointName||!meetingAddress||!meetingCity||!meetingCountry)return providerJson({error:"Veröffentlichung blockiert: Treffpunkt, Adresse, Stadt und Land sind erforderlich."},400)}const status=publish?"published":"draft";await env.DB.prepare(`INSERT INTO experiences (experience_id,provider_connect_account_id,title,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(experience_id) DO UPDATE SET provider_connect_account_id=excluded.provider_connect_account_id,title=excluded.title,meeting_point_name=excluded.meeting_point_name,meeting_address=excluded.meeting_address,meeting_city=excluded.meeting_city,meeting_country=excluded.meeting_country,meeting_instructions=excluded.meeting_instructions,arrival_minutes_before=excluded.arrival_minutes_before,meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,status=excluded.status,updated_at=CURRENT_TIMESTAMP`).bind(experienceId,providerConnectAccountId||null,title,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,lat||null,lon||null,status).run();const experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();return providerJson({success:true,experience})}catch(error){return providerJson({error:error?.message||"Server error"},500)}}
+async function handleProviderExperiences(request,env){if(request.method==="OPTIONS")return new Response(null,{status:204,headers:providerCors});if(!(await providerAuth(request,env)))return providerJson({error:"Unauthorized"},401);if(!env.DB)return providerJson({error:"D1 database not configured"},500);try{await ensureExperiencesTable(env);if(request.method==="GET"){const providerConnectAccountId=await providerAccountForRequest(request,env);if(!providerConnectAccountId)return providerJson({error:"No Stripe Connect account is assigned to this provider."},409);const rows=await env.DB.prepare("SELECT * FROM experiences WHERE provider_connect_account_id=? ORDER BY updated_at DESC,id DESC").bind(providerConnectAccountId).all();return providerJson({experiences:rows.results||[]})}if(request.method!=="POST")return providerJson({error:"Method Not Allowed"},405);const body=await request.json();const experienceId=String(body.experienceId||"").trim().toLowerCase(),title=String(body.title||"").trim();const providerConnectAccountId=await providerAccountForRequest(request,env);const meetingPointName=String(body.meetingPointName||"").trim(),meetingAddress=String(body.meetingAddress||"").trim(),meetingCity=String(body.meetingCity||"").trim(),meetingCountry=String(body.meetingCountry||"").trim(),meetingInstructions=String(body.meetingInstructions||"").trim();const arrival=Number(body.arrivalMinutesBefore),arrivalMinutesBefore=Number.isInteger(arrival)&&arrival>=0?arrival:null;const lat=String(body.meetingLatitude||"").trim(),lon=String(body.meetingLongitude||"").trim(),publish=body.publish===true;if(!/^[a-z0-9][a-z0-9_-]{2,63}$/.test(experienceId))return providerJson({error:"Ungültige Experience-ID."},400);if(!title)return providerJson({error:"Titel fehlt."},400);if(publish){if(!providerConnectAccountId)return providerJson({error:"Veröffentlichung blockiert: Stripe Connect Account fehlt."},400);if(!meetingPointName||!meetingAddress||!meetingCity||!meetingCountry)return providerJson({error:"Veröffentlichung blockiert: Treffpunkt, Adresse, Stadt und Land sind erforderlich."},400)}const status=publish?"published":"draft";await env.DB.prepare(`INSERT INTO experiences (experience_id,provider_connect_account_id,title,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(experience_id) DO UPDATE SET provider_connect_account_id=excluded.provider_connect_account_id,title=excluded.title,meeting_point_name=excluded.meeting_point_name,meeting_address=excluded.meeting_address,meeting_city=excluded.meeting_city,meeting_country=excluded.meeting_country,meeting_instructions=excluded.meeting_instructions,arrival_minutes_before=excluded.arrival_minutes_before,meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,status=excluded.status,updated_at=CURRENT_TIMESTAMP`).bind(experienceId,providerConnectAccountId||null,title,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,lat||null,lon||null,status).run();const experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();return providerJson({success:true,experience})}catch(error){return providerJson({error:error?.message||"Server error"},500)}}
 async function ensureExperiencesTable(env){await requireV2TableColumns(env,"experiences",["experience_id","provider_connect_account_id","title","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status"])}
