@@ -2240,7 +2240,7 @@ async function handleAdminProviderPayout(request, env) {
 
       const rows = await env.DB.prepare(`
         SELECT s.booking_id,s.payment_intent_id,s.total_amount_cents,s.provider_amount_cents,
-               s.settlement_status,s.stripe_transfer_id,b.booking_date,b.booking_time,
+               s.settlement_status,s.provider_transfer_id,b.booking_date,b.booking_time,
                b.status,b.payment_status,b.currency,b.experience_name
         FROM booking_settlements s
         LEFT JOIN bookings b ON b.booking_id=s.booking_id
@@ -2249,7 +2249,7 @@ async function handleAdminProviderPayout(request, env) {
       `).bind(providerRef).all();
 
       const available = (rows.results || [])
-        .filter(row => isSettlementEventDue(row) && row.settlement_status === "ready" && row.status === "confirmed" && row.payment_status === "paid")
+        .filter(row => isSettlementEventDue(row) && row.settlement_status === "pending" && row.status === "confirmed" && row.payment_status === "paid")
         .reduce((sum,row) => sum + Number(row.provider_amount_cents || 0), 0);
 
       const payouts = await env.DB.prepare(
@@ -2291,10 +2291,10 @@ async function handleAdminProviderPayout(request, env) {
     `).bind(bookingId,providerRef).first();
 
     if (!settlement) return json({ error: "Settlement für diese Buchung nicht gefunden." }, 404);
-    if (settlement.settlement_status === "transferred" || settlement.stripe_transfer_id) {
-      return json({ error: "Diese Buchung wurde bereits an den Organizer ausgezahlt.", stripeTransferId: settlement.stripe_transfer_id }, 409);
+    if (settlement.settlement_status === "transferred" || settlement.provider_transfer_id) {
+      return json({ error: "Diese Buchung wurde bereits an den Organizer ausgezahlt.", stripeTransferId: settlement.provider_transfer_id }, 409);
     }
-    if (settlement.settlement_status !== "ready") {
+    if (settlement.settlement_status !== "pending") {
       return json({ error: "Diese Buchung ist aktuell nicht auszahlbar.", settlementStatus: settlement.settlement_status }, 409);
     }
     if (settlement.booking_status !== "confirmed" || settlement.payment_status !== "paid") {
@@ -2364,7 +2364,7 @@ async function handleAdminProviderPayout(request, env) {
     ).run();
 
     await env.DB.prepare(
-      "UPDATE booking_settlements SET settlement_status='transferred',stripe_transfer_id=?,provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      "UPDATE booking_settlements SET settlement_status='transferred',provider_transfer_id=?,provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
     ).bind(transfer.id,destination,bookingId).run();
 
     return json({
@@ -2422,7 +2422,7 @@ async function ensureProviderPayoutsTable(env) {
       payout_date TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'paid'
         CHECK (status IN ('paid','failed','cancelled')),
-      stripe_transfer_id TEXT UNIQUE,
+      provider_transfer_id TEXT UNIQUE,
       reference TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -2449,7 +2449,7 @@ async function ensureBookingSettlementsTable(env) {
       provider_connect_account_id TEXT,
       provider_transfer_amount_cents INTEGER,
       provider_transfer_currency TEXT,
-      stripe_transfer_id TEXT UNIQUE,
+      provider_transfer_id TEXT UNIQUE,
       settlement_status TEXT NOT NULL DEFAULT 'pending'
         CHECK (settlement_status IN ('pending','transferred','failed','refunded','cancelled')),
       release_at TEXT,
