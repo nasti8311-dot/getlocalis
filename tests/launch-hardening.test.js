@@ -291,15 +291,13 @@ test("secure admin CORS permits the organizer DELETE action", () => {
 
 test("provider API requires an authenticated cookie session", () => {
   const source = read("worker-entry.js");
-  const start = source.indexOf("async function providerAuth");
-  const end = source.indexOf("async function handleProviderOverview", start);
-  const block = source.slice(start, end);
-  assert.match(block, /async function providerAuth\(request,env\)/);
-  assert.match(block, /return !!\(await authenticateProviderSession\(request,env\)\)/);
-  assert.doesNotMatch(block, /PROVIDER_ACCOUNT_MAP_JSON/);
-  assert.doesNotMatch(block, /PROVIDER_ADMIN_KEY/);
-  assert.doesNotMatch(block, /STRIPE_PROVIDER_CONNECT_ACCOUNT_ID/);
-  assert.match(source, /if\(\!\(await providerAuth\(request,env\)\)\)return providerJson\(\{error:"Unauthorized"\},401\)/);
+  assert.match(source, /authenticateProviderSession\(request,env\)/);
+  assert.match(source, /providerRefFromSession\(request,env\)/);
+  assert.match(source, /const providerRef=await providerRefFromSession\(request,env\)/);
+  assert.match(source, /const provider=await env\.DB\.prepare\("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=\? LIMIT 1"\)/);
+  assert.doesNotMatch(source, /PROVIDER_ACCOUNT_MAP_JSON/);
+  assert.doesNotMatch(source, /PROVIDER_ADMIN_KEY/);
+  assert.doesNotMatch(source, /STRIPE_PROVIDER_CONNECT_ACCOUNT_ID/);
 });
 
 
