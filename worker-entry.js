@@ -2671,6 +2671,7 @@ async function ensureBookingColumns(env) {
         partner_ref TEXT,
         provider_name TEXT,
         provider_connect_account_id TEXT,
+        booking_access_token TEXT,
         confirmation_email_sent_at TEXT,
         confirmation_email_error TEXT,
         cancellation_token TEXT,
@@ -2693,42 +2694,7 @@ async function ensureBookingColumns(env) {
     (columns.results || []).map(row => String(row.name || ""))
   );
 
-  const requiredColumns = [
-    ["payment_intent_id", "TEXT"],
-    ["status", "TEXT"],
-    ["payment_status", "TEXT"],
-    ["customer_name", "TEXT"],
-    ["customer_email", "TEXT"],
-    ["customer_phone", "TEXT"],
-    ["customer_language", "TEXT"],
-    ["experience_name", "TEXT"],
-    ["booking_date", "TEXT"],
-    ["booking_time", "TEXT"],
-    ["guests", "INTEGER"],
-    ["amount_cents", "INTEGER"],
-    ["currency", "TEXT"],
-    ["meeting_point_name", "TEXT"],
-    ["meeting_address", "TEXT"],
-    ["meeting_city", "TEXT"],
-    ["meeting_country", "TEXT"],
-    ["meeting_instructions", "TEXT"],
-    ["arrival_minutes_before", "INTEGER"],
-    ["meeting_latitude", "TEXT"],
-    ["meeting_longitude", "TEXT"],
-    ["partner_ref", "TEXT"],
-    ["provider_name", "TEXT"],
-    ["provider_connect_account_id", "TEXT"],
-    ["provider_notification_email_sent_at", "TEXT"],
-    ["provider_notification_email_error", "TEXT"],
-    ["booking_access_token", "TEXT"],
-    ["confirmation_email_sent_at", "TEXT"],
-    ["confirmation_email_error", "TEXT"],
-    ["cancellation_token", "TEXT"],
-    ["cancelled_at", "TEXT"],
-    ["cancellation_refund_id", "TEXT"],
-    ["created_at", "TEXT"],
-    ["updated_at", "TEXT"]
-  ];  // Booking schema is managed by migrations; runtime requests must not mutate DDL.
+  // Booking schema is managed by migrations; runtime requests must not mutate DDL.
   const requiredSchema = ["booking_id","payment_intent_id","status","payment_status","booking_access_token","cancellation_token"];
   const missing = requiredSchema.filter((name) => !existingColumns.has(name));
   if (missing.length) throw new Error("Bookings schema is missing required columns: " + missing.join(", "));
