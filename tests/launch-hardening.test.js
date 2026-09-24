@@ -209,3 +209,12 @@ test("secure entry routes payment creation through marketplace worker", () => {
   const fallbackIndex = source.indexOf('return marketplaceWorker.fetch(request, env, ctx);');
   assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
 });
+test("provider auth schema is migration-owned, not runtime-created", () => {
+  const source = read("provider-auth.js");
+  const migration = read("migrations/007_provider_auth.sql");
+  assert.doesNotMatch(source, /CREATE TABLE IF NOT EXISTS provider_(?:accounts|sessions)/);
+  assert.match(source, /sqlite_master/);
+  assert.match(source, /Provider authentication schema is missing/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS provider_accounts/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS provider_sessions/);
+});
