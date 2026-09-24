@@ -12,12 +12,12 @@ export function providerRandomHex(bytes=32){
   return Array.from(value,b=>b.toString(16).padStart(2,"0")).join("");
 }
 export async function ensureProviderAuthTables(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS provider_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT,provider_ref TEXT NOT NULL UNIQUE,email TEXT NOT NULL UNIQUE,password_salt TEXT NOT NULL,password_hash TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_provider_accounts_provider_ref ON provider_accounts(provider_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_provider_accounts_email ON provider_accounts(email)").run();
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS provider_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT,provider_ref TEXT NOT NULL,session_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_provider_sessions_provider_ref ON provider_sessions(provider_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_provider_sessions_expires_at ON provider_sessions(expires_at)").run();
+  if(!env.DB)throw new Error("D1 database is required for provider authentication.");
+  const rows=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('provider_accounts','provider_sessions') ORDER BY name").all();
+  const names=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  if(!names.has("provider_accounts")||!names.has("provider_sessions")){
+    throw new Error("Provider authentication schema is missing. Apply the provider-auth migration before enabling provider login.");
+  }
 }
 export function providerSessionCookie(value,maxAge=2592000){
   return "fiiviu_provider_session="+encodeURIComponent(String(value||""))+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
