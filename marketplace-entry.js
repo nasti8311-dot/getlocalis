@@ -259,25 +259,15 @@ async function recordPartnerScan(env,ref){
   try{
     const partner=await env.DB.prepare("SELECT partner_ref,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
     if(!partner||Number(partner.active)!==1)return;
-    await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_scan_events (id INTEGER PRIMARY KEY AUTOINCREMENT,partner_ref TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
-    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_partner_scan_events_partner_ref ON partner_scan_events(partner_ref)").run();
     await env.DB.prepare("INSERT INTO partner_scan_events (partner_ref) VALUES (?)").bind(partnerRef).run();
   }catch(error){console.error("FiiViu partner scan tracking failed",error)}
 }
 function isHtml(response,url){if(url.pathname.startsWith("/api/"))return false;return(response.headers.get("content-type")||"").includes("text/html")}
 async function ensureExperiencesTable(env){
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS experiences (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, experience_id TEXT NOT NULL UNIQUE,
-    provider_connect_account_id TEXT, provider_name TEXT, title TEXT NOT NULL, description TEXT,
-    category TEXT NOT NULL DEFAULT 'explore', image_url TEXT, gallery_urls TEXT, available_times TEXT,
-    price_cents INTEGER NOT NULL DEFAULT 0 CHECK(price_cents>=0), currency TEXT NOT NULL DEFAULT 'eur',
-    meeting_point_name TEXT, meeting_address TEXT, meeting_city TEXT, meeting_country TEXT,
-    meeting_instructions TEXT, arrival_minutes_before INTEGER, meeting_latitude TEXT, meeting_longitude TEXT,
-    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  // experiences schema is managed by migrations; production runtime must not mutate DDL.
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_provider ON experiences(provider_connect_account_id)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_experiences_status ON experiences(status)").run();
+  const columns=await env.DB.prepare("PRAGMA table_info(experiences)").all();
+  const required=["experience_id","provider_connect_account_id","provider_name","title","description","category","image_url","gallery_urls","available_times","price_cents","currency","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status"];
+  const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  const missing=required.filter(name=>!existing.has(name));
+  if(missing.length)throw new Error("Experiences schema is incomplete: "+missing.join(", "));
 }
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json"}})}
