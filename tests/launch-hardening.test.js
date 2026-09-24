@@ -126,3 +126,13 @@ test("marketplace checkout recalculates price and owns booking identity", () => 
   assert.match(source, /crypto\.randomUUID\(\)/);
   assert.match(source, /provider_connect_account_id/);
 });
+
+
+test("direct booking finalization requires the PaymentIntent client secret", () => {
+  const source = read("worker-entry.js");
+  assert.match(source, /clientSecret = String\(body\?\.clientSecret/);
+  assert.match(source, /paymentIntent\?\.client_secret/);
+  assert.match(source, /Payment confirmation credentials do not match/);
+  const checkout = read("index.html");
+  assert.match(checkout, /clientSecret: paymentData\.clientSecret/);
+});
