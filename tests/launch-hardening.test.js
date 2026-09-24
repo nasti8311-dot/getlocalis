@@ -167,7 +167,7 @@ test("admin CORS is restricted to configured first-party origins", () => {
   const source = read("secure-entry.js");
   assert.match(source, /function getAdminCors\(request, env\)/);
   assert.match(source, /PUBLIC_APP_URL/);
-  assert.match(source, /https:\\/\\/fiiviu\\.ro/);
+  assert.ok(source.includes("https://fiiviu.ro"));
   assert.match(source, /headers\[\"Access-Control-Allow-Origin\"\] = origin/);
   assert.doesNotMatch(source, /const CORS = \{[\\s\\S]*Access-Control-Allow-Origin.*\*.*\}/);
 });
