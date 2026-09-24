@@ -187,7 +187,7 @@ test("admin CORS is restricted in worker-entry too", () => {
   const adminEnd = source.indexOf('if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation")', adminStart);
   const block = source.slice(adminStart, adminEnd);
   assert.match(block, /PUBLIC_APP_URL/);
-  assert.match(block, /https:\\/\\/fiiviu\\.ro/);
+  assert.ok(block.includes("https://fiiviu.ro"));
   assert.match(block, /Access-Control-Allow-Origin.*origin/s);
   assert.doesNotMatch(block, /Access-Control-Allow-Origin.*\*/s);
 });
