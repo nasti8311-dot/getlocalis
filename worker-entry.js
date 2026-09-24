@@ -1689,20 +1689,20 @@ async function handleAdminProviderPassword(request,env){
     await env.DB.prepare("DELETE FROM provider_sessions WHERE provider_ref=?").bind(providerRef).run();
 
     const safe=(value)=>String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
-    const subject="Ihr FiiViu Veranstalter-Zugang";
+    const subject="Accesul dumneavoastră de organizator FiiViu";
     const text=[
-      "Willkommen bei FiiViu.",
+      "Bun venit la FiiViu.",
       "",
-      "Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.",
-      "Veranstalter: "+provider.name,
-      "E-Mail: "+email,
-      "Temporäres Passwort: "+password,
+      "Accesul dumneavoastră personal de organizator a fost creat.",
+      "Organizator: "+provider.name,
+      "E-mail: "+email,
+      "Parolă temporară: "+password,
       "",
-      "Login: https://fiiviu.ro/provider.html",
+      "Autentificare: https://fiiviu.ro/provider.html",
       "",
       "FiiViu"
     ].join("\n");
-    const html="<p>Willkommen bei FiiViu.</p><p>Ihr persönlicher Veranstalter-Zugang wurde eingerichtet.</p><p><strong>Veranstalter:</strong> "+safe(provider.name)+"<br><strong>E-Mail:</strong> "+safe(email)+"<br><strong>Temporäres Passwort:</strong> "+safe(password)+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Zum Veranstalter-Login</a></p><p>FiiViu</p>";
+    const html="<p>Bun venit la FiiViu.</p><p>Accesul dumneavoastră personal de organizator a fost creat.</p><p><strong>Organizator:</strong> "+safe(provider.name)+"<br><strong>E-mail:</strong> "+safe(email)+"<br><strong>Parolă temporară:</strong> "+safe(password)+"</p><p><a href=\"https://fiiviu.ro/provider.html\">Accesați pagina de autentificare pentru organizatori</a></p><p>FiiViu</p>";
 
     try{
       if(env.RESEND_API_KEY){
