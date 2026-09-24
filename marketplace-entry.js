@@ -88,8 +88,8 @@ async function handlePublicOffers(request,env){
   if(!env.DB)return json({offers:[]});
   try{
     await ensureExperiencesTable(env);
-    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.active FROM offers o LEFT JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
-    const experiences=await env.DB.prepare("SELECT id,experience_id,provider_connect_account_id,provider_name,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,status FROM experiences WHERE status='published'").all();
+    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
+    const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.description,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
     const providerExperiences=(experiences.results||[]).map(x=>({
       id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
@@ -130,7 +130,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
       if(offer){
         const provider=await env.DB.prepare(
-          "SELECT provider_ref,name,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1"
+          "SELECT provider_ref,name,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1"
         ).bind(String(offer.provider_ref||"")).first();
 
         experienceId="offer-"+String(offer.id);
