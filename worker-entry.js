@@ -1291,7 +1291,7 @@ async function sendResendConfirmation(env, booking) {
     "FiiViu"
   ].filter(Boolean).join("\\n");
 
-  const html = text.split("\\n").map(line => line ? "<p style=\\"margin:0 0 8px\\">" + String(line).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch])) + "</p>" : "<br>").join("");
+  const html = text.split("\\n").map(line => line ? '<p style="margin:0 0 8px">' + String(line).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch])) + "</p>" : "<br>").join("");
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
