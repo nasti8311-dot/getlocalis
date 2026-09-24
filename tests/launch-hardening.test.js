@@ -180,7 +180,7 @@ test("marketplace checkout rejects invalid or past booking times", () => {
 test("settlement release uses an atomic releasing claim and restores pending on failure", () => {
   const source = read("stripe-webhook.js");
   assert.match(source, /settlement_status='releasing'/);
-  assert.match(source, /WHERE id=\? AND settlement_status='pending' AND provider_transfer_id IS NULL/);
+  assert.match(source, /WHERE id=\? AND settlement_status='pending' AND provider_transfer_id IS NULL AND settlement_test_transfer_id IS NULL/);
   assert.match(source, /settlement_status='pending',settlement_error=.*WHERE id=\? AND settlement_status='releasing'/);
   assert.match(source, /Idempotency-Key.*provider-transfer-\$\{paymentIntentId\}/s);
 });
@@ -305,4 +305,11 @@ test("marketplace catalog and checkout require an active provider", () => {
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
   assert.match(source, /INNER JOIN providers p ON p\.provider_ref=o\.provider_ref AND p\.active=1 WHERE o\.active=1/);
   assert.match(source, /INNER JOIN providers p ON p\.connect_account_id=e\.provider_connect_account_id AND p\.active=1 WHERE e\.status='published'/);
+});
+
+
+test("sandbox settlement rows with a test transfer are not reprocessed", () => {
+  const source = read("stripe-webhook.js");
+  assert.match(source, /settlement_status='pending'.*provider_transfer_id IS NULL.*settlement_test_transfer_id IS NULL/);
+  assert.match(source, /settlement_test_transfer_id IS NULL ORDER BY id ASC LIMIT 50/);
 });
