@@ -74,58 +74,8 @@ CREATE TABLE IF NOT EXISTS partner_scan_events (
 );
 CREATE INDEX IF NOT EXISTS idx_partner_scan_events_partner_ref ON partner_scan_events(partner_ref);
 
-CREATE TABLE IF NOT EXISTS stripe_webhook_events (
-  event_id TEXT PRIMARY KEY,
-  event_type TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS stripe_payment_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  event_id TEXT NOT NULL UNIQUE,
-  payment_intent_id TEXT,
-  event_type TEXT NOT NULL,
-  booking_id TEXT,
-  partner_ref TEXT,
-  amount INTEGER,
-  currency TEXT,
-  payment_status TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_stripe_payment_events_payment_intent ON stripe_payment_events(payment_intent_id);
-
-CREATE TABLE IF NOT EXISTS stripe_refund_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  refund_id TEXT NOT NULL UNIQUE,
-  payment_intent_id TEXT NOT NULL,
-  charge_id TEXT,
-  amount INTEGER NOT NULL,
-  status TEXT,
-  event_type TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_stripe_refund_events_payment_intent ON stripe_refund_events(payment_intent_id);
-
-CREATE TABLE IF NOT EXISTS stripe_transfer_reversal_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  reversal_id TEXT NOT NULL UNIQUE,
-  payment_intent_id TEXT NOT NULL,
-  transfer_id TEXT NOT NULL,
-  amount INTEGER NOT NULL,
-  status TEXT,
-  event_type TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_stripe_transfer_reversal_events_payment_intent ON stripe_transfer_reversal_events(payment_intent_id);
-
-CREATE TABLE IF NOT EXISTS stripe_partner_reversal_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  reversal_id TEXT NOT NULL UNIQUE,
-  payment_intent_id TEXT NOT NULL,
-  partner_ref TEXT,
-  amount INTEGER NOT NULL,
-  status TEXT,
-  event_type TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_stripe_partner_reversal_events_payment_intent ON stripe_partner_reversal_events(payment_intent_id);
+-- stripe_webhook_events is owned by migrations/003_settlement_ledger.sql.
+-- stripe_payment_events is owned by migrations/003_settlement_ledger.sql.
+-- stripe_refund_events is owned by migrations/003_settlement_ledger.sql.
+-- stripe_transfer_reversal_events is owned by migrations/003_settlement_ledger.sql.
+-- stripe_partner_reversal_events is owned by migrations/003_settlement_ledger.sql.
