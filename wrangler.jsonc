@@ -10,24 +10,6 @@
   },
   "assets": {
     "directory": ".",
-    "exclude": [
-      ".git/**",
-      ".github/**",
-      ".wrangler/**",
-      "node_modules/**",
-      "*.sql",
-      "*.jsonc",
-      "*.yaml",
-      "*.yml",
-      "*.md",
-      "secure-entry.js",
-      "marketplace-entry.js",
-      "worker-entry.js",
-      "worker-entry-v2.js",
-      "worker.js",
-      "stripe-webhook.js",
-      "provider-auth.js"
-    ],
     "binding": "ASSETS",
     "run_worker_first": [
       "/api/*"
