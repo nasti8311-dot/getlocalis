@@ -2103,35 +2103,18 @@ async function handleProviderOverview(request,env){
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
 
-    let all=[];
-    try{
-      await ensureBookingSettlementsTable(env);
-      const rows=await env.DB.prepare(`
-        SELECT s.booking_id,s.provider_amount_cents,s.total_amount_cents,s.settlement_status,s.stripe_transfer_id,
-               b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
-               b.experience_name,b.customer_name,b.guests,b.amount_cents
-        FROM booking_settlements s
-        LEFT JOIN bookings b ON b.booking_id=s.booking_id
-        WHERE s.provider_ref=? OR (s.provider_ref IS NULL AND b.provider_name=?)
-        ORDER BY b.booking_date DESC,b.booking_time DESC,s.id DESC
-      `).bind(providerRef,provider.name).all();
-      all=rows.results||[];
-    }catch(settlementError){
-      console.error("FiiViu provider settlement overview fallback",settlementError);
-    }
-
-    if(!all.length){
-      const rows=await env.DB.prepare(`
-        SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
-               b.experience_name,b.customer_name,b.guests,b.amount_cents,
-               b.amount_cents AS provider_amount_cents,
-               NULL AS total_amount_cents,NULL AS settlement_status,NULL AS stripe_transfer_id
-        FROM bookings b
-        WHERE b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
-        ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
-      `).bind(provider.name,providerRef).all();
-      all=rows.results||[];
-    }
+    // The provider dashboard must work even when no settlement table exists yet.
+    // Bookings are the source of truth here; payout/settlement data is optional.
+    const rows=await env.DB.prepare(`
+      SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
+             b.experience_name,b.customer_name,b.guests,b.amount_cents,
+             b.amount_cents AS provider_amount_cents,
+             NULL AS total_amount_cents,NULL AS settlement_status,NULL AS stripe_transfer_id
+      FROM bookings b
+      WHERE b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
+      ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
+    `).bind(provider.name,providerRef).all();
+    const all=rows.results||[];
 
     const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||r.amount_cents||0),0);
     const paidOutCents=all.filter(r=>r.stripe_transfer_id||r.settlement_status==="paid").reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
