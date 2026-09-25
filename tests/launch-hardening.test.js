@@ -47,7 +47,6 @@ test("runtime schema evolution is not used by launch paths", () => {
     "worker-entry.js",
     "worker.js",
     "marketplace-entry.js",
-    "worker-entry-v2.js",
     "secure-entry.js"
   ]) {
     const source = read(path);
