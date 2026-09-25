@@ -332,12 +332,13 @@ test("Stripe webhook schema checks are read-only and migration-owned", () => {
 });
 
 
-test("static assets carry baseline browser security headers", () => {
+test("static assets carry active baseline browser security headers", () => {
   const source = read("_headers");
-  assert.match(source, /X-Frame-Options:\s*DENY/);
-  assert.match(source, /X-Content-Type-Options:\s*nosniff/);
-  assert.match(source, /Referrer-Policy:\s*strict-origin-when-cross-origin/);
-  assert.match(source, /Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\)/);
+  assert.match(source, /^X-Frame-Options:\s*DENY$/m);
+  assert.match(source, /^X-Content-Type-Options:\s*nosniff$/m);
+  assert.match(source, /^Referrer-Policy:\s*strict-origin-when-cross-origin$/m);
+  assert.match(source, /^Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)$/m);
+  assert.doesNotMatch(source, /\/\*[^]*X-Frame-Options:/);
 });
 
 
