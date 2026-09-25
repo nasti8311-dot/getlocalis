@@ -384,6 +384,12 @@ test("cancellation API responses are marked non-cacheable", () => {
   assert.match(block, /"Cache-Control": "no-store"/);
 });
 
+test("request-scoped Worker env bindings are not stored on globalThis", () => {
+  const source = read("secure-entry.js");
+  assert.doesNotMatch(source, /globalThis\.__fiiviuDB/);
+  assert.doesNotMatch(source, /globalThis\.__fiiviuPublicAppUrl/);
+});
+
 test("API responses receive baseline transport and browser security headers", () => {
   const source = read("secure-entry.js");
   assert.match(source, /Strict-Transport-Security.*max-age=31536000; includeSubDomains/);
