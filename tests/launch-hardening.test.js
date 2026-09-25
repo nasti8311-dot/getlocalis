@@ -323,6 +323,12 @@ test("organizer admin key is memory-only", () => {
   assert.doesNotMatch(source, /sessionStorage\.removeItem\("fiiviu_admin_key"/);
 });
 
+test("organizer admin script remains syntactically valid", () => {
+  const source = read("organizer-admin.html");
+  assert.match(source, /async function newOffer\\(\\)/);
+  assert.doesNotMatch(source, /(?<!async )function newOffer\\(\\)[\\s\\S]{0,120}await /);
+});
+
 test("admin offer deletion is safe around existing bookings", () => {
   const source = read("worker.js");
   assert.match(source, /request\.method==="DELETE"/);
