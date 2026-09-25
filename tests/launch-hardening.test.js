@@ -571,3 +571,19 @@ test("marketplace image URLs are restricted to safe HTTP(S) sources", () => {
   assert.match(source, /imageUrl = safeImageUrl\(offer\.image_url\)/);
   assert.match(source, /safeImageUrl\(image\)/);
 });
+
+
+test("organizer access can be provisioned and emailed from admin", () => {
+  const source = read("worker-entry.js");
+  const admin = read("organizer-admin.html");
+  assert.match(source, /async function handleAdminProviderPassword/);
+  assert.match(source, /INSERT INTO provider_accounts/);
+  assert.match(source, /DELETE FROM provider_sessions WHERE provider_ref=\?/);
+  assert.match(source, /fiiviu_provider_session/);
+  assert.match(source, /https:\\/\\/fiiviu\\.ro\\/provider\\.html/);
+  assert.match(source, /emailSent:true/);
+  assert.match(source, /temporaryPassword:password/);
+  assert.match(admin, /createProviderLoginById/);
+  assert.match(admin, /Zugang per E-Mail/);
+  assert.match(admin, /\\/api\\/admin\\/provider-password/);
+});

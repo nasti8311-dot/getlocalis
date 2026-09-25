@@ -1873,7 +1873,7 @@ async function handleAdminProviderPassword(request,env){
       }else{
         throw new Error("Kein E-Mail-Versand konfiguriert.");
       }
-      return json({success:true,providerRef,email,emailSent:true,message:"Zugang wurde erstellt und per E-Mail versendet."});
+      return json({success:true,providerRef,email,emailSent:true,loginUrl:"https://fiiviu.ro/provider.html",message:"Zugang wurde erstellt und per E-Mail versendet."});
     }catch(emailError){
       console.error("FiiViu provider access email delivery failed",{code:emailError?.code||"",message:emailError?.message||"",providerRef,email});
       return json({success:true,providerRef,email,emailSent:false,emailErrorCode:emailError?.code||"EMAIL_SEND_FAILED",emailError:String(emailError?.message||"E-Mail konnte nicht versendet werden."),temporaryPassword:password,message:"Zugang wurde erstellt, aber die E-Mail konnte nicht versendet werden. Das temporäre Passwort wird einmalig angezeigt."});
