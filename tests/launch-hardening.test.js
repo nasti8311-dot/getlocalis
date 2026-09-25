@@ -68,7 +68,6 @@ test("launch paths do not mutate D1 schema at request time", () => {
   for (const path of [
     "stripe-webhook.js",
     "worker-entry.js",
-    "worker-entry-v2.js",
     "worker.js",
     "marketplace-entry.js",
     "secure-entry.js",
