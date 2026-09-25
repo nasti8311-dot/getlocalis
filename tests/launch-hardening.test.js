@@ -146,6 +146,12 @@ test("Stripe mode mismatch is guarded", () => {
 });
 
 
+test("marketplace entrypoint stays wired to the current worker implementation", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /import baseWorker from ["']\.\/worker-entry\.js["']/);
+  assert.doesNotMatch(source, /worker-entry-v2\.js/);
+});
+
 test("marketplace checkout recalculates price and owns booking identity", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /const totalAmount=unitPrice\*guests/);
