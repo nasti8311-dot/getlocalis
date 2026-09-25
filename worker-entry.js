@@ -742,51 +742,6 @@ var originalFetch=window.fetch.bind(window);window.fetch=function(input,init){tr
   });
 }
 
-async function updatePaymentIntentMetadata(
-  env,
-  paymentIntentId,
-  values
-) {
-  const params = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(values)) {
-    if (
-      value !== null &&
-      value !== undefined &&
-      String(value) !== ""
-    ) {
-      params.set(
-        `metadata[${key}]`,
-        String(value).slice(0, 500)
-      );
-    }
-  }
-
-  if (!params.size) return;
-
-  const response = await fetch(
-    `https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
-        "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-      body: params
-    }
-  );
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-
-    throw new Error(
-      data?.error?.message ||
-        "Stripe PaymentIntent metadata update failed"
-    );
-  }
-}
-
 async function verifyStripeWebhookSignature(body, header, secret) {
   try {
     const parts = String(header || "")
