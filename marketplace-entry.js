@@ -1,4 +1,4 @@
-import baseWorker from "./worker-entry-v2.js";
+import baseWorker from "./worker-entry.js";
 import partnerWorker from "./worker.js";
 import { authenticateProviderSession } from "./provider-auth.js";
 
