@@ -432,7 +432,7 @@ test("Stripe webhook schema checks are read-only and migration-owned", () => {
 
 test("static assets carry active baseline browser security headers", () => {
   const source = read("_headers");
-  assert.match(source, /^\\/\\*\\n/);
+  assert.match(source, /^\/\*\n/);
   assert.doesNotMatch(source, /\\*\\//);
   assert.match(source, /^  Strict-Transport-Security:\s*max-age=31536000; includeSubDomains$/m);
   assert.match(source, /^  X-Frame-Options:\s*DENY$/m);
