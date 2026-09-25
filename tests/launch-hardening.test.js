@@ -467,3 +467,11 @@ test("provider API responses do not expose wildcard CORS", () => {
   assert.match(source, /applyApiSecurityHeaders\(await adminWorker\.fetch\(request, env, ctx\), request, env, true\)/);
   assert.match(source, /Cache-Control.*no-store/);
 });
+
+
+test("public marketplace and partner responses do not default to wildcard CORS", () => {
+  const marketplace = read("marketplace-entry.js");
+  const worker = read("worker.js");
+  assert.doesNotMatch(marketplace, /Access-Control-Allow-Origin": "\*"/);
+  assert.doesNotMatch(worker, /corsHeaders\["Access-Control-Allow-Origin"\]\s*=\s*"\*"/);
+});

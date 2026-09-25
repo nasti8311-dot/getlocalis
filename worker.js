@@ -18,8 +18,6 @@ export default {
     };
     if (isAdminPath) {
       if (origin && allowedAdminOrigins.has(origin)) corsHeaders["Access-Control-Allow-Origin"] = origin;
-    } else {
-      corsHeaders["Access-Control-Allow-Origin"] = "*";
     }
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
