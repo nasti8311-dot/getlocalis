@@ -323,6 +323,14 @@ test("organizer admin key is memory-only", () => {
   assert.doesNotMatch(source, /sessionStorage\.removeItem\("fiiviu_admin_key"/);
 });
 
+test("organizer admin accepts raw and Bearer-prefixed admin keys", () => {
+  const source = read("organizer-admin.html");
+  assert.match(source, /function normalizeAdminKey\(value\)/);
+  assert.match(source, /replace\(\/\^Bearer\\s\+\/i/);
+  assert.match(source, /Authorization.*Bearer.*normalizeAdminKey\(adminKey\)/);
+  assert.match(source, /const key=normalizeAdminKey\(document\.getElementById\("adminKey"\)\.value\)/);
+});
+
 test("admin offer deletion is safe around existing bookings", () => {
   const source = read("worker.js");
   assert.match(source, /request\.method==="DELETE"/);
