@@ -5,7 +5,7 @@ export default {
     const url = new URL(request.url);
     const origin = String(request.headers.get("Origin") || "").trim();
     const allowedAdminOrigins = new Set([
-      String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\\/$/, ""),
+      String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\/$/, ""),
       "https://fiiviu.ro",
       "https://www.fiiviu.ro",
     ]);
