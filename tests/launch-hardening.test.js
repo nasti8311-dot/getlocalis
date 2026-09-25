@@ -363,6 +363,10 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /Permissions-Policy.*payment=\\(self\\)/);
   assert.match(source, /applyApiSecurityHeaders\\(await adminWorker\\.fetch/);
   assert.match(source, /applyApiSecurityHeaders\\(await marketplaceWorker\\.fetch/);
+  assert.match(source, /"Strict-Transport-Security": "max-age=31536000; includeSubDomains"/);
+  assert.match(source, /"X-Content-Type-Options": "nosniff"/);
+  assert.match(source, /"Referrer-Policy": "strict-origin-when-cross-origin"/);
+  assert.match(source, /"Permissions-Policy": "camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"/);
 });
 
 test("JSON API responses are marked non-cacheable", () => {
