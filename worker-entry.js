@@ -172,13 +172,21 @@ export default {
 
             // Safety guard: never finalize a live event while the Worker is
             // configured with test credentials, or vice versa.
+            const paymentIntent = event.data?.object;
+            const isFiiViuCheckout =
+              String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
+              String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
+              /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""));
+
             if (configuredTestMode !== eventIsTestMode) {
               console.error("FiiViu Stripe mode mismatch; booking finalization skipped", {
                 configuredTestMode,
                 eventIsTestMode,
               });
+            } else if (!isFiiViuCheckout) {
+              console.warn("FiiViu Stripe event is not a recognized checkout; booking finalization skipped");
             } else {
-              ctx.waitUntil(finalizePaidBooking(env, event.data?.object));
+              ctx.waitUntil(finalizePaidBooking(env, paymentIntent));
             }
           }
         } catch (error) {
