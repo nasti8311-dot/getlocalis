@@ -2841,10 +2841,10 @@ function mapPublicOffer(offer) {
     const title = String(offer.title || "FiiViu Erlebnis").trim();
     const description = String(offer.description || "").trim() || "Ein besonderes Erlebnis in Bukarest.";
     const fallbackImage = categoryFallbackImages[categoryKey];
-    const imageUrl = String(offer.image_url || "").trim();
+    const imageUrl = safeImageUrl(offer.image_url);
     const galleryUrls = String(offer.gallery_urls || "")
         .split(/\\r?\\n|,/)
-        .map(url => url.trim())
+        .map(url => safeImageUrl(url))
         .filter(Boolean);
     const image = imageUrl || galleryUrls[0] || fallbackImage;
     const images = [image, ...galleryUrls.filter(url => url !== image)].filter(Boolean);
@@ -3219,7 +3219,7 @@ function createExperienceCard(item, categoryKey) {
         <div class="h-60 overflow-hidden relative">
 
             <img
-                src="${item.img}"
+                src="${escapeHtml(safeImageUrl(item.img))}"
                 alt="${escapeHtml(title)}"
                 class="w-full h-full object-cover">
 
@@ -3508,7 +3508,7 @@ function renderDetailGallery(item) {
 
             div.innerHTML = `
                 <img
-                    src="${image}"
+                    src="${escapeHtml(safeImageUrl(image))}"
                     class="w-full h-full object-cover"
                     alt="">
             `;
@@ -3527,7 +3527,7 @@ function renderDetailGallery(item) {
         images.forEach(image => {
             const div = document.createElement("div");
             div.className = "h-72 md:h-[360px] rounded-2xl overflow-hidden";
-            div.innerHTML = '<img src="' + image + '" class="w-full h-full object-cover" alt="">';
+            div.innerHTML = '<img src="' + escapeHtml(safeImageUrl(image)) + '" class="w-full h-full object-cover" alt="">';
             container.appendChild(div);
         });
 
@@ -4379,6 +4379,18 @@ document.addEventListener("click", event => {
 /* ============================================================
    ESCAPE HTML
 ============================================================ */
+
+function safeImageUrl(value, fallback = "") {
+    const raw = String(value || "").trim();
+    if (!raw) return fallback;
+    try {
+        const url = new URL(raw, window.location.origin);
+        if (url.protocol === "https:") return url.href;
+        if (url.origin === window.location.origin && url.protocol === "http:") return url.href;
+    } catch (_) {}
+    return fallback;
+}
+
 
 function escapeHtml(value) {
 
