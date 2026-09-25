@@ -182,7 +182,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
     if(!experience){
       experience=await env.DB.prepare(
-        "SELECT experience_id,title,provider_connect_account_id,provider_name,price_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,meeting_latitude,meeting_longitude,status FROM experiences WHERE experience_id=? LIMIT 1"
+        "SELECT experience_id,title,provider_connect_account_id,provider_name,price_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,available_times,meeting_latitude,meeting_longitude,status FROM experiences WHERE experience_id=? LIMIT 1"
       ).bind(experienceId).first();
     }
 
