@@ -599,7 +599,7 @@ test("organizer access can be provisioned and emailed from admin", () => {
   assert.match(source, /temporaryPassword:password/);
   assert.match(admin, /createProviderLoginById/);
   assert.match(admin, /Zugang per E-Mail/);
-  assert.match(admin, /\\/api\\/admin\\/provider-password/);
+  assert.match(admin, /\/api\/admin\/provider-password/);
 });
 
 
