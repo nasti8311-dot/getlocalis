@@ -106,6 +106,16 @@ test("server-side files are excluded from Cloudflare Static Assets", () => {
 });
 
 
+test("public static pages never embed a Stripe secret key", () => {
+  const source = read("index.html");
+  const provider = read("provider.html");
+  const admin = read("organizer-admin.html");
+  for (const html of [source, provider, admin]) {
+    assert.doesNotMatch(html, /sk_(?:test|live)_[A-Za-z0-9]+/);
+    assert.doesNotMatch(html, /STRIPE_SECRET_KEY/);
+  }
+});
+
 test("settlement release helper resolves to experience start", () => {
   assert.equal(
     calculateSettlementReleaseAt("2030-06-15", "14:30"),
