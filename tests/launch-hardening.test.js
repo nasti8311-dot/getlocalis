@@ -156,9 +156,9 @@ test("Stripe mode mismatch is guarded", () => {
 });
 
 test("Stripe booking webhooks require the FiiViu checkout marker", () => {
-  const webhook = read("stripe-webhook.js");
+  assert.match(webhook, /metadata\?\.fiiviu_checkout/);
   const entry = read("worker-entry.js");
-  assert.match(webhook, /metadata\\?\.fiiviu_checkout/);
+  assert.match(entry, /metadata\?\.fiiviu_checkout/);
   assert.match(webhook, /settlement skipped/);
   assert.match(entry, /metadata\\?\.fiiviu_checkout/);
   assert.match(entry, /booking finalization skipped/);
@@ -438,7 +438,7 @@ test("static assets carry active baseline browser security headers", () => {
   assert.match(source, /^  X-Frame-Options:\s*DENY$/m);
   assert.match(source, /^  X-Content-Type-Options:\s*nosniff$/m);
   assert.match(source, /^  Referrer-Policy:\s*strict-origin-when-cross-origin$/m);
-  assert.match(source, /^  Permissions-Policy:\s*camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)$/m);
+  assert.match(source, /^  Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)$/m);
 });
 
 
