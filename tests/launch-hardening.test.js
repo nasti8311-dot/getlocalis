@@ -330,3 +330,12 @@ test("Stripe webhook schema checks are read-only and migration-owned", () => {
   assert.doesNotMatch(source, /\bCREATE\s+(?:TABLE|INDEX)\s+/i);
   assert.doesNotMatch(source, /\bALTER\s+TABLE\b/i);
 });
+
+
+test("static assets carry baseline browser security headers", () => {
+  const source = read("_headers");
+  assert.match(source, /X-Frame-Options:\s*DENY/);
+  assert.match(source, /X-Content-Type-Options:\s*nosniff/);
+  assert.match(source, /Referrer-Policy:\s*strict-origin-when-cross-origin/);
+  assert.match(source, /Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\)/);
+});
