@@ -16,6 +16,7 @@ worker-entry-v2.js
 worker.js
 stripe-webhook.js
 provider-auth.js
+functions/
 *.env
 *.env.*
 *.pem
