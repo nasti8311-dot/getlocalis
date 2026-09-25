@@ -35,7 +35,7 @@ button{transition:.2s!important;box-shadow:0 7px 18px rgba(21,21,21,.08)}button:
     <p class="muted mt-2">Cheia de administrator este păstrată în browser doar pentru această sesiune.</p>
     <div class="mt-5">
       <label class="text-sm font-bold">Cheie administrator</label>
-      <input id="adminKey" type="password" autocomplete="off" class="mt-2" placeholder="Introdu cheia Bearer">
+      <input id="adminKey" type="password" autocomplete="off" class="mt-2" placeholder="Introdu cheia administrator (cu sau fără «Bearer »)">
     </div>
     <button id="loginBtn" class="primary mt-4">Deschide panoul</button>
     <p id="loginError" class="danger text-sm mt-3 hidden"></p>
@@ -146,7 +146,7 @@ let adminKey = "";
 let providers = [];
 let selectedRef = "";
 
-function authHeaders(){return {"Authorization":"Bearer "+adminKey,"Content-Type":"application/json"}}
+function normalizeAdminKey(value){return String(value||"").replace(/^Bearer\s+/i,"").trim()}\nfunction authHeaders(){return {"Authorization":"Bearer "+normalizeAdminKey(adminKey),"Content-Type":"application/json"}}
 async function api(path,options={}){
   let res;
   try{
@@ -289,7 +289,7 @@ async function newOffer(){
   document.getElementById("offerForm").classList.remove("hidden");
 }
 document.getElementById("loginBtn").onclick=async()=>{
-  const key=document.getElementById("adminKey").value.trim();if(!key)return;
+  const key=normalizeAdminKey(document.getElementById("adminKey").value);if(!key)return;
   adminKey=key;
   try{await api("/api/admin/providers");document.getElementById("loginError").classList.add("hidden");openApp()}catch(e){adminKey="";document.getElementById("loginError").textContent=e.message;document.getElementById("loginError").classList.remove("hidden")}
 };
