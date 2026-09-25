@@ -197,6 +197,14 @@ test("settlement release checks refunds before provider transfer", () => {
 });
 
 
+test("worker JSON responses do not default to wildcard CORS", () => {
+  const source = read("worker-entry.js");
+  const jsonStart = source.indexOf("function json(");
+  const jsonEnd = source.indexOf("function isHtmlResponse", jsonStart);
+  const block = source.slice(jsonStart, jsonEnd);
+  assert.doesNotMatch(block, /Access-Control-Allow-Origin": "\*"/);
+});
+
 test("admin CORS is restricted to configured first-party origins", () => {
   const source = read("secure-entry.js");
   assert.match(source, /function getAdminCors\(request, env\)/);
