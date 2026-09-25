@@ -371,3 +371,18 @@ test("JSON API responses are marked non-cacheable", () => {
     assert.match(source, /Cache-Control[^\n]*no-store/);
   }
 });
+
+
+test("partner sessions are cookie-only", () => {
+  const source = read("worker.js");
+  const partnerHtml = read("partner.html");
+  const authStart = source.indexOf("async function authenticatePartner");
+  const authEnd = source.indexOf("function partnerSessionCookie", authStart);
+  const authBlock = source.slice(authStart, authEnd);
+  assert.doesNotMatch(authBlock, /Authorization/);
+  assert.match(authBlock, /fiiviu_partner_session/);
+  assert.match(source, /JSON\.stringify\(\{success:true,partnerRef:String\(account\.partner_ref\)\}\)/);
+  assert.doesNotMatch(source, /JSON\.stringify\(\{success:true,partnerRef:String\(account\.partner_ref\),sessionToken:/);
+  assert.doesNotMatch(partnerHtml, /localStorage\.setItem\(tokenKey/);
+  assert.doesNotMatch(partnerHtml, /Authorization:'Bearer '\+token/);
+});

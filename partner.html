@@ -60,8 +60,7 @@ button{transition:.2s!important}button:hover{transform:translateY(-2px)}
     const emailInput=document.getElementById('email');
     const passwordInput=document.getElementById('password');
     const loginError=document.getElementById('login-error');
-    const tokenKey='fiiviu_partner_session';
-    function authHeaders(){const token=localStorage.getItem(tokenKey)||'';return token?{Authorization:'Bearer '+token}:{}}
+    function authHeaders(){return {}}
     function euro(value){return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(value)||0)}
     function date(value){if(!value)return '—';return new Intl.DateTimeFormat('ro-RO',{dateStyle:'medium',timeStyle:'short'}).format(new Date(Number(value)*1000))}
     function dateIso(value){if(!value)return '—';return new Intl.DateTimeFormat('ro-RO',{dateStyle:'medium'}).format(new Date(value))}
@@ -116,14 +115,12 @@ button{transition:.2s!important}button:hover{transform:translateY(-2px)}
         const response=await fetch('/api/partner-login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email,password})});
         const data=await response.json();
         if(!response.ok)throw new Error(data.error||'Autentificarea a eșuat.');
-        localStorage.setItem(tokenKey,String(data.sessionToken||''));
         window.history.replaceState(null,'','/partner.html');
         window.location.reload();
       }catch(error){loginError.textContent=error.message}
     });
     async function logout(){
       await fetch('/api/partner-logout',{method:'POST',credentials:'same-origin',headers:authHeaders()});
-      localStorage.removeItem(tokenKey);
       window.location.reload();
     }
     loadPartner();
