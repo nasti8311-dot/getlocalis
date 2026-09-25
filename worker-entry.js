@@ -1090,6 +1090,17 @@ async function finalizePaidBooking(
       .bind(paymentIntent.id)
       .first();
 
+    if (booking && !String(booking.booking_access_token || "").trim()) {
+      const bookingAccessToken = providerRandomHex(32);
+      await env.DB
+        .prepare(
+          "UPDATE bookings SET booking_access_token=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND booking_access_token IS NULL"
+        )
+        .bind(bookingAccessToken, paymentIntent.id)
+        .run();
+      booking.booking_access_token = bookingAccessToken;
+    }
+
     await recordBookingSettlement(env, booking);
 
     // Notify the organizer independently from the customer confirmation.
@@ -1471,6 +1482,12 @@ async function sendEmailJsConfirmation(
       booking.currency || "eur"
     ).toUpperCase()}`,
     booking_id: booking.booking_id,
+    booking_url: booking.booking_access_token
+      ? appUrl + "/booking.html?id=" + encodeURIComponent(String(booking.booking_id || "")) + "&token=" + encodeURIComponent(String(booking.booking_access_token))
+      : "",
+    booking_link: booking.booking_access_token
+      ? appUrl + "/booking.html?id=" + encodeURIComponent(String(booking.booking_id || "")) + "&token=" + encodeURIComponent(String(booking.booking_access_token))
+      : "",
     customer_language: language,
     subject,
     mail_language: language,
