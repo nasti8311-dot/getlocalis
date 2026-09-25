@@ -386,3 +386,14 @@ test("partner sessions are cookie-only", () => {
   assert.doesNotMatch(partnerHtml, /localStorage\.setItem\(tokenKey/);
   assert.doesNotMatch(partnerHtml, /Authorization:'Bearer '\+token/);
 });
+
+
+test("booking access links are generated in the booking finalization path", () => {
+  const worker = read("worker-entry.js");
+  const secure = read("secure-entry.js");
+  assert.match(worker, /booking_access_token/);
+  assert.match(worker, /booking_url:/);
+  assert.match(worker, /booking\.html\?id=/);
+  assert.doesNotMatch(secure, /globalThis\.fetch\s*=\s*async function/);
+  assert.doesNotMatch(secure, /__fiiviuSecureEmailPatch/);
+});
