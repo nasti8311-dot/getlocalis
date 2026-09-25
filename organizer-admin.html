@@ -142,7 +142,7 @@ button{transition:.2s!important;box-shadow:0 7px 18px rgba(21,21,21,.08)}button:
 window.CLOUDINARY_CLOUD_NAME = "sageu024";
 window.CLOUDINARY_UPLOAD_PRESET = "getlocalis";
 const API = "";
-let adminKey = sessionStorage.getItem("fiiviu_admin_key") || "";
+let adminKey = "";
 let providers = [];
 let selectedRef = "";
 
@@ -290,10 +290,10 @@ async function newOffer(){
 }
 document.getElementById("loginBtn").onclick=async()=>{
   const key=document.getElementById("adminKey").value.trim();if(!key)return;
-  adminKey=key;sessionStorage.setItem("fiiviu_admin_key",adminKey);
-  try{await api("/api/admin/providers");document.getElementById("loginError").classList.add("hidden");openApp()}catch(e){sessionStorage.removeItem("fiiviu_admin_key");adminKey="";document.getElementById("loginError").textContent=e.message;document.getElementById("loginError").classList.remove("hidden")}
+  adminKey=key;
+  try{await api("/api/admin/providers");document.getElementById("loginError").classList.add("hidden");openApp()}catch(e){adminKey="";document.getElementById("loginError").textContent=e.message;document.getElementById("loginError").classList.remove("hidden")}
 };
-document.getElementById("logoutBtn").onclick=()=>{sessionStorage.removeItem("fiiviu_admin_key");location.reload()};
+document.getElementById("logoutBtn").onclick=()=>{adminKey="";location.reload()};
 document.getElementById("newProviderBtn").onclick=newProvider;
 document.getElementById("cancelProviderBtn").onclick=resetForm;
 document.getElementById("refreshDetailBtn").onclick=loadDetail;document.getElementById("providerLoginBtn").onclick=createProviderLogin;
