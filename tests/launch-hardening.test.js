@@ -191,7 +191,7 @@ test("paid booking finalization is idempotent and email-send guarded", () => {
   assert.match(block, /confirmation_email_sent_at/);
   assert.match(block, /if \(!booking \|\| booking\.confirmation_email_sent_at\)/);
   assert.match(block, /confirmation_email_sent_at IS NULL/);
-  assert.match(block, /provider_notification_email_sent_at/);
+  assert.match(block, /sendProviderBookingNotification\(env, booking\)/);
   assert.match(block, /provider notification failure must never block the booking/i);
 });
 
