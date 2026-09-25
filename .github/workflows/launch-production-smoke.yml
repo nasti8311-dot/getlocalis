@@ -16,6 +16,29 @@ jobs:
           curl --fail --silent --show-error --location --max-time 20             --header 'Cache-Control: no-cache'             --output /tmp/home.html             https://fiiviu.ro/
           grep -q 'FiiViu' /tmp/home.html
 
+      - name: Check baseline security headers
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20 --dump-header /tmp/home.headers --output /dev/null https://fiiviu.ro/
+          grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' /tmp/home.headers
+          grep -qi '^x-frame-options: DENY' /tmp/home.headers
+          grep -qi '^x-content-type-options: nosniff' /tmp/home.headers
+          grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/home.headers
+
+      - name: Check first-party API CORS and no-store
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20 \
+            --header 'Origin: https://fiiviu.ro' \
+            --output /tmp/provider-session-cors.json \
+            --dump-header /tmp/provider-session.headers \
+            --write-out '%{http_code}' \
+            https://fiiviu.ro/api/provider-session)"
+          test "$status" = "401"
+          grep -qi '^access-control-allow-origin: https://fiiviu.ro' /tmp/provider-session.headers
+          grep -qi '^cache-control: no-store' /tmp/provider-session.headers
+          if grep -qi '^access-control-allow-origin: \*' /tmp/provider-session.headers; then exit 1; fi
+
       - name: Check public catalog
         run: |
           set -euo pipefail
