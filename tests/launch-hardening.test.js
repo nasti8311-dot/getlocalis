@@ -595,5 +595,5 @@ test("provider session cookie is host-only and malformed cookies fail closed", (
   assert.match(source, /Path=\\/; Max-Age=/);
   assert.match(source, /HttpOnly; Secure; SameSite=Lax/);
   assert.match(source, /try\\{return decodeURIComponent\\(match\\[1\\]\\);\\}catch\\{return "";\\}/);
-  assert.doesNotMatch(source, /fiiviu_provider_session=/);
+  assert.doesNotMatch(source, /(^|[^-])fiiviu_provider_session=/);
 });
