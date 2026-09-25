@@ -156,11 +156,12 @@ test("Stripe mode mismatch is guarded", () => {
 });
 
 test("Stripe booking webhooks require the FiiViu checkout marker", () => {
-  assert.match(webhook, /metadata\?\.fiiviu_checkout/);
+test("Stripe booking webhooks require the FiiViu checkout marker", () => {
+  const webhook = read("stripe-webhook.js");
   const entry = read("worker-entry.js");
-  assert.match(entry, /metadata\?\.fiiviu_checkout/);
+  assert.match(webhook, /metadata\?\.fiiviu_checkout/);
   assert.match(webhook, /settlement skipped/);
-  assert.match(entry, /metadata\\?\.fiiviu_checkout/);
+  assert.match(entry, /metadata\?\.fiiviu_checkout/);
   assert.match(entry, /booking finalization skipped/);
 });
 
