@@ -632,3 +632,4 @@ test("marketplace checkout revalidates that the experience provider is active", 
   assert.match(source, /Experience provider is not currently active/);
   assert.match(source, /body\.providerName=String\(bodyProviderName\|\|experience\.provider_name\|\|""\)/);
 });
+\ntest("marketplace checkout enforces configured experience time slots", () => {\n  const source = read("marketplace-entry.js");\n  assert.match(source, /const configuredTimes=normalizeAvailableTimes\(experience\.available_times\)/);\n  assert.match(source, /Die gewählte Uhrzeit ist für dieses Erlebnis nicht verfügbar/);\n  assert.match(source, /available_times: String\(offer\.available_times\|\|""\)/);\n  assert.match(source, /function normalizeAvailableTimes\(value\)/);\n});\n
