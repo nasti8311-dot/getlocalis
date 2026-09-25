@@ -164,7 +164,7 @@ async function api(path,options={}){
   return data;
 }
 function euro(cents){return (Number(cents||0)/100).toFixed(2)+" €"}
-function showMessage(text,error=false){const el=document.getElementById("message");el.textContent=text;el.classNume="text-sm "+(error?"danger":"text-green-700")}
+function showMessage(text,error=false){const el=document.getElementById("message");el.textContent=text;el.className="text-sm "+(error?"danger":"text-green-700")}
 function openApp(){document.getElementById("loginCard").classList.add("hidden");document.getElementById("app").classList.remove("hidden");document.getElementById("logoutBtn").classList.remove("hidden");loadProviders();refreshOffersRaw()}
 function resetForm(){document.getElementById("providerForm").reset();document.getElementById("providerId").value="";document.getElementById("providerForm").classList.add("hidden")}
 function editProvider(p){
@@ -193,7 +193,8 @@ async function loadProviders(){
 }
 function editProviderById(id){const p=providers.find(x=>x.id===id);if(p)editProvider(p)}
 async function selectProvider(ref){selectedRef=ref;document.getElementById("detailCard").classList.remove("hidden");await loadDetail()}
-async function createProviderLoginById(id){const provider=providers.find(p=>Number(p.id)===Number(id));if(!provider)return;selectedRef=provider.provider_ref;document.getElementById("detailCard").classList.remove("hidden");await createProviderLogin()}\nasync function createProviderLogin(){if(!selectedRef)return;const provider=providers.find(p=>String(p.provider_ref)===String(selectedRef));if(!provider)return;const email=String(provider.contact_email||'').trim();if(!email){showMessage('Bitte zuerst eine E-mail de contact beim Organizatori hinterlegen.',true);return}if(!confirm('Creezi accesul de autentificare pentru '+email+'? O parolă temporară va fi trimisă prin e-mail.'))return;try{const d=await api('/api/admin/provider-password',{method:'POST',body:JSON.stringify({providerRef:selectedRef,email})});if(d.emailSent===false&&d.temporaryPassword){showMessage((d.message||'Accesul a fost creat.')+' Parolă temporară: '+d.temporaryPassword+' — bitte sicher an den Organizatori weitergeben.',false);}else{showMessage(d.message||'Login-Accesul a fost creat.');}}catch(e){showMessage(e.message,true)}}
+async function createProviderLoginById(id){const provider=providers.find(p=>Number(p.id)===Number(id));if(!provider)return;selectedRef=provider.provider_ref;document.getElementById("detailCard").classList.remove("hidden");await createProviderLogin()}
+async function createProviderLogin(){if(!selectedRef)return;const provider=providers.find(p=>String(p.provider_ref)===String(selectedRef));if(!provider)return;const email=String(provider.contact_email||'').trim();if(!email){showMessage('Bitte zuerst eine E-mail de contact beim Organizatori hinterlegen.',true);return}if(!confirm('Creezi accesul de autentificare pentru '+email+'? O parolă temporară va fi trimisă prin e-mail.'))return;try{const d=await api('/api/admin/provider-password',{method:'POST',body:JSON.stringify({providerRef:selectedRef,email})});if(d.emailSent===false&&d.temporaryPassword){showMessage((d.message||'Accesul a fost creat.')+' Parolă temporară: '+d.temporaryPassword+' — bitte sicher an den Organizatori weitergeben.',false);}else{showMessage(d.message||'Login-Accesul a fost creat.');}}catch(e){showMessage(e.message,true)}}
 
 async function loadDetail(){
   if(!selectedRef)return;
