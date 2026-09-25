@@ -38,8 +38,19 @@ export async function handleStripeWebhook(request, env) {
     }
   }
   try {
-    if (event.type === "payment_intent.succeeded") { await recordPaymentIntentEvent(env,event); await createBookingSettlement(env,event); }
-    else if (event.type === "payment_intent.payment_failed") await recordPaymentIntentEvent(env,event);
+    if (event.type === "payment_intent.succeeded") {
+      await recordPaymentIntentEvent(env,event);
+      const paymentIntent = event.data?.object;
+      const isFiiViuCheckout =
+        String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
+        String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
+        /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""));
+      if (isFiiViuCheckout) {
+        await createBookingSettlement(env,event);
+      } else {
+        console.warn("FiiViu Stripe payment intent is not a recognized checkout; settlement skipped");
+      }
+    } else if (event.type === "payment_intent.payment_failed") await recordPaymentIntentEvent(env,event);
     else if (["charge.refunded","charge.refund.updated","refund.created","refund.updated"].includes(event.type)) await recordRefundEvent(env,event);
   } catch(error) {
     if (env.DB) {
