@@ -342,6 +342,14 @@ test("static assets carry active baseline browser security headers", () => {
 });
 
 
+test("cancellation API responses are marked non-cacheable", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function handleCancellation");
+  const end = source.indexOf("async function", start + 20);
+  const block = source.slice(start, end > start ? end : start + 5000);
+  assert.match(block, /"Cache-Control": "no-store"/);
+});
+
 test("JSON API responses are marked non-cacheable", () => {
   for (const path of ["worker-entry.js", "marketplace-entry.js", "worker.js"]) {
     const source = read(path);
