@@ -529,3 +529,12 @@ test("marketplace checkout requires a published experience and active provider",
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
   assert.match(source, /valid provider Connect account/);
 });
+
+
+test("local Wrangler secret files are excluded from Cloudflare Static Assets", () => {
+  const ignore = read(".assetsignore");
+  assert.match(ignore, /^\\.dev\\.vars$/m);
+  assert.match(ignore, /^\\.dev\\.vars\\.\*$/m);
+  assert.match(ignore, /^\\*\.env$/m);
+  assert.match(ignore, /^\\*\.env\.\*$/m);
+});
