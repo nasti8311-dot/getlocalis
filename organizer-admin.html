@@ -276,7 +276,7 @@ function populateOfferProviders(selectedRef){
   select.innerHTML='<option value="">Organizatori auswählen…</option>'+activeProviders.map(p=>'<option value="'+escapeHtml(p.provider_ref)+'">'+escapeHtml(p.name)+' · '+escapeHtml(p.provider_ref)+'</option>').join("");
   select.value=selectedRef||"";
 }
-async function newOffer(){
+async async function newOffer(){
   await loadProviders();
   document.getElementById("offerForm").reset(); document.getElementById("offerId").value="";
   document.getElementById("offerProvider").disabled=false;
