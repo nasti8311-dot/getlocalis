@@ -347,4 +347,8 @@ test("JSON API responses are marked non-cacheable", () => {
 });
 
 
-test("API responses are non-cacheable", () => {\n  const source = read("secure-entry.js");\n  assert.match(source, /headers\\.set\\("Cache-Control", "no-store"\\)/);\n  assert.match(source, /"Cache-Control": "no-store"/);\n});\n
+test("API responses are non-cacheable", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /headers\.set\("Cache-Control", "no-store"\)/);
+  assert.match(source, /"Cache-Control": "no-store"/);
+});
