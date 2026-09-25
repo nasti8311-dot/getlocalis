@@ -1,0 +1,44 @@
+name: Launch production smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check public homepage
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20             --header 'Cache-Control: no-cache'             --output /tmp/home.html             https://fiiviu.ro/
+          grep -q 'FiiViu' /tmp/home.html
+
+      - name: Check public catalog
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20             --header 'Accept: application/json'             --output /tmp/offers.json             https://fiiviu.ro/api/offers
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/offers.json","utf8")); if(!Array.isArray(d.offers)) throw new Error("Catalog response has no offers array");'
+
+      - name: Check protected provider session
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/provider-session.json             --write-out '%{http_code}'             https://fiiviu.ro/api/provider-session)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-session.json","utf8")); if(!d.error) throw new Error("Provider session endpoint did not return an error");'
+
+      - name: Check protected admin surface
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/admin-offers.json             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/offers)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/admin-offers.json","utf8")); if(!d.error) throw new Error("Admin endpoint did not return an error");'
+
+      - name: Check checkout rejects malformed input before Stripe
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"guests":0}'             --output /tmp/payment-intent.json             --write-out '%{http_code}'             https://fiiviu.ro/api/create-payment-intent)"
+          test "$status" = "400"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/payment-intent.json","utf8")); if(!d.error) throw new Error("Malformed checkout payload was not rejected");'
