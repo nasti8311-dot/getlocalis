@@ -339,3 +339,9 @@ test("static assets carry baseline browser security headers", () => {
   assert.match(source, /Referrer-Policy:\s*strict-origin-when-cross-origin/);
   assert.match(source, /Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\)/);
 });
+
+
+test("JSON API responses are marked non-cacheable", () => {
+  const source = read("worker-entry.js");
+  assert.match(source, /"Cache-Control": "no-store"/);
+});
