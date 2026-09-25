@@ -16,6 +16,14 @@ export async function handleStripeWebhook(request, env) {
   let event;
   try { event = JSON.parse(rawBody); } catch { return webhookError("Invalid JSON payload", 400); }
   if (!event?.id || !event?.type) return webhookError("Invalid Stripe event", 400);
+  const stripeSecretKey = String(env.STRIPE_SECRET_KEY || "").trim();
+  if (!stripeSecretKey) return webhookError("Stripe secret key not configured", 500);
+  const configuredTestMode = stripeSecretKey.startsWith("sk_test_");
+  const eventIsTestMode = event?.livemode === false;
+  if (configuredTestMode !== eventIsTestMode) {
+    console.error("Stripe webhook mode mismatch; event rejected", { configuredTestMode, eventIsTestMode });
+    return webhookError("Stripe webhook mode mismatch", 400);
+  }
   if (env.DB) {
     await ensureStripeWebhookEventsTable(env);
     await ensureBookingSettlementsTable(env);
