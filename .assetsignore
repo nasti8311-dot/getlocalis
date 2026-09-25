@@ -19,6 +19,8 @@ provider-auth.js
 functions/
 *.env
 *.env.*
+.dev.vars
+.dev.vars.*
 *.pem
 *.key
 *.crt
