@@ -287,6 +287,14 @@ test("admin offer deletion is safe around existing bookings", () => {
 });
 
 
+test("admin response CORS is first-party restricted, not wildcard", () => {
+  const source = read("worker.js");
+  assert.match(source, /const isAdminPath = url\.pathname\.startsWith\("\/api\/admin\/"\)/);
+  assert.match(source, /allowedAdminOrigins/);
+  assert.match(source, /if \(isAdminPath\)/);
+  assert.doesNotMatch(source, /isAdminPath[\\s\\S]{0,800}Access-Control-Allow-Origin.*\\*.*isAdminPath/);
+});
+
 test("secure admin CORS permits the organizer DELETE action", () => {
   const source = read("secure-entry.js");
   assert.match(source, /Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS"/);
