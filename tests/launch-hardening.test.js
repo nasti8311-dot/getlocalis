@@ -442,7 +442,7 @@ test("booking access links are generated in the booking finalization path", () =
 
 test("admin origin normalization uses a valid end-anchored regex", () => {
   const source = read("worker.js");
-  assert.match(source, /replace\(\/\\\/\$\//);
+  assert.ok(source.includes("replace(/\\/$/"));
 });
 
 test("secure entry does not persist request-scoped bindings on globalThis", () => {
