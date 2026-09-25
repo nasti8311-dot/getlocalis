@@ -343,6 +343,8 @@ test("static assets carry active baseline browser security headers", () => {
 
 
 test("JSON API responses are marked non-cacheable", () => {
-  const source = read("worker-entry.js");
-  assert.match(source, /"Cache-Control": "no-store"/);
+  for (const path of ["worker-entry.js", "marketplace-entry.js", "worker.js"]) {
+    const source = read(path);
+    assert.match(source, /Cache-Control[^\n]*no-store/);
+  }
 });
