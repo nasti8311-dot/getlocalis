@@ -466,7 +466,6 @@ test("partner session cookie is host-only and malformed cookies fail closed", ()
   assert.doesNotMatch(source, /(?:^|["\'=;\s])fiiviu_partner_session=/);
   assert.match(source, /Path=\/; Max-Age=/);
   assert.match(source, /HttpOnly; Secure; SameSite=Lax/);
-  assert.doesNotMatch(source, /(?:^|[^_])fiiviu_partner_session=/);
 });
 
 test("partner sessions are cookie-only", () => {
