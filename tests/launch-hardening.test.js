@@ -606,6 +606,16 @@ test("admin auth tolerates accidental whitespace around the configured secret", 
 });
 
 
+test("settlement status admin auth trims configured and incoming credentials", () => {
+  const source = read("secure-entry.js");
+  const start = source.indexOf('url.pathname === "/api/admin/settlement-status"');
+  const end = source.indexOf('if (url.pathname.startsWith("/api/admin/")', start);
+  const block = source.slice(start, end);
+  assert.match(block, /String\(request\.headers\.get\("Authorization"\) \|\| ""\)\.trim\(\)/);
+  assert.match(block, /String\(env\.ADMIN_PAYOUT_KEY \|\| ""\)\.trim\(\)/);
+  assert.doesNotMatch(block, /request\.headers\.get\("Authorization"\) !== "Bearer " \+ String\(env\.ADMIN_PAYOUT_KEY\)/);
+});
+
 test("all legacy admin auth comparisons trim configured and incoming credentials", () => {
   const worker = read("worker.js");
   const secure = read("secure-entry.js");
