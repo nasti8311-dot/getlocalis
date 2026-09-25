@@ -38,8 +38,6 @@ export default {
   },
 
   async fetch(request, env, ctx) {
-    globalThis.__fiiviuDB = env.DB || null;
-    globalThis.__fiiviuPublicAppUrl = env.PUBLIC_APP_URL || "https://fiiviu.ro";
     const url = new URL(request.url);
 
     if (url.pathname === "/api/admin/settlement-run") {
