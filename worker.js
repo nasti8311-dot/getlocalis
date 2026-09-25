@@ -626,7 +626,7 @@ async function authenticatePartner(request,env){
   return String(partner.partner_ref||"");
 }
 function partnerSessionCookie(value,maxAge=2592000){
-  return "__Host-__Host-fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
+  return "__Host-fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
   const rows=await env.DB.prepare("PRAGMA table_info(partner_payouts)").all();
