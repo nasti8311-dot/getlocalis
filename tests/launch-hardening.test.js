@@ -390,8 +390,8 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /X-Content-Type-Options.*nosniff/);
   assert.match(source, /Referrer-Policy.*strict-origin-when-cross-origin/);
   assert.match(source, /Permissions-Policy.*payment=\(self\)/);
-  assert.match(source, /applyApiSecurityHeaders\\(await adminWorker\\.fetch/);
-  assert.match(source, /applyApiSecurityHeaders\\(await marketplaceWorker\\.fetch/);
+  assert.match(source, /applyApiSecurityHeaders\(await adminWorker\.fetch/);
+  assert.match(source, /applyApiSecurityHeaders\(await marketplaceWorker\.fetch/);
   assert.match(source, /"Strict-Transport-Security": "max-age=31536000; includeSubDomains"/);
   assert.match(source, /"X-Content-Type-Options": "nosniff"/);
   assert.match(source, /"Referrer-Policy": "strict-origin-when-cross-origin"/);
@@ -437,4 +437,16 @@ test("booking access links are generated in the booking finalization path", () =
   assert.match(worker, /booking\.html\?id=/);
   assert.doesNotMatch(secure, /globalThis\.fetch\s*=\s*async function/);
   assert.doesNotMatch(secure, /__fiiviuSecureEmailPatch/);
+});
+
+
+test("admin origin normalization uses a valid end-anchored regex", () => {
+  const source = read("worker.js");
+  assert.match(source, /replace\(\/\\\/\$\//);
+});
+
+test("secure entry does not persist request-scoped bindings on globalThis", () => {
+  const source = read("secure-entry.js");
+  assert.doesNotMatch(source, /globalThis\\.__fiiviuDB/);
+  assert.doesNotMatch(source, /globalThis\\.__fiiviuPublicAppUrl/);
 });
