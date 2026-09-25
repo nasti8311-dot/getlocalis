@@ -519,3 +519,34 @@ test("marketplace checkout requires a published experience and active provider",
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
   assert.match(source, /valid provider Connect account/);
 });
+
+
+test("static asset rules block server configuration and secret-bearing files", () => {
+  const ignore = read(".assetsignore");
+  for (const pattern of [
+    "secure-entry.js",
+    "worker-entry.js",
+    "worker.js",
+    "stripe-webhook.js",
+    "provider-auth.js",
+    "*.env",
+    "*.env.*",
+    "*.pem",
+    "*.key",
+    "*.crt",
+    "wrangler.jsonc",
+    "tests/"
+  ]) {
+    assert.ok(ignore.split("\n").includes(pattern), pattern + " is not excluded from static assets");
+  }
+
+  for (const path of [
+    "index.html",
+    "booking.html",
+    "provider.html",
+    "organizer-admin.html"
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(source, /sk_(?:live|test)_[A-Za-z0-9]+/);
+  }
+});
