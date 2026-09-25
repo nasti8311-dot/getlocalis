@@ -561,3 +561,13 @@ test("public static pages never expose server secret names", () => {
     );
   }
 });
+
+
+test("marketplace image URLs are restricted to safe HTTP(S) sources", () => {
+  const source = read("index.html");
+  assert.match(source, /function safeImageUrl\(value, fallback = ""\)/);
+  assert.match(source, /url\.protocol === "https:"/);
+  assert.match(source, /url\.origin === window\.location\.origin && url\.protocol === "http:"/);
+  assert.match(source, /imageUrl = safeImageUrl\(offer\.image_url\)/);
+  assert.match(source, /safeImageUrl\(image\)/);
+});
