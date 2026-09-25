@@ -369,6 +369,14 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /"Permissions-Policy": "camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"/);
 });
 
+test("admin settlement endpoints inherit a no-store cache policy", () => {
+  const source = read("secure-entry.js");
+  const corsStart = source.indexOf("function getAdminCors(request, env)");
+  const corsEnd = source.indexOf("function applyApiSecurityHeaders", corsStart);
+  const block = source.slice(corsStart, corsEnd);
+  assert.match(block, /"Cache-Control": "no-store"/);
+});
+
 test("JSON API responses are marked non-cacheable", () => {
   for (const path of ["worker-entry.js", "marketplace-entry.js", "worker.js"]) {
     const source = read(path);
