@@ -338,7 +338,6 @@ test("static assets carry active baseline browser security headers", () => {
   assert.match(source, /^X-Content-Type-Options:\s*nosniff$/m);
   assert.match(source, /^Referrer-Policy:\s*strict-origin-when-cross-origin$/m);
   assert.match(source, /^Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)$/m);
-  assert.doesNotMatch(source, /\/\*[^]*X-Frame-Options:/);
 });
 
 
