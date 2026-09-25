@@ -145,6 +145,16 @@ test("Stripe mode mismatch is guarded", () => {
   assert.match(source, /mode mismatch/);
 });
 
+test("Stripe webhook rejects mode mismatch before ledger writes", () => {
+  const source = read("stripe-webhook.js");
+  assert.match(source, /const stripeSecretKey = String\(env\.STRIPE_SECRET_KEY \|\| ""\)\.trim\(\)/);
+  assert.match(source, /event\.livemode === false/);
+  assert.match(source, /Stripe webhook mode mismatch/);
+  const mismatch = source.indexOf("Stripe webhook mode mismatch; event rejected");
+  const ledger = source.indexOf("INSERT OR IGNORE INTO stripe_webhook_events");
+  assert.ok(mismatch >= 0 && ledger > mismatch);
+});
+
 
 test("marketplace entrypoint stays wired to the current worker implementation", () => {
   const source = read("marketplace-entry.js");
