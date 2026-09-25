@@ -155,6 +155,15 @@ test("Stripe mode mismatch is guarded", () => {
   assert.match(source, /mode mismatch/);
 });
 
+test("Stripe booking webhooks require the FiiViu checkout marker", () => {
+  const webhook = read("stripe-webhook.js");
+  const entry = read("worker-entry.js");
+  assert.match(webhook, /metadata\\?\.fiiviu_checkout/);
+  assert.match(webhook, /settlement skipped/);
+  assert.match(entry, /metadata\\?\.fiiviu_checkout/);
+  assert.match(entry, /booking finalization skipped/);
+});
+
 test("Stripe webhook rejects mode mismatch before ledger writes", () => {
   const source = read("stripe-webhook.js");
   assert.match(source, /const stripeSecretKey = String\(env\.STRIPE_SECRET_KEY \|\| ""\)\.trim\(\)/);
@@ -193,6 +202,24 @@ test("paid booking finalization is idempotent and email-send guarded", () => {
   assert.match(block, /confirmation_email_sent_at IS NULL/);
   assert.match(block, /sendProviderBookingNotification\(env, booking\)/);
   assert.match(block, /provider notification failure must never block the booking/i);
+});
+
+test("PaymentIntent carries complete FiiViu metadata at creation time", () => {
+  const source = read("worker-entry.js");
+  const createStart = source.indexOf('const params=new URLSearchParams();');
+  const stripeCreate = source.indexOf('fetch("https://api.stripe.com/v1/payment_intents"', createStart);
+  const createBlock = source.slice(createStart, stripeCreate);
+  for (const field of [
+    "fiiviu_checkout","booking_id","experience_id","customer_email","customer_phone",
+    "customer_language","booking_date","booking_time","experience_name","provider_name",
+    "meeting_point_name","meeting_address","meeting_city","meeting_country",
+    "meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude",
+    "provider_connect_account_id"
+  ]) {
+    assert.match(createBlock, new RegExp('metadata\\[' + field + '\\]'));
+  }
+  assert.doesNotMatch(createBlock, /updatePaymentIntentMetadata/);
+  assert.match(source, /PaymentIntent is not a valid FiiViu checkout/);
 });
 
 test("direct booking finalization requires the PaymentIntent client secret", () => {

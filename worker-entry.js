@@ -100,6 +100,14 @@ export default {
           return json({ error: "Payment confirmation credentials do not match." }, 403);
         }
 
+        if (
+          String(paymentIntent?.metadata?.fiiviu_checkout || "") !== "1" ||
+          !String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") ||
+          !/^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""))
+        ) {
+          return json({ error: "PaymentIntent is not a valid FiiViu checkout." }, 409);
+        }
+
         await finalizePaidBooking(env, paymentIntent);
 
         const booking = await env.DB
@@ -164,13 +172,21 @@ export default {
 
             // Safety guard: never finalize a live event while the Worker is
             // configured with test credentials, or vice versa.
+            const paymentIntent = event.data?.object;
+            const isFiiViuCheckout =
+              String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
+              String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
+              /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""));
+
             if (configuredTestMode !== eventIsTestMode) {
               console.error("FiiViu Stripe mode mismatch; booking finalization skipped", {
                 configuredTestMode,
                 eventIsTestMode,
               });
+            } else if (!isFiiViuCheckout) {
+              console.warn("FiiViu Stripe event is not a recognized checkout; booking finalization skipped");
             } else {
-              ctx.waitUntil(finalizePaidBooking(env, event.data?.object));
+              ctx.waitUntil(finalizePaidBooking(env, paymentIntent));
             }
           }
         } catch (error) {
@@ -218,6 +234,7 @@ export default {
         const params=new URLSearchParams();
         params.set("amount",String(amount));
         params.set("currency",currency);
+        params.set("metadata[fiiviu_checkout]","1");
         params.set("metadata[booking_id]",String(data.bookingId||""));
         params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
         params.set("metadata[experience_id]",String(data.experienceId||""));
@@ -225,8 +242,20 @@ export default {
         params.set("metadata[offer_id]",String(data.offerId||""));
         params.set("metadata[customer_name]",String(data.customerName||""));
         params.set("metadata[customer_email]",String(data.customerEmail||""));
+        params.set("metadata[customer_phone]",String(data.customerPhone||""));
+        params.set("metadata[customer_language]",normalizeLanguage(data.customerLanguage));
         params.set("metadata[booking_date]",String(data.bookingDate||""));
         params.set("metadata[booking_time]",String(data.bookingTime||""));
+        params.set("metadata[experience_name]",String(data.experienceName||""));
+        params.set("metadata[provider_name]",String(data.providerName||""));
+        params.set("metadata[meeting_point_name]",String(data.meetingPointName||""));
+        params.set("metadata[meeting_address]",String(data.meetingAddress||""));
+        params.set("metadata[meeting_city]",String(data.meetingCity||""));
+        params.set("metadata[meeting_country]",String(data.meetingCountry||""));
+        params.set("metadata[meeting_instructions]",String(data.meetingInstructions||""));
+        params.set("metadata[arrival_minutes_before]",String(data.arrivalMinutesBefore||""));
+        params.set("metadata[meeting_latitude]",String(data.meetingLatitude||""));
+        params.set("metadata[meeting_longitude]",String(data.meetingLongitude||""));
         params.set("metadata[provider_connect_account_id]",String(data.providerConnectAccountId||""));
         params.set("automatic_payment_methods[enabled]","true");
 
@@ -245,44 +274,6 @@ export default {
           paymentIntentId:stripeData.id,
           partnerRef:""
         },200);
-
-        if (response.ok && env.STRIPE_SECRET_KEY) {
-          try {
-            const result = await response.clone().json();
-
-            if (result?.paymentIntentId) {
-              await updatePaymentIntentMetadata(
-                env,
-                result.paymentIntentId,
-                {
-                  customer_name: data.customerName,
-                  customer_email: data.customerEmail,
-                  customer_phone: data.customerPhone,
-                  customer_language: normalizeLanguage(data.customerLanguage),
-                  booking_date: data.bookingDate,
-                  booking_time: data.bookingTime,
-                  experience_name: data.experienceName,
-                  provider_name: data.providerName,
-                  meeting_point_name: data.meetingPointName,
-                  meeting_address: data.meetingAddress,
-                  meeting_city: data.meetingCity,
-                  meeting_country: data.meetingCountry,
-                  meeting_instructions: data.meetingInstructions,
-                  arrival_minutes_before: data.arrivalMinutesBefore,
-                  meeting_latitude: data.meetingLatitude,
-                  meeting_longitude: data.meetingLongitude,
-                  provider_connect_account_id: data.providerConnectAccountId,
-                  offer_id: String(data.offerId || "")
-                }
-              );
-            }
-          } catch (error) {
-            console.error(
-              "FiiViu PaymentIntent metadata enrichment failed",
-              error
-            );
-          }
-        }
 
         return response;
       } catch (_) {
@@ -749,51 +740,6 @@ var originalFetch=window.fetch.bind(window);window.fetch=function(input,init){tr
     statusText: response.statusText,
     headers
   });
-}
-
-async function updatePaymentIntentMetadata(
-  env,
-  paymentIntentId,
-  values
-) {
-  const params = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(values)) {
-    if (
-      value !== null &&
-      value !== undefined &&
-      String(value) !== ""
-    ) {
-      params.set(
-        `metadata[${key}]`,
-        String(value).slice(0, 500)
-      );
-    }
-  }
-
-  if (!params.size) return;
-
-  const response = await fetch(
-    `https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
-        "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-      body: params
-    }
-  );
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-
-    throw new Error(
-      data?.error?.message ||
-        "Stripe PaymentIntent metadata update failed"
-    );
-  }
 }
 
 async function verifyStripeWebhookSignature(body, header, secret) {
