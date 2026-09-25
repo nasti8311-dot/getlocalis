@@ -450,3 +450,12 @@ test("secure entry does not persist request-scoped bindings on globalThis", () =
   assert.doesNotMatch(source, /globalThis\\.__fiiviuDB/);
   assert.doesNotMatch(source, /globalThis\\.__fiiviuPublicAppUrl/);
 });
+
+
+test("provider API responses do not expose wildcard CORS", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /restrictCors/);
+  assert.match(source, /headers\.delete\("Access-Control-Allow-Origin"\)/);
+  assert.match(source, /applyApiSecurityHeaders\(await adminWorker\.fetch\(request, env, ctx\), request, env, true\)/);
+  assert.match(source, /Cache-Control.*no-store/);
+});
