@@ -234,7 +234,7 @@ if (url.pathname === "/api/offers") {
         if(env.DB){
           await ensurePartnerSessionsTable(env);
           const cookie=String(request.headers.get("Cookie")||"");
-          const match=cookie.match(/(?:^|;\s*)fiiviu_partner_session=([^;]+)/);
+          const match=cookie.match(/(?:^|;\s*)__Host-fiiviu_partner_session=([^;]+)/);
           if(match)await env.DB.prepare("DELETE FROM partner_sessions WHERE session_hash=?").bind(await hashText(decodeURIComponent(match[1]))).run();
         }
       }catch(_){}
@@ -612,8 +612,13 @@ async function authenticatePartner(request,env){
   if(!env.DB)return null;
   await ensurePartnerSessionsTable(env);
   const cookie=String(request.headers.get("Cookie")||"");
-  const match=cookie.match(/(?:^|;\s*)fiiviu_partner_session=([^;]+)/);
-  const session=match?decodeURIComponent(match[1]):"";
+  const match=cookie.match(/(?:^|;\s*)__Host-fiiviu_partner_session=([^;]+)/);
+  let session="";
+  try {
+    session=match?decodeURIComponent(match[1]):"";
+  } catch (_) {
+    return null;
+  }
   if(!session)return null;
   const hash=await hashText(session);
   const partner=await env.DB.prepare("SELECT p.partner_ref,p.active FROM partner_sessions s JOIN partners p ON p.partner_ref=s.partner_ref WHERE s.session_hash=? AND s.expires_at>? LIMIT 1").bind(hash,Math.floor(Date.now()/1000)).first();
@@ -621,7 +626,7 @@ async function authenticatePartner(request,env){
   return String(partner.partner_ref||"");
 }
 function partnerSessionCookie(value,maxAge=2592000){
-  return "fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
+  return "__Host-__Host-fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
   const rows=await env.DB.prepare("PRAGMA table_info(partner_payouts)").all();
