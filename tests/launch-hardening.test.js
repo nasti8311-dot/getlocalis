@@ -548,7 +548,7 @@ test("local Wrangler secret files are excluded from Cloudflare Static Assets", (
   const ignore = read(".assetsignore");
   assert.match(ignore, /^\.dev\.vars$/m);
   assert.match(ignore, /^\\.dev\\.vars\\.\*$/m);
-  assert.match(ignore, /^\\*\.env$/m);
+  assert.ok(ignore.includes("*.env"));
   assert.match(ignore, /^\\*\.env\.\*$/m);
 });
 
