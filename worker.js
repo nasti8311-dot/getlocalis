@@ -54,7 +54,7 @@ export default {
     if (url.pathname === "/api/admin/translate-offers") {
   if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405, corsHeaders);
   const expected = String(env.ADMIN_PAYOUT_KEY || "").trim();
-  const provided = String(request.headers.get("Authorization") || "");
+  const provided = String(request.headers.get("Authorization") || "").trim();
   if (!expected || provided !== "Bearer " + expected) return json({ error: "Unauthorized" }, 401, corsHeaders);
   try {
     await ensureOffersTable(env);
