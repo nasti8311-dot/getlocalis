@@ -123,7 +123,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
       const offer=await env.DB.prepare(`
         SELECT id,provider_ref,title,price_cents,currency,meeting_point_name,
                meeting_address,meeting_city,meeting_country,meeting_instructions,
-               arrival_minutes_before,active
+               arrival_minutes_before,available_times,active
         FROM offers WHERE id=? LIMIT 1
       `).bind(Number(numericOfferId)).first();
 
@@ -146,6 +146,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
           meeting_country:String(offer.meeting_country||""),
           meeting_instructions:String(offer.meeting_instructions||""),
           arrival_minutes_before:offer.arrival_minutes_before,
+          available_times:String(offer.available_times||""),
           meeting_latitude:"",
           meeting_longitude:"",
           status:Number(offer.active)!==0 ? "published" : "draft"
@@ -218,6 +219,11 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const bookingStart=toBucharestDate(bookingDate,bookingTime);
     if(!bookingStart||bookingStart.getTime()<=Date.now())return json({error:"Das Erlebnisdatum muss in der Zukunft liegen."},409);
 
+    const configuredTimes=normalizeAvailableTimes(experience.available_times);
+    if(configuredTimes.length && !configuredTimes.includes(bookingTime)){
+      return json({error:"Die gewählte Uhrzeit ist für dieses Erlebnis nicht verfügbar."},409);
+    }
+
     const unitPrice=Number(experience.price_cents);
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
 
@@ -250,6 +256,16 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     console.error("FiiViu marketplace payment routing failed",error);
     return json({error:error?.message||"Marketplace payment routing failed"},500);
   }
+}
+function normalizeAvailableTimes(value){
+  if(Array.isArray(value))return value.map(String).map(v=>v.trim()).filter(Boolean);
+  const raw=String(value||"").trim();
+  if(!raw)return [];
+  try{
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed))return parsed.map(String).map(v=>v.trim()).filter(Boolean);
+  }catch(_){ }
+  return raw.split(",").map(v=>v.trim()).filter(Boolean);
 }
 function toBucharestDate(dateValue,timeValue){
   const date=String(dateValue||"").trim(), time=String(timeValue||"").trim();
