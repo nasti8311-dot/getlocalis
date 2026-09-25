@@ -192,7 +192,20 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
       return json({error:"Experience is missing a valid provider Connect account"},409);
     }
-    const validProviderAccount=providerAccount;
+
+    // A published experience must remain bookable only while its provider is
+    // active. The public catalog already applies this rule; enforce the same
+    // invariant again at checkout so a stale/direct experience ID cannot bypass
+    // provider deactivation.
+    const activeProvider=await env.DB.prepare(
+      "SELECT provider_ref,name,connect_account_id,active FROM providers WHERE connect_account_id=? AND active=1 LIMIT 1"
+    ).bind(providerAccount).first();
+    if(!activeProvider){
+      return json({error:"Experience provider is not currently active"},409);
+    }
+
+    const validProviderAccount=String(activeProvider.connect_account_id||"").trim();
+    const bodyProviderName=String(activeProvider.name||experience.provider_name||"").trim();
 
     const guests=Number(body.guests||1);
     if(!Number.isInteger(guests)||guests<1||guests>50)return json({error:"Invalid guest count"},400);
@@ -218,7 +231,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.experienceId=experienceId;
     body.offerId=offerIdRaw || (experienceId.startsWith("offer-") ? experienceId.slice(6) : "");
     body.providerConnectAccountId=validProviderAccount;
-    body.providerName=String(experience.provider_name||"");
+    body.providerName=String(bodyProviderName||experience.provider_name||"");
     body.experienceName=experience.title||body.tourName||"";
     body.amount=totalAmount;
     body.currency=String(experience.currency||"eur").toLowerCase();
