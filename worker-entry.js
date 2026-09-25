@@ -2450,7 +2450,9 @@ async function handleAdminProviderPayout(request, env) {
 }
 
 function isAdminRequest(request, env) {
-  return request.headers.get("Authorization") === "Bearer " + String(env.ADMIN_PAYOUT_KEY || "");
+  const provided = String(request.headers.get("Authorization") || "").trim();
+  const expected = "Bearer " + String(env.ADMIN_PAYOUT_KEY || "").trim();
+  return provided === expected;
 }
 
 function isSettlementEventDue(settlement) {

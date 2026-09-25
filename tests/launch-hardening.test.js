@@ -597,3 +597,10 @@ test("provider session cookie is host-only and malformed cookies fail closed", (
   assert.match(source, /try\\{return decodeURIComponent\\(match\\[1\\]\\);\\}catch\\{return "";\\}/);
   assert.doesNotMatch(source, /(^|[^-])fiiviu_provider_session=/);
 });
+
+
+test("admin auth tolerates accidental whitespace around the configured secret", () => {
+  const source = read("worker-entry.js");
+  assert.ok(source.includes('String(request.headers.get("Authorization") || "").trim()'));
+  assert.ok(source.includes('String(env.ADMIN_PAYOUT_KEY || "").trim()'));
+});
