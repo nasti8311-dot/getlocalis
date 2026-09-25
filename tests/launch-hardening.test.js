@@ -601,6 +601,6 @@ test("provider session cookie is host-only and malformed cookies fail closed", (
 
 test("admin auth tolerates accidental whitespace around the configured secret", () => {
   const source = read("worker-entry.js");
-  assert.match(source, /String\(request\.headers\.get\("Authorization"\) \|\| ""\)\.trim\(\)/);
-  assert.match(source, /String\(env\.ADMIN_PAYOUT_KEY \|\| ""\)\.trim\(\)/);
+  assert.ok(source.includes('String(request.headers.get("Authorization") || "").trim()'));
+  assert.ok(source.includes('String(env.ADMIN_PAYOUT_KEY || "").trim()'));
 });
