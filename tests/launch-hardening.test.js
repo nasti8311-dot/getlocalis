@@ -258,7 +258,7 @@ test("legacy worker payment-intent endpoint is disabled", () => {
 test("secure entry routes payment creation through marketplace worker", () => {
   const source = read("secure-entry.js");
   const marketplaceIndex = source.indexOf('const { default: marketplaceWorker }');
-  const fallbackIndex = source.indexOf('return marketplaceWorker.fetch(request, env, ctx);');
+  const fallbackIndex = source.indexOf('return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);');
   assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
 });
 test("provider auth schema is migration-owned, not runtime-created", () => {
@@ -403,7 +403,7 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /"Strict-Transport-Security": "max-age=31536000; includeSubDomains"/);
   assert.match(source, /"X-Content-Type-Options": "nosniff"/);
   assert.match(source, /"Referrer-Policy": "strict-origin-when-cross-origin"/);
-  assert.match(source, /"Permissions-Policy": "camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"/);
+  assert.match(source, /"Permissions-Policy": "camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)"/);
 });
 
 test("admin settlement endpoints inherit a no-store cache policy", () => {
