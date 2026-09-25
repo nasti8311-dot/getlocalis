@@ -172,6 +172,19 @@ test("marketplace checkout recalculates price and owns booking identity", () => 
 });
 
 
+test("paid booking finalization is idempotent and email-send guarded", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function finalizePaidBooking");
+  const end = source.indexOf("async function sendProviderBookingNotification", start);
+  const block = source.slice(start, end);
+  assert.match(block, /ON CONFLICT\(payment_intent_id\) DO UPDATE/);
+  assert.match(block, /confirmation_email_sent_at/);
+  assert.match(block, /if \(!booking \|\| booking\.confirmation_email_sent_at\)/);
+  assert.match(block, /confirmation_email_sent_at IS NULL/);
+  assert.match(block, /provider_notification_email_sent_at/);
+  assert.match(block, /provider notification failure must never block the booking/i);
+});
+
 test("direct booking finalization requires the PaymentIntent client secret", () => {
   const source = read("worker-entry.js");
   assert.match(source, /clientSecret = String\(body\?\.clientSecret \|\| body\?\.client_secret/);
