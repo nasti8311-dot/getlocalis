@@ -15,6 +15,7 @@ function getAdminCors(request, env) {
     "Vary": "Origin",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(self)",
     "Cache-Control": "no-store"
@@ -27,6 +28,7 @@ function applyApiSecurityHeaders(response, request, env, restrictCors = false) {
   const headers = new Headers(response.headers);
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
   headers.set("Cache-Control", "no-store");
