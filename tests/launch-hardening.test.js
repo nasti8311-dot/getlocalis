@@ -547,9 +547,9 @@ test("marketplace checkout requires a published experience and active provider",
 test("local Wrangler secret files are excluded from Cloudflare Static Assets", () => {
   const ignore = read(".assetsignore");
   assert.match(ignore, /^\.dev\.vars$/m);
-  assert.match(ignore, /^\\.dev\\.vars\\.\*$/m);
+  assert.ok(ignore.includes(".dev.vars.*"));
   assert.ok(ignore.includes("*.env"));
-  assert.match(ignore, /^\\*\.env\.\*$/m);
+  assert.ok(ignore.includes("*.env.*"));
 });
 
 test("public static pages never expose server secret names", () => {
