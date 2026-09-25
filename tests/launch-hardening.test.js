@@ -298,6 +298,15 @@ test("provider API requires an authenticated cookie session", () => {
 });
 
 
+test("legacy marketplace provider auth fallbacks are disabled", () => {
+  const source = read("marketplace-entry.js");
+  assert.doesNotMatch(source, /PROVIDER_ACCOUNT_MAP_JSON/);
+  assert.doesNotMatch(source, /PROVIDER_ADMIN_KEY/);
+  assert.doesNotMatch(source, /STRIPE_PROVIDER_CONNECT_ACCOUNT_ID/);
+  assert.doesNotMatch(source, /Authorization.*Bearer/s);
+  assert.match(source, /authenticateProviderSession\(request,env\)/);
+});
+
 test("marketplace catalog and checkout require an active provider", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);

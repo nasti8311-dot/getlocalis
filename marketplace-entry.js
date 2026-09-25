@@ -76,12 +76,11 @@ async function handleProviderRoute(request,env,ctx){
 }
 async function resolveProviderAccount(request,env){
   const sessionProviderRef=await authenticateProviderSession(request,env).catch(()=>null);
-  if(sessionProviderRef&&env.DB){
-    const sessionProvider=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(sessionProviderRef).first();
-    const sessionAccount=String(sessionProvider?.connect_account_id||"").trim();
-    if(/^acct_[A-Za-z0-9]+$/.test(sessionAccount))return sessionAccount;
-  }
-  const authorization=String(request.headers.get("Authorization")||"");const token=authorization.startsWith("Bearer ")?authorization.slice(7).trim():"";if(!token)return "";const raw=String(env.PROVIDER_ACCOUNT_MAP_JSON||"").trim();if(raw){try{const map=JSON.parse(raw);const account=typeof map?.[token]==="string"?map[token].trim():"";if(/^acct_[A-Za-z0-9]+$/.test(account))return account}catch(_){} }const adminKey=String(env.PROVIDER_ADMIN_KEY||env.ADMIN_PAYOUT_KEY||"").trim();if(token!==adminKey||!env.DB)return "";try{const configured=String(env.STRIPE_PROVIDER_CONNECT_ACCOUNT_ID||"").trim();if(/^acct_[A-Za-z0-9]+$/.test(configured))return configured;const rows=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE active=1 AND connect_account_id IS NOT NULL AND connect_account_id != '' ORDER BY id ASC").all();const accounts=[...(rows.results||[])].map(row=>String(row.connect_account_id||"").trim()).filter(account=>/^acct_[A-Za-z0-9]+$/.test(account));return accounts.length===1?accounts[0]:""}catch(_){return ""}}
+  if(!sessionProviderRef||!env.DB)return "";
+  const sessionProvider=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(sessionProviderRef).first();
+  const sessionAccount=String(sessionProvider?.connect_account_id||"").trim();
+  return /^acct_[A-Za-z0-9]+$/.test(sessionAccount)?sessionAccount:"";
+}
 
 async function handlePublicOffers(request,env){
   if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
