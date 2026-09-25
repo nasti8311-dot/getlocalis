@@ -463,7 +463,7 @@ test("partner session cookie is host-only and malformed cookies fail closed", ()
   assert.match(authBlock, /try \{[\s\S]*decodeURIComponent\(match\[1\]\)/);
   assert.match(authBlock, /catch \(_\) \{[\s\S]*return null/);
   assert.match(source, /__Host-fiiviu_partner_session=/);
-  assert.doesNotMatch(source, /__Host-__Host-fiiviu_partner_session=/);
+  assert.doesNotMatch(source, /(?:^|["\'=;\s])fiiviu_partner_session=/);
   assert.match(source, /Path=\/; Max-Age=/);
   assert.match(source, /HttpOnly; Secure; SameSite=Lax/);
   assert.doesNotMatch(source, /(?:^|[^_])fiiviu_partner_session=/);
@@ -547,7 +547,7 @@ test("marketplace checkout requires a published experience and active provider",
 
 test("local Wrangler secret files are excluded from Cloudflare Static Assets", () => {
   const ignore = read(".assetsignore");
-  assert.match(ignore, /^\\.dev\\.vars$/m);
+  assert.match(ignore, /^\.dev\.vars$/m);
   assert.match(ignore, /^\\.dev\\.vars\\.\*$/m);
   assert.match(ignore, /^\\*\.env$/m);
   assert.match(ignore, /^\\*\.env\.\*$/m);
@@ -589,11 +589,12 @@ test("marketplace image URLs are restricted to safe HTTP(S) sources", () => {
 
 test("organizer access can be provisioned and emailed from admin", () => {
   const source = read("worker-entry.js");
+  const auth = read("provider-auth.js");
   const admin = read("organizer-admin.html");
   assert.match(source, /async function handleAdminProviderPassword/);
   assert.match(source, /INSERT INTO provider_accounts/);
   assert.match(source, /DELETE FROM provider_sessions WHERE provider_ref=\?/);
-  assert.match(source, /fiiviu_provider_session/);
+  assert.match(auth, /fiiviu_provider_session/);
   assert.ok(source.includes("https://fiiviu.ro/provider.html"));
   assert.match(source, /emailSent:true/);
   assert.match(source, /temporaryPassword:password/);
