@@ -274,6 +274,14 @@ test("provider marketplace schemas are migration-owned", () => {
 });
 
 
+test("organizer admin key is memory-only", () => {
+  const source = read("organizer-admin.html");
+  assert.match(source, /let adminKey = ""/);
+  assert.doesNotMatch(source, /sessionStorage\.getItem\("fiiviu_admin_key"\)/);
+  assert.doesNotMatch(source, /sessionStorage\.setItem\("fiiviu_admin_key"/);
+  assert.doesNotMatch(source, /sessionStorage\.removeItem\("fiiviu_admin_key"/);
+});
+
 test("admin offer deletion is safe around existing bookings", () => {
   const source = read("worker.js");
   assert.match(source, /request\.method==="DELETE"/);
