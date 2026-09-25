@@ -625,3 +625,10 @@ test("all legacy admin auth comparisons trim configured and incoming credentials
   assert.match(secure, /String\(request\.headers\.get\("Authorization"\) \|\| ""\)\.trim\(\)/);
   assert.match(secure, /String\(env\.ADMIN_PAYOUT_KEY \|\| ""\)\.trim\(\)/);
 });
+
+test("marketplace checkout revalidates that the experience provider is active", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /SELECT provider_ref,name,connect_account_id,active FROM providers WHERE connect_account_id=\? AND active=1 LIMIT 1/);
+  assert.match(source, /Experience provider is not currently active/);
+  assert.match(source, /body\.providerName=String\(bodyProviderName\|\|experience\.provider_name\|\|""\)/);
+});
