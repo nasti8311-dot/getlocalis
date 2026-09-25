@@ -155,6 +155,15 @@ test("Stripe mode mismatch is guarded", () => {
   assert.match(source, /mode mismatch/);
 });
 
+test("Stripe booking webhooks require the FiiViu checkout marker", () => {
+  const webhook = read("stripe-webhook.js");
+  const entry = read("worker-entry.js");
+  assert.match(webhook, /metadata\\?\.fiiviu_checkout/);
+  assert.match(webhook, /settlement skipped/);
+  assert.match(entry, /metadata\\?\.fiiviu_checkout/);
+  assert.match(entry, /booking finalization skipped/);
+});
+
 test("Stripe webhook rejects mode mismatch before ledger writes", () => {
   const source = read("stripe-webhook.js");
   assert.match(source, /const stripeSecretKey = String\(env\.STRIPE_SECRET_KEY \|\| ""\)\.trim\(\)/);
