@@ -485,3 +485,24 @@ test("public marketplace and partner responses do not default to wildcard CORS",
   assert.doesNotMatch(marketplace, /Access-Control-Allow-Origin": "\*"/);
   assert.doesNotMatch(worker, /corsHeaders\["Access-Control-Allow-Origin"\]\s*=\s*"\*"/);
 });
+
+test("marketplace checkout derives the payable amount from the server catalog", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /const unitPrice=Number\(experience\.price_cents\)/);
+  assert.match(source, /const totalAmount=unitPrice\*guests/);
+  assert.match(source, /body\.amount=totalAmount/);
+  assert.doesNotMatch(source, /body\.amount=Number\(body\.amount/);
+});
+
+test("marketplace checkout replaces client booking IDs with a server-generated ID", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /body\.bookingId = "FV-" \+ crypto\.randomUUID\(\)/);
+  assert.match(source, /body\.bookingId = "FV-" \+ crypto\.randomUUID\(\)\.replace\(\/-\/g, ""\)/);
+});
+
+test("marketplace checkout requires a published experience and active provider", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /String\(experience\.status\)!=="published"/);
+  assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
+  assert.match(source, /valid provider Connect account/);
+});
