@@ -538,3 +538,26 @@ test("local Wrangler secret files are excluded from Cloudflare Static Assets", (
   assert.match(ignore, /^\\*\.env$/m);
   assert.match(ignore, /^\\*\.env\.\*$/m);
 });
+
+test("public static pages never expose server secret names", () => {
+  const pages = [
+    read("index.html"),
+    read("provider.html"),
+    read("organizer-admin.html"),
+    read("partner.html")
+  ].join("\n");
+  for (const secretName of [
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "EMAILJS_PRIVATE_KEY",
+    "RESEND_API_KEY",
+    "ADMIN_PAYOUT_KEY",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_ID"
+  ]) {
+    assert.doesNotMatch(
+      pages,
+      new RegExp(secretName.replaceAll("_", "[_]"))
+    );
+  }
+});
