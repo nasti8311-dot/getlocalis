@@ -62,7 +62,7 @@ export default {
           headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }
         });
       }
-      if (!env.ADMIN_PAYOUT_KEY || request.headers.get("Authorization") !== "Bearer " + String(env.ADMIN_PAYOUT_KEY)) {
+      if (String(env.ADMIN_PAYOUT_KEY || "").trim() === "" || String(request.headers.get("Authorization") || "").trim() !== "Bearer " + String(env.ADMIN_PAYOUT_KEY || "").trim()) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: { ...getAdminCors(request, env), "Content-Type": "application/json; charset=utf-8" }

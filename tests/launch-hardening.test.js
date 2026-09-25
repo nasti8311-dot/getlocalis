@@ -604,3 +604,14 @@ test("admin auth tolerates accidental whitespace around the configured secret", 
   assert.ok(source.includes('String(request.headers.get("Authorization") || "").trim()'));
   assert.ok(source.includes('String(env.ADMIN_PAYOUT_KEY || "").trim()'));
 });
+
+
+test("all legacy admin auth comparisons trim configured and incoming credentials", () => {
+  const worker = read("worker.js");
+  const secure = read("secure-entry.js");
+  assert.match(worker, /function isAdmin\(request,env\)\{return String\(env\.ADMIN_PAYOUT_KEY\|\|""\)\.trim\(\)!==""&&String\(request\.headers\.get\("Authorization"\)\|\|""\)\.trim\(\)==="Bearer "\+String\(env\.ADMIN_PAYOUT_KEY\|\|""\)\.trim\(\)\}/);
+  assert.doesNotMatch(worker, /request\.headers\.get\("Authorization"\)==="Bearer "\+env\.ADMIN_PAYOUT_KEY/);
+  assert.doesNotMatch(secure, /request\.headers\.get\("Authorization"\) !== "Bearer " \+ String\(env\.ADMIN_PAYOUT_KEY\)/);
+  assert.match(secure, /String\(request\.headers\.get\("Authorization"\) \|\| ""\)\.trim\(\)/);
+  assert.match(secure, /String\(env\.ADMIN_PAYOUT_KEY \|\| ""\)\.trim\(\)/);
+});

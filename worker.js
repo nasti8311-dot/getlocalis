@@ -538,7 +538,7 @@ async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   });
 }
 
-function isAdmin(request,env){return request.headers.get("Authorization")==="Bearer "+env.ADMIN_PAYOUT_KEY}
+function isAdmin(request,env){return String(env.ADMIN_PAYOUT_KEY||"").trim()!==""&&String(request.headers.get("Authorization")||"").trim()==="Bearer "+String(env.ADMIN_PAYOUT_KEY||"").trim()}
 async function ensurePartnerTrackingTable(env){
   for(const [table,required] of [["partner_scan_events",["partner_ref","created_at"]],["partner_visitors",["partner_ref","visitor_id","first_seen_at","last_seen_at"]]]){
     const rows=await env.DB.prepare("PRAGMA table_info("+table+")").all();
