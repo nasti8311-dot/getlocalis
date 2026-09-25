@@ -340,12 +340,25 @@ test("Stripe webhook schema checks are read-only and migration-owned", () => {
 
 test("static assets carry active baseline browser security headers", () => {
   const source = read("_headers");
+  assert.match(source, /^Strict-Transport-Security:\s*max-age=31536000; includeSubDomains$/m);
   assert.match(source, /^X-Frame-Options:\s*DENY$/m);
   assert.match(source, /^X-Content-Type-Options:\s*nosniff$/m);
   assert.match(source, /^Referrer-Policy:\s*strict-origin-when-cross-origin$/m);
   assert.match(source, /^Permissions-Policy:\s*camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)$/m);
 });
 
+
+test("cancellation CORS is restricted to first-party origins", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function handleCancellation");
+  const end = source.indexOf("async function", start + 20);
+  const block = source.slice(start, end > start ? end : start + 5000);
+  assert.match(block, /PUBLIC_APP_URL/);
+  assert.ok(block.includes("https://fiiviu.ro"));
+  assert.match(block, /Access-Control-Allow-Origin.*origin/);
+  assert.doesNotMatch(block, /Access-Control-Allow-Origin": "\*"/);
+  assert.match(block, /"Vary": "Origin"/);
+});
 
 test("cancellation API responses are marked non-cacheable", () => {
   const source = read("worker-entry.js");
@@ -360,9 +373,21 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /Strict-Transport-Security.*max-age=31536000; includeSubDomains/);
   assert.match(source, /X-Content-Type-Options.*nosniff/);
   assert.match(source, /Referrer-Policy.*strict-origin-when-cross-origin/);
-  assert.match(source, /Permissions-Policy.*payment=\\(self\\)/);
+  assert.match(source, /Permissions-Policy.*payment=\(self\)/);
   assert.match(source, /applyApiSecurityHeaders\\(await adminWorker\\.fetch/);
   assert.match(source, /applyApiSecurityHeaders\\(await marketplaceWorker\\.fetch/);
+  assert.match(source, /"Strict-Transport-Security": "max-age=31536000; includeSubDomains"/);
+  assert.match(source, /"X-Content-Type-Options": "nosniff"/);
+  assert.match(source, /"Referrer-Policy": "strict-origin-when-cross-origin"/);
+  assert.match(source, /"Permissions-Policy": "camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"/);
+});
+
+test("admin settlement endpoints inherit a no-store cache policy", () => {
+  const source = read("secure-entry.js");
+  const corsStart = source.indexOf("function getAdminCors(request, env)");
+  const corsEnd = source.indexOf("function applyApiSecurityHeaders", corsStart);
+  const block = source.slice(corsStart, corsEnd);
+  assert.match(block, /"Cache-Control": "no-store"/);
 });
 
 test("JSON API responses are marked non-cacheable", () => {

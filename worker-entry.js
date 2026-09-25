@@ -378,12 +378,19 @@ async function handleAdminResendConfirmation(request, env) {
 }
 
 async function handleCancellation(request, env) {
+  const origin = String(request.headers.get("Origin") || "").trim();
+  const allowedOrigins = new Set([
+    String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\/$/, ""),
+    "https://fiiviu.ro",
+    "https://www.fiiviu.ro",
+  ]);
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
     "Cache-Control": "no-store"
   };
+  if (origin && allowedOrigins.has(origin)) corsHeaders["Access-Control-Allow-Origin"] = origin;
 
   if (request.method === "OPTIONS") {
     return new Response(null, {

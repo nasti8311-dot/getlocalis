@@ -12,7 +12,12 @@ function getAdminCors(request, env) {
   const headers = {
     "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Vary": "Origin"
+    "Vary": "Origin",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(self)",
+    "Cache-Control": "no-store"
   };
   if (origin && allowed.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
