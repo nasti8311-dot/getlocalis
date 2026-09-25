@@ -61,6 +61,15 @@ function getAdminCors(request, env) {
   return headers;
 }
 
+function applyApiSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 export default {
   async scheduled(controller, env, ctx) {
     try { await releaseDueProviderSettlements(env); } catch (error) { console.error("FiiViu settlement cron failed", error); }
@@ -195,9 +204,9 @@ export default {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
-      return adminWorker.fetch(request, env, ctx);
+      return applyApiSecurityHeaders(await adminWorker.fetch(request, env, ctx));
     }
 
-    return marketplaceWorker.fetch(request, env, ctx);
+    return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx));
   }
 };

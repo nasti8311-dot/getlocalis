@@ -355,6 +355,16 @@ test("cancellation API responses are marked non-cacheable", () => {
   assert.match(block, /"Cache-Control": "no-store"/);
 });
 
+test("API responses receive baseline transport and browser security headers", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /Strict-Transport-Security.*max-age=31536000; includeSubDomains/);
+  assert.match(source, /X-Content-Type-Options.*nosniff/);
+  assert.match(source, /Referrer-Policy.*strict-origin-when-cross-origin/);
+  assert.match(source, /Permissions-Policy.*payment=\\(self\\)/);
+  assert.match(source, /applyApiSecurityHeaders\\(await adminWorker\\.fetch/);
+  assert.match(source, /applyApiSecurityHeaders\\(await marketplaceWorker\\.fetch/);
+});
+
 test("JSON API responses are marked non-cacheable", () => {
   for (const path of ["worker-entry.js", "marketplace-entry.js", "worker.js"]) {
     const source = read(path);
