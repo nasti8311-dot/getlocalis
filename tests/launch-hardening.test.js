@@ -438,3 +438,10 @@ test("booking access links are generated in the booking finalization path", () =
   assert.doesNotMatch(secure, /globalThis\.fetch\s*=\s*async function/);
   assert.doesNotMatch(secure, /__fiiviuSecureEmailPatch/);
 });
+
+
+test("secure entry does not persist request-scoped bindings on globalThis", () => {
+  const source = read("secure-entry.js");
+  assert.doesNotMatch(source, /globalThis\\.__fiiviuDB/);
+  assert.doesNotMatch(source, /globalThis\\.__fiiviuPublicAppUrl/);
+});
