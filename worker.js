@@ -3,7 +3,24 @@ import { handleStripeWebhook } from "./stripe-webhook.js";
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const corsHeaders = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, POST, PATCH, DELETE, OPTIONS","Cache-Control":"no-store","Access-Control-Allow-Headers":"Content-Type, Authorization"};
+    const origin = String(request.headers.get("Origin") || "").trim();
+    const allowedAdminOrigins = new Set([
+      String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\\/$/, ""),
+      "https://fiiviu.ro",
+      "https://www.fiiviu.ro",
+    ]);
+    const isAdminPath = url.pathname.startsWith("/api/admin/");
+    const corsHeaders = {
+      "Access-Control-Allow-Methods":"GET, POST, PATCH, DELETE, OPTIONS",
+      "Cache-Control":"no-store",
+      "Access-Control-Allow-Headers":"Content-Type, Authorization",
+      "Vary":"Origin"
+    };
+    if (isAdminPath) {
+      if (origin && allowedAdminOrigins.has(origin)) corsHeaders["Access-Control-Allow-Origin"] = origin;
+    } else {
+      corsHeaders["Access-Control-Allow-Origin"] = "*";
+    }
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
     if (url.pathname === "/api/partner-visit") {
