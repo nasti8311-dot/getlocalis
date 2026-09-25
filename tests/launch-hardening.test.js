@@ -580,7 +580,7 @@ test("organizer access can be provisioned and emailed from admin", () => {
   assert.match(source, /INSERT INTO provider_accounts/);
   assert.match(source, /DELETE FROM provider_sessions WHERE provider_ref=\?/);
   assert.match(source, /fiiviu_provider_session/);
-  assert.match(source, /https:\\/\\/fiiviu\\.ro\\/provider\\.html/);
+  assert.ok(source.includes("https://fiiviu.ro/provider.html"));
   assert.match(source, /emailSent:true/);
   assert.match(source, /temporaryPassword:password/);
   assert.match(admin, /createProviderLoginById/);
