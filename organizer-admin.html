@@ -146,7 +146,8 @@ let adminKey = "";
 let providers = [];
 let selectedRef = "";
 
-function normalizeAdminKey(value){return String(value||"").replace(/^Bearer\s+/i,"").trim()}\nfunction authHeaders(){return {"Authorization":"Bearer "+normalizeAdminKey(adminKey),"Content-Type":"application/json"}}
+function normalizeAdminKey(value){return String(value||"").replace(/^Bearer\s+/i,"").trim()}
+function authHeaders(){return {"Authorization":"Bearer "+normalizeAdminKey(adminKey),"Content-Type":"application/json"}}
 async function api(path,options={}){
   let res;
   try{
