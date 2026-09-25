@@ -580,10 +580,20 @@ test("organizer access can be provisioned and emailed from admin", () => {
   assert.match(source, /INSERT INTO provider_accounts/);
   assert.match(source, /DELETE FROM provider_sessions WHERE provider_ref=\?/);
   assert.match(source, /fiiviu_provider_session/);
-  assert.match(source, /https:\\/\\/fiiviu\\.ro\\/provider\\.html/);
+  assert.ok(source.includes("https://fiiviu.ro/provider.html"));
   assert.match(source, /emailSent:true/);
   assert.match(source, /temporaryPassword:password/);
   assert.match(admin, /createProviderLoginById/);
   assert.match(admin, /Zugang per E-Mail/);
   assert.match(admin, /\\/api\\/admin\\/provider-password/);
+});
+
+
+test("provider session cookie is host-only and malformed cookies fail closed", () => {
+  const source = read("provider-auth.js");
+  assert.match(source, /__Host-fiiviu_provider_session=/);
+  assert.match(source, /Path=\\/; Max-Age=/);
+  assert.match(source, /HttpOnly; Secure; SameSite=Lax/);
+  assert.match(source, /try\\{return decodeURIComponent\\(match\\[1\\]\\);\\}catch\\{return "";\\}/);
+  assert.doesNotMatch(source, /(^|[^-])fiiviu_provider_session=/);
 });
