@@ -684,3 +684,12 @@ test("marketplace checkout revalidates that the experience provider is active", 
   assert.match(source, /Experience provider is not currently active/);
   assert.match(source, /body\.providerName=String\(bodyProviderName\|\|experience\.provider_name\|\|""\)/);
 });
+
+
+test("internal provider and organizer surfaces are marked noindex", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /requestPath === "\/provider\.html"/);
+  assert.match(source, /requestPath === "\/organizer-admin\.html"/);
+  assert.match(source, /X-Robots-Tag/);
+  assert.match(source, /noindex, nofollow, noarchive/);
+});
