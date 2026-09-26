@@ -156,7 +156,8 @@ test("disabled manual payout route contains no executable Stripe transfer implem
   assert.doesNotMatch(afterDisabled, /api\/v1\/transfers/);
   assert.doesNotMatch(afterDisabled, /Idempotency-Key.*fiiviu-provider-payout/);
 });
-\ntest("legacy manual payout path is disabled", () => {
+
+test("legacy manual payout path is disabled", () => {
   const source = read("worker-entry.js");
   assert.match(source, /Manual .*Auszahlungen sind deaktiviert/);
   assert.match(source, /}, 410\);/);
