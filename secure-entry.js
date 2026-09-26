@@ -33,7 +33,7 @@ function applyApiSecurityHeaders(response, request, env, restrictCors = false) {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
   headers.set("Cache-Control", "no-store");
   const requestPath = new URL(request.url).pathname;
-  if (requestPath === "/provider.html" || requestPath === "/organizer-admin.html") {
+  if (requestPath === "/provider.html" || requestPath === "/organizer-admin.html" || requestPath === "/partner.html" || requestPath === "/booking.html") {
     headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
   if (restrictCors) {
