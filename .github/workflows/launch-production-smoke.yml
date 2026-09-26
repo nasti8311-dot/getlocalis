@@ -59,6 +59,38 @@ jobs:
           test "$status" = "401"
           node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/admin-offers.json","utf8")); if(!d.error) throw new Error("Admin endpoint did not return an error");'
 
+
+
+      - name: Check private booking view rejects missing token
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/booking-view.json             --write-out '%{http_code}'             'https://fiiviu.ro/api/booking?id=FV-INVALID')"
+          test "$status" = "403"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/booking-view.json","utf8")); if(d.error!=="Invalid booking access.") throw new Error("Booking endpoint did not fail closed on missing token");'
+
+      - name: Check cancellation rejects missing token
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"bookingId":"FV-INVALID"}'             --output /tmp/cancel.json             --write-out '%{http_code}'             https://fiiviu.ro/api/cancel-booking)"
+          test "$status" = "400" -o "$status" = "403"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/cancel.json","utf8")); if(!d.error) throw new Error("Cancellation endpoint did not reject missing credentials");'
+
+      - name: Check Stripe webhook rejects unsigned requests
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{}'             --output /tmp/webhook.json             --write-out '%{http_code}'             https://fiiviu.ro/api/stripe/webhook)"
+          test "$status" = "400"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/webhook.json","utf8")); if(!d.error) throw new Error("Stripe webhook accepted an unsigned request");'
+
+      - name: Check admin preflight is first-party restricted
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request OPTIONS             --header 'Origin: https://fiiviu.ro'             --header 'Access-Control-Request-Method: GET'             --output /tmp/admin-options.txt             --dump-header /tmp/admin-options.headers             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/offers)"
+          test "$status" = "204"
+          grep -qi '^access-control-allow-origin: https://fiiviu.ro' /tmp/admin-options.headers
+          grep -qi '^access-control-allow-methods: GET, POST, PATCH, DELETE, OPTIONS' /tmp/admin-options.headers
+          if grep -qi '^access-control-allow-origin: *' /tmp/admin-options.headers; then exit 1; fi
+
       - name: Check checkout rejects malformed input before Stripe
         run: |
           set -euo pipefail
