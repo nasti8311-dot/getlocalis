@@ -766,3 +766,17 @@ test("personal booking view is backed by a token-bound read endpoint", () => {
   assert.match(page, /fetch\('\/api\/booking\?id=/);
   assert.match(page, /token/);
 });
+
+
+test("confirmation email routing prefers EmailJS and keeps Resend as fallback", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function sendConfirmationWithRetry");
+  const end = source.indexOf("async function sendResendConfirmation", start);
+  const block = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(block, /EMAILJS_PRIVATE_KEY/);
+  assert.match(block, /sendEmailJsConfirmation\(env, booking\)/);
+  assert.match(block, /RESEND_API_KEY/);
+  assert.match(block, /sendResendConfirmation\(env, booking\)/);
+  assert.match(block, /fallback/);
+});
