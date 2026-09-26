@@ -408,7 +408,18 @@ async function handleAdminControlCenter(request, env) {
             ...(inactive ? ["inaktiv"] : []),
             ...(errors ? [errors + " Settlement-Fehler"] : [])
           ],
-          pendingSettlements: pending
+          pendingSettlements: pending,
+          settlementErrors: providerSettlements
+            .filter(s => Boolean(s.settlement_error))
+            .sort((a,b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))
+            .slice(0, 10)
+            .map(s => ({
+              bookingId: s.booking_id,
+              amountCents: Number(s.provider_amount_cents || 0),
+              error: String(s.settlement_error || ""),
+              status: String(s.settlement_status || ""),
+              updatedAt: s.updated_at || null
+            }))
         });
       }
     }
