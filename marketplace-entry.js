@@ -208,6 +208,20 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const validProviderAccount=String(activeProvider.connect_account_id||"").trim();
     const bodyProviderName=String(activeProvider.name||experience.provider_name||"").trim();
 
+    // Partner attribution is client-supplied for first-touch tracking, but the
+    // server must verify it against the active partner table before it can affect
+    // financial settlement. Never persist an arbitrary ref from the browser.
+    const submittedPartnerRef=String(body.partnerRef||"").trim().toUpperCase();
+    let partnerRef="";
+    if(submittedPartnerRef){
+      const partner=await env.DB.prepare(
+        "SELECT partner_ref FROM partners WHERE partner_ref=? AND active=1 LIMIT 1"
+      ).bind(submittedPartnerRef).first();
+      if(!partner)return json({error:"Unknown partner referral"},400);
+      partnerRef=String(partner.partner_ref||"").trim().toUpperCase();
+    }
+    body.partnerRef=partnerRef;
+
     const guests=Number(body.guests||1);
     if(!Number.isInteger(guests)||guests<1||guests>50)return json({error:"Invalid guest count"},400);
 
