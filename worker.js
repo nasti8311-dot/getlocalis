@@ -121,7 +121,7 @@ if (url.pathname === "/api/offers") {
             String(offer.meeting_instructions_ro||"").trim()===String(offer.meeting_instructions||"").trim();
           if(!missing && !stale) continue;
           try{
-            const translated=await translateOfferFields(offer);
+            const translated=await translateOfferFields(offer, { force: stale });
             await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
               .bind(translated.titleEn,translated.titleRo,translated.descriptionEn,translated.descriptionRo,translated.meetingPointNameEn,translated.meetingPointNameRo,translated.meetingInstructionsEn,translated.meetingInstructionsRo,offer.id).run();
             Object.assign(offer,{
