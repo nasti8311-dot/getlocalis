@@ -807,9 +807,9 @@ test("admin provider password provisioning requires the admin bearer key", () =>
 test("production smoke workflow guards wildcard CORS and protected boundaries", () => {
   const workflow = read(".github/workflows/launch-production-smoke.yml");
   assert.match(workflow, /permissions:\s*\{\}/);
-  assert.match(workflow, /access-control-allow-origin:\[\\[[:space:\]\]\\*\[\\[[:space:\]\]\\*\]\$\/);
+  assert.ok(workflow.includes("if grep -Eqi '^access-control-allow-origin:[[:space:]]*\\*[[:space:]]*$'"));
   assert.doesNotMatch(workflow, /access-control-allow-origin: \*/);
-  assert.match(workflow, /permissions-policy: camera=\\\\\(\\\\\), microphone=\\\\\(\\\\\), geolocation=\\\\\(\\\\\), payment=\\\\\(self\\\\\)/);
+  assert.ok(workflow.includes("permissions-policy: camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"));
   for (const marker of [
     "https://fiiviu.ro/api/provider-test-booking",
     "https://fiiviu.ro/api/provider/connect-status",
