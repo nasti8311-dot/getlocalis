@@ -692,6 +692,6 @@ test("internal provider and organizer surfaces are marked noindex", () => {
   assert.match(source, /requestPath === "\/organizer-admin\.html"/);
   assert.match(source, /X-Robots-Tag/);
   assert.match(source, /noindex, nofollow, noarchive/);
-  assert.match(source, /requestPath === "\/partner\\.html"/);
-  assert.match(source, /requestPath === "\/booking\\.html"/);
+  assert.match(source, /requestPath === "\/partner\.html"/);
+  assert.match(source, /requestPath === "\/booking\.html"/);
 });
