@@ -666,7 +666,7 @@ async function getPartnerStats(env,partnerRef){
     const bookingTime=String(payment.metadata?.booking_time||"").trim();
     const eventTimestamp=getBookingEventTimestamp(bookingDate,bookingTime);
     const commissionAvailable=eventTimestamp!==null
-      ? Math.floor(Date.now()/1000)>=eventTimestamp
+      ? eventTimestamp<=cutoff
       : false;
     revenueCents+=netCents;
     if(commissionAvailable)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
@@ -680,7 +680,7 @@ async function getPartnerStats(env,partnerRef){
       netAmount:netCents/100,
       commission:bookingCommissionCents/100,
       commissionStatus:commissionAvailable?"available":"pending",
-      commissionAvailableAt:eventTimestamp===null?null:new Date(eventTimestamp*1000).toISOString(),
+      commissionAvailableAt:eventTimestamp===null?null:new Date((eventTimestamp+holdDays*86400)*1000).toISOString(),
       bookingDate,
       bookingTime,
       currency:String(payment.currency||"eur").toLowerCase(),
