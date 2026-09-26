@@ -183,23 +183,6 @@ export default {
       return applyApiSecurityHeaders(await adminWorker.fetch(request, env, ctx), request, env, true);
     }
 
-    // Maintenance switch: keep admin/API routes available while the public site is paused.\n    // Deployment marker: keep this Worker version aligned with the current main branch.
-    // Missing/empty means normal operation.
-    if (String(env.MAINTENANCE_MODE || "").trim().toUpperCase() === "ON") {
-      const maintenanceHtml = "<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>FiiViu – Wir sind gleich wieder da</title><style>:root{color-scheme:light dark}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:#f7f7f7;color:#171717;text-align:center}.box{max-width:620px;padding:40px 24px}h1{margin:0 0 16px;font-size:clamp(32px,7vw,56px)}p{margin:0;color:#666;font-size:18px;line-height:1.6}@media(prefers-color-scheme:dark){body{background:#111;color:#f5f5f5}p{color:#aaa}}</style></head><body><main class=\"box\"><h1>Wir sind gleich wieder da.</h1><p>FiiViu wird gerade überarbeitet. Bitte schau später noch einmal vorbei.</p></main></body></html>";
-      return new Response(maintenanceHtml, {
-        status: 503,
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-          "Retry-After": "3600",
-          "X-Robots-Tag": "noindex, nofollow, noarchive",
-          "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-          "X-Content-Type-Options": "nosniff"
-        }
-      });
-    }
-
     return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);
   }
 };
