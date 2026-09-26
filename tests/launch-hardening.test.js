@@ -198,6 +198,18 @@ test("Stripe webhook rejects mode mismatch before ledger writes", () => {
 });
 
 
+
+test("legacy payment endpoint is disabled in the worker entrypoint", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf('if (url.pathname === "/api/create-payment-intent")');
+  const end = source.indexOf('const response = await legacyWorker.fetch(request, env, ctx);', start);
+  const block = source.slice(start, end);
+  assert.match(block, /Legacy payment endpoint disabled/);
+  assert.match(block, /}, 410\);/);
+  assert.doesNotMatch(block, /v1\/payment_intents/);
+  assert.doesNotMatch(block, /metadata\[fiiviu_checkout\]/);
+});
+
 test("marketplace entrypoint stays wired to the current worker implementation", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /import baseWorker from ["']\.\/worker-entry\.js["']/);
