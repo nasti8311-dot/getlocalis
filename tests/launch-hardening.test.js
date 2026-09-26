@@ -728,3 +728,13 @@ test("retired partner token helpers and schema are no longer reachable", () => {
   assert.match(source, /Legacy partner token endpoint disabled/);
 });
 
+
+
+test("provider test booking endpoint is routed through the authenticated worker", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
+  assert.match(
+    source,
+    /url\.pathname === "\/api\/provider-test-booking" \|\| url\.pathname\.startsWith\("\/api\/provider\/"\)/
+  );
+});
