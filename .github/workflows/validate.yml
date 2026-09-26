@@ -21,6 +21,11 @@ jobs:
           while IFS= read -r -d '' file; do
             node --check "$file"
           done < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+      - name: Validate GitHub Actions workflow YAML
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e 'require "yaml"; Dir[".github/workflows/*.yml", ".github/workflows/*.yaml"].each { |file| YAML.load_file(file); puts "validated #{file}" }'
       - name: Run launch hardening regression tests
         run: node --test tests/launch-hardening.test.js
       - name: Validate Wrangler configuration and worker bundle
