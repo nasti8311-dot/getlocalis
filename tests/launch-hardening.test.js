@@ -145,7 +145,7 @@ test("legacy partner token endpoint is disabled", () => {
   assert.doesNotMatch(block, /INSERT INTO partner_auth_tokens/);
 });
 
-test("legacy manual payout path is disabled", () => {
+test("disabled manual payout route contains no executable Stripe transfer implementation", () => {\n  const source = read("worker-entry.js");\n  const start = source.indexOf("async function handleAdminProviderPayout");\n  const end = source.indexOf("async function handleAdminResendConfirmation", start);\n  const block = source.slice(start, end);\n  const disabled = block.indexOf("Manual Organizer-Auszahlungen sind deaktiviert");\n  assert.ok(disabled >= 0);\n  const afterDisabled = block.slice(disabled);\n  assert.doesNotMatch(afterDisabled, /api\\/v1\\/transfers/);\n  assert.doesNotMatch(afterDisabled, /Idempotency-Key.*fiiviu-provider-payout/);\n});\n\ntest("legacy manual payout path is disabled", () => {
   const source = read("worker-entry.js");
   assert.match(source, /Manual .*Auszahlungen sind deaktiviert/);
   assert.match(source, /}, 410\);/);
