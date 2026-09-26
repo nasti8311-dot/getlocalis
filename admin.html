@@ -29,6 +29,38 @@ body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 20p
 </div>
 <button id="refreshActivity" class="secondary">Aktivitäten aktualisieren</button>
 </section>
+
+<section><h2>Kontrollzentrum</h2>
+<div class="hint">Tageslage und technische Betriebsdaten. Nur lesend; keine bestehenden Buchungs-, Provider- oder Auszahlungsdaten werden verändert.</div>
+<button id="loadControlCenter">Kontrollzentrum aktualisieren</button>
+<div id="controlCenter" style="margin-top:18px">
+  <div class="balance">
+    <div>Neue Buchungen heute<strong id="ccBookings">–</strong></div>
+    <div>Umsatz heute<strong id="ccRevenue">–</strong></div>
+    <div>Offene Auszahlungen<strong id="ccPayouts">–</strong></div>
+    <div>Stornos heute<strong id="ccCancellations">–</strong></div>
+    <div>Fehlgeschlagene Zahlungen<strong id="ccFailedPayments">–</strong></div>
+    <div>Fehlgeschlagene E-Mails<strong id="ccFailedEmails">–</strong></div>
+    <div>Neue Provider<strong id="ccNewProviders">–</strong></div>
+    <div>Provider mit Problemen<strong id="ccProviderProblems">–</strong></div>
+  </div>
+  <div class="grid" style="margin-top:18px">
+    <div style="padding:16px;background:#f7f7f7;border-radius:10px"><b>Stripe</b><div id="ccStripe" class="status">–</div></div>
+    <div style="padding:16px;background:#f7f7f7;border-radius:10px"><b>E-Mail</b><div id="ccEmail" class="status">–</div></div>
+    <div style="padding:16px;background:#f7f7f7;border-radius:10px"><b>D1</b><div id="ccD1" class="status">–</div></div>
+    <div style="padding:16px;background:#f7f7f7;border-radius:10px"><b>Worker</b><div id="ccWorker" class="status">–</div></div>
+  </div>
+  <div class="history">
+    <h3>Letzte Systemereignisse</h3>
+    <div id="ccLastEvents" class="muted">Noch nicht geladen.</div>
+  </div>
+  <div class="history">
+    <h3>Provider mit Problemen</h3>
+    <div id="ccProviderProblemsList" class="muted">Keine Daten.</div>
+  </div>
+  <div id="ccResult"></div>
+</div>
+</section>
 <section><h2>Auszahlung</h2><div class="grid"><div><label for="payoutPartner">Partner</label><select id="payoutPartner"><option value="">Partner auswählen…</option></select></div><div><label for="amount">Auszahlungsbetrag (€)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="Betrag"></div><div><label for="date">Auszahlungsdatum</label><input id="date" type="date"></div><div><label for="reference">Referenz (optional)</label><input id="reference" placeholder="z. B. Überweisung 15.10.2026"></div></div>
 <div id="payoutBalance" class="balance" style="display:none"><div>Vermittelter Umsatz<strong id="payoutRevenue">0,00 €</strong></div><div>Bereits ausgezahlt<strong id="payoutPaid">0,00 €</strong></div><div>Offene Provision<strong id="payoutOpen">0,00 €</strong></div></div>
 <button id="maxPayout" class="secondary" style="display:none">Maximal offenen Betrag einsetzen</button><button id="payout" disabled>Auszahlung speichern</button><div id="payoutResult"></div><div id="payoutHistory" class="history" style="display:none"></div></section>
@@ -41,6 +73,36 @@ async function saveEdit(id){const body={id,name:document.getElementById('en-'+id
 async function generatePartnerLogin(partnerRef,contactEmail=''){const partner=partnerData.find(p=>String(p.partner_ref||'').trim().toUpperCase()===String(partnerRef||'').trim().toUpperCase());contactEmail=String(contactEmail||partner?.contact_email||'').trim();const box=[...document.querySelectorAll('.partner')].find(el=>el.querySelector('.code')?.textContent?.trim()===partnerRef);const result=box?.querySelector('[id^="access-"]');if(result){result.style.display='block';result.className='result';result.textContent='Erzeuge Login-Zugang…';}try{const r=await fetch(WORKER+'/api/admin/partner-password',{method:'POST',headers:headers(),body:JSON.stringify({partnerRef,email:String(contactEmail||'').trim(),contactEmail:String(contactEmail||'').trim()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Login-Zugang konnte nicht erzeugt werden.');if(result){result.className='result ok';result.innerHTML='<b>Login-Zugang erstellt</b><br>E-Mail: '+escapeHtml(data.email)+'<br>Temporäres Passwort: <code>'+escapeHtml(data.temporaryPassword)+'</code><br><div class="link" style="margin-top:8px"><b>Login:</b> '+escapeHtml(PUBLIC_SITE+data.loginUrl)+'</div><button class="secondary" onclick="copyText('+JSON.stringify(data.temporaryPassword)+')">Passwort kopieren</button><button class="secondary" onclick="copyText('+JSON.stringify(PUBLIC_SITE+data.loginUrl)+')">Login-Link kopieren</button><div class="hint" style="margin-top:8px;margin-bottom:0">Wichtig: Das Passwort wird aus Sicherheitsgründen nur jetzt angezeigt. Wenn du erneut einen Zugang erzeugst, wird das bisherige Passwort ersetzt.</div>';}}catch(e){if(result){result.className='result error';result.textContent=e.message;}}}
 function openQr(url){window.open(url,'_blank','noopener');}function printQr(url,name,ref){const w=window.open('','_blank');w.document.write('<!doctype html><html lang="de"><head><title>FiiViu QR-Code</title><style>body{font-family:Arial;text-align:center;padding:40px}img{width:420px;max-width:90%}</style></head><body><h1>FiiViu</h1><h2>'+escapeHtml(name)+'</h2><p>Erlebnisse in Bukarest entdecken</p><img src="'+url+'"><p>Partner-Code: '+escapeHtml(ref)+'</p><script>window.onload=()=>window.print()<\\/script></body></html>');w.document.close();}
 async function loadPayoutDetails(ref){const balance=document.getElementById('payoutBalance'),history=document.getElementById('payoutHistory'),maxBtn=document.getElementById('maxPayout'),payoutBtn=document.getElementById('payout');if(!ref){balance.style.display='none';history.style.display='none';maxBtn.style.display='none';payoutBtn.disabled=true;selectedStats=null;return;}try{const [statsR,histR]=await Promise.all([fetch(WORKER+'/api/partner-stats?ref='+encodeURIComponent(ref),{headers:headers()}),fetch(WORKER+'/api/admin/partner-payout?ref='+encodeURIComponent(ref),{headers:headers()})]);const stats=await statsR.json();const hist=await histR.json();if(!statsR.ok)throw new Error(stats.error||'Provisionsdaten konnten nicht geladen werden.');if(!histR.ok)throw new Error(hist.error||'Auszahlungshistorie konnte nicht geladen werden.');selectedStats=stats;document.getElementById('payoutRevenue').textContent=euro(stats.revenue);document.getElementById('payoutPaid').textContent=euro(stats.paidCommission);document.getElementById('payoutOpen').textContent=euro(stats.openCommission);balance.style.display='grid';maxBtn.style.display=stats.openCommission>0?'inline-block':'none';payoutBtn.disabled=stats.openCommission<=0;document.getElementById('amount').max=Math.max(0,stats.openCommission).toFixed(2);const rows=hist.payouts||[];history.style.display='block';history.innerHTML='<h3>Auszahlungshistorie</h3>'+(rows.length?'<table><thead><tr><th>Datum</th><th>Betrag</th><th>Referenz</th><th>Status</th></tr></thead><tbody>'+rows.map(p=>`<tr><td>${escapeHtml(new Date(p.payout_date+'T12:00:00').toLocaleDateString('de-DE'))}</td><td>${euro(p.amount)}</td><td>${escapeHtml(p.reference||'–')}</td><td>${escapeHtml(p.status)}</td></tr>`).join('')+'</tbody></table>':'<div class="muted">Noch keine Auszahlungen erfasst.</div>');}catch(e){selectedStats=null;balance.style.display='none';history.style.display='none';payoutBtn.disabled=true;show('payoutResult',e.message);}}
+
+function ccStatus(id,ok,label){const el=document.getElementById(id);el.textContent=ok?'● OK':'● Problem';el.className='status '+(ok?'active':'inactive');}
+async function loadControlCenter(){
+  show('ccResult','Lade Kontrollzentrum…',true);
+  try{
+    const r=await fetch(WORKER+'/api/admin/control-center',{headers:headers()});
+    const data=await r.json();
+    if(!r.ok && !data.today) throw new Error(data.error||'Kontrollzentrum konnte nicht geladen werden.');
+    const t=data.today||{},s=data.system||{};
+    document.getElementById('ccBookings').textContent=Number(t.bookings||0).toLocaleString('de-DE');
+    document.getElementById('ccRevenue').textContent=euro(Number(t.revenueCents||0)/100);
+    document.getElementById('ccPayouts').textContent=euro(Number(t.openPayoutsCents||0)/100);
+    document.getElementById('ccCancellations').textContent=Number(t.cancellations||0).toLocaleString('de-DE');
+    document.getElementById('ccFailedPayments').textContent=Number(t.failedPayments||0).toLocaleString('de-DE');
+    document.getElementById('ccFailedEmails').textContent=Number(t.failedEmails||0).toLocaleString('de-DE');
+    document.getElementById('ccNewProviders').textContent=Number(t.newProviders||0).toLocaleString('de-DE');
+    document.getElementById('ccProviderProblems').textContent=Number(t.providersWithProblems||0).toLocaleString('de-DE');
+    ccStatus('ccStripe',s.stripe,'Stripe');ccStatus('ccEmail',s.email,'E-Mail');ccStatus('ccD1',s.d1,'D1');ccStatus('ccWorker',s.worker,'Worker');
+    const events=[];
+    if(s.lastSuccessfulBooking) events.push('Letzte erfolgreiche Buchung: '+s.lastSuccessfulBooking.id+' · '+s.lastSuccessfulBooking.experience+' · '+new Date(s.lastSuccessfulBooking.at).toLocaleString('de-DE'));
+    if(s.lastWebhook) events.push('Letzter Webhook: '+s.lastWebhook.event+' · '+new Date(s.lastWebhook.at).toLocaleString('de-DE')+(s.lastWebhook.success?'':' · Fehler'));
+    if(s.lastPayout) events.push('Letzte Auszahlung: '+s.lastPayout.bookingId+' · '+euro(Number(s.lastPayout.amountCents||0)/100)+' · '+new Date(s.lastPayout.at).toLocaleString('de-DE'));
+    document.getElementById('ccLastEvents').innerHTML=events.length?events.map(escapeHtml).join('<br>'):'Noch keine Ereignisse erfasst.';
+    const problems=data.providerProblems||[];
+    document.getElementById('ccProviderProblemsList').innerHTML=problems.length?problems.map(p=>'<div class="result error" style="margin:8px 0"><b>'+escapeHtml(p.name)+' ('+escapeHtml(p.providerRef)+')</b><br>'+escapeHtml(p.issues.join(' · '))+'</div>').join(''):'Keine aktuellen Provider-Probleme erkannt.';
+    document.getElementById('ccResult').className='result ok';document.getElementById('ccResult').textContent='Kontrollzentrum aktualisiert: '+new Date(data.generatedAt||Date.now()).toLocaleString('de-DE');
+  }catch(e){show('ccResult',e.message||'Fehler beim Laden des Kontrollzentrums.');}
+}
+document.getElementById('loadControlCenter').onclick=loadControlCenter;
+
 document.getElementById('payoutPartner').onchange=async e=>{document.getElementById('payoutResult').textContent='';await loadPayoutDetails(e.target.value);};document.getElementById('maxPayout').onclick=()=>{if(selectedStats)document.getElementById('amount').value=Math.max(0,selectedStats.openCommission).toFixed(2);};
 document.getElementById('create').onclick=async()=>{const body={name:document.getElementById('name').value.trim(),type:document.getElementById('type').value,contactName:document.getElementById('contactName').value.trim(),contactEmail:document.getElementById('contactEmail').value.trim(),partnerRef:document.getElementById('partnerRef').value.trim()};if(!body.name){show('createResult','Bitte einen Hotel-/Apartment-Namen eingeben.');return;}try{const r=await fetch(WORKER+'/api/admin/partners',{method:'POST',headers:headers(),body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Partner konnte nicht angelegt werden.');show('createResult','Partner angelegt.\nCode: '+data.partner.partnerRef+'\nLink: '+data.partner.link,true);['name','partnerRef','contactName','contactEmail'].forEach(id=>document.getElementById(id).value='');await loadPartners();}catch(e){show('createResult',e.message);}};
 
