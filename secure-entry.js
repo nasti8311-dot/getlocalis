@@ -32,6 +32,10 @@ function applyApiSecurityHeaders(response, request, env, restrictCors = false) {
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
   headers.set("Cache-Control", "no-store");
+  const requestPath = new URL(request.url).pathname;
+  if (requestPath === "/provider.html" || requestPath === "/organizer-admin.html") {
+    headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  }
   if (restrictCors) {
     const cors = getAdminCors(request, env);
     headers.delete("Access-Control-Allow-Origin");
