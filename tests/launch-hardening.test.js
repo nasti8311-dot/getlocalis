@@ -233,7 +233,7 @@ test("marketplace checkout recalculates price and owns booking identity", () => 
 test("paid booking finalization is idempotent and email-send guarded", () => {
   const source = read("worker-entry.js");
   const start = source.indexOf("async function finalizePaidBooking");
-  const end = source.indexOf("async function sendResendConfirmation", start);
+  const end = source.indexOf("async function sendProviderBookingNotification", start);
   const block = source.slice(start, end);
   assert.match(block, /ON CONFLICT\(payment_intent_id\) DO UPDATE/);
   assert.match(block, /confirmation_email_sent_at/);
@@ -771,7 +771,7 @@ test("personal booking view is backed by a token-bound read endpoint", () => {
 test("confirmation email routing prefers EmailJS and keeps Resend as fallback", () => {
   const source = read("worker-entry.js");
   const start = source.indexOf("async function sendConfirmationWithRetry");
-  const end = source.indexOf("async function sendProviderBookingNotification", start);
+  const end = source.indexOf("async function sendResendConfirmation", start);
   const block = source.slice(start, end);
   assert.ok(start >= 0 && end > start);
   assert.match(block, /EMAILJS_PRIVATE_KEY/);
