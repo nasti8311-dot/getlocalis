@@ -199,15 +199,19 @@ test("Stripe webhook rejects mode mismatch before ledger writes", () => {
 
 
 
-test("legacy payment endpoint is disabled in the worker entrypoint", () => {
+test("marketplace PaymentIntent creation stays in the authenticated worker path", () => {
   const source = read("worker-entry.js");
-  const start = source.indexOf('if (url.pathname === "/api/create-payment-intent")');
+  const start = source.indexOf('if (request.method === "POST" && url.pathname === "/api/create-payment-intent")');
   const end = source.indexOf('const response = await legacyWorker.fetch(request, env, ctx);', start);
   const block = source.slice(start, end);
-  assert.match(block, /Legacy payment endpoint disabled/);
-  assert.match(block, /}, 410\);/);
-  assert.doesNotMatch(block, /v1\/payment_intents/);
-  assert.doesNotMatch(block, /metadata\[fiiviu_checkout\]/);
+  assert.ok(block.includes("https://api.stripe.com/v1/payment_intents"));
+  for (const field of [
+    "fiiviu_checkout","booking_id","experience_id","guests","offer_id",
+    "customer_email","booking_date","booking_time","provider_connect_account_id"
+  ]) {
+    assert.ok(block.includes('metadata[' + field + ']'), field + " metadata missing");
+  }
+  assert.ok(block.includes("automatic_payment_methods[enabled]"));
 });
 
 test("marketplace entrypoint stays wired to the current worker implementation", () => {
