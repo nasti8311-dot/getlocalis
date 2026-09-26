@@ -15,6 +15,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/booking") return handleBookingAccess(request, env);
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
 
     // Admin UI is served from Pages and calls this Worker cross-origin.
@@ -365,6 +366,55 @@ async function handleAdminResendConfirmation(request, env) {
       { error: error?.message || "Confirmation email resend failed." },
       500
     );
+  }
+}
+
+async function handleBookingAccess(request, env) {
+  if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+
+  if (!env.DB) return json({ error: "Booking service is not configured." }, 500);
+
+  try {
+    const url = new URL(request.url);
+    const bookingId = String(url.searchParams.get("id") || "").trim();
+    const token = String(url.searchParams.get("token") || "").trim();
+
+    if (!bookingId || !token || token.length < 32) {
+      return json({ error: "Invalid booking access." }, 403);
+    }
+
+    await ensureBookingColumns(env);
+
+    const booking = await env.DB.prepare(`
+      SELECT
+        booking_id,
+        customer_language,
+        experience_name,
+        booking_date,
+        booking_time,
+        guests,
+        meeting_point_name,
+        meeting_address,
+        meeting_city,
+        meeting_country,
+        meeting_instructions,
+        arrival_minutes_before,
+        meeting_latitude,
+        meeting_longitude,
+        status
+      FROM bookings
+      WHERE booking_id=? AND booking_access_token=?
+      LIMIT 1
+    `).bind(bookingId, token).first();
+
+    if (!booking) {
+      return json({ error: "Booking not found." }, 404);
+    }
+
+    return json({ success: true, booking }, 200, { "Cache-Control": "no-store" });
+  } catch (error) {
+    console.error("FiiViu booking access failed", error);
+    return json({ error: error?.message || "Booking could not be loaded." }, 500);
   }
 }
 
