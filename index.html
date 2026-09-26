@@ -21,9 +21,6 @@
     <script src="https://npmcdn.com/flatpickr/dist/l10n/de.js"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/ro.js"></script>
 
-    <!-- EmailJS -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-
     <!-- Stripe -->
     <script src="https://js.stripe.com/v3/"></script>
 
@@ -1561,17 +1558,6 @@ function capturePartnerRef() {
     const params = new URLSearchParams(window.location.search);
     currentPartnerRef = params.get("ref")?.trim().toUpperCase() || "";
 }
-
-/* ============================================================
-   EMAILJS
-============================================================ */
-
-try {
-    emailjs.init("Q_tJ6LhJkeMcVE0U4");
-} catch (error) {
-    console.warn("EmailJS konnte nicht initialisiert werden.", error);
-}
-
 
 /* ============================================================
    STRIPE
@@ -3529,12 +3515,7 @@ async function createPaymentIntent({
 
     const partnerRef =
     currentPartnerRef ||
-    localStorage.getItem(
-        "fiiviu_partner_ref"
-    ) ||
-    new URLSearchParams(
-        window.location.search
-    ).get("ref")?.trim() ||
+    new URLSearchParams(window.location.search).get("ref")?.trim() ||
     "";
 
 const response =
