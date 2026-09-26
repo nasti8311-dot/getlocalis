@@ -788,7 +788,7 @@ test("provider test booking is session-protected before any booking write", () =
   const block = source.slice(start, end);
   assert.ok(start >= 0 && end > start);
   assert.match(block, /providerRefFromSession\(request, env\)/);
-  const auth = block.indexOf("if (!providerRef) return json({ error: "Unauthorized provider credentials" }, 401);");
+  const auth = block.indexOf('if (!providerRef) return json({ error: "Unauthorized provider credentials" }, 401);');
   const insert = block.indexOf("INSERT INTO bookings");
   assert.ok(auth >= 0 && insert > auth);
 });
