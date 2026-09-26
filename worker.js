@@ -62,11 +62,16 @@ export default {
     let updated = 0;
     for (const row of (rows.results || [])) {
       const translated = await translateOfferFields(row, { force: true });
-      const missing = !String(row.title_en || "").trim() || !String(row.title_ro || "").trim() ||
-        !String(row.description_en || "").trim() || !String(row.description_ro || "").trim() ||
-        !String(row.meeting_point_name_en || "").trim() || !String(row.meeting_point_name_ro || "").trim() ||
-        !String(row.meeting_instructions_en || "").trim() || !String(row.meeting_instructions_ro || "").trim();
-      if (!missing) continue;
+      const stale = (localized, source) => {
+      const value = String(localized || "").trim();
+      const original = String(source || "").trim();
+      return !value || (original && value.toLowerCase() === original.toLowerCase());
+    };
+    const needsRefresh = stale(row.title_en, row.title) || stale(row.title_ro, row.title) ||
+      stale(row.description_en, row.description) || stale(row.description_ro, row.description) ||
+      stale(row.meeting_point_name_en, row.meeting_point_name) || stale(row.meeting_point_name_ro, row.meeting_point_name) ||
+      stale(row.meeting_instructions_en, row.meeting_instructions) || stale(row.meeting_instructions_ro, row.meeting_instructions);
+    if (!needsRefresh) continue;
       await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
         .bind(translated.titleEn, translated.titleRo, translated.descriptionEn, translated.descriptionRo, translated.meetingPointNameEn, translated.meetingPointNameRo, translated.meetingInstructionsEn, translated.meetingInstructionsRo, row.id).run();
       updated++;
@@ -158,7 +163,7 @@ if (url.pathname === "/api/offers") {
           const priceCents=Number(body.priceCents);
           if(!providerRef||!title)return json({error:"Veranstalter und Titel sind erforderlich."},400,corsHeaders);
           if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis."},400,corsHeaders);
-          const translated = body.autoTranslate === true ? await translateOfferFields(body) : null;
+          const translated = body.autoTranslate === false ? null : await translateOfferFields(body);
           if (translated) Object.assign(body, translated);
           const provider=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
           if(!provider)return json({error:"Aktiver Veranstalter nicht gefunden."},404,corsHeaders);
@@ -200,7 +205,7 @@ if (url.pathname === "/api/offers") {
           const priceCents=Number.isFinite(parsedPriceCents) ? Math.round(parsedPriceCents) : Number(current.price_cents);
           const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
           if(!providerRef)return json({error:"Veranstalter fehlt."},400,corsHeaders); if(!title)return json({error:"Titel fehlt."},400,corsHeaders); if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis: "+String(body.priceCents)},400,corsHeaders);
-          const translated = body.autoTranslate === true ? await translateOfferFields(body) : null;
+          const translated = body.autoTranslate === false ? null : await translateOfferFields(body);
           if (translated) Object.assign(body, translated);
           await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,title_en=?,title_ro=?,description=?,description_en=?,description_ro=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,meeting_instructions_en=?,meeting_instructions_ro=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.titleEn ?? current.title_en ?? "").trim()||null,String(body.titleRo ?? current.title_ro ?? "").trim()||null,String(body.description ?? current.description ?? "").trim()||null,String(body.descriptionEn ?? current.description_en ?? "").trim()||null,String(body.descriptionRo ?? current.description_ro ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingPointNameEn ?? current.meeting_point_name_en ?? "").trim()||null,String(body.meetingPointNameRo ?? current.meeting_point_name_ro ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,String(body.meetingInstructionsEn ?? current.meeting_instructions_en ?? "").trim()||null,String(body.meetingInstructionsRo ?? current.meeting_instructions_ro ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",String(body.imageUrl ?? current.image_url ?? "").trim()||null,String(body.galleryUrls ?? current.gallery_urls ?? "").trim()||null,active?1:0,id).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first();
@@ -449,16 +454,21 @@ async function translateOfferFields(source, options = {}) {
   const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
   const meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
 
-  // If the admin/provider already supplied EN/RO text, use it directly.
-  // Translation is only a fallback for fields that are still empty.
-  let titleEn = force ? "" : String(source.titleEn || source.title_en || "").trim();
-  let titleRo = force ? "" : String(source.titleRo || source.title_ro || "").trim();
-  let descriptionEn = force ? "" : String(source.descriptionEn || source.description_en || "").trim();
-  let descriptionRo = force ? "" : String(source.descriptionRo || source.description_ro || "").trim();
-  let pointEn = force ? "" : String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
-  let pointRo = force ? "" : String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
-  let instructionsEn = force ? "" : String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
-  let instructionsRo = force ? "" : String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
+  // Keep real provider-supplied translations, but treat a localized value
+  // identical to the source text as stale and translate it again.
+  const keepTranslation = (value, original) => {
+    const localized = String(value || "").trim();
+    const sourceText = String(original || "").trim();
+    return localized && localized.toLowerCase() !== sourceText.toLowerCase() ? localized : "";
+  };
+  let titleEn = force ? "" : keepTranslation(source.titleEn || source.title_en, title);
+  let titleRo = force ? "" : keepTranslation(source.titleRo || source.title_ro, title);
+  let descriptionEn = force ? "" : keepTranslation(source.descriptionEn || source.description_en, description);
+  let descriptionRo = force ? "" : keepTranslation(source.descriptionRo || source.description_ro, description);
+  let pointEn = force ? "" : keepTranslation(source.meetingPointNameEn || source.meeting_point_name_en, meetingPointName);
+  let pointRo = force ? "" : keepTranslation(source.meetingPointNameRo || source.meeting_point_name_ro, meetingPointName);
+  let instructionsEn = force ? "" : keepTranslation(source.meetingInstructionsEn || source.meeting_instructions_en, meetingInstructions);
+  let instructionsRo = force ? "" : keepTranslation(source.meetingInstructionsRo || source.meeting_instructions_ro, meetingInstructions);
 
   const jobs = [];
   if (title && !titleEn) jobs.push(translateOfferText(title, "en").then(v => { titleEn = v; }));
