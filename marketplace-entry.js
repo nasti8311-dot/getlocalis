@@ -90,18 +90,46 @@ async function handlePublicOffers(request,env){
     const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
     const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.description,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
-    const providerExperiences=(experiences.results||[]).map(x=>({
-      id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
-      title:x.title,title_en:"",title_ro:"",description:x.description||"",description_en:"",description_ro:"",
-      price_cents:x.price_cents,currency:x.currency||"eur",available_times:x.available_times||"",
-      meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:"",meeting_point_name_ro:"",
-      meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
-      meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:"",meeting_instructions_ro:"",
-      arrival_minutes_before:x.arrival_minutes_before,category:x.category||"explore",image_url:x.image_url||"",
-      gallery_urls:x.gallery_urls||"",active:1,source:"experience"
+    const providerExperiences=await Promise.all((experiences.results||[]).map(async x=>{
+      const [titleEn,titleRo,descriptionEn,descriptionRo,pointEn,pointRo,instructionsEn,instructionsRo]=await Promise.all([
+        translatePublicText(x.title,"en"),translatePublicText(x.title,"ro"),
+        translatePublicText(x.description,"en"),translatePublicText(x.description,"ro"),
+        translatePublicText(x.meeting_point_name,"en"),translatePublicText(x.meeting_point_name,"ro"),
+        translatePublicText(x.meeting_instructions,"en"),translatePublicText(x.meeting_instructions,"ro")
+      ]);
+      return {
+        id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
+        title:x.title,title_en:titleEn,title_ro:titleRo,description:x.description||"",description_en:descriptionEn,description_ro:descriptionRo,
+        price_cents:x.price_cents,currency:x.currency||"eur",available_times:x.available_times||"",
+        meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:pointEn,meeting_point_name_ro:pointRo,
+        meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
+        meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:instructionsEn,meeting_instructions_ro:instructionsRo,
+        arrival_minutes_before:x.arrival_minutes_before,category:x.category||"explore",image_url:x.image_url||"",
+        gallery_urls:x.gallery_urls||"",active:1,source:"experience"
+      };
     }));
     return json({offers:[...legacyOffers,...providerExperiences]});
   }catch(error){return json({offers:[],error:error?.message||"Catalog failed"});}
+}
+
+async function translatePublicText(value,target){
+  const source=String(value||"").trim();
+  if(!source)return "";
+  const common={
+    ro:{"spannende Stadtführung":"tur captivant al orașului","Lasst euch überraschen!":"Lăsați-vă surprinși!","Eingang McDonalds":"Intrarea McDonald's","Bitte pünktlich":"Vă rugăm să fiți punctuali"},
+    en:{"spannende Stadtführung":"exciting city tour","Lasst euch überraschen!":"Let yourself be surprised!","Eingang McDonalds":"McDonald's entrance","Bitte pünktlich":"Please be punctual"}
+  };
+  if(common[target]?.[source])return common[target][source];
+  try{
+    const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl="+encodeURIComponent(target)+"&dt=t&q="+encodeURIComponent(source);
+    const response=await fetch(url,{headers:{"Accept":"application/json"},cf:{cacheTtl:0,cacheEverything:false}});
+    if(response.ok){
+      const data=await response.json();
+      const translated=Array.isArray(data?.[0])?data[0].map(part=>Array.isArray(part)?String(part[0]||""):"").join("").trim():"";
+      if(translated&&translated!==source)return translated;
+    }
+  }catch(_){}
+  return "";
 }
 
 async function createMarketplacePaymentIntent(request,env,ctx){
