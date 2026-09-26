@@ -134,6 +134,17 @@ test("cancellation policy enforces the 24-hour boundary", () => {
 });
 
 
+test("legacy partner token endpoint is disabled", () => {
+  const source = read("worker.js");
+  const start = source.indexOf('if (url.pathname === "/api/admin/partner-token")');
+  const end = source.indexOf('if (url.pathname === "/api/admin/partners")', start);
+  const block = source.slice(start, end);
+  assert.match(block, /Legacy partner token endpoint disabled/);
+  assert.ok(block.includes("},410,corsHeaders);"));
+  assert.doesNotMatch(block, /generatePartnerToken\\(\\)/);
+  assert.doesNotMatch(block, /INSERT INTO partner_auth_tokens/);
+});
+
 test("legacy manual payout path is disabled", () => {
   const source = read("worker-entry.js");
   assert.match(source, /Manual .*Auszahlungen sind deaktiviert/);
