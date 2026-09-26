@@ -870,6 +870,16 @@
                         <div id="detail-instructions-row" class="hidden"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-1" data-i18n="instructions">Anweisungen</div><div id="detail-instructions" class="text-gray-700 leading-6 whitespace-pre-line"></div></div>
                     </div>
 
+                    <div class="bg-white rounded-2xl border border-black/5 shadow-sm p-5">
+                        <h3 class="text-xl font-black mb-4" data-i18n="trust_title">Gut zu wissen</h3>
+                        <div id="detail-trust-grid" class="grid sm:grid-cols-2 gap-3"></div>
+                        <div class="mt-5 pt-5 border-t border-black/5 space-y-3 text-sm text-gray-600">
+                            <div class="flex items-start gap-3"><i class="fa-solid fa-shield-halved text-fii-orange mt-0.5"></i><span data-i18n="trust_stripe">Sichere Zahlung über Stripe.</span></div>
+                            <div class="flex items-start gap-3"><i class="fa-solid fa-ticket text-fii-orange mt-0.5"></i><span data-i18n="trust_after_booking">Nach erfolgreicher Zahlung erhältst du deine Buchungsbestätigung per E-Mail mit den Buchungs- und Treffpunktdetails.</span></div>
+                            <div class="flex items-start gap-3"><i class="fa-solid fa-rotate-left text-fii-orange mt-0.5"></i><span data-i18n="trust_cancellation">Für dieses Erlebnis gelten die vor der Zahlung angezeigten Storno- und Rückerstattungsbedingungen.</span></div>
+                        </div>
+                    </div>
+
                     <div>
 
                         <h3 class="text-xl font-black mb-4"
@@ -2167,6 +2177,10 @@ const translations = {
         estimated_total: "Gesamt",
         book_now: "Jetzt buchen",
         secure_booking: "Sichere Buchungsanfrage",
+        trust_title: "Gut zu wissen",
+        trust_stripe: "Sichere Zahlung über Stripe.",
+        trust_after_booking: "Nach erfolgreicher Zahlung erhältst du deine Buchungsbestätigung per E-Mail mit den Buchungs- und Treffpunktdetails.",
+        trust_cancellation: "Für dieses Erlebnis gelten die vor der Zahlung angezeigten Storno- und Rückerstattungsbedingungen.",
 
         checkout_label: "Fast da",
         checkout_title: "Deinen Moment buchen",
@@ -2375,6 +2389,10 @@ const translations = {
         estimated_total: "Total",
         book_now: "Rezervă acum",
         secure_booking: "Rezervare sigură",
+        trust_title: "Bine de știut",
+        trust_stripe: "Plată sigură prin Stripe.",
+        trust_after_booking: "După plata cu succes, primești confirmarea rezervării prin email, cu detaliile rezervării și ale locului de întâlnire.",
+        trust_cancellation: "Pentru această experiență se aplică condițiile de anulare și rambursare afișate înainte de plată.",
 
         checkout_label: "Aproape gata",
         checkout_title: "Rezervă momentul",
@@ -2483,7 +2501,11 @@ function mapPublicOffer(offer) {
         badge: categoryBadges[categoryKey],
         title: { de: title, en: String(offer.title_en || "").trim() || title, ro: String(offer.title_ro || "").trim() || title },
         price: Number(offer.price_cents || 0) / 100,
-        duration: { de: "Erlebnis", en: "Experience", ro: "Experiență" },
+        duration: {
+            de: String(offer.duration || offer.duration_de || "").trim() || "",
+            en: String(offer.duration_en || offer.duration || "").trim() || "",
+            ro: String(offer.duration_ro || offer.duration || "").trim() || ""
+        },
         availableTimes: normalizeOfferTimes(offer.available_times),
         img: image,
         images,
@@ -2494,6 +2516,11 @@ function mapPublicOffer(offer) {
         meetingCountry: String(offer.meeting_country || "").trim(),
         meetingInstructions: { de: String(offer.meeting_instructions || "").trim(), en: String(offer.meeting_instructions_en || "").trim() || String(offer.meeting_instructions || "").trim(), ro: String(offer.meeting_instructions_ro || "").trim() || String(offer.meeting_instructions || "").trim() },
         arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
+        languages: Array.isArray(offer.languages)
+            ? offer.languages.map(String).map(v => v.trim()).filter(Boolean)
+            : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
+        minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
+        maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
@@ -2947,8 +2974,9 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
         detailProviderEl.classList.toggle("hidden", !detailProviderName);
     }
 
+    const localizedDuration = item.duration && (item.duration[currentLang] || item.duration.de) || "";
     document.getElementById("detail-duration").innerText =
-        item.duration[currentLang] || item.duration.de;
+        localizedDuration || (currentLang === "ro" ? "Durată la cerere" : currentLang === "en" ? "Duration on request" : "Dauer auf Anfrage");
 
     document.getElementById("detail-price").innerText =
         formatPrice(item.price);
@@ -2998,6 +3026,8 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
     document.getElementById("detail-arrival-before").innerText = arrival !== null && arrival >= 0 ? String(arrival) + " " + (translations[currentLang].minutes_before || "minutes before start") : "";
     document.getElementById("detail-instructions").innerText = instructions;
     logistics.classList.toggle("hidden", !fullMeetingPoint && !(arrival !== null && arrival >= 0) && !instructions);
+
+    renderDetailTrustInfo(item);
 
     renderDetailGallery(item);
 
@@ -3099,6 +3129,51 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
 }
 
+
+/* ============================================================
+   CUSTOMER TRUST DETAILS
+============================================================ */
+
+function renderDetailTrustInfo(item) {
+    const container = document.getElementById("detail-trust-grid");
+    if (!container) return;
+
+    const labels = {
+        de: { provider: "Veranstalter", meeting: "Treffpunkt", duration: "Dauer", guests: "Teilnehmer", language: "Sprache" },
+        en: { provider: "Provider", meeting: "Meeting point", duration: "Duration", guests: "Participants", language: "Language" },
+        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", duration: "Durată", guests: "Participanți", language: "Limbă" }
+    };
+
+    const l = labels[currentLang] || labels.de;
+    const rows = [];
+    const provider = String(item.providerName || "").trim();
+    const meeting = [item.meetingPoint?.[currentLang] || item.meetingPoint?.de, item.meetingAddress, item.meetingCity].filter(Boolean).join(", ");
+    const duration = String(item.duration?.[currentLang] || item.duration?.de || "").trim();
+
+    if (provider) rows.push(["fa-user-tie", l.provider, provider]);
+    if (meeting) rows.push(["fa-location-dot", l.meeting, meeting]);
+    if (duration) rows.push(["fa-clock", l.duration, duration]);
+
+    const minGuests = Number.isFinite(Number(item.minGuests)) ? Number(item.minGuests) : null;
+    const maxGuests = Number.isFinite(Number(item.maxGuests)) ? Number(item.maxGuests) : null;
+    if (minGuests !== null || maxGuests !== null) {
+        const value = minGuests !== null && maxGuests !== null
+            ? minGuests + "–" + maxGuests
+            : maxGuests !== null ? "1–" + maxGuests : String(minGuests);
+        rows.push(["fa-users", l.guests, value]);
+    }
+
+    const languages = Array.isArray(item.languages) ? item.languages.filter(Boolean) : [];
+    if (languages.length) rows.push(["fa-language", l.language, languages.join(", ")]);
+
+    container.innerHTML = rows.map(function(row) {
+        return '<div class="bg-[#F8F6F1] rounded-xl p-3 flex items-start gap-3">' +
+            '<i class="fa-solid ' + row[0] + ' text-fii-orange mt-0.5"></i>' +
+            '<div class="min-w-0"><div class="text-[11px] font-black uppercase tracking-wider text-gray-400">' +
+            escapeHtml(row[1]) + '</div><div class="text-sm font-semibold text-gray-800 mt-0.5">' +
+            escapeHtml(row[2]) + '</div></div></div>';
+    }).join("");
+}
 
 /* ============================================================
    GALLERY
