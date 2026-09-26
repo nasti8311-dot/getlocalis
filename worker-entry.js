@@ -387,7 +387,7 @@ async function handleAdminControlCenter(request, env) {
     ).all();
     const settlements = settlementRows.results || [];
     result.today.openPayoutsCents = settlements
-      .filter(s => s.settlement_status === "pending" && String(s.release_at || "") <= new Date().toISOString().replace("T"," ").replace("Z",""))
+      .filter(s => s.settlement_status === "pending")
       .reduce((sum,s) => sum + Number(s.provider_amount_cents || 0), 0);
 
     const problems = [];
@@ -440,7 +440,15 @@ async function handleAdminControlCenter(request, env) {
 
     result.system.d1 = true;
     result.system.email = Boolean(env.RESEND_API_KEY || env.EMAIL || env.EMAILJS_PRIVATE_KEY);
-    result.system.stripe = Boolean(env.STRIPE_SECRET_KEY);
+    if (env.STRIPE_SECRET_KEY) {
+      try {
+        const stripeHealth = await stripeGet(env, "/v1/balance");
+        result.system.stripe = Boolean(stripeHealth && stripeHealth.object === "balance");
+      } catch (error) {
+        console.error("FiiViu admin Stripe health check failed", error);
+        result.system.stripe = false;
+      }
+    }
     return json(result);
   } catch (error) {
     console.error("FiiViu admin control center failed", error);
