@@ -828,3 +828,16 @@ test("production smoke workflow guards wildcard CORS and protected boundaries", 
     "https://fiiviu.ro/api/stripe/webhook"
   ]) assert.ok(workflow.includes(marker), marker + " smoke check missing");
 });
+
+test("partner commission enforces the configured hold period", () => {
+  const source = read("worker.js");
+  const start = source.indexOf("async function getPartnerStats");
+  const end = source.indexOf("async function searchPartnerPayments", start);
+  const block = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(block, /const holdDays=getPartnerHoldDays\(env\)/);
+  assert.match(block, /const cutoff=Math\.floor\(Date\.now\(\)\/1000\)-\(holdDays\*86400\)/);
+  assert.match(block, /eventTimestamp<=cutoff/);
+  assert.match(block, /eventTimestamp\+holdDays\*86400/);
+  assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
+});
