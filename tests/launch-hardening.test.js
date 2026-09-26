@@ -738,3 +738,15 @@ test("provider test booking endpoint is routed through the authenticated worker"
     /url\.pathname === "\/api\/provider-test-booking" \|\| url\.pathname\.startsWith\("\/api\/provider\/"\)/
   );
 });
+
+
+test("personal booking view is backed by a token-bound read endpoint", () => {
+  const source = read("worker-entry.js");
+  const page = read("booking.html");
+  assert.match(source, /url\.pathname === "\/api\/booking"/);
+  assert.match(source, /WHERE booking_id=\? AND booking_access_token=\?/);
+  assert.match(source, /Invalid booking access/);
+  assert.match(source, /Booking not found/);
+  assert.match(page, /fetch\('\/api\/booking\?id=/);
+  assert.match(page, /token/);
+});
