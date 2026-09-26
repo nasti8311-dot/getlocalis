@@ -25,7 +25,8 @@ export default {
         url.pathname === "/api/admin/provider-payout" ||
         url.pathname === "/api/admin/resend-confirmation" ||
         url.pathname === "/api/admin/offers" ||
-        url.pathname === "/api/admin/translate-offers")
+        url.pathname === "/api/admin/translate-offers" ||
+        url.pathname === "/api/admin/control-center")
     ) {
       const origin = String(request.headers.get("Origin") || "").trim();
       const allowedOrigins = new Set([
@@ -52,6 +53,10 @@ export default {
 
     if (url.pathname === "/api/admin/providers") {
       return handleAdminProviders(request, env);
+    }
+
+    if (url.pathname === "/api/admin/control-center") {
+      return handleAdminControlCenter(request, env);
     }
 
     if (url.pathname === "/api/admin/provider-password") {
@@ -162,6 +167,18 @@ export default {
         env,
         ctx
       );
+
+      try {
+        const event = JSON.parse(body);
+        await recordSystemEvent(env, "stripe_webhook", event?.type || "unknown", {
+          event_id: event?.id || "",
+          livemode: event?.livemode === true,
+          received_at: new Date().toISOString(),
+          success: response.ok
+        });
+      } catch (error) {
+        console.error("FiiViu webhook audit log failed", error);
+      }
 
       if (response.ok) {
         try {
@@ -299,6 +316,137 @@ export default {
     return response;
   }
 };
+
+
+async function ensureSystemEventsTable(env) {
+  if (!env.DB) throw new Error("D1 database not configured.");
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS system_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_type TEXT NOT NULL,
+      event_name TEXT NOT NULL,
+      payload_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_system_events_type_created ON system_events(event_type, created_at)").run();
+}
+
+async function recordSystemEvent(env, eventType, eventName, payload = {}) {
+  try {
+    await ensureSystemEventsTable(env);
+    await env.DB.prepare(
+      "INSERT INTO system_events (event_type,event_name,payload_json) VALUES (?,?,?)"
+    ).bind(eventType, eventName, JSON.stringify(payload).slice(0, 12000)).run();
+  } catch (error) {
+    console.error("FiiViu system event logging failed", error);
+  }
+}
+
+async function handleAdminControlCenter(request, env) {
+  if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.DB) return json({ error: "D1 database not configured." }, 500);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const result = {
+    generatedAt: new Date().toISOString(),
+    today: { bookings: 0, revenueCents: 0, openPayoutsCents: 0, cancellations: 0, failedPayments: 0, failedEmails: 0, newProviders: 0, providersWithProblems: 0 },
+    system: { stripe: false, email: false, d1: false, worker: true, lastSuccessfulBooking: null, lastWebhook: null, lastPayout: null },
+    providerProblems: []
+  };
+
+  try {
+    await ensureBookingColumns(env);
+    await ensureProvidersTable(env);
+    await ensureBookingSettlementsTable(env);
+    await ensureSystemEventsTable(env);
+
+    const bookingRows = await env.DB.prepare(
+      "SELECT booking_id,status,payment_status,amount_cents,created_at,updated_at,confirmation_email_sent_at,confirmation_email_error,experience_name,provider_connect_account_id FROM bookings"
+    ).all();
+    const bookings = bookingRows.results || [];
+    const todayBookings = bookings.filter(b => String(b.created_at || "").slice(0,10) === today);
+    result.today.bookings = todayBookings.length;
+    result.today.revenueCents = todayBookings
+      .filter(b => b.payment_status === "paid" || b.status === "confirmed")
+      .reduce((sum,b) => sum + Number(b.amount_cents || 0), 0);
+    result.today.cancellations = todayBookings.filter(b => ["cancelled","refunded"].includes(String(b.status))).length;
+    result.today.failedPayments = todayBookings.filter(b => b.payment_status === "failed").length;
+    result.today.failedEmails = todayBookings.filter(b => Boolean(b.confirmation_email_error) && !b.confirmation_email_sent_at).length;
+
+    const providerRows = await env.DB.prepare(
+      "SELECT id,provider_ref,name,connect_account_id,contact_email,active,created_at FROM providers ORDER BY created_at DESC,id DESC"
+    ).all();
+    const providers = providerRows.results || [];
+    result.today.newProviders = providers.filter(p => String(p.created_at || "").slice(0,10) === today).length;
+
+    const settlementRows = await env.DB.prepare(
+      "SELECT booking_id,provider_ref,provider_name,provider_amount_cents,settlement_status,release_at,settlement_error,provider_transfer_id,updated_at FROM booking_settlements"
+    ).all();
+    const settlements = settlementRows.results || [];
+    result.today.openPayoutsCents = settlements
+      .filter(s => s.settlement_status === "pending" && String(s.release_at || "") <= new Date().toISOString().replace("T"," ").replace("Z",""))
+      .reduce((sum,s) => sum + Number(s.provider_amount_cents || 0), 0);
+
+    const problems = [];
+    for (const p of providers) {
+      const providerSettlements = settlements.filter(s => s.provider_ref === p.provider_ref || s.provider_name === p.name);
+      const pending = providerSettlements.filter(s => s.settlement_status === "pending").length;
+      const errors = providerSettlements.filter(s => Boolean(s.settlement_error)).length;
+      const missingConnect = !String(p.connect_account_id || "").trim();
+      const inactive = Number(p.active) !== 1;
+      const missingEmail = !String(p.contact_email || "").trim();
+      if (errors || missingConnect || inactive || missingEmail) {
+        problems.push({
+          providerRef: p.provider_ref,
+          name: p.name,
+          issues: [
+            ...(missingConnect ? ["Stripe Connect fehlt"] : []),
+            ...(missingEmail ? ["E-Mail fehlt"] : []),
+            ...(inactive ? ["inaktiv"] : []),
+            ...(errors ? [errors + " Settlement-Fehler"] : [])
+          ],
+          pendingSettlements: pending
+        });
+      }
+    }
+    result.providerProblems = problems;
+    result.today.providersWithProblems = problems.length;
+
+    const lastBooking = bookings
+      .filter(b => b.payment_status === "paid" || b.status === "confirmed")
+      .sort((a,b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))[0];
+    if (lastBooking) result.system.lastSuccessfulBooking = {
+      id: lastBooking.booking_id, experience: lastBooking.experience_name, at: lastBooking.created_at
+    };
+
+    const webhooks = await env.DB.prepare(
+      "SELECT event_name,created_at,payload_json FROM system_events WHERE event_type='stripe_webhook' ORDER BY id DESC LIMIT 1"
+    ).all();
+    const webhook = webhooks.results?.[0];
+    if (webhook) result.system.lastWebhook = {
+      event: webhook.event_name, at: webhook.created_at,
+      success: JSON.parse(webhook.payload_json || "{}").success !== false
+    };
+
+    const payout = settlements
+      .filter(s => s.provider_transfer_id || s.settlement_status === "paid" || s.settlement_status === "transferred")
+      .sort((a,b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))[0];
+    if (payout) result.system.lastPayout = {
+      bookingId: payout.booking_id, provider: payout.provider_name, amountCents: Number(payout.provider_amount_cents || 0), at: payout.updated_at
+    };
+
+    result.system.d1 = true;
+    result.system.email = Boolean(env.RESEND_API_KEY || env.EMAIL || env.EMAILJS_PRIVATE_KEY);
+    result.system.stripe = Boolean(env.STRIPE_SECRET_KEY);
+    return json(result);
+  } catch (error) {
+    console.error("FiiViu admin control center failed", error);
+    return json({ ...result, error: error?.message || "Kontrollzentrum konnte nicht geladen werden." }, 500);
+  }
+}
 
 async function handleAdminResendConfirmation(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) {
