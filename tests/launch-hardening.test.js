@@ -706,3 +706,13 @@ test("internal provider and organizer surfaces are marked noindex", () => {
   assert.match(source, /requestPath === "\/partner\.html"/);
   assert.match(source, /requestPath === "\/booking\.html"/);
 });
+
+test("retired partner token helpers and schema are no longer reachable", () => {
+  const source = read("worker.js");
+  assert.doesNotMatch(source, /generatePartnerToken/);
+  assert.doesNotMatch(source, /hashPartnerToken/);
+  assert.doesNotMatch(source, /ensurePartnerAuthTable/);
+  assert.doesNotMatch(source, /partner_auth_tokens/);
+  assert.match(source, /Legacy partner token endpoint disabled/);
+});
+

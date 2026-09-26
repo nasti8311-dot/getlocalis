@@ -538,22 +538,6 @@ async function ensurePartnersTable(env){
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Partners schema is incomplete: "+missing.join(", "));
 }
-async function ensurePartnerAuthTable(env){
-  const rows=await env.DB.prepare("PRAGMA table_info(partner_auth_tokens)").all();
-  const required=["partner_ref","token_hash","created_at","updated_at"];
-  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Partner auth schema is incomplete: "+missing.join(", "));
-}
-function generatePartnerToken(){
-  const bytes=new Uint8Array(32); crypto.getRandomValues(bytes);
-  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
-}
-async function hashPartnerToken(token){
-  const data=new TextEncoder().encode(String(token||""));
-  const digest=await crypto.subtle.digest("SHA-256",data);
-  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
-}
 async function ensurePartnerAccountsTable(env){
   const rows=await env.DB.prepare("PRAGMA table_info(partner_accounts)").all();
   const required=["partner_ref","email","password_salt","password_hash"];
