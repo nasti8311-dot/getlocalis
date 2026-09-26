@@ -780,3 +780,25 @@ test("confirmation email routing prefers EmailJS and keeps Resend as fallback", 
   assert.match(block, /sendResendConfirmation\(env, booking\)/);
   assert.match(block, /fallback/);
 });
+
+test("provider test booking is session-protected before any booking write", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function handleProviderTestBooking");
+  const end = source.indexOf("async function handleProviderLogout", start);
+  const block = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(block, /providerRefFromSession\(request, env\)/);
+  const auth = block.indexOf('if (!providerRef) return json({ error: "Unauthorized provider credentials" }, 401);');
+  const insert = block.indexOf("INSERT INTO bookings");
+  assert.ok(auth >= 0 && insert > auth);
+});
+
+test("admin provider password provisioning requires the admin bearer key", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function handleAdminProviderPassword");
+  const end = source.indexOf("async function handleAdminProviderPayout", start);
+  const block = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(block, /isAdminRequest\(request,env\)/);
+  assert.match(block, /request.method!==\"POST\"/);
+});

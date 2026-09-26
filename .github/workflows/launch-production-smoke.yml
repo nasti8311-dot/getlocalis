@@ -104,3 +104,26 @@ jobs:
           status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"guests":0}'             --output /tmp/payment-intent.json             --write-out '%{http_code}'             https://fiiviu.ro/api/create-payment-intent)"
           test "$status" = "400"
           node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/payment-intent.json","utf8")); if(!d.error) throw new Error("Malformed checkout payload was not rejected");'
+
+      - name: Check provider test booking rejects missing session
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"customerEmail":"smoke@example.com"}'             --output /tmp/provider-test-booking.json             --write-out '%{http_code}'             https://fiiviu.ro/api/provider-test-booking)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-test-booking.json","utf8")); if(!d.error) throw new Error("Provider test booking did not reject missing session");'
+
+      - name: Check provider Connect endpoints reject missing session
+        run: |
+          set -euo pipefail
+          for path in connect-status connect-onboarding; do
+            status="$(curl --silent --show-error --location --max-time 20               --request GET               --output "/tmp/provider-${path}.json"               --write-out '%{http_code}'               "https://fiiviu.ro/api/provider/${path}")"
+            test "$status" = "401"
+            node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(!d.error) throw new Error("Protected provider endpoint did not return an error");' "/tmp/provider-${path}.json"
+          done
+
+      - name: Check admin provider-password rejects missing key
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"providerRef":"INVALID","email":"smoke@example.com"}'             --output /tmp/provider-password.json             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/provider-password)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-password.json","utf8")); if(!d.error) throw new Error("Provider password admin endpoint did not reject missing credentials");'
