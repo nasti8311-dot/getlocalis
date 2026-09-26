@@ -204,14 +204,14 @@ test("marketplace PaymentIntent creation stays in the authenticated worker path"
   const start = source.indexOf('if (request.method === "POST" && url.pathname === "/api/create-payment-intent")');
   const end = source.indexOf('const response = await legacyWorker.fetch(request, env, ctx);', start);
   const block = source.slice(start, end);
-  assert.match(block, /https:\\/\\/api\\.stripe\\.com\\/v1\\/payment_intents/);
+  assert.ok(block.includes("https://api.stripe.com/v1/payment_intents"));
   for (const field of [
     "fiiviu_checkout","booking_id","experience_id","guests","offer_id",
     "customer_email","booking_date","booking_time","provider_connect_account_id"
   ]) {
-    assert.match(block, new RegExp('metadata\\\\[' + field + '\\\\]'));
+    assert.ok(block.includes('metadata[' + field + ']'), field + " metadata missing");
   }
-  assert.match(block, /automatic_payment_methods\\[enabled\\]/);
+  assert.ok(block.includes("automatic_payment_methods[enabled]"));
 });
 
 test("marketplace entrypoint stays wired to the current worker implementation", () => {
