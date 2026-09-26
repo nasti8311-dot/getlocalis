@@ -775,8 +775,8 @@ test("confirmation email routing prefers EmailJS and keeps Resend as fallback", 
   const block = source.slice(start, end);
   assert.ok(start >= 0 && end > start);
   assert.match(block, /EMAILJS_PRIVATE_KEY/);
-  assert.match(block, /sendEmailJsConfirmation\\(env, booking\\)/);
+  assert.match(block, /sendEmailJsConfirmation\(env, booking\)/);
   assert.match(block, /RESEND_API_KEY/);
-  assert.match(block, /sendResendConfirmation\\(env, booking\\)/);
+  assert.match(block, /sendResendConfirmation\(env, booking\)/);
   assert.match(block, /fallback/);
 });
