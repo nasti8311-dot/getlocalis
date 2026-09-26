@@ -24,6 +24,7 @@ jobs:
           grep -qi '^x-frame-options: DENY' /tmp/home.headers
           grep -qi '^x-content-type-options: nosniff' /tmp/home.headers
           grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/home.headers
+          grep -qi '^permissions-policy: camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)' /tmp/home.headers
 
       - name: Check first-party API CORS and no-store
         run: |
@@ -32,7 +33,103 @@ jobs:
           test "$status" = "401"
           grep -qi '^access-control-allow-origin: https://fiiviu.ro' /tmp/provider-session.headers
           grep -qi '^cache-control: no-store' /tmp/provider-session.headers
-          if grep -qi '^access-control-allow-origin: *' /tmp/provider-session.headers; then exit 1; fi
+          grep -qi '^vary: Origin' /tmp/provider-session.headers
+          if if grep -Eqi '^access-control-allow-origin:[[:space:]]*\*[[:space:]]*
+
+      - name: Check public catalog
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20             --header 'Accept: application/json'             --output /tmp/offers.json             https://fiiviu.ro/api/offers
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/offers.json","utf8")); if(!Array.isArray(d.offers)) throw new Error("Catalog response has no offers array");'
+
+      - name: Check protected provider session
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/provider-session.json             --write-out '%{http_code}'             https://fiiviu.ro/api/provider-session)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-session.json","utf8")); if(!d.error) throw new Error("Provider session endpoint did not return an error");'
+
+      - name: Check protected admin surface
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/admin-offers.json             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/offers)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/admin-offers.json","utf8")); if(!d.error) throw new Error("Admin endpoint did not return an error");'
+
+      - name: Check private booking view rejects missing token
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/booking-view.json             --write-out '%{http_code}'             'https://fiiviu.ro/api/booking?id=FV-INVALID')"
+          test "$status" = "403"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/booking-view.json","utf8")); if(d.error!=="Invalid booking access.") throw new Error("Booking endpoint did not fail closed on missing token");'
+
+      - name: Check cancellation rejects missing token
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"bookingId":"FV-INVALID"}'             --output /tmp/cancel.json             --write-out '%{http_code}'             https://fiiviu.ro/api/cancel-booking)"
+          test "$status" = "400" -o "$status" = "403"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/cancel.json","utf8")); if(!d.error) throw new Error("Cancellation endpoint did not reject missing credentials");'
+
+      - name: Check Stripe webhook rejects unsigned requests
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{}'             --output /tmp/webhook.json             --write-out '%{http_code}'             https://fiiviu.ro/api/stripe/webhook)"
+          test "$status" = "400"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/webhook.json","utf8")); if(!d.error) throw new Error("Stripe webhook accepted an unsigned request");'
+
+      - name: Check admin preflight is first-party restricted
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request OPTIONS             --header 'Origin: https://fiiviu.ro'             --header 'Access-Control-Request-Method: GET'             --output /tmp/admin-options.txt             --dump-header /tmp/admin-options.headers             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/offers)"
+          test "$status" = "204"
+          grep -qi '^access-control-allow-origin: https://fiiviu.ro' /tmp/admin-options.headers
+          grep -qi '^access-control-allow-methods: GET, POST, PATCH, DELETE, OPTIONS' /tmp/admin-options.headers
+          if grep -Eqi '^access-control-allow-origin:[[:space:]]*\*[[:space:]]*$' /tmp/admin-options.headers; then exit 1; fi
+
+      - name: Check admin settlement status rejects missing key
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --output /tmp/settlement-status.json             --write-out '%{http_code}'             'https://fiiviu.ro/api/admin/settlement-status?booking_id=FV-INVALID')"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/settlement-status.json","utf8")); if(!d.error) throw new Error("Settlement status endpoint did not reject missing credentials");'
+
+      - name: Check admin settlement run rejects missing key
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{}'             --output /tmp/settlement-run.json             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/settlement-run)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/settlement-run.json","utf8")); if(!d.error) throw new Error("Settlement run endpoint did not reject missing credentials");'
+
+      - name: Check checkout rejects malformed input before Stripe
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"guests":0}'             --output /tmp/payment-intent.json             --write-out '%{http_code}'             https://fiiviu.ro/api/create-payment-intent)"
+          test "$status" = "400"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/payment-intent.json","utf8")); if(!d.error) throw new Error("Malformed checkout payload was not rejected");'
+
+      - name: Check provider test booking rejects missing session
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"customerEmail":"smoke@example.com"}'             --output /tmp/provider-test-booking.json             --write-out '%{http_code}'             https://fiiviu.ro/api/provider-test-booking)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-test-booking.json","utf8")); if(!d.error) throw new Error("Provider test booking did not reject missing session");'
+
+      - name: Check provider Connect endpoints reject missing session
+        run: |
+          set -euo pipefail
+          for path in connect-status connect-onboarding; do
+            status="$(curl --silent --show-error --location --max-time 20               --request GET               --output "/tmp/provider-${path}.json"               --write-out '%{http_code}'               "https://fiiviu.ro/api/provider/${path}")"
+            test "$status" = "401"
+            node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(!d.error) throw new Error("Protected provider endpoint did not return an error");' "/tmp/provider-${path}.json"
+          done
+
+      - name: Check admin provider-password rejects missing key
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"providerRef":"INVALID","email":"smoke@example.com"}'             --output /tmp/provider-password.json             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/provider-password)"
+          test "$status" = "401"
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-password.json","utf8")); if(!d.error) throw new Error("Provider password admin endpoint did not reject missing credentials");'
+ /tmp/provider-session.headers; then exit 1; fi
 
       - name: Check public catalog
         run: |
