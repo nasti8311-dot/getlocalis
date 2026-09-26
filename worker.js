@@ -289,23 +289,7 @@ if (url.pathname === "/api/offers") {
     }
 
     if (url.pathname === "/api/admin/partner-token") {
-      if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
-      if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key not configured"},500,corsHeaders);
-      if(!isAdmin(request,env))return json({error:"Unauthorized"},401,corsHeaders);
-      try{
-        await ensurePartnersTable(env);
-        await ensurePartnerAuthTable(env);
-        const body=await request.json();
-        const partnerRef=String(body.partnerRef||"").trim().toUpperCase();
-        if(!partnerRef)return json({error:"Partner-Code fehlt"},400,corsHeaders);
-        const partner=await env.DB.prepare("SELECT partner_ref,active FROM partners WHERE partner_ref=? LIMIT 1").bind(partnerRef).first();
-        if(!partner)return json({error:"Partner nicht gefunden"},404,corsHeaders);
-        if(Number(partner.active)!==1)return json({error:"Dieser Partner ist deaktiviert."},400,corsHeaders);
-        const token=generatePartnerToken();
-        const tokenHash=await hashPartnerToken(token);
-        await env.DB.prepare("INSERT INTO partner_auth_tokens (partner_ref,token_hash,updated_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(partner_ref) DO UPDATE SET token_hash=excluded.token_hash,updated_at=CURRENT_TIMESTAMP").bind(partnerRef,tokenHash).run();
-        return json({success:true,partnerRef,dashboardUrl:"/partner.html?ref="+encodeURIComponent(partnerRef)+"#token="+token,token},200,corsHeaders);
-      }catch(error){return json({error:error?.message||"Server error"},500,corsHeaders)}
+      return json({error:"Legacy partner token endpoint disabled. Use cookie-based partner login."},410,corsHeaders);
     }
 
     if (url.pathname === "/api/admin/partners") {
