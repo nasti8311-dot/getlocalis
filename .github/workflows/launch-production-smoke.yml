@@ -36,7 +36,7 @@ jobs:
           grep -qi '^access-control-allow-origin: https://fiiviu.ro' /tmp/provider-session.headers
           grep -qi '^cache-control: no-store' /tmp/provider-session.headers
           grep -qi '^vary: Origin' /tmp/provider-session.headers
-          if grep -Eqi '^access-control-allow-origin:[[:space:]]*\*[[:space:]]*
+          if grep -Eqi '^access-control-allow-origin:[[:space:]]*\*[[:space:]]*$' /tmp/provider-session.headers; then exit 1; fi
       - name: Check public catalog
         run: |
           set -euo pipefail
@@ -130,5 +130,3 @@ jobs:
           status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"providerRef":"INVALID","email":"smoke@example.com"}'             --output /tmp/provider-password.json             --write-out '%{http_code}'             https://fiiviu.ro/api/admin/provider-password)"
           test "$status" = "401"
           node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-password.json","utf8")); if(!d.error) throw new Error("Provider password admin endpoint did not reject missing credentials");'
- /tmp/provider-session.headers; then exit 1; fi
-
