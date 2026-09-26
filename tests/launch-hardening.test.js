@@ -724,6 +724,17 @@ test("marketplace checkout revalidates that the experience provider is active", 
   assert.match(source, /body\.providerName=String\(bodyProviderName\|\|experience\.provider_name\|\|""\)/);
 });
 
+test("marketplace checkout validates and propagates active partner attribution", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /const submittedPartnerRef=String\(body\.partnerRef\|\|""\)\.trim\(\)\.toUpperCase\(\)/);
+  assert.match(source, /SELECT partner_ref FROM partners WHERE partner_ref=\? AND active=1 LIMIT 1/);
+  assert.match(source, /if\(!partner\)return json\(\{error:"Unknown partner referral"\},400\)/);
+  assert.match(source, /body\.partnerRef=partnerRef/);
+
+  const worker = read("worker-entry.js");
+  assert.match(worker, /params\.set\("metadata\[partner_ref\]",String\(data\.partnerRef\|\|"\"\)/);
+});
+
 
 test("internal provider and organizer surfaces are marked noindex", () => {
   const source = read("secure-entry.js");
