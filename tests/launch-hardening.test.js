@@ -140,7 +140,7 @@ test("legacy partner token endpoint is disabled", () => {
   const end = source.indexOf('if (url.pathname === "/api/admin/partners")', start);
   const block = source.slice(start, end);
   assert.match(block, /Legacy partner token endpoint disabled/);
-  assert.match(block, /},410,corsHeaders\\);/);
+  assert.ok(block.includes("},410,corsHeaders);"));
   assert.doesNotMatch(block, /generatePartnerToken\\(\\)/);
   assert.doesNotMatch(block, /INSERT INTO partner_auth_tokens/);
 });
