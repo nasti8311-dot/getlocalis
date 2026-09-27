@@ -2962,10 +2962,6 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
         detailProviderEl.classList.toggle("hidden", !detailProviderName);
     }
 
-    const localizedDuration = item.duration && (item.duration[currentLang] || item.duration.de) || "";
-    document.getElementById("detail-duration").innerText =
-        localizedDuration || (currentLang === "ro" ? "Durată la cerere" : currentLang === "en" ? "Duration on request" : "Dauer auf Anfrage");
-
     document.getElementById("detail-price").innerText =
         formatPrice(item.price);
 
