@@ -3086,6 +3086,36 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
    CUSTOMER TRUST DETAILS
 ============================================================ */
 
+function translateDetailMetadataValue(value, lang = currentLang) {
+    const source = getLocalizedOfferValue(value, "de");
+    if (!source) return "";
+    const languageMap = {
+        "Englisch": { en: "English", ro: "Engleză" },
+        "Deutsch": { en: "German", ro: "Germană" },
+        "Rumänisch": { en: "Romanian", ro: "Română" },
+        "Französisch": { en: "French", ro: "Franceză" },
+        "Spanisch": { en: "Spanish", ro: "Spaniolă" },
+        "Italienisch": { en: "Italian", ro: "Italiană" }
+    };
+    const mappedLanguage = languageMap[source];
+    if (mappedLanguage) return lang === "de" ? source : (mappedLanguage[lang] || source);
+
+    const durationMatch = source.match(/^(\\d+(?:[.,]\\d+)?)\\s*(Stunde|Stunden|Std\\.?|Minute|Minuten|Min\.?|Tag|Tage)$/i);
+    if (durationMatch) {
+        const amount = durationMatch[1];
+        const unit = durationMatch[2].toLowerCase();
+        if (lang === "en") {
+            const translatedUnit = unit.startsWith("stunde") || unit.startsWith("std") ? (Number(amount) === 1 ? "hour" : "hours") : unit.startsWith("minute") || unit.startsWith("min") ? (Number(amount) === 1 ? "minute" : "minutes") : (Number(amount) === 1 ? "day" : "days");
+            return amount + " " + translatedUnit;
+        }
+        if (lang === "ro") {
+            const translatedUnit = unit.startsWith("stunde") || unit.startsWith("std") ? "ore" : unit.startsWith("minute") || unit.startsWith("min") ? "minute" : "zile";
+            return amount + " " + translatedUnit;
+        }
+    }
+    return source;
+}
+
 function renderDetailTrustInfo(item) {
     const container = document.getElementById("detail-trust-grid");
     if (!container) return;
