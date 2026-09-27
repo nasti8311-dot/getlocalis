@@ -1,5 +1,5 @@
 import baseWorker from "./worker-entry.js";
-import partnerWorker from "./worker.js";
+import partnerWorker, { translateOfferFields, translationFieldsNeedRefresh } from "./worker.js";
 import { authenticateProviderSession } from "./provider-auth.js";
 
 const CORS={"Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization","Cache-Control":"no-store","Vary":"Origin"};
@@ -90,6 +90,26 @@ async function handlePublicOffers(request,env){
     const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
     const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.description,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
+    for (const offer of legacyOffers) {
+      if (!translationFieldsNeedRefresh(offer)) continue;
+      try {
+        const translated = await translateOfferFields(offer, { refreshStale: true });
+        await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+          .bind(translated.titleEn,translated.titleRo,translated.descriptionEn,translated.descriptionRo,translated.meetingPointNameEn,translated.meetingPointNameRo,translated.meetingInstructionsEn,translated.meetingInstructionsRo,offer.id).run();
+        Object.assign(offer, {
+          title_en: translated.titleEn,
+          title_ro: translated.titleRo,
+          description_en: translated.descriptionEn,
+          description_ro: translated.descriptionRo,
+          meeting_point_name_en: translated.meetingPointNameEn,
+          meeting_point_name_ro: translated.meetingPointNameRo,
+          meeting_instructions_en: translated.meetingInstructionsEn,
+          meeting_instructions_ro: translated.meetingInstructionsRo
+        });
+      } catch (error) {
+        console.error("FiiViu public offer translation failed", error);
+      }
+    }
     const providerExperiences=(experiences.results||[]).map(x=>({
       id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
       title:x.title,title_en:"",title_ro:"",description:x.description||"",description_en:"",description_ro:"",
