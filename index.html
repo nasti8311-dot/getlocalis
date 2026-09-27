@@ -837,20 +837,6 @@
 
                 <div class="lg:col-span-2 space-y-9">
 
-                    <div>
-
-                        <h3 class="text-xl font-black mb-3"
-                            data-i18n="about_experience">
-                            Über diesen Moment
-                        </h3>
-
-                        <p id="detail-description"
-                           class="text-gray-600 leading-7 whitespace-pre-line">
-                        </p>
-
-                    </div>
-
-
                     <div id="detail-logistics" class="hidden bg-[#F8F6F1] rounded-2xl p-5 border border-black/5 space-y-4">
                         <div id="detail-meeting-row" class="hidden"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-1" data-i18n="meeting_point">Treffpunkt</div><div id="detail-meeting-point" class="font-semibold text-gray-800 whitespace-pre-line"></div></div>
                         <div id="detail-arrival-row" class="hidden"><div class="text-xs font-black uppercase tracking-wider text-gray-400 mb-1" data-i18n="arrival_before">Vor Start</div><div id="detail-arrival-before" class="font-semibold text-gray-800"></div></div>
@@ -868,16 +854,8 @@
                     </div>
 
                     <div>
-
-                        <h3 class="text-xl font-black mb-4"
-                            data-i18n="highlights">
-                            Highlights
-                        </h3>
-
-                        <ul id="detail-highlights"
-                            class="grid sm:grid-cols-2 gap-3">
-                        </ul>
-
+                        <h3 class="text-xl font-black mb-3" data-i18n="about_experience">Über diesen Moment</h3>
+                        <p id="detail-description" class="text-gray-600 leading-7 whitespace-pre-line"></p>
                     </div>
 
                 </div>
@@ -3132,14 +3110,14 @@ function renderDetailTrustInfo(item) {
     const rows = [];
     const provider = String(item.providerName || "").trim();
     const meeting = [item.meetingPoint?.[currentLang] || item.meetingPoint?.de, item.meetingAddress, item.meetingCity].filter(Boolean).join(", ");
-    const duration = String(item.duration?.[currentLang] || item.duration?.de || "").trim();
+    const duration = String(item.duration?.[currentLang] || item.duration?.de || item.duration || "").trim();
     const guideLanguage = String(item.guideLanguage || "").trim();
 
-    if (provider) rows.push(["fa-user-tie", l.provider, provider]);
-    if (meeting) rows.push(["fa-location-dot", l.meeting, meeting]);
+    rows.push(["fa-user-tie", l.provider, provider || "—"]);
+    rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
     rows.push(["fa-rotate-left", l.cancellation, currentLang === "ro" ? "Poți anula cu până la 24 de ore înainte, cu rambursare integrală" : currentLang === "en" ? "Cancel up to 24 hours in advance for a full refund" : "Bis 24 Stunden vorher stornierbar, volle Rückerstattung"]);
-    if (guideLanguage) rows.push(["fa-person-chalkboard", l.guide, guideLanguage]);
-    if (duration) rows.push(["fa-clock", l.duration, duration]);
+    rows.push(["fa-clock", l.duration, duration || "—"]);
+    rows.push(["fa-person-chalkboard", l.guide, guideLanguage || "—"]);
 
     container.innerHTML = rows.map(function(row) {
         return '<div class="bg-[#F8F6F1] rounded-xl p-3 flex items-start gap-3">' +
