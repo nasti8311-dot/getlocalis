@@ -2947,31 +2947,6 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
         item.desc[currentLang] || item.desc.de;
 
 
-    const highlightContainer =
-        document.getElementById("detail-highlights");
-
-    highlightContainer.innerHTML = "";
-
-    const highlights =
-        item.highlights[currentLang] || item.highlights.de;
-
-    highlights.forEach(highlight => {
-
-        const li = document.createElement("li");
-
-        li.className =
-            "bg-[#F8F6F1] rounded-xl p-3 text-sm flex items-start gap-2";
-
-        li.innerHTML = `
-            <i class="fa-solid fa-circle-check text-fii-orange mt-0.5"></i>
-            <span>${escapeHtml(highlight)}</span>
-        `;
-
-        highlightContainer.appendChild(li);
-
-    });
-
-
     const logistics = document.getElementById("detail-logistics");
     const meetingRow = document.getElementById("detail-meeting-row");
     const arrivalRow = document.getElementById("detail-arrival-row");
