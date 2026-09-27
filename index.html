@@ -809,19 +809,6 @@
 
                     <div id="detail-provider" class="hidden text-sm text-gray-500 mt-2 font-semibold"></div>
 
-                    <div class="flex flex-wrap gap-5 text-sm text-gray-500 mt-4">
-
-                        <span class="flex items-center gap-2">
-                            <i class="fa-regular fa-clock text-fii-orange"></i>
-                            <span id="detail-duration"></span>
-                        </span>
-
-                        <span class="flex items-center gap-2">
-                            <i class="fa-solid fa-location-dot text-fii-orange"></i>
-                            București
-                        </span>
-
-                    </div>
 
                 </div>
 
@@ -2516,6 +2503,7 @@ function mapPublicOffer(offer) {
         meetingCountry: String(offer.meeting_country || "").trim(),
         meetingInstructions: { de: String(offer.meeting_instructions || "").trim(), en: String(offer.meeting_instructions_en || "").trim() || String(offer.meeting_instructions || "").trim(), ro: String(offer.meeting_instructions_ro || "").trim() || String(offer.meeting_instructions || "").trim() },
         arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
+        guideLanguage: String(offer.guide_language || "").trim(),
         languages: Array.isArray(offer.languages)
             ? offer.languages.map(String).map(v => v.trim()).filter(Boolean)
             : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
@@ -3139,9 +3127,9 @@ function renderDetailTrustInfo(item) {
     if (!container) return;
 
     const labels = {
-        de: { provider: "Veranstalter", meeting: "Treffpunkt", duration: "Dauer", guests: "Teilnehmer", language: "Sprache" },
-        en: { provider: "Provider", meeting: "Meeting point", duration: "Duration", guests: "Participants", language: "Language" },
-        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", duration: "Durată", guests: "Participanți", language: "Limbă" }
+        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", guide: "Live-Tourguide", duration: "Dauer" },
+        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", guide: "Live tour guide", duration: "Duration" },
+        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", guide: "Live-Tourguide", duration: "Durată" }
     };
 
     const l = labels[currentLang] || labels.de;
@@ -3149,22 +3137,13 @@ function renderDetailTrustInfo(item) {
     const provider = String(item.providerName || "").trim();
     const meeting = [item.meetingPoint?.[currentLang] || item.meetingPoint?.de, item.meetingAddress, item.meetingCity].filter(Boolean).join(", ");
     const duration = String(item.duration?.[currentLang] || item.duration?.de || "").trim();
+    const guideLanguage = String(item.guideLanguage || "").trim();
 
     if (provider) rows.push(["fa-user-tie", l.provider, provider]);
     if (meeting) rows.push(["fa-location-dot", l.meeting, meeting]);
+    rows.push(["fa-rotate-left", l.cancellation, currentLang === "ro" ? "Poți anula cu până la 24 de ore înainte, cu rambursare integrală" : currentLang === "en" ? "Cancel up to 24 hours in advance for a full refund" : "Bis 24 Stunden vorher stornierbar, volle Rückerstattung"]);
+    if (guideLanguage) rows.push(["fa-person-chalkboard", l.guide, guideLanguage]);
     if (duration) rows.push(["fa-clock", l.duration, duration]);
-
-    const minGuests = Number.isFinite(Number(item.minGuests)) ? Number(item.minGuests) : null;
-    const maxGuests = Number.isFinite(Number(item.maxGuests)) ? Number(item.maxGuests) : null;
-    if (minGuests !== null || maxGuests !== null) {
-        const value = minGuests !== null && maxGuests !== null
-            ? minGuests + "–" + maxGuests
-            : maxGuests !== null ? "1–" + maxGuests : String(minGuests);
-        rows.push(["fa-users", l.guests, value]);
-    }
-
-    const languages = Array.isArray(item.languages) ? item.languages.filter(Boolean) : [];
-    if (languages.length) rows.push(["fa-language", l.language, languages.join(", ")]);
 
     container.innerHTML = rows.map(function(row) {
         return '<div class="bg-[#F8F6F1] rounded-xl p-3 flex items-start gap-3">' +
