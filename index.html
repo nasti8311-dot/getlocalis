@@ -2451,6 +2451,13 @@ function normalizeOfferTimes(value) {
     return raw.split(",").map(v => v.trim()).filter(Boolean);
 }
 
+function getLocalizedOfferValue(value, lang = currentLang) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+        return String(value[lang] ?? value.de ?? value.en ?? value.ro ?? "").trim();
+    }
+    return String(value || "").trim();
+}
+
 function mapPublicOffer(offer) {
     const categoryKey = ["explore","relax","nightlife","adventure","vip"].includes(String(offer.category || "").toLowerCase())
         ? String(offer.category).toLowerCase()
@@ -2475,9 +2482,9 @@ function mapPublicOffer(offer) {
         title: { de: title, en: String(offer.title_en || "").trim() || title, ro: String(offer.title_ro || "").trim() || title },
         price: Number(offer.price_cents || 0) / 100,
         duration: {
-            de: String(offer.duration_de || offer.duration || offer.durationDe || "").trim() || "",
-            en: String(offer.duration_en || offer.duration || offer.durationEn || "").trim() || "",
-            ro: String(offer.duration_ro || offer.duration || offer.durationRo || "").trim() || ""
+            de: getLocalizedOfferValue(offer.duration_de || offer.duration || offer.durationDe, "de"),
+            en: getLocalizedOfferValue(offer.duration_en || offer.duration || offer.durationEn, "en"),
+            ro: getLocalizedOfferValue(offer.duration_ro || offer.duration || offer.durationRo, "ro")
         },
         availableTimes: normalizeOfferTimes(offer.available_times),
         img: image,
@@ -2489,7 +2496,7 @@ function mapPublicOffer(offer) {
         meetingCountry: String(offer.meeting_country || "").trim(),
         meetingInstructions: { de: String(offer.meeting_instructions || "").trim(), en: String(offer.meeting_instructions_en || "").trim() || String(offer.meeting_instructions || "").trim(), ro: String(offer.meeting_instructions_ro || "").trim() || String(offer.meeting_instructions || "").trim() },
         arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
-        guideLanguage: String(offer.guide_language || offer.guideLanguage || offer.language || "").trim(),
+        guideLanguage: getLocalizedOfferValue(offer.guide_language || offer.guideLanguage || offer.language),
         languages: Array.isArray(offer.languages)
             ? offer.languages.map(String).map(v => v.trim()).filter(Boolean)
             : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
@@ -3093,8 +3100,8 @@ function renderDetailTrustInfo(item) {
     const rows = [];
     const provider = String(item.providerName || "").trim();
     const meeting = [item.meetingPoint?.[currentLang] || item.meetingPoint?.de, item.meetingAddress, item.meetingCity].filter(Boolean).join(", ");
-    const duration = String(item.duration?.[currentLang] || item.duration?.de || item.duration || "").trim();
-    const guideLanguage = String(item.guideLanguage || "").trim();
+    const duration = getLocalizedOfferValue(item.duration);
+    const guideLanguage = getLocalizedOfferValue(item.guideLanguage);
 
     rows.push(["fa-user-tie", l.provider, provider || "—"]);
     rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
