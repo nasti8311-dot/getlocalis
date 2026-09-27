@@ -3130,7 +3130,8 @@ function renderDetailTrustInfo(item) {
     const rows = [];
     const provider = String(item.providerName || "").trim();
     const meeting = [item.meetingPoint?.[currentLang] || item.meetingPoint?.de, item.meetingAddress, item.meetingCity].filter(Boolean).join(", ");
-    const duration = translateDetailMetadataValue(item.duration);\n    const guideLanguage = translateDetailMetadataValue(item.guideLanguage);
+    const duration = translateDetailMetadataValue(item.duration);
+    const guideLanguage = translateDetailMetadataValue(item.guideLanguage);
 
     rows.push(["fa-user-tie", l.provider, provider || "—"]);
     rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
