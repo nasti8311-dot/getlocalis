@@ -2595,11 +2595,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (key) showCategory(key);
             };
             card.dataset.categoryBound = "1";
-            card.addEventListener("click", open);
-            card.addEventListener("pointerup", open);
-            card.addEventListener("keydown", event => {
+            // Use the element's direct click handler so category cards remain
+            // clickable regardless of nested image/text overlays or re-renders.
+            card.onclick = open;
+            card.onkeydown = event => {
                 if (event.key === "Enter" || event.key === " ") open(event);
-            });
+            };
         });
     };
 
