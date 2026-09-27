@@ -368,6 +368,7 @@ async function translateOfferText(text, target) {
       "Lasst euch überraschen!": "Lăsați-vă surprinși!",
       "Eingang McDonalds": "Intrarea McDonald",
       "Bitte pünktlich": "Vă rugăm să fiți punctuali",
+      "Fahrräder stellen wir zur Verfügung": "Punem la dispoziție biciclete",
       "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Descoperă în turul nostru cele mai frumoase obiective și locuri pe care le oferă orașul. Durată: aproximativ 3 ore"
     },
     "en": {
@@ -381,6 +382,7 @@ async function translateOfferText(text, target) {
       "Lasst euch überraschen!": "Let yourself be surprised!",
       "Eingang McDonalds": "McDonald entrance",
       "Bitte pünktlich": "Please be punctual",
+      "Fahrräder stellen wir zur Verfügung": "We provide bicycles",
       "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Explore the most beautiful sights and places the city has to offer on our tour. Duration: approx. 3 hours"
     }
   };
