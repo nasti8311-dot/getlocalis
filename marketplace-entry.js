@@ -45,7 +45,7 @@ async function handleProviderRoute(request,env,ctx){
     if(!title)return json({error:"Titel fehlt."},400);
     if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Preis muss mindestens 0,50 betragen."},400);
     if(!["eur","ron","usd","gbp"].includes(currency))return json({error:"Nicht unterstützte Währung."},400);
-    if(!["explore","relax","nightlife","adventure","vip"].includes(category))return json({error:"Ungültige Kategorie."},400);
+    if(!["explore","relax","nightlife","adventure","vip","secret-menus"].includes(category))return json({error:"Ungültige Kategorie."},400);
     if(publish){
       if(!meetingPointName||!meetingAddress||!meetingCity||!meetingCountry)return json({error:"Veröffentlichung blockiert: Treffpunkt, Adresse, Stadt und Land sind erforderlich."},400);
     }

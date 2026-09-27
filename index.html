@@ -575,7 +575,15 @@
             </div>
 
 
-
+            <div data-category="secret-menus"
+                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=900" class="absolute inset-0 w-full h-full object-cover" alt="Secret Menüs">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="absolute bottom-0 p-7 text-white">
+                    <h3 class="text-3xl font-black" data-i18n="cat_secret_menus">Secret Menüs</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_secret_menus_desc">Überraschungsmenüs in ausgewählten Restaurants.</p>
+                </div>
+            </div>
 
         </div>
     </section>
@@ -2082,6 +2090,16 @@ const categoriesData = {
         ]
     },
 
+    secret-menus: {
+        eyebrow: { de: "06 · Secret Menüs", en: "06 · Secret Menus", ro: "06 · Meniuri secrete" },
+        title: { de: "Secret Menüs", en: "Secret Menus", ro: "Meniuri secrete" },
+        subtitle: {
+            de: "Überraschungsmenüs in ausgewählten Restaurants – zum festen Preis.",
+            en: "Surprise menus at selected restaurants – at a fixed price.",
+            ro: "Meniuri surpriză în restaurante selectate – la un preț fix."
+        },
+        items: []
+    },
 
 };
 
@@ -2118,6 +2136,8 @@ const translations = {
         cat_adventure_desc: "Adrenalin, Action & neue Erfahrungen.",
         cat_vip: "VIP",
         cat_vip_desc: "Komfort, Stil & besondere Zugänge.",
+        cat_secret_menus: "Secret Menüs",
+        cat_secret_menus_desc: "Überraschungsmenüs in ausgewählten Restaurants.",
 
         featured_label: "Jetzt entdecken",
         featured_title: "Momente, die bleiben.",
@@ -2227,6 +2247,8 @@ const translations = {
         cat_adventure_desc: "Adrenaline, action & new experiences.",
         cat_vip: "VIP",
         cat_vip_desc: "Comfort, style & special access.",
+        cat_secret_menus: "Secret Menus",
+        cat_secret_menus_desc: "Surprise menus at selected restaurants.",
 
         featured_label: "Discover now",
         featured_title: "Moments that stay with you.",
@@ -2332,6 +2354,8 @@ const translations = {
         cat_adventure_desc: "Adrenalină, acțiune și experiențe noi.",
         cat_vip: "VIP",
         cat_vip_desc: "Confort, stil și acces special.",
+        cat_secret_menus: "Meniuri secrete",
+        cat_secret_menus_desc: "Meniuri surpriză în restaurante selectate.",
 
         featured_label: "Descoperă acum",
         featured_title: "Momente care rămân.",
@@ -2429,7 +2453,8 @@ const categoryFallbackImages = {
     relax: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1000",
     nightlife: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=1000",
     adventure: "https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=1000",
-    vip: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1000"
+    vip: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1000",
+    "secret-menus": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=1000"
 };
 
 const categoryBadges = {
@@ -2437,7 +2462,8 @@ const categoryBadges = {
     relax: { de: "Relax", en: "Relax", ro: "Relax" },
     nightlife: { de: "Nightlife", en: "Nightlife", ro: "Nightlife" },
     adventure: { de: "Adventure", en: "Adventure", ro: "Adventure" },
-    vip: { de: "VIP", en: "VIP", ro: "VIP" }
+    vip: { de: "VIP", en: "VIP", ro: "VIP" },
+    "secret-menus": { de: "Secret Menü", en: "Secret Menu", ro: "Meniu secret" }
 };
 
 function normalizeOfferTimes(value) {
@@ -2459,7 +2485,7 @@ function getLocalizedOfferValue(value, lang = currentLang) {
 }
 
 function mapPublicOffer(offer) {
-    const categoryKey = ["explore","relax","nightlife","adventure","vip"].includes(String(offer.category || "").toLowerCase())
+    const categoryKey = ["explore","relax","nightlife","adventure","vip","secret-menus"].includes(String(offer.category || "").toLowerCase())
         ? String(offer.category).toLowerCase()
         : "explore";
     const title = String(offer.title || "FiiViu Erlebnis").trim();
@@ -2527,12 +2553,13 @@ async function loadPublicOffers() {
             relax: [],
             nightlife: [],
             adventure: [],
-            vip: []
+            vip: [],
+            "secret-menus": []
         };
 
         offers.forEach(offer => {
             const item = mapPublicOffer(offer);
-            const categoryKey = ["explore","relax","nightlife","adventure","vip"].includes(String(offer.category || "").toLowerCase())
+            const categoryKey = ["explore","relax","nightlife","adventure","vip","secret-menus"].includes(String(offer.category || "").toLowerCase())
                 ? String(offer.category).toLowerCase()
                 : "explore";
             grouped[categoryKey].push(item);
