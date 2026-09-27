@@ -61,12 +61,9 @@ export default {
     const rows = await env.DB.prepare("SELECT id,title,description,meeting_point_name,meeting_instructions,title_en,title_ro,description_en,description_ro,meeting_point_name_en,meeting_point_name_ro,meeting_instructions_en,meeting_instructions_ro FROM offers").all();
     let updated = 0;
     for (const row of (rows.results || [])) {
-      const translated = await translateOfferFields(row, { force: true });
-      const missing = !String(row.title_en || "").trim() || !String(row.title_ro || "").trim() ||
-        !String(row.description_en || "").trim() || !String(row.description_ro || "").trim() ||
-        !String(row.meeting_point_name_en || "").trim() || !String(row.meeting_point_name_ro || "").trim() ||
-        !String(row.meeting_instructions_en || "").trim() || !String(row.meeting_instructions_ro || "").trim();
-      if (!missing) continue;
+      const translated = await translateOfferFields(row, { refreshStale: true });
+      const missingOrStale = translationFieldsNeedRefresh(row);
+      if (!missingOrStale) continue;
       await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
         .bind(translated.titleEn, translated.titleRo, translated.descriptionEn, translated.descriptionRo, translated.meetingPointNameEn, translated.meetingPointNameRo, translated.meetingInstructionsEn, translated.meetingInstructionsRo, row.id).run();
       updated++;
@@ -434,46 +431,68 @@ async function translateOfferText(text, target) {
   // Never silently store German as an "EN/RO translation".
   return "";
 }
+function translationFieldsNeedRefresh(source) {
+  const fields = [
+    ["title", "title_en", "titleEn"],
+    ["title", "title_ro", "titleRo"],
+    ["description", "description_en", "descriptionEn"],
+    ["description", "description_ro", "descriptionRo"],
+    ["meeting_point_name", "meeting_point_name_en", "meetingPointNameEn"],
+    ["meeting_point_name", "meeting_point_name_ro", "meetingPointNameRo"],
+    ["meeting_instructions", "meeting_instructions_en", "meetingInstructionsEn"],
+    ["meeting_instructions", "meeting_instructions_ro", "meetingInstructionsRo"]
+  ];
+  return fields.some(([sourceKey, translatedKey, camelKey]) => {
+    const sourceValue = String(source[sourceKey] ?? source[camelKey] ?? "").trim();
+    const translatedValue = String(source[translatedKey] ?? source[camelKey] ?? "").trim();
+    return Boolean(sourceValue && (!translatedValue || translatedValue === sourceValue));
+  });
+}
+
 async function translateOfferFields(source, options = {}) {
-  const force = options.force === true;
+  const refreshStale = options.refreshStale === true;
   const title = String(source.title || "").trim();
   const description = String(source.description || "").trim();
   const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
   const meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
 
-  // If the admin/provider already supplied EN/RO text, use it directly.
-  // Translation is only a fallback for fields that are still empty.
-  let titleEn = force ? "" : String(source.titleEn || source.title_en || "").trim();
-  let titleRo = force ? "" : String(source.titleRo || source.title_ro || "").trim();
-  let descriptionEn = force ? "" : String(source.descriptionEn || source.description_en || "").trim();
-  let descriptionRo = force ? "" : String(source.descriptionRo || source.description_ro || "").trim();
-  let pointEn = force ? "" : String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
-  let pointRo = force ? "" : String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
-  let instructionsEn = force ? "" : String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
-  let instructionsRo = force ? "" : String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
+  // Existing EN/RO values are authoritative. Only empty values, or values
+  // that exactly repeat the German source when refreshStale is enabled, are
+  // sent to the translator. This prevents overwriting real manual translations.
+  let titleEn = String(source.titleEn || source.title_en || "").trim();
+  let titleRo = String(source.titleRo || source.title_ro || "").trim();
+  let descriptionEn = String(source.descriptionEn || source.description_en || "").trim();
+  let descriptionRo = String(source.descriptionRo || source.description_ro || "").trim();
+  let pointEn = String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
+  let pointRo = String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
+  let instructionsEn = String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
+  let instructionsRo = String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
 
   const jobs = [];
-  if (title && !titleEn) jobs.push(translateOfferText(title, "en").then(v => { titleEn = v; }));
-  if (title && !titleRo) jobs.push(translateOfferText(title, "ro").then(v => { titleRo = v; }));
-  if (description && !descriptionEn) jobs.push(translateOfferText(description, "en").then(v => { descriptionEn = v; }));
-  if (description && !descriptionRo) jobs.push(translateOfferText(description, "ro").then(v => { descriptionRo = v; }));
-  if (meetingPointName && !pointEn) jobs.push(translateOfferText(meetingPointName, "en").then(v => { pointEn = v; }));
-  if (meetingPointName && !pointRo) jobs.push(translateOfferText(meetingPointName, "ro").then(v => { pointRo = v; }));
-  if (meetingInstructions && !instructionsEn) jobs.push(translateOfferText(meetingInstructions, "en").then(v => { instructionsEn = v; }));
-  if (meetingInstructions && !instructionsRo) jobs.push(translateOfferText(meetingInstructions, "ro").then(v => { instructionsRo = v; }));
+  const shouldTranslate = (sourceValue, translatedValue) =>
+    Boolean(sourceValue && (!translatedValue || (refreshStale && translatedValue === sourceValue)));
+
+  if (shouldTranslate(title, titleEn)) jobs.push(translateOfferText(title, "en").then(v => { if (v) titleEn = v; }));
+  if (shouldTranslate(title, titleRo)) jobs.push(translateOfferText(title, "ro").then(v => { if (v) titleRo = v; }));
+  if (shouldTranslate(description, descriptionEn)) jobs.push(translateOfferText(description, "en").then(v => { if (v) descriptionEn = v; }));
+  if (shouldTranslate(description, descriptionRo)) jobs.push(translateOfferText(description, "ro").then(v => { if (v) descriptionRo = v; }));
+  if (shouldTranslate(meetingPointName, pointEn)) jobs.push(translateOfferText(meetingPointName, "en").then(v => { if (v) pointEn = v; }));
+  if (shouldTranslate(meetingPointName, pointRo)) jobs.push(translateOfferText(meetingPointName, "ro").then(v => { if (v) pointRo = v; }));
+  if (shouldTranslate(meetingInstructions, instructionsEn)) jobs.push(translateOfferText(meetingInstructions, "en").then(v => { if (v) instructionsEn = v; }));
+  if (shouldTranslate(meetingInstructions, instructionsRo)) jobs.push(translateOfferText(meetingInstructions, "ro").then(v => { if (v) instructionsRo = v; }));
   await Promise.all(jobs);
 
-  // A translation service being temporarily unavailable must never block saving.
-  // The original text is used only when no translated text was supplied or returned.
+  // Never store the German source as an EN/RO translation when a translation
+  // provider is unavailable. The UI can safely fall back to the source field.
   return {
-    titleEn: titleEn || title,
-    titleRo: titleRo || title,
-    descriptionEn: descriptionEn || description,
-    descriptionRo: descriptionRo || description,
-    meetingPointNameEn: pointEn || meetingPointName,
-    meetingPointNameRo: pointRo || meetingPointName,
-    meetingInstructionsEn: instructionsEn || meetingInstructions,
-    meetingInstructionsRo: instructionsRo || meetingInstructions
+    titleEn,
+    titleRo,
+    descriptionEn,
+    descriptionRo,
+    meetingPointNameEn: pointEn,
+    meetingPointNameRo: pointRo,
+    meetingInstructionsEn: instructionsEn,
+    meetingInstructionsRo: instructionsRo
   };
 }
 
