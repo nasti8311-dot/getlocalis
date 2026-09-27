@@ -49,7 +49,7 @@ jobs:
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
             if curl --fail --silent --show-error --location --max-time 20               --header 'Accept: application/json'               https://fiiviu.ro/api/offers               --output /tmp/offers.json; then
-              node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/offers.json","utf8")); if(!Array.isArray(d.offers)) throw new Error("Catalog response has no offers array");'
+              node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/offers.json","utf8")); if(!Array.isArray(d.offers)) throw new Error("Catalog response has no offers array"); for(const o of d.offers){ if(!Object.prototype.hasOwnProperty.call(o,"duration")) throw new Error("Production API is missing duration"); if(!Object.prototype.hasOwnProperty.call(o,"guide_language")) throw new Error("Production API is missing guide_language"); }'
               exit 0
             fi
             sleep 10
