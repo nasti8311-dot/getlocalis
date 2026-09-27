@@ -345,10 +345,20 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     else if(id){body.imageUrl=offers.find(x=>Number(x.id)===Number(id))?.image_url||""}
     if(galleryFiles.length){const urls=[];for(const file of galleryFiles)urls.push((await uploadImage(file,id||"new","gallery")).url);body.galleryUrls=urls.join("\n")}
     else if(id){body.galleryUrls=offers.find(x=>Number(x.id)===Number(id))?.gallery_urls||""}
-    if(id) await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)});
-    else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
+    const saved = id
+      ? await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)})
+      : await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
+    const savedOffer=saved?.offer||{};
+    const expectedDuration=body.duration;
+    const expectedGuideLanguage=body.guideLanguage;
+    if(expectedDuration && String(savedOffer.duration||"").trim()!==expectedDuration){
+      throw new Error("Dauer wurde vom Server nicht gespeichert. Bitte erneut versuchen.");
+    }
+    if(expectedGuideLanguage && String(savedOffer.guide_language||"").trim()!==expectedGuideLanguage){
+      throw new Error("Live-Tourguide Sprache wurde vom Server nicht gespeichert. Bitte erneut versuchen.");
+    }
     await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
-    document.getElementById("offerForm").classList.add("hidden"); showMessage("Experiența a fost salvată."); await refreshOffersRaw();
+    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis wurde gespeichert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
 if(adminKey){document.getElementById("adminKey").value=adminKey;openApp()}
