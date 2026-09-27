@@ -118,7 +118,7 @@ if (url.pathname === "/api/offers") {
             String(offer.meeting_instructions_ro||"").trim()===String(offer.meeting_instructions||"").trim();
           if(!missing && !stale) continue;
           try{
-            const translated=await translateOfferFields(offer);
+            const translated=await translateOfferFields(offer, { refreshStale: true });
             await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
               .bind(translated.titleEn,translated.titleRo,translated.descriptionEn,translated.descriptionRo,translated.meetingPointNameEn,translated.meetingPointNameRo,translated.meetingInstructionsEn,translated.meetingInstructionsRo,offer.id).run();
             Object.assign(offer,{
@@ -364,6 +364,10 @@ async function translateOfferText(text, target) {
       "Bitte einfach nur gute Laune mitbringen!": "Vă rugăm să aduceți doar voie bună!",
       "Das ist ein Test und hat keine Bedeutung.": "Acesta este un test și nu are nicio semnificație.",
       "Test erlebnis bukarest": "Experiență de test în București",
+      "spannende Stadtführung": "tur de oraș captivant",
+      "Lasst euch überraschen!": "Lăsați-vă surprinși!",
+      "Eingang McDonalds": "Intrarea McDonald",
+      "Bitte pünktlich": "Vă rugăm să fiți punctuali",
       "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Descoperă în turul nostru cele mai frumoase obiective și locuri pe care le oferă orașul. Durată: aproximativ 3 ore"
     },
     "en": {
@@ -373,6 +377,10 @@ async function translateOfferText(text, target) {
       "Bitte einfach nur gute Laune mitbringen!": "Please just bring a good mood!",
       "Das ist ein Test und hat keine Bedeutung.": "This is a test and has no meaning.",
       "Test erlebnis bukarest": "Test experience in Bucharest",
+      "spannende Stadtführung": "exciting city tour",
+      "Lasst euch überraschen!": "Let yourself be surprised!",
+      "Eingang McDonalds": "McDonald entrance",
+      "Bitte pünktlich": "Please be punctual",
       "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Explore the most beautiful sights and places the city has to offer on our tour. Duration: approx. 3 hours"
     }
   };
