@@ -232,7 +232,7 @@ async function loadOffers(){
     const offers=d.offers||[];
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${o.active?"Activ":"Dezactivat"}</div></div>
+        <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${escapeHtml(o.duration||"keine Dauer")} · ${escapeHtml(o.guide_language||"keine Guide-Sprache")} · ${o.active?"Activ":"Dezactivat"}</div></div>
         <div class="flex gap-2">
           <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Editează</button>
           <button class="danger border border-red-200 bg-white" onclick="deleteOfferById(${o.id})">${o.active?"Löschen":"Deaktiviert"}</button>
@@ -345,10 +345,20 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     else if(id){body.imageUrl=offers.find(x=>Number(x.id)===Number(id))?.image_url||""}
     if(galleryFiles.length){const urls=[];for(const file of galleryFiles)urls.push((await uploadImage(file,id||"new","gallery")).url);body.galleryUrls=urls.join("\n")}
     else if(id){body.galleryUrls=offers.find(x=>Number(x.id)===Number(id))?.gallery_urls||""}
-    if(id) await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)});
-    else await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
+    const saved = id
+      ? await api("/api/admin/offers",{method:"PATCH",body:JSON.stringify(body)})
+      : await api("/api/admin/offers",{method:"POST",body:JSON.stringify(body)});
+    const savedOffer=saved?.offer||{};
+    const expectedDuration=body.duration;
+    const expectedGuideLanguage=body.guideLanguage;
+    if(expectedDuration && String(savedOffer.duration||"").trim()!==expectedDuration){
+      throw new Error("Dauer wurde vom Server nicht gespeichert. Bitte erneut versuchen.");
+    }
+    if(expectedGuideLanguage && String(savedOffer.guide_language||"").trim()!==expectedGuideLanguage){
+      throw new Error("Live-Tourguide Sprache wurde vom Server nicht gespeichert. Bitte erneut versuchen.");
+    }
     await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
-    document.getElementById("offerForm").classList.add("hidden"); showMessage("Experiența a fost salvată."); await refreshOffersRaw();
+    document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis wurde gespeichert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
 if(adminKey){document.getElementById("adminKey").value=adminKey;openApp()}
