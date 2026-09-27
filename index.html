@@ -3100,7 +3100,7 @@ function translateDetailMetadataValue(value, lang = currentLang) {
     const mappedLanguage = languageMap[source];
     if (mappedLanguage) return lang === "de" ? source : (mappedLanguage[lang] || source);
 
-    const durationMatch = source.match(/^(\\d+(?:[.,]\\d+)?)\\s*(Stunde|Stunden|Std\\.?|Minute|Minuten|Min\.?|Tag|Tage)$/i);
+    const durationMatch = source.match(/^(\d+(?:[.,]\d+)?)\s*(Stunde|Stunden|Std\.?|Minute|Minuten|Min\.?|Tag|Tage)$/i);
     if (durationMatch) {
         const amount = durationMatch[1];
         const unit = durationMatch[2].toLowerCase();
