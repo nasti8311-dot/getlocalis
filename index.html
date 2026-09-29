@@ -251,6 +251,49 @@
                 padding-right: 20px;
             }
         }
+    
+        /* Mobile app shell */
+        @media (max-width: 767px) {
+            html { scroll-padding-top: 72px; }
+            body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+            header { padding-top: env(safe-area-inset-top); }
+            header > div > div:first-child { height: 64px; }
+            header .logo-mark { width: 38px; height: 38px; border-radius: 12px; }
+            header .text-xl { font-size: 1.05rem; }
+            header .text-\[9px\] { display: none; }
+            header #currency-select { height: 38px; font-size: 11px; padding: 0 8px; }
+            header #lang-select { height: 38px; width: 72px; min-width: 72px; }
+            header .lg\\:hidden { width: 38px; height: 38px; }
+            .hero-bg { min-height: 610px; background-position: 58% center; }
+            .hero-bg > div { padding-bottom: 42px; }
+            .hero-bg h1 { font-size: clamp(2.7rem, 13vw, 4.5rem); line-height: .92; }
+            .hero-bg p { font-size: 1rem; line-height: 1.55; }
+            .hero-bg button { min-height: 52px; width: 100%; }
+            #moments { grid-template-columns: 1fr; gap: 14px; }
+            .category-card { height: 250px !important; border-radius: 24px; }
+            .category-card > div:last-child { padding: 20px; }
+            .category-card h3 { font-size: 1.7rem; }
+            .experience-card { border-radius: 24px; }
+            .experience-card:hover { transform: none; box-shadow: none; }
+            button, a, select, input, textarea { touch-action: manipulation; }
+            button, .time-slot-btn { min-height: 48px; }
+            input, select, textarea { font-size: 16px !important; }
+            .mobile-bottom-nav {
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+                padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+                background: rgba(248,246,241,.94); border-top: 1px solid rgba(0,0,0,.07);
+                backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                display: grid; grid-template-columns: repeat(3,1fr); gap: 6px;
+            }
+            .mobile-bottom-nav button {
+                min-height: 50px; border-radius: 16px; background: transparent;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                gap: 3px; color: #6b7280; font-size: 10px; font-weight: 800;
+            }
+            .mobile-bottom-nav button i { font-size: 17px; }
+            .mobile-bottom-nav button:active { background: rgba(232,111,45,.10); color: #E86F2D; }
+        }
+        @media (min-width: 768px) { .mobile-bottom-nav { display: none; } }
     </style>
 
 
