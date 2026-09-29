@@ -36,6 +36,9 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
+      - name: Apply D1 migrations
+        run: npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote
+
       - name: Deploy Worker to Cloudflare
         uses: cloudflare/wrangler-action@v4
         with:
