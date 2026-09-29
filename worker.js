@@ -515,14 +515,7 @@ function normalizeOfferText(value){
 }
 async function ensureOffersTable(env){
   const rows=await env.DB.prepare("PRAGMA table_info(offers)").all();
-  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  for(const column of ["duration","guide_language"]){
-    if(!existing.has(column)){
-      await env.DB.prepare("ALTER TABLE offers ADD COLUMN "+column+" TEXT").run();
-    }
-  }
-  const refreshed=await env.DB.prepare("PRAGMA table_info(offers)").all();
-  const current=new Set((refreshed.results||[]).map(row=>String(row.name||"")));
+  const current=new Set((rows.results||[]).map(row=>String(row.name||"")));
   const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration","guide_language"];
   const missing=required.filter(name=>!current.has(name));
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
