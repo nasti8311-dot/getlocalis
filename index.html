@@ -294,6 +294,25 @@
             .mobile-bottom-nav button:active { background: rgba(232,111,45,.10); color: #E86F2D; }
         }
         @media (min-width: 768px) { .mobile-bottom-nav { display: none; } }
+
+        @media (max-width: 767px) {
+            section { scroll-margin-top: 76px; }
+            .glass { border-radius: 20px !important; }
+            .experience-card { overflow: hidden; }
+            .experience-card .p-6, .experience-card .p-7, .experience-card .p-8 { padding: 18px !important; }
+            .experience-card img { max-height: 230px; }
+            #experience-detail-view .grid, #booking-view .grid { gap: 12px !important; }
+            #experience-detail-view .flex, #booking-view .flex { min-width: 0; }
+            #experience-detail-view h1, #booking-view h1 { font-size: 1.75rem; line-height: 1.05; }
+            #experience-detail-view .text-4xl { font-size: 1.85rem !important; }
+            #experience-detail-view .text-5xl { font-size: 2rem !important; }
+            .time-slot-btn { width: 100%; text-align: center; }
+            #meeting-map-modal > div { width: calc(100vw - 24px) !important; max-height: calc(100vh - 24px); }
+            #meeting-map-container { min-height: 52vh !important; }
+            .flatpickr-calendar { max-width: calc(100vw - 20px) !important; }
+            .modal, [role="dialog"] { max-width: calc(100vw - 20px); }
+            .mobile-bottom-nav { padding-left: 8px; padding-right: 8px; }
+        }
     </style>
 
 
