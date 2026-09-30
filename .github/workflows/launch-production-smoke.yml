@@ -3,7 +3,7 @@ name: Launch production smoke
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Deploy production Worker"]
+    workflows: ["pages build and deployment"]
     types: [completed]
   schedule:
     - cron: "17 * * * *"
