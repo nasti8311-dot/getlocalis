@@ -2774,6 +2774,26 @@ function getLocalizedOfferValue(value, lang = currentLang) {
     return String(value || "").trim();
 }
 
+function localizeOfferFallback(value, lang) {
+    const source = String(value || "").trim();
+    if (!source || lang === "de") return source;
+    const exact = {
+        en: {
+            "Traditionell – „Geschmack, der Geschichten erzählt“": "Traditional – “A taste that tells stories”",
+            "Entdecke die echte Seele der rumänischen Küche...": "Discover the true soul of Romanian cuisine...",
+            "Bitte Spaß Und gute Laune mitbringen...": "Please bring a good mood and have fun...",
+            "ca. 2 Stunden": "approx. 2 hours"
+        },
+        ro: {
+            "Traditionell – „Geschmack, der Geschichten erzählt“": "Tradițional – „Gust care spune povești“",
+            "Entdecke die echte Seele der rumänischen Küche...": "Descoperă adevărata esență a bucătăriei românești...",
+            "Bitte Spaß Und gute Laune mitbringen...": "Vă rugăm să aduceți voie bună și să vă distrați...",
+            "ca. 2 Stunden": "aproximativ 2 ore"
+        }
+    };
+    return exact[lang]?.[source] || source;
+}
+
 function mapPublicOffer(offer) {
     const categoryKey = ["explore","relax","nightlife","adventure","vip","secret-menus"].includes(String(offer.category || "").toLowerCase())
         ? String(offer.category).toLowerCase()
@@ -2795,22 +2815,22 @@ function mapPublicOffer(offer) {
         providerRef: String(offer.provider_ref || ""),
         providerName: String(offer.provider_name || "").trim(),
         badge: categoryBadges[categoryKey],
-        title: { de: title, en: String(offer.title_en || "").trim() || title, ro: String(offer.title_ro || "").trim() || title },
+        title: { de: title, en: localizeOfferFallback(String(offer.title_en || "").trim() || title, "en"), ro: localizeOfferFallback(String(offer.title_ro || "").trim() || title, "ro") },
         price: Number(offer.price_cents || 0) / 100,
         duration: {
             de: getLocalizedOfferValue(offer.duration_de || offer.duration || offer.durationDe, "de"),
-            en: getLocalizedOfferValue(offer.duration_en || offer.duration || offer.durationEn, "en"),
-            ro: getLocalizedOfferValue(offer.duration_ro || offer.duration || offer.durationRo, "ro")
+            en: localizeOfferFallback(getLocalizedOfferValue(offer.duration_en || offer.duration || offer.durationEn, "en"), "en"),
+            ro: localizeOfferFallback(getLocalizedOfferValue(offer.duration_ro || offer.duration || offer.durationRo, "ro"), "ro")
         },
         availableTimes: normalizeOfferTimes(offer.available_times),
         img: image,
         images,
-        desc: { de: description, en: String(offer.description_en || "").trim() || description, ro: String(offer.description_ro || "").trim() || description },
+        desc: { de: description, en: localizeOfferFallback(String(offer.description_en || "").trim() || description, "en"), ro: localizeOfferFallback(String(offer.description_ro || "").trim() || description, "ro") },
         meetingPoint: { de: String(offer.meeting_point_name || "").trim(), en: String(offer.meeting_point_name_en || "").trim() || String(offer.meeting_point_name || "").trim(), ro: String(offer.meeting_point_name_ro || "").trim() || String(offer.meeting_point_name || "").trim() },
         meetingAddress: String(offer.meeting_address || "").trim(),
         meetingCity: String(offer.meeting_city || "").trim(),
         meetingCountry: String(offer.meeting_country || "").trim(),
-        meetingInstructions: { de: String(offer.meeting_instructions || "").trim(), en: String(offer.meeting_instructions_en || "").trim() || String(offer.meeting_instructions || "").trim(), ro: String(offer.meeting_instructions_ro || "").trim() || String(offer.meeting_instructions || "").trim() },
+        meetingInstructions: { de: String(offer.meeting_instructions || "").trim(), en: localizeOfferFallback(String(offer.meeting_instructions_en || "").trim() || String(offer.meeting_instructions || "").trim(), "en"), ro: localizeOfferFallback(String(offer.meeting_instructions_ro || "").trim() || String(offer.meeting_instructions || "").trim(), "ro") },
         arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
         guideLanguage: getLocalizedOfferValue(offer.guide_language || offer.guideLanguage || offer.language),
         languages: Array.isArray(offer.languages)
