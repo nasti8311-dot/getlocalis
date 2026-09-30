@@ -831,14 +831,11 @@ test("production smoke runs after a successful production deploy", () => {
   assert.match(workflow, /types: \[completed\]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   const deploy = read(".github/workflows/deploy-production.yml");
-  assert.match(deploy, /Wait for Cloudflare Pages deployment for this commit/);
-  assert.match(deploy, /api\.cloudflare\.com\/client\/v4\/accounts/);
-  assert.match(deploy, /pages\/projects\?per_page=100/);
-  assert.match(deploy, /pages\/projects\/\$project\/deployments/);
-  assert.match(deploy, /fiiviu\.ro/);
-  assert.match(deploy, /commit_hash/);
-  assert.match(deploy, /GITHUB_SHA/);
-  assert.match(deploy, /Wait for public Pages deployment/);
+  assert.match(deploy, /Wait for public Pages deployment of this commit/);
+  assert.match(deploy, /sha256sum index\.html/);
+  assert.match(deploy, /https:\/\/fiiviu\.ro\//);
+  assert.match(deploy, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
+  assert.match(deploy, /X-Frame-Options: DENY/);
   assert.match(deploy, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
 });
 
