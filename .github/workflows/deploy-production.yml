@@ -49,12 +49,18 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
+          projects="$(curl --fail --silent --show-error --max-time 20 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100")"
+          project="$(node -e 'const d=JSON.parse(process.argv[1]); const p=(d.result||[]).find(x=>(x.domains||[]).includes("fiiviu.ro")); if(!p) throw new Error("Cloudflare Pages project for fiiviu.ro was not found"); console.log(p.name)' "$projects")"
+          echo "Cloudflare Pages project: $project"
           state="missing"
           for attempt in $(seq 1 60); do
             payload="$(curl --fail --silent --show-error --max-time 20 \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               -H "Content-Type: application/json" \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/fiiviu/deployments?env=production&per_page=20")"
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/deployments?env=production&per_page=20")"
             state="$(node -e 'const d=JSON.parse(process.argv[1]); const sha=process.argv[2]; const rows=(d.result||[]).filter(x=>x?.deployment_trigger?.metadata?.commit_hash===sha); const row=rows[0]; const s=row?.latest_stage?.status||""; console.log(row ? s+"|"+row.id : "missing")' "$payload" "$GITHUB_SHA")"
             case "$state" in
               success\|*) echo "Cloudflare Pages deployment for $GITHUB_SHA completed successfully."; break;;
