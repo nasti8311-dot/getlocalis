@@ -176,6 +176,25 @@ export default {
       }
     }
 
+    // Serve the admin UI explicitly. Cloudflare Assets can otherwise resolve /admin
+    // through the SPA fallback and return index.html instead of admin.html.
+    if (request.method === "GET" && (url.pathname === "/admin" || url.pathname === "/admin/")) {
+      if (env.ASSETS && typeof env.ASSETS.fetch === "function") {
+        const assetUrl = new URL(request.url);
+        assetUrl.pathname = "/admin.html";
+        const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+        const headers = new Headers(assetResponse.headers);
+        headers.set("Cache-Control", "no-store");
+        headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        return new Response(assetResponse.body, {
+          status: assetResponse.status,
+          statusText: assetResponse.statusText,
+          headers
+        });
+      }
+      return new Response("Admin UI asset is not configured.", { status: 503 });
+    }
+
     if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname === "/api/provider-test-booking" || url.pathname === "/api/partner-stats" || url.pathname.startsWith("/api/provider/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: getAdminCors(request, env) });
