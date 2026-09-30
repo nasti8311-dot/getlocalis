@@ -77,10 +77,11 @@ test("launch paths do not mutate D1 schema at request time", () => {
     assert.doesNotMatch(source, /\bCREATE\s+(?:TABLE|INDEX)\s+IF\s+NOT\s+EXISTS\b/i, path + " still contains runtime CREATE IF NOT EXISTS");
     assert.doesNotMatch(source, /\bALTER\s+TABLE\b/i, path + " still contains runtime ALTER TABLE");
   }
-  const migrations = read("migrations/009_launch_runtime_schemas.sql") + read("migrations/010_legacy_partner_schema.sql");
+  const migrations = read("migrations/009_launch_runtime_schemas.sql") + read("migrations/010_legacy_partner_schema.sql") + read("migrations/012_system_events.sql");
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS bookings/);
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS experiences/);
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS partner_sessions/);
+  assert.match(migrations, /CREATE TABLE IF NOT EXISTS system_events/);
   assert.match(read("migrations/003_settlement_ledger.sql"), /CREATE TABLE IF NOT EXISTS stripe_webhook_events/);
   const settlementMigration = read("migrations/011_settlement_runtime_fields.sql");
   for (const column of ["provider_ref","provider_name","release_at","settlement_error","settlement_test_transfer_id","settlement_last_attempt_at"]) {
@@ -823,7 +824,7 @@ test("production smoke workflow guards wildcard CORS and protected boundaries", 
   assert.ok(workflow.includes("permissions-policy: camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"));
   for (const marker of [
     "https://fiiviu.ro/api/provider-test-booking",
-    "https://fiiviu.ro/api/provider/connect-status",
+    "for path in connect-status connect-onboarding",
     "https://fiiviu.ro/api/admin/provider-password",
     "https://fiiviu.ro/api/stripe/webhook"
   ]) assert.ok(workflow.includes(marker), marker + " smoke check missing");
