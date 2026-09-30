@@ -182,7 +182,11 @@ export default {
       if (env.ASSETS && typeof env.ASSETS.fetch === "function") {
         const assetUrl = new URL(request.url);
         assetUrl.pathname = "/admin.html";
-        const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+        const assetRequest = new Request(assetUrl.toString(), {
+          method: "GET",
+          headers: request.headers
+        });
+        const assetResponse = await env.ASSETS.fetch(assetRequest);
         const headers = new Headers(assetResponse.headers);
         headers.set("Cache-Control", "no-store");
         headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
