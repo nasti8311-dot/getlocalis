@@ -36,8 +36,13 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
-      - name: Apply D1 migrations
-        run: npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote
+      - name: Verify production D1 schema before deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          required="provider_ref provider_name release_at settlement_error settlement_test_transfer_id settlement_last_attempt_at"
+          schema="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --json --command "PRAGMA table_info(booking_settlements);")"
+          node -e 'const data=JSON.parse(process.argv[1]); const rows=(data?.[0]?.results||data?.results||[]); const names=new Set(rows.map(r=>String(r.name||""))); for(const name of process.argv[2].split(" ")) if(!names.has(name)) throw new Error("Production D1 schema missing: "+name);' "$schema" "$required"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 

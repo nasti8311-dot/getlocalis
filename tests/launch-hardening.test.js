@@ -839,7 +839,7 @@ test("production smoke workflow guards wildcard CORS and protected boundaries", 
   assert.ok(workflow.includes("permissions-policy: camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"));
   for (const marker of [
     "https://fiiviu.ro/api/provider-test-booking",
-    "https://fiiviu.ro/api/provider/connect-status",
+    "for path in connect-status connect-onboarding",
     "https://fiiviu.ro/api/admin/provider-password",
     "https://fiiviu.ro/api/stripe/webhook"
   ]) assert.ok(workflow.includes(marker), marker + " smoke check missing");
@@ -856,6 +856,14 @@ test("partner commission enforces the configured hold period", () => {
   assert.match(block, /eventTimestamp<=cutoff/);
   assert.match(block, /eventTimestamp\+holdDays\*86400/);
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
+});
+
+test("production deploy does not mutate D1 and checks schema read-only", () => {
+  const workflow = read(".github/workflows/deploy-production.yml");
+  assert.doesNotMatch(workflow, /d1 migrations apply/);
+  assert.match(workflow, /Verify production D1 schema before deploy/);
+  assert.match(workflow, /PRAGMA table_info\(booking_settlements\)/);
+  assert.match(workflow, /settlement_test_transfer_id/);
 });
 
 test("iOS app icon references an existing static asset", () => {
