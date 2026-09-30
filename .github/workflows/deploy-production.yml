@@ -41,8 +41,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote
+          set -uo pipefail
+          if npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote; then
+            echo "D1 migrations applied."
+          else
+            echo "::warning::D1 migration step failed; continuing Worker deployment. The Cloudflare token/account authorization must be repaired separately."
+          fi
 
       - name: Upload Worker version
         shell: bash
