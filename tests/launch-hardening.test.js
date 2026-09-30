@@ -831,6 +831,9 @@ test("production smoke runs after a successful production deploy", () => {
   assert.match(workflow, /types: \[completed\]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   const deploy = read(".github/workflows/deploy-production.yml");
+  assert.match(deploy, /Wait for Pages workflow for this commit/);
+  assert.match(deploy, /pages build and deployment/);
+  assert.match(deploy, /GITHUB_SHA/);
   assert.match(deploy, /Wait for public Pages deployment/);
   assert.match(deploy, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
 });
