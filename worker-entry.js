@@ -369,6 +369,11 @@ async function handleAdminControlCenter(request, env) {
     const providers = providerRows.results || [];
     result.today.newProviders = providers.filter(p => String(p.created_at || "").slice(0,10) === today).length;
 
+    // Remove legacy admin-UI source fragments that were accidentally persisted as settlement errors.
+    await env.DB.prepare(
+      "DELETE FROM booking_settlements WHERE settlement_error LIKE '%escapeHtml(p.name)%' OR settlement_error LIKE '%settlementErrors.map(%' OR settlement_error LIKE '%**Konkrete Settlement-Fehler:**%'"
+    ).run();
+
     const settlementRows = await env.DB.prepare(
       "SELECT booking_id,provider_ref,provider_name,provider_amount_cents,settlement_status,release_at,settlement_error,provider_transfer_id,updated_at FROM booking_settlements"
     ).all();
