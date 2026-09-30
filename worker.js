@@ -390,7 +390,23 @@ async function translateOfferText(text, target) {
 
   const encoded = encodeURIComponent(source);
 
-  // Provider 1: MyMemory
+  // Google Translate is the primary provider because it is reliable for the
+  // short DE/EN/RO catalog fields used by FiiViu. Keep the public mirrors as
+  // fallbacks so a temporary provider outage does not block saving an offer.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&dt=rm&q=" + encoded;
+      const response = await fetch(googleUrl, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
+      if (response.ok) {
+        const data = await response.json();
+        const translated = Array.isArray(data?.[0])
+          ? data[0].map(part => Array.isArray(part) ? String(part[0] || "") : "").join("").trim()
+          : "";
+        if (translated && translated !== source) return translated;
+      }
+    } catch (_) {}
+  }
+
   try {
     const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
     const response = await fetch(url, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
@@ -401,8 +417,6 @@ async function translateOfferText(text, target) {
     }
   } catch (_) {}
 
-  // Provider 2: LibreTranslate public mirrors. Cloudflare Workers can call
-  // third-party HTTP APIs directly from the request handler.
   const mirrors = [
     "https://translate.argosopentech.com/translate",
     "https://libretranslate.de/translate"
@@ -418,21 +432,6 @@ async function translateOfferText(text, target) {
       if (response.ok) {
         const data = await response.json();
         const translated = String(data?.translatedText || "").trim();
-        if (translated && translated !== source) return translated;
-      }
-    } catch (_) {}
-  }
-
-  // Provider 3: Google Translate endpoint as a final fallback.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&q=" + encoded;
-      const response = await fetch(googleUrl, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
-      if (response.ok) {
-        const data = await response.json();
-        const translated = Array.isArray(data?.[0])
-          ? data[0].map(part => Array.isArray(part) ? String(part[0] || "") : "").join("").trim()
-          : "";
         if (translated && translated !== source) return translated;
       }
     } catch (_) {}
