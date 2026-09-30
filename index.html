@@ -2760,6 +2760,35 @@ const categoryBadges = {
     "secret-menus": { de: "Secret Menü", en: "Secret Menu", ro: "Meniu secret" }
 };
 
+function localizeTimeSlotLabel(value, lang = currentLang) {
+    const source = String(value || "").trim();
+    const match = source.match(/^Reservierung\s+zwischen\s+(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\s*Uhr$/i);
+    if (!match || lang === "de") return source;
+
+    const startHour = Number(match[1]);
+    const startMinute = match[2] || "00";
+    const endHour = Number(match[3]);
+    const endMinute = match[4] || "00";
+
+    if (lang === "en") {
+        const formatTime = (hour, minute) => {
+            const suffix = hour >= 12 ? "PM" : "AM";
+            const displayHour = hour % 12 || 12;
+            return displayHour + ":" + minute + " " + suffix;
+        };
+        return "Reservations available between " + formatTime(startHour, startMinute) + " and " + formatTime(endHour, endMinute);
+    }
+
+    if (lang === "ro") {
+        return "Rezervările sunt disponibile între " +
+            String(startHour).padStart(2, "0") + ":" + startMinute +
+            " și " +
+            String(endHour).padStart(2, "0") + ":" + endMinute;
+    }
+
+    return source;
+}
+
 function normalizeOfferTimes(value) {
     if (Array.isArray(value)) return value.map(String).map(v => v.trim()).filter(Boolean);
     const raw = String(value || "").trim();
@@ -2804,7 +2833,7 @@ function localizeOfferFallback(value, lang) {
     const isDescription = lower.startsWith("entdecke die echte seele der rumänischen küche");
     const isInstructions = lower.startsWith("bitte spaß und gute laune mitbringen");
     const isDuration = /^ca\.?\s*2\s*stunden$/i.test(normalized);
-    const reservationWindowMatch = normalized.match(/^Reservierung\s+zwischen\s+(\\d{1,2})(?::(\\d{2}))?\s*[-–]\s*(\\d{1,2})(?::(\\d{2}))?\s*Uhr$/i);
+    const reservationWindowMatch = normalized.match(/^Reservierung\s+zwischen\s+(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\s*Uhr$/i);
 
     if (reservationWindowMatch) {
         const startHour = Number(reservationWindowMatch[1]);
@@ -3461,7 +3490,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
             button.className =
                 `time-slot-btn ${index === 0 ? "active" : ""}`;
 
-            button.innerText = time;
+            button.innerText = localizeTimeSlotLabel(time, currentLang);
 
             button.onclick = () => {
 
