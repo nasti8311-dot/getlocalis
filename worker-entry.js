@@ -168,18 +168,6 @@ export default {
         ctx
       );
 
-      try {
-        const event = JSON.parse(body);
-        await recordSystemEvent(env, "stripe_webhook", event?.type || "unknown", {
-          event_id: event?.id || "",
-          livemode: event?.livemode === true,
-          received_at: new Date().toISOString(),
-          success: response.ok
-        });
-      } catch (error) {
-        console.error("FiiViu webhook audit log failed", error);
-      }
-
       if (response.ok) {
         try {
           const event = JSON.parse(body);
@@ -318,31 +306,6 @@ export default {
 };
 
 
-async function ensureSystemEventsTable(env) {
-  if (!env.DB) throw new Error("D1 database not configured.");
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS system_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type TEXT NOT NULL,
-      event_name TEXT NOT NULL,
-      payload_json TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_system_events_type_created ON system_events(event_type, created_at)").run();
-}
-
-async function recordSystemEvent(env, eventType, eventName, payload = {}) {
-  try {
-    await ensureSystemEventsTable(env);
-    await env.DB.prepare(
-      "INSERT INTO system_events (event_type,event_name,payload_json) VALUES (?,?,?)"
-    ).bind(eventType, eventName, JSON.stringify(payload).slice(0, 12000)).run();
-  } catch (error) {
-    console.error("FiiViu system event logging failed", error);
-  }
-}
-
 async function handleAdminControlCenter(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
@@ -361,7 +324,6 @@ async function handleAdminControlCenter(request, env) {
     await ensureBookingColumns(env);
     await ensureProvidersTable(env);
     await ensureBookingSettlementsTable(env);
-    await ensureSystemEventsTable(env);
 
     const bookingRows = await env.DB.prepare(
       "SELECT booking_id,status,payment_status,amount_cents,created_at,updated_at,confirmation_email_sent_at,confirmation_email_error,experience_name,provider_connect_account_id FROM bookings"
@@ -434,12 +396,11 @@ async function handleAdminControlCenter(request, env) {
     };
 
     const webhooks = await env.DB.prepare(
-      "SELECT event_name,created_at,payload_json FROM system_events WHERE event_type='stripe_webhook' ORDER BY id DESC LIMIT 1"
+      "SELECT event_type,created_at FROM stripe_webhook_events ORDER BY id DESC LIMIT 1"
     ).all();
     const webhook = webhooks.results?.[0];
     if (webhook) result.system.lastWebhook = {
-      event: webhook.event_name, at: webhook.created_at,
-      success: JSON.parse(webhook.payload_json || "{}").success !== false
+      event: webhook.event_type, at: webhook.created_at, success: true
     };
 
     const payout = settlements
