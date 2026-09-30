@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -1802,7 +1802,7 @@ html, body, main,
    CONFIG
 ============================================================ */
 
-let currentLang = 'de';
+let currentLang = 'en';
 let currentCurrency = 'EUR';
 
 const currencyRates = {
@@ -2929,7 +2929,7 @@ async function loadPublicOffers() {
 
 function applyInitialQueryRoute() {
     const params = new URLSearchParams(window.location.search);
-    const requestedLanguage = params.get("lang");
+    const requestedLanguage = params.get("lang") || "en";
     const requestedCategory = params.get("category");
 
     if (["de", "en", "ro"].includes(requestedLanguage)) {
