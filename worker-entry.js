@@ -324,7 +324,13 @@ function sanitizeSettlementError(value) {
     message.includes("escapeHtml(") ||
     message.includes("settlementErrors.map(") ||
     message.includes("'+escapeHtml(") ||
-    message.includes("**Konkrete Settlement-Fehler:**")
+    message.includes("**Konkrete Settlement-Fehler:**") ||
+    message.includes("async function loadPayoutDetails(") ||
+    message.includes("document.getElementById(") ||
+    message.includes("fetch(WORKER+") ||
+    message.includes("const payoutBtn=") ||
+    message.includes("const [statsR,histR]") ||
+    message.includes("function ccStatus(")
   ) {
     return "Ungültiger gespeicherter Settlement-Fehler (alte Admin-UI-Daten).";
   }
