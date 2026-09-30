@@ -827,9 +827,12 @@ test("admin provider password provisioning requires the admin bearer key", () =>
 test("production smoke runs after a successful production deploy", () => {
   const workflow = read(".github/workflows/launch-production-smoke.yml");
   assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \["pages build and deployment"\]/);
+  assert.match(workflow, /workflows: \["Deploy production Worker"\]/);
   assert.match(workflow, /types: \[completed\]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  const deploy = read(".github/workflows/deploy-production.yml");
+  assert.match(deploy, /Wait for public Pages deployment/);
+  assert.match(deploy, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
 });
 
 test("production smoke workflow guards wildcard CORS and protected boundaries", () => {
