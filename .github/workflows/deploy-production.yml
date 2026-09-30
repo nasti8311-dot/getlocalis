@@ -36,11 +36,30 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
-      - name: Deploy Worker to Cloudflare
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy
+      - name: Upload Worker version
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          output="$(npx --yes wrangler@4 versions upload --message "GitHub Actions \$GITHUB_SHA")"
+          printf '%s\n' "$output"
+          version_id="$(printf '%s\n' "$output" | sed -nE 's/.*Version ID[^0-9a-f]*([0-9a-f-]{36}).*/\1/p' | tail -n 1)"
+          if [ -z "$version_id" ]; then
+            echo "Could not determine uploaded Worker version ID."
+            exit 1
+          fi
+          printf 'WORKER_VERSION_ID=%s\n' "$version_id" >> "$GITHUB_ENV"
+
+      - name: Deploy Worker version
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 versions deploy "${WORKER_VERSION_ID}@100%" --yes
 
       - name: Verify production endpoint
         shell: bash
