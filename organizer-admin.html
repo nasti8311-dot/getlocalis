@@ -384,7 +384,6 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     if(expectedGuideLanguage && String(savedOffer.guide_language||"").trim()!==expectedGuideLanguage){
       throw new Error("Live-Tourguide Sprache wurde vom Server nicht gespeichert. Bitte erneut versuchen.");
     }
-    await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
     document.getElementById("offerForm").classList.add("hidden"); showMessage("Erlebnis wurde gespeichert."); await refreshOffersRaw();
   }catch(e){showMessage(e.message,true)}
 };
