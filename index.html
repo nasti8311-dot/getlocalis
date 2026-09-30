@@ -2854,9 +2854,7 @@ function applyInitialQueryRoute() {
     const requestedCategory = params.get("category");
 
     if (["de", "en", "ro"].includes(requestedLanguage)) {
-        currentLang = requestedLanguage;
-        document.documentElement.lang = requestedLanguage;
-        updateLanguageSelector();
+        changeLanguage(requestedLanguage);
     }
 
     if (requestedCategory && categoriesData[requestedCategory]) {
