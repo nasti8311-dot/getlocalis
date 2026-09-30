@@ -41,8 +41,13 @@ jobs:
         run: |
           set -euo pipefail
           required="provider_ref provider_name release_at settlement_error settlement_test_transfer_id settlement_last_attempt_at"
-          schema="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --json --command "PRAGMA table_info(booking_settlements);")"
-          node -e 'const data=JSON.parse(process.argv[1]); const rows=(data?.[0]?.results||data?.results||[]); const names=new Set(rows.map(r=>String(r.name||""))); for(const name of process.argv[2].split(" ")) if(!names.has(name)) throw new Error("Production D1 schema missing: "+name);' "$schema" "$required"
+          schema="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "PRAGMA table_info(booking_settlements);")"
+          for column in $required; do
+            if ! printf '%s\n' "$schema" | grep -Eq "(^|[[:space:]|])${column}([[:space:]|]|$)"; then
+              echo "Production D1 schema missing: $column"
+              exit 1
+            fi
+          done
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
