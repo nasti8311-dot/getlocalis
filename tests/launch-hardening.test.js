@@ -897,3 +897,12 @@ test("production deploy does not depend on GitHub Pages readiness", () => {
   assert.match(workflow, /Deploy Worker to Cloudflare/);
   assert.match(workflow, /Verify production endpoint/);
 });
+
+test("production deploy avoids route-write permission dependency", () => {
+  const workflow = read(".github/workflows/deploy-production.yml");
+  assert.match(workflow, /wrangler@4 versions upload/);
+  assert.match(workflow, /wrangler@4 versions deploy/);
+  assert.match(workflow, /WORKER_VERSION_ID/);
+  assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
+  assert.doesNotMatch(workflow, /command:\s*deploy\b/);
+});
