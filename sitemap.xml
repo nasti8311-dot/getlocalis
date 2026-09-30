@@ -3,4 +3,10 @@
   <url>
     <loc>https://fiiviu.ro/</loc>
   </url>
+  <url><loc>https://fiiviu.ro/?category=explore</loc></url>
+  <url><loc>https://fiiviu.ro/?category=relax</loc></url>
+  <url><loc>https://fiiviu.ro/?category=nightlife</loc></url>
+  <url><loc>https://fiiviu.ro/?category=adventure</loc></url>
+  <url><loc>https://fiiviu.ro/?category=vip</loc></url>
+  <url><loc>https://fiiviu.ro/?category=secret-menus</loc></url>
 </urlset>

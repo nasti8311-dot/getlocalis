@@ -1,0 +1,38 @@
+# FiiViu
+
+> FiiViu is a Bucharest, Romania platform for discovering and booking local experiences, activities, wellness, nightlife, VIP moments, and Secret Menüs.
+
+## Website
+
+- Homepage: https://fiiviu.ro/
+- Sitemap: https://fiiviu.ro/sitemap.xml
+- Public experience catalog: https://fiiviu.ro/api/offers
+
+## Main categories
+
+- Explore / Bukarest entdecken: https://fiiviu.ro/?category=explore
+- Relax / Wellness: https://fiiviu.ro/?category=relax
+- Nightlife: https://fiiviu.ro/?category=nightlife
+- Adventure: https://fiiviu.ro/?category=adventure
+- VIP: https://fiiviu.ro/?category=vip
+- Secret Menüs: https://fiiviu.ro/?category=secret-menus
+
+## Languages
+
+The website supports German, English, and Romanian.
+
+- German: https://fiiviu.ro/?lang=de
+- English: https://fiiviu.ro/?lang=en
+- Romanian: https://fiiviu.ro/?lang=ro
+
+## About FiiViu
+
+FiiViu focuses on bookable moments in and around Bucharest. The catalog can include guided city experiences, cycling, wellness and spa experiences, nightlife, adventure activities, VIP experiences, and fixed-price Secret Menüs at selected restaurants.
+
+## Data and freshness
+
+Public experience data is served from the live catalog endpoint at https://fiiviu.ro/api/offers. Availability, prices, descriptions, meeting points, and provider information can change and should be checked against the live website before presenting them as current.
+
+## Crawling
+
+Public pages are intended to be crawlable. OAI-SearchBot, OAI-AdsBot, GPTBot, Googlebot, and other general web crawlers are explicitly allowed by robots.txt.
