@@ -317,6 +317,20 @@ export default {
 };
 
 
+function sanitizeSettlementError(value) {
+  const message = String(value || "").trim();
+  if (!message) return "";
+  if (
+    message.includes("escapeHtml(") ||
+    message.includes("settlementErrors.map(") ||
+    message.includes("'+escapeHtml(") ||
+    message.includes("**Konkrete Settlement-Fehler:**")
+  ) {
+    return "Ungültiger gespeicherter Settlement-Fehler (alte Admin-UI-Daten).";
+  }
+  return message.slice(0, 1000);
+}
+
 async function handleAdminControlCenter(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
@@ -389,7 +403,7 @@ async function handleAdminControlCenter(request, env) {
             .map(s => ({
               bookingId: s.booking_id,
               amountCents: Number(s.provider_amount_cents || 0),
-              error: String(s.settlement_error || ""),
+              error: sanitizeSettlementError(s.settlement_error),
               status: String(s.settlement_status || ""),
               updatedAt: s.updated_at || null
             }))
