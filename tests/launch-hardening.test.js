@@ -864,10 +864,11 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy does not mutate D1", () => {
+test("production deploy applies D1 migrations before deployment", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  assert.doesNotMatch(workflow, /d1 migrations apply/);
+  assert.match(workflow, /d1 migrations apply .*--remote/);
   assert.doesNotMatch(workflow, /d1 execute .*--remote/);
+  assert.match(workflow, /Apply production D1 migrations/);
   assert.match(workflow, /Deploy Worker version/);
 });
 
