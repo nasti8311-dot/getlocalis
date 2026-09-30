@@ -559,33 +559,19 @@ async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
 
 function isAdmin(request,env){return String(env.ADMIN_PAYOUT_KEY||"").trim()!==""&&String(request.headers.get("Authorization")||"").trim()==="Bearer "+String(env.ADMIN_PAYOUT_KEY||"").trim()}
 async function ensurePartnerTrackingTable(env){
-  for(const [table,required] of [["partner_scan_events",["partner_ref","created_at"]],["partner_visitors",["partner_ref","visitor_id","first_seen_at","last_seen_at"]]]){
-    const rows=await env.DB.prepare("PRAGMA table_info("+table+")").all();
-    const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-    const missing=required.filter(name=>!existing.has(name));
-    if(missing.length)throw new Error("Partner tracking schema is incomplete: "+table+" missing "+missing.join(", "));
-  }
+  await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_scan_events (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_visitors (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, visitor_id TEXT NOT NULL, first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(partner_ref, visitor_id))")
+  ]);
 }
 async function ensurePartnersTable(env){
-  const rows=await env.DB.prepare("PRAGMA table_info(partners)").all();
-  const required=["name","type","partner_ref","contact_name","contact_email","active"];
-  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Partners schema is incomplete: "+missing.join(", "));
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'Hotel', partner_ref TEXT NOT NULL UNIQUE, contact_name TEXT, contact_email TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
 }
 async function ensurePartnerAccountsTable(env){
-  const rows=await env.DB.prepare("PRAGMA table_info(partner_accounts)").all();
-  const required=["partner_ref","email","password_salt","password_hash"];
-  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Partner account schema is incomplete: "+missing.join(", "));
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL UNIQUE, email TEXT NOT NULL UNIQUE, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
 }
 async function ensurePartnerSessionsTable(env){
-  const rows=await env.DB.prepare("PRAGMA table_info(partner_sessions)").all();
-  const required=["partner_ref","session_hash","expires_at"];
-  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Partner session schema is incomplete: "+missing.join(", "));
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, session_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL)").run();
 }
 function randomHex(bytesLength=32){
   const bytes=new Uint8Array(bytesLength); crypto.getRandomValues(bytes);
@@ -632,11 +618,7 @@ function partnerSessionCookie(value,maxAge=2592000){
   return "__Host-fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
-  const rows=await env.DB.prepare("PRAGMA table_info(partner_payouts)").all();
-  const required=["partner_ref","amount_cents","payout_date","status","reference"];
-  const existing=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Partner payout schema is incomplete: "+missing.join(", "));
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, amount_cents INTEGER NOT NULL, payout_date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'paid', reference TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
 }
 async function ensureBookingSettlementsTable(env){
   const rows=await env.DB.prepare("PRAGMA table_info(booking_settlements)").all();
