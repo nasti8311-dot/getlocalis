@@ -3905,6 +3905,9 @@ const response =
                 customerEmail: customerEmail,
                 customerLanguage: customerLanguage,
                 bookingDate: normalizeBookingDateValue(bookingDate),
+                // Keep a second canonical field for deployments where the
+                // checkout state was restored after navigation.
+                selectedDate: normalizeBookingDateValue(bookingDate),
                 bookingTime: bookingTime,
                 offerId: offerId || "",
                 experienceId: experienceId || "",
@@ -3986,8 +3989,16 @@ async function processBooking(event) {
           String(selectedDateFromPicker.getDate()).padStart(2, "0")
         : "";
 
+    const checkoutDateText =
+        String(document.getElementById("booking-date")?.value || "").trim();
+
+    // The picker is the primary source. If the global state was lost during
+    // the detail -> checkout transition, recover the same date from the
+    // read-only checkout field instead of sending an empty bookingDate.
     const date =
-        normalizeBookingDateValue(selectedDetailDate || pickerDateIso);
+        normalizeBookingDateValue(
+            pickerDateIso || selectedDetailDate || checkoutDateText
+        );
 
     const time =
         String(selectedTourTime || "").trim();
