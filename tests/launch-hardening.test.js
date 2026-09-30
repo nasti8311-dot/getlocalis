@@ -833,7 +833,9 @@ test("production smoke runs after a successful production deploy", () => {
   const deploy = read(".github/workflows/deploy-production.yml");
   assert.match(deploy, /Wait for Cloudflare Pages deployment for this commit/);
   assert.match(deploy, /api\.cloudflare\.com\/client\/v4\/accounts/);
-  assert.match(deploy, /pages\/projects\/fiiviu\/deployments/);
+  assert.match(deploy, /pages\/projects\?per_page=100/);
+  assert.match(deploy, /pages\/projects\/\$project\/deployments/);
+  assert.match(deploy, /fiiviu\.ro/);
   assert.match(deploy, /commit_hash/);
   assert.match(deploy, /GITHUB_SHA/);
   assert.match(deploy, /Wait for public Pages deployment/);
