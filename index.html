@@ -257,20 +257,20 @@
             html { scroll-padding-top: 72px; }
             body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
             header { padding-top: env(safe-area-inset-top); }
-            header > div > div:first-child { height: 64px; }
-            header .logo-mark { width: 38px; height: 38px; border-radius: 12px; }
+            header > div > div:first-child { height: 56px; }
+            header .logo-mark { width: 34px; height: 34px; border-radius: 10px; }
             header .text-xl { font-size: 1.05rem; }
             header .text-\[9px\] { display: none; }
             header #currency-select { height: 38px; font-size: 11px; padding: 0 8px; }
             header #lang-select { height: 38px; width: 72px; min-width: 72px; }
             header .lg\\:hidden { width: 38px; height: 38px; }
-            .hero-bg { min-height: 610px; background-position: 58% center; }
-            .hero-bg > div { padding-bottom: 42px; }
-            .hero-bg h1 { font-size: clamp(2.7rem, 13vw, 4.5rem); line-height: .92; }
+            .hero-bg { min-height: 500px; background-position: 58% center; }
+            .hero-bg > div { padding-bottom: 32px; }
+            .hero-bg h1 { font-size: clamp(2.35rem, 11vw, 3.8rem); line-height: .95; }
             .hero-bg p { font-size: 1rem; line-height: 1.55; }
             .hero-bg button { min-height: 52px; width: 100%; }
             #moments { grid-template-columns: 1fr; gap: 14px; }
-            .category-card { height: 250px !important; border-radius: 24px; }
+            .category-card { height: 210px !important; border-radius: 20px; }
             .category-card > div:last-child { padding: 20px; }
             .category-card h3 { font-size: 1.7rem; }
             .experience-card { border-radius: 24px; }
@@ -293,6 +293,13 @@
             .mobile-bottom-nav button i { font-size: 17px; }
             .mobile-bottom-nav button:active { background: rgba(232,111,45,.10); color: #E86F2D; }
         }
+        @media (max-width: 767px) {
+            section.max-w-7xl {
+                padding-top: 3rem !important;
+                padding-bottom: 3rem !important;
+            }
+        }
+
         @media (min-width: 768px) { .mobile-bottom-nav { display: none; } }
 
         @media (max-width: 767px) {
