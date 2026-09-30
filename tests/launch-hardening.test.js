@@ -827,16 +827,14 @@ test("admin provider password provisioning requires the admin bearer key", () =>
 test("production smoke runs after a successful production deploy", () => {
   const workflow = read(".github/workflows/launch-production-smoke.yml");
   assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \["Deploy production Worker"\]/);
-  assert.match(workflow, /types: \[completed\]/);
+  assert.match(workflow, /workflows: ["Deploy production Worker"]/);
+  assert.match(workflow, /types: [completed]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   const deploy = read(".github/workflows/deploy-production.yml");
-  assert.match(deploy, /Wait for public Pages deployment of this commit/);
-  assert.match(deploy, /sha256sum index\.html/);
-  assert.match(deploy, /https:\/\/fiiviu\.ro\//);
-  assert.match(deploy, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
-  assert.match(deploy, /X-Frame-Options: DENY/);
-  assert.match(deploy, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
+  assert.doesNotMatch(deploy, /Wait for public Pages deployment/);
+  assert.doesNotMatch(deploy, /sha256sum index\\.html/);
+  assert.match(deploy, /Deploy Worker to Cloudflare/);
+  assert.match(deploy, /Verify production endpoint/);
 });
 
 test("production smoke workflow guards wildcard CORS and protected boundaries", () => {
