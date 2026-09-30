@@ -369,7 +369,11 @@ async function translateOfferText(text, target) {
       "Eingang McDonalds": "Intrarea McDonald",
       "Bitte pünktlich": "Vă rugăm să fiți punctuali",
       "Fahrräder stellen wir zur Verfügung": "Punem la dispoziție biciclete",
-      "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Descoperă în turul nostru cele mai frumoase obiective și locuri pe care le oferă orașul. Durată: aproximativ 3 ore"
+      "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Descoperă în turul nostru cele mai frumoase obiective și locuri pe care le oferă orașul. Durată: aproximativ 3 ore",
+      "Traditionell – „Geschmack, der Geschichten erzählt“": "Tradițional – „Gust care spune povești“",
+      "Entdecke die echte Seele der rumänischen Küche...": "Descoperă adevărata esență a bucătăriei românești...",
+      "Bitte Spaß Und gute Laune mitbringen...": "Vă rugăm să aduceți voie bună și să vă distrați...",
+      "ca. 2 Stunden": "aproximativ 2 ore"
     },
     "en": {
       "Vor dem Haus": "In front of the house",
@@ -383,7 +387,11 @@ async function translateOfferText(text, target) {
       "Eingang McDonalds": "McDonald entrance",
       "Bitte pünktlich": "Please be punctual",
       "Fahrräder stellen wir zur Verfügung": "We provide bicycles",
-      "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Explore the most beautiful sights and places the city has to offer on our tour. Duration: approx. 3 hours"
+      "Erkunde bei unserer Tour die schönsten Sehenswürdigkeiten und Orte, die die Stadt zu bieten hat. Dauer: ca. 3 Stunden": "Explore the most beautiful sights and places the city has to offer on our tour. Duration: approx. 3 hours",
+      "Traditionell – „Geschmack, der Geschichten erzählt“": "Traditional – “A taste that tells stories”",
+      "Entdecke die echte Seele der rumänischen Küche...": "Discover the true soul of Romanian cuisine...",
+      "Bitte Spaß Und gute Laune mitbringen...": "Please bring a good mood and have fun...",
+      "ca. 2 Stunden": "approx. 2 hours"
     }
   };
   if (common[target]?.[source]) return common[target][source];
@@ -486,16 +494,17 @@ async function translateOfferFields(source, options = {}) {
     return translated;
   };
 
-  const jobs = [];
-  if (shouldTranslate(title, titleEn)) jobs.push(translateRequired(title, "en", "Titel").then(v => { titleEn = v; }));
-  if (shouldTranslate(title, titleRo)) jobs.push(translateRequired(title, "ro", "Titel").then(v => { titleRo = v; }));
-  if (shouldTranslate(description, descriptionEn)) jobs.push(translateRequired(description, "en", "Beschreibung").then(v => { descriptionEn = v; }));
-  if (shouldTranslate(description, descriptionRo)) jobs.push(translateRequired(description, "ro", "Beschreibung").then(v => { descriptionRo = v; }));
-  if (shouldTranslate(meetingPointName, pointEn)) jobs.push(translateRequired(meetingPointName, "en", "Treffpunkt").then(v => { pointEn = v; }));
-  if (shouldTranslate(meetingPointName, pointRo)) jobs.push(translateRequired(meetingPointName, "ro", "Treffpunkt").then(v => { pointRo = v; }));
-  if (shouldTranslate(meetingInstructions, instructionsEn)) jobs.push(translateRequired(meetingInstructions, "en", "Anweisungen").then(v => { instructionsEn = v; }));
-  if (shouldTranslate(meetingInstructions, instructionsRo)) jobs.push(translateRequired(meetingInstructions, "ro", "Anweisungen").then(v => { instructionsRo = v; }));
-  await Promise.all(jobs);
+  // Translate one field at a time. Eight parallel external requests can trigger
+  // provider throttling on Cloudflare Workers and leave the offer only partly
+  // translated. Sequential calls are slower but deterministic and reliable.
+  if (shouldTranslate(title, titleEn)) titleEn = await translateRequired(title, "en", "Titel");
+  if (shouldTranslate(title, titleRo)) titleRo = await translateRequired(title, "ro", "Titel");
+  if (shouldTranslate(description, descriptionEn)) descriptionEn = await translateRequired(description, "en", "Beschreibung");
+  if (shouldTranslate(description, descriptionRo)) descriptionRo = await translateRequired(description, "ro", "Beschreibung");
+  if (shouldTranslate(meetingPointName, pointEn)) pointEn = await translateRequired(meetingPointName, "en", "Treffpunkt");
+  if (shouldTranslate(meetingPointName, pointRo)) pointRo = await translateRequired(meetingPointName, "ro", "Treffpunkt");
+  if (shouldTranslate(meetingInstructions, instructionsEn)) instructionsEn = await translateRequired(meetingInstructions, "en", "Anweisungen");
+  if (shouldTranslate(meetingInstructions, instructionsRo)) instructionsRo = await translateRequired(meetingInstructions, "ro", "Anweisungen");
 
   return {
     titleEn,
