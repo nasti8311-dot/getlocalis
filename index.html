@@ -2804,6 +2804,27 @@ function localizeOfferFallback(value, lang) {
     const isDescription = lower.startsWith("entdecke die echte seele der rumänischen küche");
     const isInstructions = lower.startsWith("bitte spaß und gute laune mitbringen");
     const isDuration = /^ca\.?\s*2\s*stunden$/i.test(normalized);
+    const reservationWindowMatch = normalized.match(/^Reservierung\s+zwischen\s+(\\d{1,2})(?::(\\d{2}))?\s*[-–]\s*(\\d{1,2})(?::(\\d{2}))?\s*Uhr$/i);
+
+    if (reservationWindowMatch) {
+        const startHour = Number(reservationWindowMatch[1]);
+        const startMinute = reservationWindowMatch[2] || "00";
+        const endHour = Number(reservationWindowMatch[3]);
+        const endMinute = reservationWindowMatch[4] || "00";
+
+        if (lang === "en") {
+            const formatEnglishTime = (hour, minute) => {
+                const suffix = hour >= 12 ? "PM" : "AM";
+                const displayHour = hour % 12 || 12;
+                return displayHour + (minute !== "00" ? ":" + minute : ":00") + " " + suffix;
+            };
+            return "Reservations available between " + formatEnglishTime(startHour, startMinute) + " and " + formatEnglishTime(endHour, endMinute) + ".";
+        }
+
+        if (lang === "ro") {
+            return "Rezervările sunt disponibile între " + String(startHour).padStart(2, "0") + ":" + startMinute + " și " + String(endHour).padStart(2, "0") + ":" + endMinute + ".";
+        }
+    }
 
     if (lang === "en") {
         if (isDescription) {
