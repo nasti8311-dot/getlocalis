@@ -842,7 +842,7 @@ test("production smoke workflow guards wildcard CORS and protected boundaries", 
   assert.match(workflow, /permissions:\s*\{\}/);
   assert.ok(workflow.includes("if grep -Eqi '^access-control-allow-origin:[[:space:]]*\\*[[:space:]]*$'"));
   assert.doesNotMatch(workflow, /access-control-allow-origin: \*/);
-  assert.ok(workflow.includes("permissions-policy: camera=\\(\\), microphone=\\(\\), geolocation=\\(\\), payment=\\(self\\)"));
+  assert.ok(workflow.includes("permissions-policy: camera=(), microphone=(), geolocation=(), payment=(self)"));
   for (const marker of [
     "https://fiiviu.ro/api/provider-test-booking",
     "for path in connect-status connect-onboarding",
