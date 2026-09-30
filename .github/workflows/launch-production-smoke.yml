@@ -30,7 +30,7 @@ jobs:
           grep -qi '^x-frame-options: DENY' /tmp/home.headers
           grep -qi '^x-content-type-options: nosniff' /tmp/home.headers
           grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/home.headers
-          grep -qi '^permissions-policy: camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)' /tmp/home.headers
+          grep -Fqi 'permissions-policy: camera=(), microphone=(), geolocation=(), payment=(self)' /tmp/home.headers
 
       - name: Check first-party API CORS and no-store
         run: |
