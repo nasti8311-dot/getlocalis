@@ -2778,6 +2778,9 @@ function localizeOfferFallback(value, lang) {
     const source = String(value || "").trim();
     if (!source || lang === "de") return source;
 
+    const normalized = source.replace(/\s+/g, " ").trim();
+    const lower = normalized.toLowerCase();
+
     const exact = {
         en: {
             "Traditionell – „Geschmack, der Geschichten erzählt“": "Traditional – “A taste that tells stories”",
@@ -2789,31 +2792,33 @@ function localizeOfferFallback(value, lang) {
         }
     };
 
-    const direct = exact[lang]?.[source];
+    const direct = exact[lang]?.[normalized];
     if (direct) return direct;
 
-    const normalized = source.replace(/\\s+/g, " ").trim();
+    const isDescription = lower.startsWith("entdecke die echte seele der rumänischen küche");
+    const isInstructions = lower.startsWith("bitte spaß und gute laune mitbringen");
+    const isDuration = /^ca\.?\s*2\s*stunden$/i.test(normalized);
 
     if (lang === "en") {
-        if (/^Entdecke die echte Seele der rumänischen Küche\\b/i.test(normalized)) {
+        if (isDescription) {
             return "Discover the true soul of Romanian cuisine. Homemade recipes, regional specialties and traditional ingredients come together in a special menu that you will not find on the regular menu. A culinary evening like with a Romanian family – but as a Secret Menu.";
         }
-        if (/^Bitte Spaß Und gute Laune mitbringen\\b/i.test(normalized)) {
+        if (isInstructions) {
             return "Please bring a good mood and have fun.";
         }
-        if (/^ca\\.?\\s*2\\s*Stunden$/i.test(normalized)) {
+        if (isDuration) {
             return "approx. 2 hours";
         }
     }
 
     if (lang === "ro") {
-        if (/^Entdecke die echte Seele der rumänischen Küche\\b/i.test(normalized)) {
+        if (isDescription) {
             return "Descoperă adevărata esență a bucătăriei românești. Rețete de casă, specialități regionale și ingrediente tradiționale sunt reunite într-un meniu special pe care nu îl găsești în meniul obișnuit. O seară culinară ca într-o familie românească – dar ca Secret Menu.";
         }
-        if (/^Bitte Spaß Und gute Laune mitbringen\\b/i.test(normalized)) {
+        if (isInstructions) {
             return "Vă rugăm să aduceți voie bună și să vă distrați.";
         }
-        if (/^ca\\.?\\s*2\\s*Stunden$/i.test(normalized)) {
+        if (isDuration) {
             return "aproximativ 2 ore";
         }
     }
