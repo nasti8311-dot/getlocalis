@@ -848,5 +848,5 @@ test("iOS app icon references an existing static asset", () => {
   assert.ok(icon, "apple-touch-icon reference missing");
   const path = icon.split("?")[0].replace(/^\//, "");
   assert.ok(path === "icons/icon-192.svg", "apple-touch-icon must point to the checked-in PNG/SVG asset");
-  assert.match(read(path), /<svg[\\s>]/i);
+  assert.match(read(path), /<svg[\s>]/i);
 });
