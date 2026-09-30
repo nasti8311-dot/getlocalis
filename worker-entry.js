@@ -51,6 +51,17 @@ export default {
       return legacyWorker.fetch(request, env, ctx);
     }
 
+    // Legacy partner admin endpoints are still the authoritative implementation.
+    // Keep them behind the same secure admin Worker routing as the provider admin.
+    if (
+      url.pathname === "/api/admin/partners" ||
+      url.pathname === "/api/admin/partner-password" ||
+      url.pathname === "/api/admin/partner-payout" ||
+      url.pathname === "/api/partner-stats"
+    ) {
+      return legacyWorker.fetch(request, env, ctx);
+    }
+
     if (url.pathname === "/api/admin/providers") {
       return handleAdminProviders(request, env);
     }
