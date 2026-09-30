@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: production-deploy
@@ -41,6 +42,31 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: deploy
+
+      - name: Wait for Pages workflow for this commit
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          state="missing"
+          for attempt in $(seq 1 60); do
+            payload="$(curl --fail --silent --show-error --max-time 20 \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?branch=main&per_page=50")"
+            state="$(node -e 'const d=JSON.parse(process.argv[1]); const sha=process.argv[2]; const runs=(d.workflow_runs||[]).filter(r=>r.name==="pages build and deployment"&&r.head_sha===sha); const r=runs[0]; console.log(r?`${r.status}|${r.conclusion||""}`:"missing")' "$payload" "$GITHUB_SHA")"
+            case "$state" in
+              completed\|success) echo "Pages deployment for $GITHUB_SHA completed successfully."; break;;
+              completed\|failure|completed\|cancelled) echo "Pages deployment for $GITHUB_SHA failed: $state"; exit 1;;
+              *) echo "Waiting for Pages workflow for $GITHUB_SHA (attempt $attempt/60): $state"; sleep 5;;
+            esac
+          done
+          if [ "$state" != "completed|success" ]; then
+            echo "Pages deployment for $GITHUB_SHA did not complete successfully within 5 minutes."
+            exit 1
+          fi
 
       - name: Wait for public Pages deployment
         shell: bash
