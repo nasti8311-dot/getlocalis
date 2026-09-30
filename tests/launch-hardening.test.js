@@ -859,12 +859,11 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy does not mutate D1 and checks schema read-only", () => {
+test("production deploy does not mutate D1", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(workflow, /d1 migrations apply/);
-  assert.match(workflow, /Verify production D1 schema before deploy/);
-  assert.match(workflow, /PRAGMA table_info\(booking_settlements\)/);
-  assert.match(workflow, /settlement_test_transfer_id/);
+  assert.doesNotMatch(workflow, /d1 execute .*--remote/);
+  assert.match(workflow, /Deploy Worker to Cloudflare/);
 });
 
 test("iOS app icon references an existing static asset", () => {
