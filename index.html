@@ -4309,5 +4309,66 @@ function escapeHtml(value) {
 
 </script>
 
+
+    <!-- PWA install helper -->
+    <style>
+        #pwa-install-btn {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: calc(86px + env(safe-area-inset-bottom));
+            z-index: 80;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 52px;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: #E86F2D;
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 14px 32px rgba(0,0,0,.18);
+        }
+        #pwa-install-btn.visible { display: flex; }
+        @media (min-width: 768px) {
+            #pwa-install-btn {
+                left: auto;
+                right: 24px;
+                bottom: 24px;
+                width: auto;
+            }
+        }
+    </style>
+    <button id="pwa-install-btn" type="button" aria-label="FiiViu installieren">
+        <i class="fa-solid fa-download"></i>
+        <span>FiiViu installieren</span>
+    </button>
+    <script>
+        let deferredInstallPrompt = null;
+        const pwaInstallButton = document.getElementById("pwa-install-btn");
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            pwaInstallButton.classList.add("visible");
+        });
+
+        pwaInstallButton?.addEventListener("click", async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const result = await deferredInstallPrompt.userChoice;
+            if (result?.outcome === "accepted") {
+                pwaInstallButton.classList.remove("visible");
+            }
+            deferredInstallPrompt = null;
+        });
+
+        window.addEventListener("appinstalled", () => {
+            deferredInstallPrompt = null;
+            pwaInstallButton.classList.remove("visible");
+        });
+    </script>
+
 </body>
 </html>
