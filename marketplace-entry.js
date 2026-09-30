@@ -246,9 +246,9 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const guests=Number(body.guests||1);
     if(!Number.isInteger(guests)||guests<1||guests>50)return json({error:"Invalid guest count"},400);
 
-    const bookingDate=String(body.bookingDate||"").trim();
     const bookingTime=String(body.bookingTime||"").trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(bookingTime)){
+    const bookingDate=normalizeMarketplaceBookingDate(body.bookingDate, body.customerLanguage);
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(bookingDate)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(bookingTime)){
       return json({error:"Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich."},400);
     }
     const bookingStart=toBucharestDate(bookingDate,bookingTime);
@@ -292,6 +292,35 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     return json({error:error?.message||"Marketplace payment routing failed"},500);
   }
 }
+function normalizeMarketplaceBookingDate(value, language){
+  const raw=String(value||"").trim();
+  if(/^\\d{4}-\\d{2}-\\d{2}$/.test(raw))return raw;
+
+  const match=raw.match(/^(\\d{1,2})[\\/.](\\d{1,2})[\\/.](\\d{4})$/);
+  if(!match)return raw;
+
+  const first=Number(match[1]), second=Number(match[2]), year=Number(match[3]);
+  let month, day;
+  const lang=String(language||"").slice(0,2).toLowerCase();
+
+  if(lang==="de"||lang==="ro"){
+    day=first; month=second;
+  }else if(lang==="en"){
+    month=first; day=second;
+  }else if(first>12){
+    day=first; month=second;
+  }else if(second>12){
+    month=first; day=second;
+  }else{
+    day=first; month=second;
+  }
+
+  const candidate=year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+  const parsed=new Date(candidate+"T00:00:00Z");
+  if(parsed.getUTCFullYear()!==year||parsed.getUTCMonth()+1!==month||parsed.getUTCDate()!==day)return raw;
+  return candidate;
+}
+
 function normalizeAvailableTimes(value){
   if(Array.isArray(value))return value.map(String).map(v=>v.trim()).filter(Boolean);
   const raw=String(value||"").trim();
