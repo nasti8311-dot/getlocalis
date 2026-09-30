@@ -824,6 +824,12 @@ test("admin provider password provisioning requires the admin bearer key", () =>
 });
 
 
+test("production smoke matches literal Permissions-Policy header syntax", () => {
+  const workflow = read(".github/workflows/launch-production-smoke.yml");
+  assert.match(workflow, /grep -Fqi 'permissions-policy: camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)'/);
+  assert.doesNotMatch(workflow, /grep -qi '\^permissions-policy: camera=\\\\\(\\\\\),/);
+});
+
 test("production smoke runs after a successful production deploy", () => {
   const workflow = read(".github/workflows/launch-production-smoke.yml");
   assert.match(workflow, /workflow_run:/);
