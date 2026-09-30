@@ -465,9 +465,6 @@ async function translateOfferFields(source, options = {}) {
   const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
   const meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
 
-  // Existing EN/RO values are authoritative. Only empty values, or values
-  // that exactly repeat the German source when refreshStale is enabled, are
-  // sent to the translator. This prevents overwriting real manual translations.
   let titleEn = String(source.titleEn || source.title_en || "").trim();
   let titleRo = String(source.titleRo || source.title_ro || "").trim();
   let descriptionEn = String(source.descriptionEn || source.description_en || "").trim();
@@ -477,22 +474,29 @@ async function translateOfferFields(source, options = {}) {
   let instructionsEn = String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
   let instructionsRo = String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
 
-  const jobs = [];
   const shouldTranslate = (sourceValue, translatedValue) =>
     Boolean(sourceValue && (!translatedValue || (refreshStale && translatedValue === sourceValue)));
 
-  if (shouldTranslate(title, titleEn)) jobs.push(translateOfferText(title, "en").then(v => { if (v) titleEn = v; }));
-  if (shouldTranslate(title, titleRo)) jobs.push(translateOfferText(title, "ro").then(v => { if (v) titleRo = v; }));
-  if (shouldTranslate(description, descriptionEn)) jobs.push(translateOfferText(description, "en").then(v => { if (v) descriptionEn = v; }));
-  if (shouldTranslate(description, descriptionRo)) jobs.push(translateOfferText(description, "ro").then(v => { if (v) descriptionRo = v; }));
-  if (shouldTranslate(meetingPointName, pointEn)) jobs.push(translateOfferText(meetingPointName, "en").then(v => { if (v) pointEn = v; }));
-  if (shouldTranslate(meetingPointName, pointRo)) jobs.push(translateOfferText(meetingPointName, "ro").then(v => { if (v) pointRo = v; }));
-  if (shouldTranslate(meetingInstructions, instructionsEn)) jobs.push(translateOfferText(meetingInstructions, "en").then(v => { if (v) instructionsEn = v; }));
-  if (shouldTranslate(meetingInstructions, instructionsRo)) jobs.push(translateOfferText(meetingInstructions, "ro").then(v => { if (v) instructionsRo = v; }));
+  const translateRequired = async (sourceValue, target, label) => {
+    if (!sourceValue) return "";
+    const translated = await translateOfferText(sourceValue, target);
+    if (!translated || translated === sourceValue) {
+      throw new Error("Übersetzung für " + label + " nach " + target.toUpperCase() + " konnte nicht erstellt werden.");
+    }
+    return translated;
+  };
+
+  const jobs = [];
+  if (shouldTranslate(title, titleEn)) jobs.push(translateRequired(title, "en", "Titel").then(v => { titleEn = v; }));
+  if (shouldTranslate(title, titleRo)) jobs.push(translateRequired(title, "ro", "Titel").then(v => { titleRo = v; }));
+  if (shouldTranslate(description, descriptionEn)) jobs.push(translateRequired(description, "en", "Beschreibung").then(v => { descriptionEn = v; }));
+  if (shouldTranslate(description, descriptionRo)) jobs.push(translateRequired(description, "ro", "Beschreibung").then(v => { descriptionRo = v; }));
+  if (shouldTranslate(meetingPointName, pointEn)) jobs.push(translateRequired(meetingPointName, "en", "Treffpunkt").then(v => { pointEn = v; }));
+  if (shouldTranslate(meetingPointName, pointRo)) jobs.push(translateRequired(meetingPointName, "ro", "Treffpunkt").then(v => { pointRo = v; }));
+  if (shouldTranslate(meetingInstructions, instructionsEn)) jobs.push(translateRequired(meetingInstructions, "en", "Anweisungen").then(v => { instructionsEn = v; }));
+  if (shouldTranslate(meetingInstructions, instructionsRo)) jobs.push(translateRequired(meetingInstructions, "ro", "Anweisungen").then(v => { instructionsRo = v; }));
   await Promise.all(jobs);
 
-  // Never store the German source as an EN/RO translation when a translation
-  // provider is unavailable. The UI can safely fall back to the source field.
   return {
     titleEn,
     titleRo,
@@ -504,7 +508,6 @@ async function translateOfferFields(source, options = {}) {
     meetingInstructionsRo: instructionsRo
   };
 }
-
 
 function normalizeOfferText(value){
   if(value && typeof value==="object" && !Array.isArray(value)){
