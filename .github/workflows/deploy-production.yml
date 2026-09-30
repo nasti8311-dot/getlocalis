@@ -77,3 +77,9 @@ jobs:
           done
           echo "Production catalog did not become healthy after deployment."
           exit 1
+
+          admin_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
+          test "$admin_status" = "401"
+
+          stats_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/stats.json -w '%{http_code}' https://fiiviu.ro/api/partner-stats?ref=TEST)"
+          test "$stats_status" = "401"
