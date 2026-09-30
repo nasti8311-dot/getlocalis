@@ -58,6 +58,15 @@ test("runtime schema evolution is not used by launch paths", () => {
   }
 });
 
+test("system event audit does not create runtime D1 schema", () => {
+  const source = read("worker-entry.js");
+  assert.doesNotMatch(source, /CREATE TABLE IF NOT EXISTS system_events/i);
+  assert.doesNotMatch(source, /CREATE INDEX IF NOT EXISTS idx_system_events/i);
+  assert.doesNotMatch(source, /ensureSystemEventsTable/);
+  assert.match(source, /FROM stripe_webhook_events ORDER BY id DESC LIMIT 1/);
+});
+
+
 test("production D1 audit workflow checks migration history", () => {
   const source = read(".github/workflows/audit-d1-schema.yml");
   assert.match(source, /SELECT \* FROM d1_migrations ORDER BY id/);
@@ -514,6 +523,13 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /"Referrer-Policy": "strict-origin-when-cross-origin"/);
   assert.match(source, /"Permissions-Policy": "camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)"/);
 });
+
+test("booking and cancellation APIs inherit baseline security headers", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /url\.pathname === "\/api\/booking"[\s\S]*applyApiSecurityHeaders\(await handleBookingAccess/);
+  assert.match(source, /url\.pathname === "\/api\/cancel-booking"[\s\S]*applyApiSecurityHeaders\(await handleCancellation/);
+});
+
 
 test("admin settlement endpoints inherit a no-store cache policy", () => {
   const source = read("secure-entry.js");
