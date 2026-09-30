@@ -594,6 +594,13 @@ html, body, main,
                    data-i18n="nav_adventure">
                     Adventure
                 </a>
+
+                <a href="#"
+                   onclick="showCategory('secret-menus'); return false;"
+                   class="hover:text-fii-orange transition"
+                   data-i18n="nav_secret_menus">
+                    Secret Menüs
+                </a>
             </nav>
 
             <div class="flex items-center gap-2">
@@ -654,6 +661,12 @@ html, body, main,
                         class="text-left p-3 rounded-xl hover:bg-white"
                         data-i18n="nav_adventure">
                     Adventure
+                </button>
+
+                <button onclick="mobileCategory('secret-menus')"
+                        class="text-left p-3 rounded-xl hover:bg-white"
+                        data-i18n="nav_secret_menus">
+                    Secret Menüs
                 </button>
             </div>
         </div>
@@ -821,6 +834,16 @@ html, body, main,
             </div>
 
 
+            <div data-category="secret-menus"
+                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=900" class="absolute inset-0 w-full h-full object-cover" alt="Secret Menüs">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="absolute bottom-0 p-7 text-white">
+                    <h3 class="text-3xl font-black" data-i18n="cat_secret_menus">Secret Menüs</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_secret_menus_desc">Überraschungsmenüs in ausgewählten Restaurants.</p>
+                </div>
+            </div>
+
             <div data-category="vip"
                  role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
 
@@ -843,16 +866,6 @@ html, body, main,
                 </div>
             </div>
 
-
-            <div data-category="secret-menus"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=900" class="absolute inset-0 w-full h-full object-cover" alt="Secret Menüs">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-                <div class="absolute bottom-0 p-7 text-white">
-                    <h3 class="text-3xl font-black" data-i18n="cat_secret_menus">Secret Menüs</h3>
-                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_secret_menus_desc">Überraschungsmenüs in ausgewählten Restaurants.</p>
-                </div>
-            </div>
 
         </div>
     </section>
@@ -2386,6 +2399,8 @@ const translations = {
         nav_relax: "Relax",
         nav_nightlife: "Nightlife",
         nav_adventure: "Adventure",
+        nav_secret_menus: "Secret Menüs",
+        nav_secret_menus: "Secret Menüs",
 
         hero_title: "Halte die Zeit an.<br>Erlebe den Moment.",
         hero_subtitle: "Manchmal liegt das Besondere direkt um die Ecke. FiiViu zeigt dir Orte und Erlebnisse, die deinen Tag besonders machen.",
@@ -2497,6 +2512,7 @@ const translations = {
         nav_relax: "Relax",
         nav_nightlife: "Nightlife",
         nav_adventure: "Adventure",
+        nav_secret_menus: "Secret Menus",
 
         hero_title: "Stop time.<br>Live the moment.",
         hero_subtitle: "Sometimes the best things are right around the corner. FiiViu shows you places and experiences that make your day special.",
