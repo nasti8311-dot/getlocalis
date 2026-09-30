@@ -250,7 +250,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const submittedBookingDate =
       body.bookingDate ?? body.selectedDate ?? body.date ?? body.selected_date ?? "";
     const bookingDate=normalizeMarketplaceBookingDate(submittedBookingDate, body.customerLanguage);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(bookingTime)){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(bookingTime)){
       return json({error:"Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich."},400);
     }
     const bookingStart=toBucharestDate(bookingDate,bookingTime);
