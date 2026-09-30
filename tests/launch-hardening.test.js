@@ -524,6 +524,13 @@ test("API responses receive baseline transport and browser security headers", ()
   assert.match(source, /"Permissions-Policy": "camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)"/);
 });
 
+test("booking and cancellation APIs inherit baseline security headers", () => {
+  const source = read("secure-entry.js");
+  assert.match(source, /url\.pathname === "\/api\/booking"[\s\S]*applyApiSecurityHeaders\(await handleBookingAccess/);
+  assert.match(source, /url\.pathname === "\/api\/cancel-booking"[\s\S]*applyApiSecurityHeaders\(await handleCancellation/);
+});
+
+
 test("admin settlement endpoints inherit a no-store cache policy", () => {
   const source = read("secure-entry.js");
   const corsStart = source.indexOf("function getAdminCors(request, env)");
