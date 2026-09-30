@@ -267,8 +267,7 @@
             .hero-bg {
                 min-height: auto !important;
                 padding-top: 30vh;
-                background:
-                    #F8F6F1;
+                background: #F8F6F1;
                 color: #151515;
                 position: relative;
             }
@@ -292,17 +291,46 @@
             .hero-bg > div {
                 position: relative;
                 padding-top: 28px;
-                padding-bottom: 44px;
+                padding-bottom: 34px;
+            }
+            .hero-bg .fade-up {
+                display: flex;
+                flex-direction: column;
+            }
+            .hero-bg .inline-flex {
+                display: none;
             }
             .hero-bg h1 {
-                color: #151515;
+                position: absolute;
+                top: calc(-30vh + 18px);
+                left: 0;
+                right: 0;
+                margin-bottom: 0;
+                color: white;
                 font-size: clamp(2.25rem, 10vw, 3.5rem);
                 line-height: .98;
+                z-index: 2;
             }
             .hero-bg p {
+                order: 2;
                 color: #4b5563;
                 font-size: 1rem;
                 line-height: 1.6;
+                margin-bottom: 0;
+                margin-top: 16px;
+            }
+            .hero-bg .fade-up > .flex {
+                order: 1;
+            }
+            .hero-bg button {
+                width: 100%;
+            }
+            .home-view > section.max-w-7xl {
+                padding-top: 18px !important;
+                padding-bottom: 3rem !important;
+            }
+            .home-view > section.max-w-7xl > .max-w-2xl {
+                display: none;
             }
             .hero-bg > div { padding-bottom: 32px; }
             .hero-bg h1 { font-size: clamp(2.35rem, 11vw, 3.8rem); line-height: .95; }
