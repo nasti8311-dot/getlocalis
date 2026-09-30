@@ -39,6 +39,20 @@ jobs:
           grep -qi '^cache-control: no-store' /tmp/provider-session.headers
           grep -qi '^vary: Origin' /tmp/provider-session.headers
           if grep -Eqi '^access-control-allow-origin:[[:space:]]*\*[[:space:]]*$' /tmp/provider-session.headers; then exit 1; fi
+      - name: Check launch-critical static surfaces
+        run: |
+          set -euo pipefail
+          for path in /robots.txt /sitemap.xml /manifest.json /icons/icon-192.svg /icons/icon-512.svg; do
+            name="$(echo "$path" | tr '/' '_')"
+            status="$(curl --silent --show-error --location --max-time 20 --output "/tmp/static${name}" --write-out '%{http_code}' "https://fiiviu.ro${path}")"
+            test "$status" = "200"
+          done
+          grep -q 'Sitemap: https://fiiviu.ro/sitemap.xml' /tmp/static_robots.txt
+          grep -q 'https://fiiviu.ro/' /tmp/static_sitemap.xml
+          node -e 'const fs=require("fs"); const m=JSON.parse(fs.readFileSync("/tmp/static_manifest.json","utf8")); if(m.start_url!=="/" || m.scope!=="/") throw new Error("PWA manifest scope/start_url mismatch"); if(!Array.isArray(m.icons) || m.icons.length<2) throw new Error("PWA manifest icons missing");'
+          grep -qi '<svg' /tmp/static_icons_icon-192.svg
+          grep -qi '<svg' /tmp/static_icons_icon-512.svg
+
       - name: Check public catalog
         run: |
           set -euo pipefail
