@@ -2,8 +2,9 @@ name: Launch production smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Deploy production Worker"]
+    types: [completed]
   schedule:
     - cron: "17 * * * *"
 
@@ -11,6 +12,7 @@ permissions: {}
 
 jobs:
   smoke:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
