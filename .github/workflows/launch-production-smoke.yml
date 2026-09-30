@@ -25,12 +25,23 @@ jobs:
       - name: Check baseline security headers
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location --max-time 20             --dump-header /tmp/home.headers             --output /dev/null             https://fiiviu.ro/
-          grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' /tmp/home.headers
-          grep -qi '^x-frame-options: DENY' /tmp/home.headers
-          grep -qi '^x-content-type-options: nosniff' /tmp/home.headers
-          grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/home.headers
-          grep -qi '^permissions-policy: camera=\(\), microphone=\(\), geolocation=\(\), payment=\(self\)' /tmp/home.headers
+          for attempt in $(seq 1 12); do
+            curl --fail --silent --show-error --location --max-time 20 \
+              --dump-header /tmp/home.headers \
+              --output /dev/null \
+              https://fiiviu.ro/
+            if grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' /tmp/home.headers &&
+               grep -qi '^x-frame-options: DENY' /tmp/home.headers &&
+               grep -qi '^x-content-type-options: nosniff' /tmp/home.headers &&
+               grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/home.headers &&
+               grep -qi '^permissions-policy: camera=(), microphone=(), geolocation=(), payment=(self)' /tmp/home.headers; then
+              exit 0
+            fi
+            echo "Waiting for the public security headers to converge (attempt $attempt/12)..."
+            sleep 5
+          done
+          echo "Public security headers did not converge within 60 seconds."
+          exit 1
 
       - name: Check first-party API CORS and no-store
         run: |
