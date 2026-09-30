@@ -9,16 +9,23 @@
     <meta name="apple-mobile-web-app-title" content="FiiViu">
     <link rel="manifest" href="/manifest.json">
     <link rel="canonical" href="https://fiiviu.ro/">
-    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="FiiViu">
     <meta property="og:title" content="FiiViu — Oprește timpul, trăiește momentul.">
     <meta property="og:description" content="FiiViu – besondere Erlebnisse in Bukarest. Entdecke lokale Momente, Wellness, Nightlife, Abenteuer und VIP-Erlebnisse.">
     <meta property="og:url" content="https://fiiviu.ro/">
     <meta property="og:image" content="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1600">
+    <meta property="og:image:alt" content="Bukarest bei Nacht – FiiViu Erlebnisse in București">
+    <meta property="og:locale" content="de_DE">
+    <meta property="og:locale:alternate" content="en_GB">
+    <meta property="og:locale:alternate" content="ro_RO">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="FiiViu — Oprește timpul, trăiește momentul.">
     <meta name="twitter:description" content="Besondere Erlebnisse in Bukarest – lokal, direkt und einfach buchbar.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1600">
+    <meta name="twitter:image:alt" content="FiiViu – besondere Erlebnisse in Bukarest">
     <link rel="apple-touch-icon" href="/icons/icon-192.svg?v=4">
 
     <title>FiiViu — Oprește timpul, trăiește momentul.</title>
@@ -456,13 +463,49 @@
     <script type="application/ld+json">
     {
       "@context":"https://schema.org",
-      "@type":"WebSite",
-      "name":"FiiViu",
-      "url":"https://fiiviu.ro/",
-      "description":"Besondere Erlebnisse in Bukarest – lokale Momente, Wellness, Nightlife, Abenteuer und VIP-Erlebnisse.",
-      "inLanguage":["de","en","ro"]
+      "@graph":[
+        {
+          "@type":"WebSite",
+          "@id":"https://fiiviu.ro/#website",
+          "name":"FiiViu",
+          "url":"https://fiiviu.ro/",
+          "description":"FiiViu – besondere Erlebnisse in Bukarest. Entdecke lokale Momente, Wellness, Nightlife, Abenteuer, VIP-Erlebnisse und Secret Menüs.",
+          "inLanguage":["de","en","ro"],
+          "publisher":{"@id":"https://fiiviu.ro/#organization"}
+        },
+        {
+          "@type":"Organization",
+          "@id":"https://fiiviu.ro/#organization",
+          "name":"FiiViu",
+          "url":"https://fiiviu.ro/",
+          "logo":"https://fiiviu.ro/icons/icon-512.svg",
+          "description":"Plattform für besondere Erlebnisse und buchbare Momente in Bukarest, Rumänien."
+        }
+      ]
     }
     </script>
+    <noscript>
+        <div>
+            <h2>FiiViu – besondere Erlebnisse in Bukarest</h2>
+            <p>
+                FiiViu hilft dir, besondere Momente in București zu entdecken und zu buchen:
+                Stadtführungen, lokale Erlebnisse, Wellness, Nightlife, Abenteuer, VIP-Erlebnisse
+                und Secret Menüs in ausgewählten Restaurants.
+            </p>
+            <p>
+                Kategorien:
+                <a href="/?category=explore">Bukarest entdecken</a>,
+                <a href="/?category=relax">Relax &amp; Wellness</a>,
+                <a href="/?category=nightlife">Nightlife</a>,
+                <a href="/?category=adventure">Adventure</a>,
+                <a href="/?category=vip">VIP</a>,
+                <a href="/?category=secret-menus">Secret Menüs</a>.
+            </p>
+            <p>
+                FiiViu ist auf Deutsch, Englisch und Rumänisch verfügbar.
+            </p>
+        </div>
+    </noscript>
 </head>
 
 <body class="text-fii-black font-sans min-h-screen flex flex-col">
@@ -2805,6 +2848,25 @@ async function loadPublicOffers() {
    INITIALIZATION
 ============================================================ */
 
+function applyInitialQueryRoute() {
+    const params = new URLSearchParams(window.location.search);
+    const requestedLanguage = params.get("lang");
+    const requestedCategory = params.get("category");
+
+    if (["de", "en", "ro"].includes(requestedLanguage)) {
+        currentLang = requestedLanguage;
+        document.documentElement.lang = requestedLanguage;
+        updateLanguageSelector();
+    }
+
+    if (requestedCategory && categoriesData[requestedCategory]) {
+        showCategory(requestedCategory, { pushHistory: false });
+        return true;
+    }
+
+    return false;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     
     capturePartnerRef();
@@ -2842,15 +2904,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Keep the SPA navigation inside browser history so the normal
     // browser back button moves through FiiViu's views instead of
     // leaving the site immediately.
-    history.replaceState(
-        {
-            view: "home-view",
-            category: "",
-            tour: ""
-        },
-        "",
-        window.location.href
-    );
+    const routedFromQuery = applyInitialQueryRoute();
+
+    if (!routedFromQuery) {
+        history.replaceState(
+            {
+                view: "home-view",
+                category: "",
+                tour: ""
+            },
+            "",
+            window.location.href
+        );
+    }
 
     if (cardElement) {
 
