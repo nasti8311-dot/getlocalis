@@ -881,3 +881,21 @@ test("iOS app icon references an existing static asset", () => {
   assert.ok(path === "icons/icon-192.svg", "apple-touch-icon must point to the checked-in PNG/SVG asset");
   assert.match(read(path), /<svg[\s>]/i);
 });
+
+
+test("public static assets are served through the Worker for header enforcement", () => {
+  const config = read("wrangler.jsonc");
+  assert.match(config, /"pattern":\s*"fiiviu\.ro\/\*"/);
+  assert.match(config, /"zone_name":\s*"fiiviu\.ro"/);
+  assert.match(config, /"run_worker_first":\s*true/);
+  const worker = read("worker.js");
+  assert.match(worker, /return env\.ASSETS\.fetch\(request\)/);
+});
+
+test("production deploy does not depend on GitHub Pages readiness", () => {
+  const workflow = read(".github/workflows/deploy-production.yml");
+  assert.doesNotMatch(workflow, /Wait for public Pages deployment/);
+  assert.doesNotMatch(workflow, /pages build and deployment/);
+  assert.match(workflow, /Deploy Worker to Cloudflare/);
+  assert.match(workflow, /Verify production endpoint/);
+});
