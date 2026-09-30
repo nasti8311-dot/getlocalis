@@ -248,7 +248,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
     const bookingTime=String(body.bookingTime||"").trim();
     const bookingDate=normalizeMarketplaceBookingDate(body.bookingDate, body.customerLanguage);
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(bookingDate)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(bookingTime)){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(bookingTime)){
       return json({error:"Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich."},400);
     }
     const bookingStart=toBucharestDate(bookingDate,bookingTime);
@@ -294,9 +294,9 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 }
 function normalizeMarketplaceBookingDate(value, language){
   const raw=String(value||"").trim();
-  if(/^\\d{4}-\\d{2}-\\d{2}$/.test(raw))return raw;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
 
-  const match=raw.match(/^(\\d{1,2})[\\/.](\\d{1,2})[\\/.](\\d{4})$/);
+  const match=raw.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/);
   if(!match)return raw;
 
   const first=Number(match[1]), second=Number(match[2]), year=Number(match[3]);
