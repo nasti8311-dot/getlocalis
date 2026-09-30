@@ -841,3 +841,12 @@ test("partner commission enforces the configured hold period", () => {
   assert.match(block, /eventTimestamp\+holdDays\*86400/);
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
+
+test("iOS app icon references an existing static asset", () => {
+  const html = read("index.html");
+  const icon = html.match(/apple-touch-icon[^>]+href="([^"]+)"/)?.[1] || "";
+  assert.ok(icon, "apple-touch-icon reference missing");
+  const path = icon.split("?")[0].replace(/^\//, "");
+  assert.ok(path === "icons/icon-192.svg", "apple-touch-icon must point to the checked-in PNG/SVG asset");
+  assert.match(read(path), /<svg[\\s>]/i);
+});
