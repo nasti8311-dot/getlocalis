@@ -58,6 +58,15 @@ test("runtime schema evolution is not used by launch paths", () => {
   }
 });
 
+test("system event audit does not create runtime D1 schema", () => {
+  const source = read("worker-entry.js");
+  assert.doesNotMatch(source, /CREATE TABLE IF NOT EXISTS system_events/i);
+  assert.doesNotMatch(source, /CREATE INDEX IF NOT EXISTS idx_system_events/i);
+  assert.doesNotMatch(source, /ensureSystemEventsTable/);
+  assert.match(source, /FROM stripe_webhook_events ORDER BY id DESC LIMIT 1/);
+});
+
+
 test("production D1 audit workflow checks migration history", () => {
   const source = read(".github/workflows/audit-d1-schema.yml");
   assert.match(source, /SELECT \* FROM d1_migrations ORDER BY id/);
