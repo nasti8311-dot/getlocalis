@@ -320,16 +320,18 @@ export default {
 
 async function ensureSystemEventsTable(env) {
   if (!env.DB) throw new Error("D1 database not configured.");
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS system_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type TEXT NOT NULL,
-      event_name TEXT NOT NULL,
-      payload_json TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `).run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_system_events_type_created ON system_events(event_type, created_at)").run();
+  const rows = await env.DB.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='system_events' LIMIT 1"
+  ).all();
+  if (!(rows.results || []).length) {
+    throw new Error("System events schema is missing. Apply the system-events migration before enabling event logging.");
+  }
+  const columns = await env.DB.prepare("PRAGMA table_info(system_events)").all();
+  const required = new Set(["event_type","event_name","payload_json","created_at"]);
+  const existing = new Set((columns.results || []).map(row => String(row.name || "")));
+  for (const name of required) {
+    if (!existing.has(name)) throw new Error("System events schema is incomplete: " + name);
+  }
 }
 
 async function recordSystemEvent(env, eventType, eventName, payload = {}) {
