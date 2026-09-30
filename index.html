@@ -264,7 +264,46 @@
             header #currency-select { height: 38px; font-size: 11px; padding: 0 8px; }
             header #lang-select { height: 38px; width: 72px; min-width: 72px; }
             header .lg\\:hidden { width: 38px; height: 38px; }
-            .hero-bg { min-height: 500px !important; background-position: 58% center; }
+            .hero-bg {
+                min-height: auto !important;
+                padding-top: 30vh;
+                background:
+                    #F8F6F1;
+                color: #151515;
+                position: relative;
+            }
+            .hero-bg::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 30vh;
+                background:
+                    linear-gradient(
+                        180deg,
+                        rgba(0,0,0,.18) 0%,
+                        rgba(0,0,0,.42) 70%,
+                        rgba(0,0,0,.55) 100%
+                    ),
+                    url('https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=2000')
+                    58% center/cover no-repeat;
+            }
+            .hero-bg > div {
+                position: relative;
+                padding-top: 28px;
+                padding-bottom: 44px;
+            }
+            .hero-bg h1 {
+                color: #151515;
+                font-size: clamp(2.25rem, 10vw, 3.5rem);
+                line-height: .98;
+            }
+            .hero-bg p {
+                color: #4b5563;
+                font-size: 1rem;
+                line-height: 1.6;
+            }
             .hero-bg > div { padding-bottom: 32px; }
             .hero-bg h1 { font-size: clamp(2.35rem, 11vw, 3.8rem); line-height: .95; }
             .hero-bg p { font-size: 1rem; line-height: 1.55; }
@@ -2194,7 +2233,7 @@ const translations = {
         nav_adventure: "Adventure",
 
         hero_title: "Halte die Zeit an.<br>Erlebe den Moment.",
-        hero_subtitle: "FiiViu bringt dich zu den Momenten, die du später nicht vergessen willst. Entdecke Bukarest anders.",
+        hero_subtitle: "Manchmal liegt das Besondere direkt um die Ecke. FiiViu zeigt dir Orte und Erlebnisse, die deinen Tag besonders machen.",
         hero_cta: "Erlebnisse entdecken",
 
         intro_label: "FiiViu Moments",
@@ -2305,7 +2344,7 @@ const translations = {
         nav_adventure: "Adventure",
 
         hero_title: "Stop time.<br>Live the moment.",
-        hero_subtitle: "FiiViu takes you to the moments you'll remember long after the trip. Experience Bucharest differently.",
+        hero_subtitle: "Sometimes the best things are right around the corner. FiiViu shows you places and experiences that make your day special.",
         hero_cta: "Discover experiences",
 
         intro_label: "FiiViu Moments",
@@ -2412,7 +2451,7 @@ const translations = {
         nav_adventure: "Aventură",
 
         hero_title: "Oprește timpul.<br>Trăiește momentul.",
-        hero_subtitle: "FiiViu te duce către momente pe care le vei ține minte mult timp după vacanță. Descoperă Bucureștiul altfel.",
+        hero_subtitle: "Uneori, lucrurile speciale sunt chiar după colț. FiiViu îți arată locuri și experiențe care îți fac ziua mai frumoasă.",
         hero_cta: "Descoperă experiențele",
 
         intro_label: "FiiViu Moments",
