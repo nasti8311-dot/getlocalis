@@ -3299,16 +3299,16 @@ function createExperienceCard(item, categoryKey) {
 
 
     const title =
-        item.title[currentLang] || item.title.de;
+        item.title[currentLang] || "";
 
     const badge =
         item.badge[currentLang] || item.badge.de;
 
     const duration =
-        item.duration[currentLang] || item.duration.de;
+        item.duration[currentLang] || "";
 
     const description =
-        item.desc[currentLang] || item.desc.de;
+        item.desc[currentLang] || "";
     const providerName = String(item.providerName || "").trim();
     const providerLabel = currentLang === "ro" ? "Furnizor" : currentLang === "en" ? "Provider" : "Anbieter";
 
@@ -3409,7 +3409,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
         item.badge[currentLang] || item.badge.de;
 
     document.getElementById("detail-title").innerText =
-        item.title[currentLang] || item.title.de;
+        item.title[currentLang] || "";
 
     const detailProviderName = String(item.providerName || "").trim();
     const detailProviderEl = document.getElementById("detail-provider");
@@ -3424,17 +3424,17 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
         formatPrice(item.price);
 
     document.getElementById("detail-description").innerText =
-        item.desc[currentLang] || item.desc.de;
+        item.desc[currentLang] || "";
 
 
     const logistics = document.getElementById("detail-logistics");
     const meetingRow = document.getElementById("detail-meeting-row");
     const arrivalRow = document.getElementById("detail-arrival-row");
     const instructionsRow = document.getElementById("detail-instructions-row");
-    const meetingPoint = item.meetingPoint && (item.meetingPoint[currentLang] || item.meetingPoint.de) || "";
+    const meetingPoint = item.meetingPoint && (item.meetingPoint[currentLang] || "") || "";
     const addressParts = [item.meetingAddress, item.meetingCity, item.meetingCountry].filter(Boolean);
     const fullMeetingPoint = [meetingPoint].concat(addressParts).filter(Boolean).join("\n");
-    const instructions = item.meetingInstructions && (item.meetingInstructions[currentLang] || item.meetingInstructions.de) || "";
+    const instructions = item.meetingInstructions && (item.meetingInstructions[currentLang] || "") || "";
     const arrival = Number.isFinite(Number(item.arrivalMinutesBefore)) ? Number(item.arrivalMinutesBefore) : null;
     meetingRow.classList.toggle("hidden", !fullMeetingPoint);
     arrivalRow.classList.toggle("hidden", !(arrival !== null && arrival >= 0));
@@ -3837,7 +3837,7 @@ function changeLanguage(lang) {
         const item = category?.items?.find(product => product.id === currentTourKey);
 
         if (item) {
-            const title = item.title[currentLang] || item.title.de;
+            const title = item.title[currentLang] || "";
             document.getElementById("checkout-summary-title").innerText = title;
 
             const dateText = selectedDetailDate || document.getElementById("booking-date").value || "";
@@ -3884,7 +3884,7 @@ function proceedToCheckout({ pushHistory = true } = {}) {
 
 
     const title =
-        item.title[currentLang] || item.title.de;
+        item.title[currentLang] || "";
 
 
     const dateText =
@@ -4474,7 +4474,7 @@ function findTranslatedTourTitle(rawTourName) {
         const item = categoriesData[categoryKey].items.find(candidate =>
             Object.values(candidate.title || {}).includes(rawTourName)
         );
-        if (item) return item.title[currentLang] || item.title.de;
+        if (item) return item.title[currentLang] || "";
     }
 
     return rawTourName;
