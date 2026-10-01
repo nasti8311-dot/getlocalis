@@ -489,36 +489,8 @@ async function translateOfferFields(source, options = {}) {
   const shouldTranslate = (sourceValue, translatedValue) =>
     Boolean(sourceValue && (!translatedValue || (refreshStale && translatedValue === sourceValue)));
 
-  // Translate all four fields in one request per target language. This avoids
-  // eight sequential provider calls, which was the main source of partial /
-  // timeout-prone translations in Cloudflare Workers.
-  const translateBatch = async (target) => {
-    const active = fields
-      .map((value, index) => "F" + (index + 1) + ": " + (value || ""))
-      .join("\n");
-
-    if (!active.trim()) return fields.slice();
-
-    const translated = await translateOfferText(active, target);
-    if (!translated || translated === active) return fields.slice();
-
-    const result = fields.slice();
-    const labels = ["F1", "F2", "F3", "F4"];
-    for (let i = 0; i < labels.length; i++) {
-      const next = labels[i + 1];
-      const pattern = new RegExp(
-        "(?:^|\\n)\\s*" + labels[i] + ":\\s*([\\s\\S]*?)(?=\\n\\s*" + (next || "$END$") + ":|$)"
-      );
-      const match = translated.match(pattern);
-      if (match && String(match[1] || "").trim()) {
-        result[i] = String(match[1]).trim();
-      }
-    }
-    return result;
-  };
-
-  const translateOneFallback = async (sourceValue, target, currentValue) => {
-    if (!sourceValue) return currentValue;
+  const translateOne = async (sourceValue, target, currentValue) => {
+    if (!shouldTranslate(sourceValue, currentValue)) return currentValue;
     try {
       const translated = await translateOfferText(sourceValue, target);
       return translated && translated !== sourceValue ? translated : currentValue;
@@ -527,56 +499,22 @@ async function translateOfferFields(source, options = {}) {
     }
   };
 
-  const needsEn = [
-    shouldTranslate(fields[0], existing.titleEn),
-    shouldTranslate(fields[1], existing.descriptionEn),
-    shouldTranslate(fields[2], existing.meetingPointNameEn),
-    shouldTranslate(fields[3], existing.meetingInstructionsEn)
-  ].some(Boolean);
-
-  const needsRo = [
-    shouldTranslate(fields[0], existing.titleRo),
-    shouldTranslate(fields[1], existing.descriptionRo),
-    shouldTranslate(fields[2], existing.meetingPointNameRo),
-    shouldTranslate(fields[3], existing.meetingInstructionsRo)
-  ].some(Boolean);
-
-  let en = [existing.titleEn, existing.descriptionEn, existing.meetingPointNameEn, existing.meetingInstructionsEn];
-  let ro = [existing.titleRo, existing.descriptionRo, existing.meetingPointNameRo, existing.meetingInstructionsRo];
-
-  if (needsEn) {
-    try {
-      const translated = await translateBatch("en");
-      for (let i = 0; i < 4; i++) {
-        if (shouldTranslate(fields[i], en[i]) && translated[i] && translated[i] !== fields[i]) {
-          en[i] = translated[i];
-        }
-      }
-    } catch (_) {}
-  }
-
-  if (needsRo) {
-    try {
-      const translated = await translateBatch("ro");
-      for (let i = 0; i < 4; i++) {
-        if (shouldTranslate(fields[i], ro[i]) && translated[i] && translated[i] !== fields[i]) {
-          ro[i] = translated[i];
-        }
-      }
-    } catch (_) {}
-  }
-
-  // If a batch response was incomplete, retry only the missing fields.
-  // Existing/manual translations are never erased when a provider is down.
-  if (shouldTranslate(fields[0], en[0]) && fields[0]) en[0] = await translateOneFallback(fields[0], "en", en[0]);
-  if (shouldTranslate(fields[1], en[1]) && fields[1]) en[1] = await translateOneFallback(fields[1], "en", en[1]);
-  if (shouldTranslate(fields[2], en[2]) && fields[2]) en[2] = await translateOneFallback(fields[2], "en", en[2]);
-  if (shouldTranslate(fields[3], en[3]) && fields[3]) en[3] = await translateOneFallback(fields[3], "en", en[3]);
-
-  if (shouldTranslate(fields[0], ro[0]) && fields[0]) ro[0] = await translateOneFallback(fields[0], "ro", ro[0]);
-  if (shouldTranslate(fields[1], ro[1]) && fields[1]) ro[1] = await translateOneFallback(fields[1], "ro", ro[1]);
-  if (shouldTranslate(fields[2], ro[2]) && fields[2]) ro[2] = await translateOneFallback(fields[2], "ro", ro[2]);
-  if (shouldTranslate(fields[3], ro[3]) && fields[3]) ro[3] = await translateOneFallback(fields[3], "ro", ro[3]);
+  // Translate fields independently and in parallel. Batch translation was
+  // unreliable because external providers can alter the F1/F2 markers.
+  const [en, ro] = await Promise.all([
+    Promise.all([
+      translateOne(fields[0], "en", existing.titleEn),
+      translateOne(fields[1], "en", existing.descriptionEn),
+      translateOne(fields[2], "en", existing.meetingPointNameEn),
+      translateOne(fields[3], "en", existing.meetingInstructionsEn)
+    ]),
+    Promise.all([
+      translateOne(fields[0], "ro", existing.titleRo),
+      translateOne(fields[1], "ro", existing.descriptionRo),
+      translateOne(fields[2], "ro", existing.meetingPointNameRo),
+      translateOne(fields[3], "ro", existing.meetingInstructionsRo)
+    ])
+  ]);
 
   return {
     titleEn: en[0],
