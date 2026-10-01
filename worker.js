@@ -488,10 +488,11 @@ async function translateOfferFields(source, options = {}) {
   const translateRequired = async (sourceValue, target, label) => {
     if (!sourceValue) return "";
     const translated = await translateOfferText(sourceValue, target);
-    if (!translated || translated === sourceValue) {
-      throw new Error("Übersetzung für " + label + " nach " + target.toUpperCase() + " konnte nicht erstellt werden.");
-    }
-    return translated;
+    // Translation is an enhancement, not a reason to reject an otherwise
+    // valid offer. If an external translation provider is temporarily
+    // unavailable, keep the translated field empty so the offer can still
+    // be saved and edited manually in the organizer admin.
+    return translated && translated !== sourceValue ? translated : "";
   };
 
   // Translate one field at a time. Eight parallel external requests can trigger
