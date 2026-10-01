@@ -468,57 +468,127 @@ function translationFieldsNeedRefresh(source) {
 
 async function translateOfferFields(source, options = {}) {
   const refreshStale = options.refreshStale === true;
-  const title = String(source.title || "").trim();
-  const description = String(source.description || "").trim();
-  const meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
-  const meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
+  const fields = [
+    String(source.title || "").trim(),
+    String(source.description || "").trim(),
+    String(source.meetingPointName || source.meeting_point_name || "").trim(),
+    String(source.meetingInstructions || source.meeting_instructions || "").trim()
+  ];
 
-  let titleEn = String(source.titleEn || source.title_en || "").trim();
-  let titleRo = String(source.titleRo || source.title_ro || "").trim();
-  let descriptionEn = String(source.descriptionEn || source.description_en || "").trim();
-  let descriptionRo = String(source.descriptionRo || source.description_ro || "").trim();
-  let pointEn = String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim();
-  let pointRo = String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim();
-  let instructionsEn = String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim();
-  let instructionsRo = String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim();
+  const existing = {
+    titleEn: String(source.titleEn || source.title_en || "").trim(),
+    titleRo: String(source.titleRo || source.title_ro || "").trim(),
+    descriptionEn: String(source.descriptionEn || source.description_en || "").trim(),
+    descriptionRo: String(source.descriptionRo || source.description_ro || "").trim(),
+    meetingPointNameEn: String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim(),
+    meetingPointNameRo: String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim(),
+    meetingInstructionsEn: String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim(),
+    meetingInstructionsRo: String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim()
+  };
 
   const shouldTranslate = (sourceValue, translatedValue) =>
     Boolean(sourceValue && (!translatedValue || (refreshStale && translatedValue === sourceValue)));
 
-  const translateRequired = async (sourceValue, target, label) => {
-    if (!sourceValue) return "";
-    const translated = await translateOfferText(sourceValue, target);
-    // Translation is an enhancement, not a reason to reject an otherwise
-    // valid offer. If an external translation provider is temporarily
-    // unavailable, keep the translated field empty so the offer can still
-    // be saved and edited manually in the organizer admin.
-    return translated && translated !== sourceValue ? translated : "";
+  // Translate all four fields in one request per target language. This avoids
+  // eight sequential provider calls, which was the main source of partial /
+  // timeout-prone translations in Cloudflare Workers.
+  const translateBatch = async (target) => {
+    const active = fields
+      .map((value, index) => "F" + (index + 1) + ": " + (value || ""))
+      .join("\n");
+
+    if (!active.trim()) return fields.slice();
+
+    const translated = await translateOfferText(active, target);
+    if (!translated || translated === active) return fields.slice();
+
+    const result = fields.slice();
+    const labels = ["F1", "F2", "F3", "F4"];
+    for (let i = 0; i < labels.length; i++) {
+      const next = labels[i + 1];
+      const pattern = new RegExp(
+        "(?:^|\\n)\\s*" + labels[i] + ":\\s*([\\s\\S]*?)(?=\\n\\s*" + (next || "$END$") + ":|$)"
+      );
+      const match = translated.match(pattern);
+      if (match && String(match[1] || "").trim()) {
+        result[i] = String(match[1]).trim();
+      }
+    }
+    return result;
   };
 
-  // Translate one field at a time. Eight parallel external requests can trigger
-  // provider throttling on Cloudflare Workers and leave the offer only partly
-  // translated. Sequential calls are slower but deterministic and reliable.
-  if (shouldTranslate(title, titleEn)) titleEn = await translateRequired(title, "en", "Titel");
-  if (shouldTranslate(title, titleRo)) titleRo = await translateRequired(title, "ro", "Titel");
-  if (shouldTranslate(description, descriptionEn)) descriptionEn = await translateRequired(description, "en", "Beschreibung");
-  if (shouldTranslate(description, descriptionRo)) descriptionRo = await translateRequired(description, "ro", "Beschreibung");
-  if (shouldTranslate(meetingPointName, pointEn)) pointEn = await translateRequired(meetingPointName, "en", "Treffpunkt");
-  if (shouldTranslate(meetingPointName, pointRo)) pointRo = await translateRequired(meetingPointName, "ro", "Treffpunkt");
-  if (shouldTranslate(meetingInstructions, instructionsEn)) instructionsEn = await translateRequired(meetingInstructions, "en", "Anweisungen");
-  if (shouldTranslate(meetingInstructions, instructionsRo)) instructionsRo = await translateRequired(meetingInstructions, "ro", "Anweisungen");
+  const translateOneFallback = async (sourceValue, target, currentValue) => {
+    if (!sourceValue) return currentValue;
+    try {
+      const translated = await translateOfferText(sourceValue, target);
+      return translated && translated !== sourceValue ? translated : currentValue;
+    } catch (_) {
+      return currentValue;
+    }
+  };
+
+  const needsEn = [
+    shouldTranslate(fields[0], existing.titleEn),
+    shouldTranslate(fields[1], existing.descriptionEn),
+    shouldTranslate(fields[2], existing.meetingPointNameEn),
+    shouldTranslate(fields[3], existing.meetingInstructionsEn)
+  ].some(Boolean);
+
+  const needsRo = [
+    shouldTranslate(fields[0], existing.titleRo),
+    shouldTranslate(fields[1], existing.descriptionRo),
+    shouldTranslate(fields[2], existing.meetingPointNameRo),
+    shouldTranslate(fields[3], existing.meetingInstructionsRo)
+  ].some(Boolean);
+
+  let en = [existing.titleEn, existing.descriptionEn, existing.meetingPointNameEn, existing.meetingInstructionsEn];
+  let ro = [existing.titleRo, existing.descriptionRo, existing.meetingPointNameRo, existing.meetingInstructionsRo];
+
+  if (needsEn) {
+    try {
+      const translated = await translateBatch("en");
+      for (let i = 0; i < 4; i++) {
+        if (shouldTranslate(fields[i], en[i]) && translated[i] && translated[i] !== fields[i]) {
+          en[i] = translated[i];
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (needsRo) {
+    try {
+      const translated = await translateBatch("ro");
+      for (let i = 0; i < 4; i++) {
+        if (shouldTranslate(fields[i], ro[i]) && translated[i] && translated[i] !== fields[i]) {
+          ro[i] = translated[i];
+        }
+      }
+    } catch (_) {}
+  }
+
+  // If a batch response was incomplete, retry only the missing fields.
+  // Existing/manual translations are never erased when a provider is down.
+  if (shouldTranslate(fields[0], en[0]) && fields[0]) en[0] = await translateOneFallback(fields[0], "en", en[0]);
+  if (shouldTranslate(fields[1], en[1]) && fields[1]) en[1] = await translateOneFallback(fields[1], "en", en[1]);
+  if (shouldTranslate(fields[2], en[2]) && fields[2]) en[2] = await translateOneFallback(fields[2], "en", en[2]);
+  if (shouldTranslate(fields[3], en[3]) && fields[3]) en[3] = await translateOneFallback(fields[3], "en", en[3]);
+
+  if (shouldTranslate(fields[0], ro[0]) && fields[0]) ro[0] = await translateOneFallback(fields[0], "ro", ro[0]);
+  if (shouldTranslate(fields[1], ro[1]) && fields[1]) ro[1] = await translateOneFallback(fields[1], "ro", ro[1]);
+  if (shouldTranslate(fields[2], ro[2]) && fields[2]) ro[2] = await translateOneFallback(fields[2], "ro", ro[2]);
+  if (shouldTranslate(fields[3], ro[3]) && fields[3]) ro[3] = await translateOneFallback(fields[3], "ro", ro[3]);
 
   return {
-    titleEn,
-    titleRo,
-    descriptionEn,
-    descriptionRo,
-    meetingPointNameEn: pointEn,
-    meetingPointNameRo: pointRo,
-    meetingInstructionsEn: instructionsEn,
-    meetingInstructionsRo: instructionsRo
+    titleEn: en[0],
+    titleRo: ro[0],
+    descriptionEn: en[1],
+    descriptionRo: ro[1],
+    meetingPointNameEn: en[2],
+    meetingPointNameRo: ro[2],
+    meetingInstructionsEn: en[3],
+    meetingInstructionsRo: ro[3]
   };
 }
-
 function normalizeOfferText(value){
   if(value && typeof value==="object" && !Array.isArray(value)){
     return String(value.de ?? value.en ?? value.ro ?? "").trim();
