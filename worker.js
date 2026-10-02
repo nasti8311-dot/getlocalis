@@ -405,7 +405,7 @@ async function translateOfferText(text, target, signal) {
     },
     "Please let us know in the booking notes what time between 4 PM and 9 PM you would like your Secret Menu. A changing surprise menu served straight from the kitchen. The exact location will be provided after booking.": {
       de: "Bitte teile uns in den Buchungsmitteilungen mit, wann du zwischen 16 und 21 Uhr dein Secret Menü möchtest. Ein wechselndes Überraschungsmenü wird direkt aus der Küche serviert. Der genaue Ort wird nach der Buchung mitgeteilt.",
-      ro: "Vă rugăm să ne spuneți în notele rezervării la ce oră, între 16:00 und 21:00, doriți să aveți meniul Secret Menu. Un meniu surpriză schimbător este servit direct din bucătărie. Locația exactă va fi comunicată după rezervare."
+      ro: "Vă rugăm să ne spuneți în notele rezervării la ce oră, între 16:00 și 21:00, doriți să aveți meniul Secret Menu. Un meniu surpriză schimbător este servit direct din bucătărie. Locația exactă va fi comunicată după rezervare."
     },
 
     "Fusion & Street Food – „Vertraute Aromen. Unerwartete Kombinationen.“": {
