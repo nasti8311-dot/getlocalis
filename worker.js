@@ -396,6 +396,20 @@ async function translateOfferText(text, target, signal) {
   };
   if (common[target]?.[source]) return common[target][source];
 
+  // Known catalog phrases are kept explicit so an external provider cannot
+  // return a stale/wrong language for these offers.
+  const exact = {
+    "Fusion & Street Food – „Vertraute Aromen. Unerwartete Kombinationen.“": {
+      en: "Fusion & Street Food – “Familiar flavors. Unexpected combinations.”",
+      ro: "Fusion & Street Food – „Arome familiare. Combinații neașteptate.”"
+    },
+    "Was passiert, wenn rumänische Klassiker auf internationale Street-Food-Küche treffen? Genau hier beginnt das Secret Menu. Freche Kombinationen, kleine Überraschungen und Gerichte, die du wahrscheinlich noch nie so probiert hast. Locker, kreativ und perfekt zum Teilen.": {
+      en: "What happens when Romanian classics meet international street food? That’s exactly where the Secret Menu begins. Bold combinations, little surprises, and dishes you probably haven’t tried like this before. Casual, creative, and perfect for sharing.",
+      ro: "Ce se întâmplă când preparatele clasice românești întâlnesc bucătăria internațională de street food? Aici începe Secret Menu. Combinații îndrăznețe, mici surprize și preparate pe care probabil nu le-ai încercat niciodată în această formă. Relaxat, creativ și perfect de împărțit."
+    }
+  };
+  if (exact[source]?.[target]) return exact[source][target];
+
   const encoded = encodeURIComponent(source);
 
   // Google Translate is the primary provider because it is reliable for the
