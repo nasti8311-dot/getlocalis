@@ -70,7 +70,17 @@ async function handleProviderRoute(request,env,ctx){
       meeting_latitude=excluded.meeting_latitude,meeting_longitude=excluded.meeting_longitude,status=excluded.status,
       updated_at=CURRENT_TIMESTAMP
     `).bind(experienceId,account,providerName||null,title,description||null,category,imageUrl||null,galleryUrls||null,availableTimes||null,priceCents,currency,meetingPointName||null,meetingAddress||null,meetingCity||null,meetingCountry||null,meetingInstructions||null,arrivalMinutesBefore,latitude||null,longitude||null,status).run();
-    const experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
+    let experience=await env.DB.prepare("SELECT * FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
+    if (experience) {
+      try {
+        const translated=await translateOfferFields(experience,{refreshStale:true});
+        await env.DB.prepare("UPDATE experiences SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+          .bind(translated.titleEn,translated.titleRo,translated.descriptionEn,translated.descriptionRo,translated.meetingPointNameEn,translated.meetingPointNameRo,translated.meetingInstructionsEn,translated.meetingInstructionsRo,experience.id).run();
+        experience=await env.DB.prepare("SELECT * FROM experiences WHERE id=? LIMIT 1").bind(experience.id).first();
+      } catch (translationError) {
+        console.error("FiiViu experience save translation failed",translationError);
+      }
+    }
     return json({success:true,experience});
   }catch(error){return json({error:error?.message||"Server error"},500)}
 }
