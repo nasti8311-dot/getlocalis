@@ -1952,6 +1952,26 @@ function extractTime(value) {
   return match ? match[0] : "";
 }
 
+async function stripePostJson(env,path,payload){
+  const response=await fetch("https://api.stripe.com"+path,{
+    method:"POST",
+    headers:{Authorization:"Bearer "+String(env.STRIPE_SECRET_KEY||""),"Content-Type":"application/json","Stripe-Version":"2026-08-26.dahlia"},
+    body:JSON.stringify(payload)
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data?.error?.message||"Stripe request failed");
+  return data;
+}
+
+async function stripeGetV2(env,path){
+  const response=await fetch("https://api.stripe.com"+path,{
+    headers:{Authorization:"Bearer "+String(env.STRIPE_SECRET_KEY||""),"Stripe-Version":"2026-08-26.dahlia"}
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data?.error?.message||"Stripe request failed");
+  return data;
+}
+
 async function stripeGet(env, path) {
   const response = await fetch(
     `https://api.stripe.com${path}`,
@@ -2263,13 +2283,14 @@ async function handleProviderConnectOnboarding(request,env){
     if(!provider||Number(provider.active)!==1)return json({error:"Veranstalter nicht gefunden oder deaktiviert."},404);
     let accountId=String(provider.connect_account_id||"").trim();
     if(!/^acct_[A-Za-z0-9]+$/.test(accountId)){
-      const account=await stripePostForm(env,"/v1/accounts",{
-        type:"express",
-        country:"RO",
-        email:String(provider.contact_email||"").trim(),
-        business_type:"individual",
-        "capabilities[card_payments][requested]":"true",
-        "capabilities[transfers][requested]":"true"
+      const account=await stripePostJson(env,"/v2/core/accounts",{
+        contact_email:String(provider.contact_email||"").trim(),
+        display_name:String(provider.name||provider.provider_ref||"FiiViu Provider").trim(),
+        identity:{country:"RO",entity_type:"individual"},
+        configuration:{recipient:{capabilities:{stripe_balance:{stripe_transfers:{requested:true}}}}},
+        dashboard:"express",
+        defaults:{responsibilities:{fees_collector:"application",losses_collector:"application"}},
+        include:["configuration.recipient","identity","defaults"]
       });
       accountId=String(account.id||"").trim();
       if(!/^acct_[A-Za-z0-9]+$/.test(accountId))throw new Error("Stripe-Konto konnte nicht erstellt werden.");
@@ -2297,14 +2318,18 @@ async function handleProviderConnectStatus(request,env){
     const provider=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
     const accountId=String(provider?.connect_account_id||"").trim();
     if(!accountId)return json({error:"Noch kein Stripe Connect-Konto angelegt. Bitte zuerst „Stripe-Onboarding öffnen“ wählen."},400);
-    const account=await stripeGet(env,"/v1/accounts/"+encodeURIComponent(accountId));
+    const account=await stripeGetV2(env,"/v2/core/accounts/"+encodeURIComponent(accountId)+"?include[0]=configuration.recipient&include[1]=identity&include[2]=defaults&include[3]=requirements");
+    const transfersStatus=String(account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status||"");
+    const currentlyDue=Array.isArray(account?.requirements?.currently_due)?account.requirements.currently_due:[];
+    const pastDue=Array.isArray(account?.requirements?.past_due)?account.requirements.past_due:[];
     return json({account:{
       id:account.id,
-      detailsSubmitted:!!account.details_submitted,
-      payoutsEnabled:!!account.payouts_enabled,
-      transfersEnabled:!!account.capabilities?.transfers,
-      currentlyDue:Array.isArray(account.requirements?.currently_due)?account.requirements.currently_due:[],
-      pastDue:Array.isArray(account.requirements?.past_due)?account.requirements.past_due:[]
+      detailsSubmitted:currentlyDue.length===0,
+      payoutsEnabled:transfersStatus==="active",
+      transfersEnabled:transfersStatus==="active",
+      transfersStatus,
+      currentlyDue,
+      pastDue
     }});
   }catch(error){
     return json({error:error?.message||"Stripe-Status konnte nicht geladen werden."},500);
