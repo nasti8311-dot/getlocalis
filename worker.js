@@ -399,6 +399,15 @@ async function translateOfferText(text, target, signal) {
   // Known catalog phrases are kept explicit so an external provider cannot
   // return a stale/wrong language for these offers.
   const exact = {
+    "Bitte teile uns in den Mitteilungen bei der Buchung mit, wann zwischen 16 - 21 Uhr du gerne dein Secret Menü hattest.": {
+      en: "Please let us know in the booking notes what time between 4 PM and 9 PM you would like your Secret Menu.",
+      ro: "Vă rugăm să ne spuneți în notele rezervării la ce oră, între 16:00 și 21:00, doriți să aveți meniul Secret Menu."
+    },
+    "Please let us know in the booking notes what time between 4 PM and 9 PM you would like your Secret Menu. A changing surprise menu served straight from the kitchen. The exact location will be provided after booking.": {
+      de: "Bitte teile uns in den Buchungsmitteilungen mit, wann du zwischen 16 und 21 Uhr dein Secret Menü möchtest. Ein wechselndes Überraschungsmenü wird direkt aus der Küche serviert. Der genaue Ort wird nach der Buchung mitgeteilt.",
+      ro: "Vă rugăm să ne spuneți în notele rezervării la ce oră, între 16:00 und 21:00, doriți să aveți meniul Secret Menu. Un meniu surpriză schimbător este servit direct din bucătărie. Locația exactă va fi comunicată după rezervare."
+    },
+
     "Fusion & Street Food – „Vertraute Aromen. Unerwartete Kombinationen.“": {
       en: "Fusion & Street Food – “Familiar flavors. Unexpected combinations.”",
       ro: "Fusion & Street Food – „Arome familiare. Combinații neașteptate.”"
@@ -417,7 +426,7 @@ async function translateOfferText(text, target, signal) {
   // fallbacks so a temporary provider outage does not block saving an offer.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&dt=rm&q=" + encoded;
+      const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + encodeURIComponent(target) + "&dt=t&dt=rm&q=" + encoded;
       const response = await fetch(googleUrl, { signal, headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
       if (response.ok) {
         const data = await response.json();
@@ -430,7 +439,7 @@ async function translateOfferText(text, target, signal) {
   }
 
   try {
-    const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
+    const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=auto|" + encodeURIComponent(target);
     const response = await fetch(url, { signal, headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
     if (response.ok) {
       const data = await response.json();
