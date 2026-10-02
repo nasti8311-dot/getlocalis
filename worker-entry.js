@@ -1369,38 +1369,38 @@ async function sendProviderBookingNotification(env, booking) {
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
   }[c]));
   const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
-  const subject = "Neue Buchung – " + String(booking.experience_name || "FiiViu-Erlebnis");
+  const subject = "Rezervare nouă – " + String(booking.experience_name || "Experiență FiiViu");
   const text = [
-    "Neue Buchung bei FiiViu",
+    "Rezervare nouă la FiiViu",
     "",
-    "Erlebnis: " + (booking.experience_name || ""),
-    "Buchung: " + (booking.booking_id || ""),
-    "Datum: " + (booking.booking_date || ""),
-    "Uhrzeit: " + (booking.booking_time || ""),
-    "Personen: " + (booking.guests || 1),
-    "Gast: " + (booking.customer_name || ""),
-    "E-Mail des Gastes: " + (booking.customer_email || ""),
+    "Experiență: " + (booking.experience_name || ""),
+    "Rezervare: " + (booking.booking_id || ""),
+    "Data: " + (booking.booking_date || ""),
+    "Ora: " + (booking.booking_time || ""),
+    "Număr de persoane: " + (booking.guests || 1),
+    "Client: " + (booking.customer_name || ""),
+    "E-mail client: " + (booking.customer_email || ""),
     "Telefon: " + (booking.customer_phone || ""),
-    "Umsatz: " + amount,
+    "Valoarea rezervării: " + amount,
     "",
-    "Treffpunkt: " + (booking.meeting_point_name || ""),
-    "Adresse: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
+    "Punct de întâlnire: " + (booking.meeting_point_name || ""),
+    "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
     "",
     "FiiViu"
   ].join("\n");
 
-  const html = "<h2>Neue Buchung bei FiiViu</h2>" +
-    "<p><strong>Erlebnis:</strong> " + safe(booking.experience_name) + "<br>" +
-    "<strong>Buchung:</strong> " + safe(booking.booking_id) + "<br>" +
-    "<strong>Datum:</strong> " + safe(booking.booking_date) + "<br>" +
-    "<strong>Uhrzeit:</strong> " + safe(booking.booking_time) + "<br>" +
-    "<strong>Personen:</strong> " + safe(booking.guests) + "<br>" +
-    "<strong>Umsatz:</strong> " + safe(amount) + "</p>" +
-    "<p><strong>Gast:</strong> " + safe(booking.customer_name) + "<br>" +
-    "<strong>E-Mail:</strong> " + safe(booking.customer_email) + "<br>" +
+  const html = "<h2>Rezervare nouă la FiiViu</h2>" +
+    "<p><strong>Experiență:</strong> " + safe(booking.experience_name) + "<br>" +
+    "<strong>Rezervare:</strong> " + safe(booking.booking_id) + "<br>" +
+    "<strong>Data:</strong> " + safe(booking.booking_date) + "<br>" +
+    "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
+    "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
+    "<strong>Valoarea rezervării:</strong> " + safe(amount) + "</p>" +
+    "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
+    "<strong>E-mail:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
-    "<p><strong>Treffpunkt:</strong> " + safe(booking.meeting_point_name) + "<br>" +
-    "<strong>Adresse:</strong> " + safe([booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", ")) + "</p>";
+    "<p><strong>Punct de întâlnire:</strong> " + safe(booking.meeting_point_name) + "<br>" +
+    "<strong>Adresă:</strong> " + safe([booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", ")) + "</p>";
 
   if (!env.RESEND_API_KEY) {
     await env.DB.prepare(
