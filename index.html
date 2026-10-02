@@ -4161,10 +4161,12 @@ async function processBooking(event) {
             pickerDateIso || selectedDetailDate || checkoutDateText
         );
 
-    const time =
+    const rawSelectedTime =
         String(selectedTourTime || "").trim();
+    const time =
+        normalizeBookingTimeValue(rawSelectedTime);
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !time) {
         cardErrors.textContent =
             "Bitte wähle zuerst ein gültiges Buchungsdatum und eine gültige Uhrzeit.";
         submitButton.disabled = false;
@@ -4398,6 +4400,39 @@ function normalizeBookingDateValue(dateText) {
     }
 
     return value;
+}
+
+function normalizeBookingTimeValue(timeText) {
+    const value = String(timeText || "").trim();
+    if (/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return value;
+
+    // Organizer offers may define a reservation window instead of a single
+    // slot, e.g. "16 -21 Uhr" or "Reservierung zwischen 16 - 21 Uhr".
+    // Checkout/payment needs one canonical HH:mm value; use the window start
+    // while keeping the original window for display.
+    const match = value.match(/(?:zwischen\s+)?(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\s*(?:Uhr|h)?/i);
+    if (match) {
+        const hour = Number(match[1]);
+        const minute = match[2] ? Number(match[2]) : 0;
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
+        }
+    }
+
+    // English reservation windows, e.g. "between 4 PM and 9 PM".
+    const english = value.match(/(?:between\s+)?(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s+(?:and|-)\s+(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+    if (english) {
+        let hour = Number(english[1]);
+        const minute = english[2] ? Number(english[2]) : 0;
+        const period = english[3].toUpperCase();
+        if (period === "AM" && hour === 12) hour = 0;
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
+        }
+    }
+
+    return "";
 }
 function formatDisplayBookingDate(dateText) {
     const iso = normalizeBookingDateValue(dateText);
