@@ -89,7 +89,7 @@ async function handlePublicOffers(request,env){
     await ensureExperiencesTable(env);
     await ensureOffersTable(env);
     const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
-    const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.description,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
+    const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
     for (const offer of legacyOffers) {
       if (!translationFieldsNeedRefresh(offer)) continue;
@@ -111,16 +111,41 @@ async function handlePublicOffers(request,env){
         console.error("FiiViu public offer translation failed", error);
       }
     }
-    const providerExperiences=(experiences.results||[]).map(x=>({
-      id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
-      title:x.title,title_en:"",title_ro:"",description:x.description||"",description_en:"",description_ro:"",
-      price_cents:x.price_cents,currency:x.currency||"eur",available_times:x.available_times||"",
-      meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:"",meeting_point_name_ro:"",
-      meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
-      meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:"",meeting_instructions_ro:"",
-      arrival_minutes_before:x.arrival_minutes_before,category:x.category||"explore",image_url:x.image_url||"",
-      gallery_urls:x.gallery_urls||"",active:1,source:"experience"
-    }));
+    const providerExperiences=[];
+    for (const x of (experiences.results||[])) {
+      const offerLike={
+        title:x.title,title_en:x.title_en,title_ro:x.title_ro,
+        description:x.description||"",description_en:x.description_en,description_ro:x.description_ro,
+        meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:x.meeting_point_name_en,meeting_point_name_ro:x.meeting_point_name_ro,
+        meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:x.meeting_instructions_en,meeting_instructions_ro:x.meeting_instructions_ro
+      };
+      if (translationFieldsNeedRefresh(offerLike)) {
+        try {
+          const translated=await translateOfferFields(offerLike,{refreshStale:true});
+          await env.DB.prepare("UPDATE experiences SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+            .bind(translated.titleEn,translated.titleRo,translated.descriptionEn,translated.descriptionRo,translated.meetingPointNameEn,translated.meetingPointNameRo,translated.meetingInstructionsEn,translated.meetingInstructionsRo,x.id).run();
+          Object.assign(x,{
+            title_en:translated.titleEn,title_ro:translated.titleRo,
+            description_en:translated.descriptionEn,description_ro:translated.descriptionRo,
+            meeting_point_name_en:translated.meetingPointNameEn,meeting_point_name_ro:translated.meetingPointNameRo,
+            meeting_instructions_en:translated.meetingInstructionsEn,meeting_instructions_ro:translated.meetingInstructionsRo
+          });
+        } catch (error) {
+          console.error("FiiViu public experience translation failed", error);
+        }
+      }
+      providerExperiences.push({
+        id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
+        title:x.title,title_en:x.title_en||"",title_ro:x.title_ro||"",
+        description:x.description||"",description_en:x.description_en||"",description_ro:x.description_ro||"",
+        price_cents:x.price_cents,currency:x.currency||"eur",available_times:x.available_times||"",
+        meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:x.meeting_point_name_en||"",meeting_point_name_ro:x.meeting_point_name_ro||"",
+        meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
+        meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:x.meeting_instructions_en||"",meeting_instructions_ro:x.meeting_instructions_ro||"",
+        arrival_minutes_before:x.arrival_minutes_before,category:x.category||"explore",image_url:x.image_url||"",
+        gallery_urls:x.gallery_urls||"",active:1,source:"experience"
+      });
+    }
     return json({offers:[...legacyOffers,...providerExperiences]});
   }catch(error){return json({offers:[],error:error?.message||"Catalog failed"});}
 }
@@ -369,9 +394,12 @@ async function recordPartnerScan(env,ref){
 function isHtml(response,url){if(url.pathname.startsWith("/api/"))return false;return(response.headers.get("content-type")||"").includes("text/html")}
 async function ensureExperiencesTable(env){
   const columns=await env.DB.prepare("PRAGMA table_info(experiences)").all();
-  const required=["experience_id","provider_connect_account_id","provider_name","title","description","category","image_url","gallery_urls","available_times","price_cents","currency","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status"];
+  const required=["experience_id","provider_connect_account_id","provider_name","title","description","category","image_url","gallery_urls","available_times","price_cents","currency","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","updated_at"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Experiences schema is incomplete: "+missing.join(", "));
+  for(const name of missing){
+    const type=name==="updated_at"?"TEXT":"TEXT";
+    await env.DB.prepare("ALTER TABLE experiences ADD COLUMN "+name+" "+type).run();
+  }
 }
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json","Cache-Control":"no-store"}})}
