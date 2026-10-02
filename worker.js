@@ -127,7 +127,13 @@ if (url.pathname === "/api/offers") {
             String(offer.meeting_point_name_en||"").trim()===String(offer.meeting_point_name||"").trim() ||
             String(offer.meeting_point_name_ro||"").trim()===String(offer.meeting_point_name||"").trim() ||
             String(offer.meeting_instructions_en||"").trim()===String(offer.meeting_instructions||"").trim() ||
-            String(offer.meeting_instructions_ro||"").trim()===String(offer.meeting_instructions||"").trim();
+            String(offer.meeting_instructions_ro||"").trim()===String(offer.meeting_instructions||"").trim() ||
+            looksWrongForTarget(offer.title, offer.title_en, "en") ||
+            looksWrongForTarget(offer.title, offer.title_ro, "ro") ||
+            looksWrongForTarget(offer.description, offer.description_en, "en") ||
+            looksWrongForTarget(offer.description, offer.description_ro, "ro") ||
+            looksWrongForTarget(offer.meeting_instructions, offer.meeting_instructions_en, "en") ||
+            looksWrongForTarget(offer.meeting_instructions, offer.meeting_instructions_ro, "ro");
           if(!missing && !stale) continue;
           try{
             const translated=await translateOfferFields(offer, { refreshStale: true });
@@ -168,7 +174,7 @@ if (url.pathname === "/api/offers") {
           if(!providerRef||!title)return json({error:"Veranstalter und Titel sind erforderlich."},400,corsHeaders);
           if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis."},400,corsHeaders);
           await normalizeOfferSourceFields(body);
-          const translated = await translateOfferFields(body);
+          const translated = await translateOfferFields(body, { refreshStale: true, forceRefresh: true });
           Object.assign(body, translated);
           const provider=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
           if(!provider)return json({error:"Aktiver Veranstalter nicht gefunden."},404,corsHeaders);
@@ -211,7 +217,7 @@ if (url.pathname === "/api/offers") {
           const active=body.active===undefined?Number(current.active)!==0:(body.active===true||body.active===1||body.active==="1");
           if(!providerRef)return json({error:"Veranstalter fehlt."},400,corsHeaders); if(!title)return json({error:"Titel fehlt."},400,corsHeaders); if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Ungültiger Preis: "+String(body.priceCents)},400,corsHeaders);
           await normalizeOfferSourceFields(body);
-          const translated = await translateOfferFields(body);
+          const translated = await translateOfferFields(body, { refreshStale: true, forceRefresh: true });
           Object.assign(body, translated);
           await env.DB.prepare("UPDATE offers SET provider_ref=?,title=?,title_en=?,title_ro=?,description=?,description_en=?,description_ro=?,price_cents=?,currency=?,available_times=?,meeting_point_name=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,meeting_instructions_en=?,meeting_instructions_ro=?,arrival_minutes_before=?,duration=?,guide_language=?,category=?,image_url=?,gallery_urls=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(providerRef,title,String(body.titleEn ?? current.title_en ?? "").trim()||null,String(body.titleRo ?? current.title_ro ?? "").trim()||null,String(body.description ?? current.description ?? "").trim()||null,String(body.descriptionEn ?? current.description_en ?? "").trim()||null,String(body.descriptionRo ?? current.description_ro ?? "").trim()||null,priceCents,String(body.currency ?? current.currency ?? "eur").toLowerCase(),String(body.availableTimes ?? current.available_times ?? "").trim()||null,String(body.meetingPointName ?? current.meeting_point_name ?? "").trim()||null,String(body.meetingPointNameEn ?? current.meeting_point_name_en ?? "").trim()||null,String(body.meetingPointNameRo ?? current.meeting_point_name_ro ?? "").trim()||null,String(body.meetingAddress ?? current.meeting_address ?? "").trim()||null,String(body.meetingCity ?? current.meeting_city ?? "").trim()||null,String(body.meetingCountry ?? current.meeting_country ?? "").trim()||null,String(body.meetingInstructions ?? current.meeting_instructions ?? "").trim()||null,String(body.meetingInstructionsEn ?? current.meeting_instructions_en ?? "").trim()||null,String(body.meetingInstructionsRo ?? current.meeting_instructions_ro ?? "").trim()||null,Number.isInteger(Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before))?Number(body.arrivalMinutesBefore ?? current.arrival_minutes_before):null,normalizeOfferText(body.duration ?? body.duration_de ?? body.durationDe ?? current.duration) || null,normalizeOfferText(body.guideLanguage ?? body.guide_language ?? body.guideLanguageDe ?? body.guide_language_de ?? current.guide_language) || null,String(body.category ?? current.category ?? "explore").trim().toLowerCase()||"explore",String(body.imageUrl ?? current.image_url ?? "").trim()||null,String(body.galleryUrls ?? current.gallery_urls ?? "").trim()||null,active?1:0,id).run();
           const offer=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(id).first();
@@ -503,32 +509,30 @@ function translationFieldsNeedRefresh(source) {
   });
 }
 
-async function normalizeOfferSourceFields(source) {
-  const keys = ["title", "description", "meetingPointName", "meetingInstructions"];
-  const values = keys.map(key => String(source[key] || source[{
-    meetingPointName: "meeting_point_name",
-    meetingInstructions: "meeting_instructions"
-  }[key]] || "").trim());
-  const translated = await Promise.all(values.map(async (value) => {
-    if (!value) return value;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3500);
-      try {
-        const result = await translateOfferText(value, "de", controller.signal);
-        const normalized = String(result || "").trim();
-        return normalized && normalized !== value ? normalized : value;
-      } finally {
-        clearTimeout(timeout);
-      }
-    } catch (_) {
-      return value;
-    }
-  }));
-  source.title = translated[0];
-  source.description = translated[1];
-  source.meetingPointName = translated[2];
-  source.meetingInstructions = translated[3];
+function normalizeOfferSourceFields(source) {
+  // The organizer fields are the canonical source text. Never translate or
+  // rewrite them on save: doing so can turn already-English/Romanian content
+  // into a second language before the target translations are generated.
+  source.title = String(source.title || "").trim();
+  source.description = String(source.description || "").trim();
+  source.meetingPointName = String(source.meetingPointName || source.meeting_point_name || "").trim();
+  source.meetingInstructions = String(source.meetingInstructions || source.meeting_instructions || "").trim();
+  return source;
+}
+
+function looksWrongForTarget(source, translated, target) {
+  const src = String(source || "").toLowerCase();
+  const value = String(translated || "").toLowerCase();
+  if (!src || !value || src === value) return Boolean(src && value && src === value);
+  if (target === "en") {
+    const germanMarkers = [" und ", " der ", " die ", " das ", " bitte ", " zwischen ", " uhr", " geschmack", " vertraute ", " aromen", " unerwartete ", " passiert", " rumänische", " küche"];
+    return germanMarkers.filter(marker => value.includes(marker)).length >= 2;
+  }
+  if (target === "ro") {
+    const germanMarkers = [" und ", " der ", " die ", " das ", " bitte ", " zwischen ", " uhr", " geschmack", " vertraute ", " aromen", " unerwartete "];
+    return germanMarkers.filter(marker => value.includes(marker)).length >= 2;
+  }
+  return false;
 }
 
 async function translateOfferFields(source, options = {}) {
@@ -546,8 +550,9 @@ async function translateOfferFields(source, options = {}) {
     String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim()
   ];
 
+  const forceRefresh = options.forceRefresh === true;
   const needs = (sourceValue, translatedValue) =>
-    Boolean(sourceValue && (!translatedValue || (refreshStale && translatedValue === sourceValue)));
+    Boolean(sourceValue && (!translatedValue || forceRefresh || (refreshStale && translatedValue === sourceValue)));
 
   const translateField = async (sourceValue, target, existingValue) => {
     if (!needs(sourceValue, existingValue)) return existingValue;
