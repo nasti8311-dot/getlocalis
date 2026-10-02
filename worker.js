@@ -353,7 +353,7 @@ if (url.pathname === "/api/offers") {
   }
 };
 
-async function translateOfferText(text, target) {
+async function translateOfferText(text, target, signal) {
   const source = String(text || "").trim();
   if (!source) return "";
   const common = {
@@ -404,7 +404,7 @@ async function translateOfferText(text, target) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const googleUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=" + encodeURIComponent(target) + "&dt=t&dt=rm&q=" + encoded;
-      const response = await fetch(googleUrl, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
+      const response = await fetch(googleUrl, { signal, headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
       if (response.ok) {
         const data = await response.json();
         const translated = Array.isArray(data?.[0])
@@ -417,7 +417,7 @@ async function translateOfferText(text, target) {
 
   try {
     const url = "https://api.mymemory.translated.net/get?q=" + encoded + "&langpair=de|" + encodeURIComponent(target);
-    const response = await fetch(url, { headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
+    const response = await fetch(url, { signal, headers: { "Accept": "application/json" }, cf: { cacheTtl: 0, cacheEverything: false } });
     if (response.ok) {
       const data = await response.json();
       const translated = String(data?.responseData?.translatedText || "").trim();
@@ -469,62 +469,58 @@ function translationFieldsNeedRefresh(source) {
 async function translateOfferFields(source, options = {}) {
   const refreshStale = options.refreshStale === true;
   const fields = [
-    String(source.title || "").trim(),
-    String(source.description || "").trim(),
-    String(source.meetingPointName || source.meeting_point_name || "").trim(),
-    String(source.meetingInstructions || source.meeting_instructions || "").trim()
+    ["title", String(source.title || "").trim(), String(source.titleEn || source.title_en || "").trim()],
+    ["description", String(source.description || "").trim(), String(source.descriptionEn || source.description_en || "").trim()],
+    ["meetingPointName", String(source.meetingPointName || source.meeting_point_name || "").trim(), String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim()],
+    ["meetingInstructions", String(source.meetingInstructions || source.meeting_instructions || "").trim(), String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim()]
+  ];
+  const roExisting = [
+    String(source.titleRo || source.title_ro || "").trim(),
+    String(source.descriptionRo || source.description_ro || "").trim(),
+    String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim(),
+    String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim()
   ];
 
-  const existing = {
-    titleEn: String(source.titleEn || source.title_en || "").trim(),
-    titleRo: String(source.titleRo || source.title_ro || "").trim(),
-    descriptionEn: String(source.descriptionEn || source.description_en || "").trim(),
-    descriptionRo: String(source.descriptionRo || source.description_ro || "").trim(),
-    meetingPointNameEn: String(source.meetingPointNameEn || source.meeting_point_name_en || "").trim(),
-    meetingPointNameRo: String(source.meetingPointNameRo || source.meeting_point_name_ro || "").trim(),
-    meetingInstructionsEn: String(source.meetingInstructionsEn || source.meeting_instructions_en || "").trim(),
-    meetingInstructionsRo: String(source.meetingInstructionsRo || source.meeting_instructions_ro || "").trim()
-  };
-
-  const shouldTranslate = (sourceValue, translatedValue) =>
+  const needs = (sourceValue, translatedValue) =>
     Boolean(sourceValue && (!translatedValue || (refreshStale && translatedValue === sourceValue)));
 
-  const translateOne = async (sourceValue, target, currentValue) => {
-    if (!shouldTranslate(sourceValue, currentValue)) return currentValue;
+  // Do not let a translation provider outage overwrite a valid/manual value.
+  // If the existing value is merely the German source copied into EN/RO,
+  // treat it as missing and keep it empty when translation fails.
+  const translateField = async (sourceValue, target, existingValue) => {
+    if (!needs(sourceValue, existingValue)) return existingValue;
+    const fallback = existingValue === sourceValue ? "" : existingValue;
     try {
-      const translated = await translateOfferText(sourceValue, target);
-      return translated && translated !== sourceValue ? translated : currentValue;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3500);
+      try {
+        const translated = await translateOfferText(sourceValue, target, controller.signal);
+        const value = String(translated || "").trim();
+        return value && value !== sourceValue ? value : fallback;
+      } finally {
+        clearTimeout(timeout);
+      }
     } catch (_) {
-      return currentValue;
+      return fallback;
     }
   };
 
-  // Translate fields independently and in parallel. Batch translation was
-  // unreliable because external providers can alter the F1/F2 markers.
-  const [en, ro] = await Promise.all([
-    Promise.all([
-      translateOne(fields[0], "en", existing.titleEn),
-      translateOne(fields[1], "en", existing.descriptionEn),
-      translateOne(fields[2], "en", existing.meetingPointNameEn),
-      translateOne(fields[3], "en", existing.meetingInstructionsEn)
-    ]),
-    Promise.all([
-      translateOne(fields[0], "ro", existing.titleRo),
-      translateOne(fields[1], "ro", existing.descriptionRo),
-      translateOne(fields[2], "ro", existing.meetingPointNameRo),
-      translateOne(fields[3], "ro", existing.meetingInstructionsRo)
-    ])
-  ]);
+  // Sequential calls are intentional: public/free translation endpoints
+  // frequently throttle or drop concurrent requests from Workers.
+  const titleEn = await translateField(fields[0][1], "en", fields[0][2]);
+  const titleRo = await translateField(fields[0][1], "ro", roExisting[0]);
+  const descriptionEn = await translateField(fields[1][1], "en", fields[1][2]);
+  const descriptionRo = await translateField(fields[1][1], "ro", roExisting[1]);
+  const meetingPointNameEn = await translateField(fields[2][1], "en", fields[2][2]);
+  const meetingPointNameRo = await translateField(fields[2][1], "ro", roExisting[2]);
+  const meetingInstructionsEn = await translateField(fields[3][1], "en", fields[3][2]);
+  const meetingInstructionsRo = await translateField(fields[3][1], "ro", roExisting[3]);
 
   return {
-    titleEn: en[0],
-    titleRo: ro[0],
-    descriptionEn: en[1],
-    descriptionRo: ro[1],
-    meetingPointNameEn: en[2],
-    meetingPointNameRo: ro[2],
-    meetingInstructionsEn: en[3],
-    meetingInstructionsRo: ro[3]
+    titleEn, titleRo,
+    descriptionEn, descriptionRo,
+    meetingPointNameEn, meetingPointNameRo,
+    meetingInstructionsEn, meetingInstructionsRo
   };
 }
 function normalizeOfferText(value){
