@@ -61,11 +61,23 @@ export default {
     const rows = await env.DB.prepare("SELECT id,title,description,meeting_point_name,meeting_instructions,title_en,title_ro,description_en,description_ro,meeting_point_name_en,meeting_point_name_ro,meeting_instructions_en,meeting_instructions_ro FROM offers").all();
     let updated = 0;
     for (const row of (rows.results || [])) {
-      const translated = await translateOfferFields(row, { refreshStale: true });
-      const missingOrStale = translationFieldsNeedRefresh(row);
-      if (!missingOrStale) continue;
-      await env.DB.prepare("UPDATE offers SET title_en=?,title_ro=?,description_en=?,description_ro=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
-        .bind(translated.titleEn, translated.titleRo, translated.descriptionEn, translated.descriptionRo, translated.meetingPointNameEn, translated.meetingPointNameRo, translated.meetingInstructionsEn, translated.meetingInstructionsRo, row.id).run();
+      const before = {
+        title: String(row.title || "").trim(),
+        description: String(row.description || "").trim(),
+        meetingPointName: String(row.meeting_point_name || "").trim(),
+        meetingInstructions: String(row.meeting_instructions || "").trim()
+      };
+      const normalized = { ...row, ...before };
+      await normalizeOfferSourceFields(normalized);
+      const translated = await translateOfferFields(normalized, { refreshStale: true });
+      const needsRepair = translationFieldsNeedRefresh(row) ||
+        normalized.title !== before.title ||
+        normalized.description !== before.description ||
+        normalized.meetingPointName !== before.meetingPointName ||
+        normalized.meetingInstructions !== before.meetingInstructions;
+      if (!needsRepair) continue;
+      await env.DB.prepare("UPDATE offers SET title=?,title_en=?,title_ro=?,description=?,description_en=?,description_ro=?,meeting_point_name=?,meeting_point_name_en=?,meeting_point_name_ro=?,meeting_instructions=?,meeting_instructions_en=?,meeting_instructions_ro=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+        .bind(normalized.title, translated.titleEn, translated.titleRo, normalized.description, translated.descriptionEn, translated.descriptionRo, normalized.meetingPointName, translated.meetingPointNameEn, translated.meetingPointNameRo, normalized.meetingInstructions, translated.meetingInstructionsEn, translated.meetingInstructionsRo, row.id).run();
       updated++;
     }
     return json({ ok: true, updated }, 200, corsHeaders);
