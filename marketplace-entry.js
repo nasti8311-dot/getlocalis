@@ -246,19 +246,30 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(String(experience.status)!=="published")return json({error:"Experience is not currently bookable"},409);
 
     const providerAccount=String(experience.provider_connect_account_id||"").trim();
-    if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
+    const stripeTestMode=String(env.STRIPE_SECRET_KEY||"").startsWith("sk_test_");
+    if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount) && !stripeTestMode){
       return json({error:"Experience is missing a valid provider Connect account"},409);
     }
 
-    // A published experience must remain bookable only while its provider is
-    // active. The public catalog already applies this rule; enforce the same
-    // invariant again at checkout so a stale/direct experience ID cannot bypass
-    // provider deactivation.
-    const activeProvider=await env.DB.prepare(
-      "SELECT provider_ref,name,connect_account_id,active FROM providers WHERE connect_account_id=? AND active=1 LIMIT 1"
-    ).bind(providerAccount).first();
-    if(!activeProvider){
-      return json({error:"Experience provider is not currently active"},409);
+    // In Stripe test mode, Connect is intentionally optional for test providers.
+    // Payments are processed on the platform account and settlement stays pending
+    // until a real provider Connect account is configured. Live mode keeps the
+    // strict Connect requirement.
+    let activeProvider=null;
+    if(/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
+      activeProvider=await env.DB.prepare(
+        "SELECT provider_ref,name,connect_account_id,active FROM providers WHERE connect_account_id=? AND active=1 LIMIT 1"
+      ).bind(providerAccount).first();
+      if(!activeProvider){
+        return json({error:"Experience provider is not currently active"},409);
+      }
+    }else{
+      activeProvider=await env.DB.prepare(
+        "SELECT provider_ref,name,connect_account_id,active FROM providers WHERE name=? AND active=1 LIMIT 1"
+      ).bind(String(experience.provider_name||"").trim()).first();
+      if(!activeProvider){
+        return json({error:"Experience provider is not currently active"},409);
+      }
     }
 
     const validProviderAccount=String(activeProvider.connect_account_id||"").trim();
