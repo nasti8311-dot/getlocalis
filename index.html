@@ -2832,6 +2832,7 @@ function localizeOfferFallback(value, lang) {
 
     const isDescription = lower.startsWith("entdecke die echte seele der rumänischen küche");
     const isInstructions = lower.startsWith("bitte spaß und gute laune mitbringen");
+    const isSecretMenuReservationInstruction = lower.startsWith("bitte teile uns in den mitteilungen bei der buchung mit, wann zwischen 16 - 21 uhr du gerne dein secret men") || lower.startsWith("bitte teile uns in den mitteilungen bei der buchung mit, wann zwischen 16–21 uhr du gerne dein secret men");
     const isDuration = /^ca\.?\s*2\s*stunden$/i.test(normalized);
     const reservationWindowMatch = normalized.match(/^Reservierung\s+zwischen\s+(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\s*Uhr$/i);
 
@@ -2859,6 +2860,9 @@ function localizeOfferFallback(value, lang) {
         if (isDescription) {
             return "Discover the true soul of Romanian cuisine. Homemade recipes, regional specialties and traditional ingredients come together in a special menu that you will not find on the regular menu. A culinary evening like with a Romanian family – but as a Secret Menu.";
         }
+        if (isSecretMenuReservationInstruction) {
+            return "Please tell us in the booking notes when between 4 PM and 9 PM you would like to have your Secret Menu.";
+        }
         if (isInstructions) {
             return "Please bring a good mood and have fun.";
         }
@@ -2870,6 +2874,9 @@ function localizeOfferFallback(value, lang) {
     if (lang === "ro") {
         if (isDescription) {
             return "Descoperă adevărata esență a bucătăriei românești. Rețete de casă, specialități regionale și ingrediente tradiționale sunt reunite într-un meniu special pe care nu îl găsești în meniul obișnuit. O seară culinară ca într-o familie românească – dar ca Secret Menu.";
+        }
+        if (isSecretMenuReservationInstruction) {
+            return "Vă rugăm să ne spuneți în notele rezervării când, între orele 16:00 și 21:00, doriți să aveți meniul Secret Menu.";
         }
         if (isInstructions) {
             return "Vă rugăm să aduceți voie bună și să vă distrați.";
@@ -3407,6 +3414,11 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
     document.getElementById("detail-badge").innerText =
         item.badge[currentLang] || item.badge.de;
+
+    const pricePrefix = document.getElementById("price-prefix");
+    if (pricePrefix) {
+        pricePrefix.innerText = currentLang === "en" ? "From" : currentLang === "ro" ? "De la" : "Ab";
+    }
 
     document.getElementById("detail-title").innerText =
         item.title[currentLang] || "";
