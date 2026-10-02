@@ -109,12 +109,7 @@ export async function releaseDueProviderSettlements(env){
     try{
       const settlementTotalCents=Number(row?.total_amount_cents||0);
       if(Number.isInteger(settlementTotalCents)&&settlementTotalCents>0){
-        const partnerCents=Number(row?.partner_amount_cents||0);
-        const fiiviuCents=partnerCents>0?Math.round(settlementTotalCents*FIIVIU_SHARE_PERCENT/100):Math.round(settlementTotalCents*(100-PROVIDER_SHARE_PERCENT)/100);
-        const providerCents=settlementTotalCents-fiiviuCents-partnerCents;
-        if(providerCents>0&&(Number(row.provider_amount_cents)!==providerCents||Number(row.fiiviu_amount_cents)!==fiiviuCents)){
-          await env.DB.prepare("UPDATE booking_settlements SET provider_amount_cents=?,fiiviu_amount_cents=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(providerCents,fiiviuCents,row.id).run();
-        }
+        // Final net shares are calculated from Stripe's actual fee/net data below.
       }
       const pi=await stripeGetPaymentIntent(env,row.payment_intent_id);
       if(pi?.status!=="succeeded")throw new Error("PaymentIntent is not succeeded");
@@ -128,17 +123,19 @@ export async function releaseDueProviderSettlements(env){
       const provider=String(pi?.metadata?.provider_connect_account_id||row.provider_connect_account_id||"").trim();
       if(!/^acct_[A-Za-z0-9]+$/.test(provider))throw new Error("Missing provider Connect account");
       if(provider!==String(row.provider_connect_account_id||"").trim())await env.DB.prepare("UPDATE booking_settlements SET provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(provider,row.id).run();
-      const totalCents=Number(row.total_amount_cents||0),partnerCents=Number(row.partner_amount_cents||0),fiiviuCents=partnerCents>0?Math.round(totalCents*FIIVIU_SHARE_PERCENT/100):Math.round(totalCents*(100-PROVIDER_SHARE_PERCENT)/100),providerBusinessCents=totalCents-fiiviuCents-partnerCents,transferCurrency=String(row.provider_transfer_currency||pi.currency||"eur").toLowerCase();
+      const totalCents=Number(row.total_amount_cents||0),hasPartner=Boolean(String(row.partner_ref||"").trim()),transferCurrency=String(row.provider_transfer_currency||pi.currency||"eur").toLowerCase();
       const balanceTransaction=await getChargeBalanceTransaction(env,pi.latest_charge);
-      if(!balanceTransaction?.currency||!Number.isInteger(Number(balanceTransaction.amount))||Number(balanceTransaction.amount)<=0)throw new Error("Stripe balance transaction is missing for provider transfer");
-      const providerTransferAmountCents=Math.round(Number(balanceTransaction.amount)*providerBusinessCents/totalCents);
+      const stripeGrossCents=Number(balanceTransaction?.amount||0),stripeFeeCents=Number(balanceTransaction?.fee||0),netSettlementAmountCents=Number(balanceTransaction?.net||stripeGrossCents-stripeFeeCents);
+      if(!balanceTransaction?.currency||!Number.isInteger(stripeGrossCents)||stripeGrossCents<=0||!Number.isInteger(stripeFeeCents)||stripeFeeCents<0||!Number.isInteger(netSettlementAmountCents)||netSettlementAmountCents<=0)throw new Error("Stripe balance transaction is missing valid fee/net data for provider transfer");
+      const partnerCents=hasPartner?Math.round(netSettlementAmountCents*PARTNER_SHARE_PERCENT/100):0,fiiviuCents=hasPartner?Math.round(netSettlementAmountCents*FIIVIU_SHARE_PERCENT/100):Math.round(netSettlementAmountCents*(100-PROVIDER_SHARE_PERCENT)/100),providerCents=netSettlementAmountCents-fiiviuCents-partnerCents;
+      const providerTransferAmountCents=providerCents;
       if(!Number.isInteger(providerTransferAmountCents)||providerTransferAmountCents<=0)throw new Error("Invalid provider transfer amount");
       if(String(env.STRIPE_SECRET_KEY||"").startsWith("sk_test_")){
         const testTransferId="test_transfer_"+String(row.booking_id).replace(/[^A-Za-z0-9_-]/g,"_");
-        await env.DB.prepare("UPDATE booking_settlements SET provider_amount_cents=?,fiiviu_amount_cents=?,provider_transfer_amount_cents=?,provider_transfer_currency=?,settlement_test_transfer_id=?,settlement_status='pending',settlement_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(providerBusinessCents,fiiviuCents,providerTransferAmountCents,transferCurrency,testTransferId,row.id).run();
+        await env.DB.prepare("UPDATE booking_settlements SET provider_amount_cents=?,fiiviu_amount_cents=?,partner_amount_cents=?,stripe_fee_cents=?,net_settlement_amount_cents=?,provider_transfer_amount_cents=?,provider_transfer_currency=?,settlement_test_transfer_id=?,settlement_status='pending',settlement_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(providerCents,fiiviuCents,partnerCents,stripeFeeCents,netSettlementAmountCents,providerTransferAmountCents,transferCurrency,testTransferId,row.id).run();
         tested++;continue;
       }
-      await env.DB.prepare("UPDATE booking_settlements SET provider_amount_cents=?,fiiviu_amount_cents=?,provider_transfer_amount_cents=?,provider_transfer_currency=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(providerBusinessCents,fiiviuCents,providerTransferAmountCents,transferCurrency,row.id).run();
+      await env.DB.prepare("UPDATE booking_settlements SET provider_amount_cents=?,fiiviu_amount_cents=?,partner_amount_cents=?,stripe_fee_cents=?,net_settlement_amount_cents=?,provider_transfer_amount_cents=?,provider_transfer_currency=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(providerCents,fiiviuCents,partnerCents,stripeFeeCents,netSettlementAmountCents,providerTransferAmountCents,transferCurrency,row.id).run();
       const transfer=await createProviderTransfer(env,{amountCents:providerTransferAmountCents,currency:transferCurrency,destination:provider,bookingId:String(row.booking_id),paymentIntentId:String(row.payment_intent_id),sourceTransaction:String(pi.latest_charge||"")});
       await env.DB.prepare("UPDATE booking_settlements SET provider_transfer_id=?,settlement_status='transferred',settlement_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND settlement_status='releasing'").bind(String(transfer.id),row.id).run();
       transferred++;
