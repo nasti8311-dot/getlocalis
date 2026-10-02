@@ -193,7 +193,8 @@ export default {
             const isFiiViuCheckout =
               String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
               String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
-              /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""));
+              (configuredTestMode ||
+                /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || "")));
 
             if (configuredTestMode !== eventIsTestMode) {
               console.error("FiiViu Stripe mode mismatch; booking finalization skipped", {
