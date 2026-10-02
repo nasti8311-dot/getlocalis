@@ -2673,11 +2673,6 @@ async function recordBookingSettlement(env, booking) {
     await env.DB.prepare(`
       UPDATE booking_settlements SET
         payment_intent_id=?,
-        total_amount_cents=?,
-        provider_amount_cents=?,
-        fiiviu_amount_cents=?,
-        partner_amount_cents=?,
-        partner_ref=?,
         provider_ref=?,
         provider_name=?,
         provider_connect_account_id=?,
@@ -2685,11 +2680,6 @@ async function recordBookingSettlement(env, booking) {
       WHERE booking_id=?
     `).bind(
       booking.payment_intent_id,
-      totalCents,
-      providerAmountCents,
-      fiiviuAmountCents,
-      partnerAmountCents,
-      partnerRef,
       provider?.provider_ref || null,
       provider?.name || clean(booking.provider_name) || null,
       provider?.connect_account_id || clean(booking.provider_connect_account_id) || null,
