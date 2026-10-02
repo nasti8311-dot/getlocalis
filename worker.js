@@ -471,7 +471,7 @@ async function translateOfferText(text, target, signal) {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ q: source, source: "de", target, format: "text" }),
+        body: JSON.stringify({ q: source, source: "auto", target, format: "text" }),
         cf: { cacheTtl: 0, cacheEverything: false }
       });
       if (response.ok) {
