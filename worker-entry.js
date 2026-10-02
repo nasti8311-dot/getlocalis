@@ -117,10 +117,14 @@ export default {
           return json({ error: "Payment confirmation credentials do not match." }, 403);
         }
 
+        const configuredTestMode = String(env.STRIPE_SECRET_KEY || "").startsWith("sk_test_");
+        const validProviderConnectAccount = /^acct_[A-Za-z0-9]+$/.test(
+          String(paymentIntent?.metadata?.provider_connect_account_id || "")
+        );
         if (
           String(paymentIntent?.metadata?.fiiviu_checkout || "") !== "1" ||
           !String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") ||
-          !/^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""))
+          (!configuredTestMode && !validProviderConnectAccount)
         ) {
           return json({ error: "PaymentIntent is not a valid FiiViu checkout." }, 409);
         }
