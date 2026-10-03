@@ -1218,7 +1218,12 @@ async function finalizePaidBooking(
       Number(metadata.guests || 1)
     );
 
-    const offerId = Number(metadata.offer_id || 0);
+    let offerId = Number(metadata.offer_id || 0);
+    if (!(Number.isInteger(offerId) && offerId > 0)) {
+      const metadataExperienceId = String(metadata.experience_id || "").trim();
+      const match = metadataExperienceId.match(/^offer-(\d+)$/i);
+      if (match) offerId = Number(match[1]);
+    }
     const bookingDate = clean(metadata.booking_date);
     const bookingTime = clean(metadata.booking_time);
 
