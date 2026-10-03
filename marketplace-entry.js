@@ -177,7 +177,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const numericOfferId=offerIdRaw.replace(/^offer-/i,"").trim();
     if(numericOfferId && /^\d+$/.test(numericOfferId)){
       const offer=await env.DB.prepare(`
-        SELECT id,provider_ref,title,price_cents,currency,meeting_point_name,
+        SELECT id,provider_ref,title,price_cents,currency,capacity,meeting_point_name,
                meeting_address,meeting_city,meeting_country,meeting_instructions,
                arrival_minutes_before,available_times,active
         FROM offers WHERE id=? LIMIT 1
