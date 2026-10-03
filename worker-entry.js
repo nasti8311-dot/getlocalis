@@ -1958,7 +1958,8 @@ async function sendResendConfirmation(env, booking) {
   if (!recipient) throw new Error("Keine Kunden-E-Mail-Adresse vorhanden.");
 
   const language = normalizeLanguage(booking.customer_language);
-  const experience = String(booking.experience_name || "FiiViu Erlebnis");
+  const localizedOffer = await getLocalizedEmailOffer(env, booking, language);
+  const experience = String(localizedOffer?.title || booking.experience_name || "FiiViu Erlebnis").trim();
   const bookingDate = String(booking.booking_date || "");
   const bookingTime = clean(booking.booking_time) || extractTime(experience) || "";
   const guests = String(booking.guests || 1);
