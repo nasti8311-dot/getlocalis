@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   booking_id TEXT NOT NULL UNIQUE,
   payment_intent_id TEXT UNIQUE,
+  offer_id INTEGER,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled', 'refunded')),
   payment_status TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')),
   customer_name TEXT NOT NULL,
@@ -60,6 +61,8 @@ CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_booking_date ON bookings(booking_date);
 CREATE INDEX IF NOT EXISTS idx_bookings_confirmation_email ON bookings(confirmation_email_sent_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(booking_access_token) WHERE booking_access_token IS NOT NULL;
+
+  -- Legacy offer capacity is stored on the offers table; bookings retain offer_id for slot accounting.
 
 -- Provider-owned marketplace experiences. Price is stored server-side per guest.
 CREATE TABLE IF NOT EXISTS experiences (
