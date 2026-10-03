@@ -2061,6 +2061,9 @@ async function sendEmailJsConfirmation(
     );
   }
 
+  const localizedOffer = await getLocalizedEmailOffer(env, booking, language);
+  const localizedTitle = String(localizedOffer?.title || booking.experience_name || "").trim();
+
   const subject =
     language === "de"
       ? `Buchung bestätigt – ${localizedTitle}`
@@ -2087,8 +2090,6 @@ async function sendEmailJsConfirmation(
   const provider =
     booking.provider_name || "FiiViu";
 
-  const localizedOffer = await getLocalizedEmailOffer(env, booking, language);
-  const localizedTitle = localizedOffer?.title || booking.experience_name || "";
   const meetingPoint =
     localizedOffer?.meetingPoint || booking.meeting_point_name || "";
 
