@@ -3412,6 +3412,15 @@ async function refreshDetailSlotAvailability(item){
         });
         const selected=document.querySelector(".time-slot-btn.active");
         const selectedSlot=selected?slots[String(selected.dataset.time||"")]:null;
+        const capacityValue=document.getElementById("detail-capacity-value");
+        if(capacityValue && selectedSlot && Number.isInteger(Number(selectedSlot.remaining))){
+            const remaining=Math.max(0,Number(selectedSlot.remaining));
+            capacityValue.textContent=currentLang==="de"
+                ? remaining + " Plätze verfügbar"
+                : currentLang==="ro"
+                    ? remaining + " locuri disponibile"
+                    : remaining + " spots available";
+        }
         const guestInput=document.getElementById("detail-guest-count");
         if(guestInput){
             const maxGuests=selectedSlot&&Number.isInteger(Number(selectedSlot.remaining))
@@ -3669,7 +3678,7 @@ function renderDetailTrustInfo(item) {
 
     rows.push(["fa-user-tie", l.provider, provider || "—"]);
     rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
-    if (capacity) rows.push(["fa-users", l.capacity, capacity]);
+    if (capacity) rows.push(["fa-users", l.capacity, capacity, "detail-capacity-value"]);
     rows.push(["fa-rotate-left", l.cancellation, currentLang === "ro" ? "Poți anula cu până la 24 de ore înainte, cu rambursare integrală" : currentLang === "en" ? "Cancel up to 24 hours in advance for a full refund" : "Bis 24 Stunden vorher stornierbar, volle Rückerstattung"]);
     rows.push(["fa-clock", l.duration, duration || "—"]);
     rows.push(["fa-person-chalkboard", l.guide, guideLanguage || "—"]);
@@ -3678,7 +3687,8 @@ function renderDetailTrustInfo(item) {
         return '<div class="bg-[#F8F6F1] rounded-xl p-3 flex items-start gap-3">' +
             '<i class="fa-solid ' + row[0] + ' text-fii-orange mt-0.5"></i>' +
             '<div class="min-w-0"><div class="text-[11px] font-black uppercase tracking-wider text-gray-400">' +
-            escapeHtml(row[1]) + '</div><div class="text-sm font-semibold text-gray-800 mt-0.5">' +
+            escapeHtml(row[1]) + '</div><div class="text-sm font-semibold text-gray-800 mt-0.5"' +
+            (row[3] ? ' id="' + row[3] + '"' : '') + '>' +
             escapeHtml(row[2]) + '</div></div></div>';
     }).join("");
 }
