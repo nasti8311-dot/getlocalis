@@ -3392,7 +3392,7 @@ function createExperienceCard(item, categoryKey) {
 async function refreshDetailSlotAvailability(item){
     if(!item || !String(item.id||"").startsWith("offer-")) return;
     const date=String(selectedDetailDate||"").trim();
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const offerId=String(item.id).slice(6);
     try{
         const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(date),{cache:"no-store"});
