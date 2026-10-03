@@ -3411,7 +3411,8 @@ async function refreshDetailSlotAvailability(item){
             button.dataset.remaining=slot?.remaining==null?"":String(slot.remaining);
         });
         const selected=document.querySelector(".time-slot-btn.active");
-        const selectedSlot=selected?slots[String(selected.dataset.time||"")]:null;
+        const selectedTime=String(selectedTourTime||selected?.dataset.time||"");
+        const selectedSlot=slots[selectedTime] || (selected ? slots[String(selected.dataset.time||"")] : null);
         const capacityValue=document.getElementById("detail-capacity-value");
         if(capacityValue && selectedSlot && Number.isInteger(Number(selectedSlot.remaining))){
             const remaining=Math.max(0,Number(selectedSlot.remaining));
@@ -3589,6 +3590,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                 button.classList.add("active");
 
                 selectedTourTime = time;
+                refreshDetailSlotAvailability(item);
 
             };
 
