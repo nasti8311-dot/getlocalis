@@ -1476,11 +1476,16 @@ async function sendProviderBookingNotification(env, booking) {
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
   }[c]));
   const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
-  const subject = "Rezervare nouă – " + String(booking.experience_name || "Experiență FiiViu");
+  // The organizer mail is Romanian, but the event name itself must stay in German.
+  const germanOffer = await getLocalizedEmailOffer(env, booking, "de");
+  const germanExperienceName = String(
+    germanOffer?.title || booking.experience_name || "Erlebnis FiiViu"
+  ).trim();
+  const subject = "Rezervare nouă – " + germanExperienceName;
   const text = [
     "Rezervare nouă la FiiViu",
     "",
-    "Experiență: " + (booking.experience_name || ""),
+    "Experiență: " + germanExperienceName,
     "Rezervare: " + (booking.booking_id || ""),
     "Data: " + (booking.booking_date || ""),
     "Ora: " + (booking.booking_time || ""),
@@ -2307,7 +2312,7 @@ function resolveMeetingDefaults(experienceName) {
 }
 
 async function getLocalizedEmailOffer(env, booking, language) {
-  if (!env.DB || language === "de") {
+  if (!env.DB) {
     return {
       title: booking.experience_name || "",
       meetingPoint: booking.meeting_point_name || "",
@@ -2343,9 +2348,11 @@ async function getLocalizedEmailOffer(env, booking, language) {
     };
 
     return {
-      title: language === "ro"
-        ? (row.title_ro || row.title_en || row.title)
-        : (row.title_en || row.title_ro || row.title),
+      title: language === "de"
+        ? (row.title || row.title_en || row.title_ro)
+        : language === "ro"
+          ? (row.title_ro || row.title_en || row.title)
+          : (row.title_en || row.title_ro || row.title),
       meetingPoint: language === "ro"
         ? (row.meeting_point_name_ro || row.meeting_point_name_en || row.meeting_point_name)
         : (row.meeting_point_name_en || row.meeting_point_name_ro || row.meeting_point_name),
