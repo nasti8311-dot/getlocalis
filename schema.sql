@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS bookings (
   booking_access_token TEXT,
   confirmation_email_sent_at TEXT,
   confirmation_email_error TEXT,
+  cancellation_token TEXT,
+  cancelled_at TEXT,
+  cancellation_refund_id TEXT,
+  cancellation_customer_email_sent_at TEXT,
+  cancellation_customer_email_error TEXT,
+  cancellation_provider_email_sent_at TEXT,
+  cancellation_provider_email_error TEXT,
+  cancellation_admin_email_sent_at TEXT,
+  cancellation_admin_email_error TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
