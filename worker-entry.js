@@ -1476,16 +1476,21 @@ async function sendProviderBookingNotification(env, booking) {
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
   }[c]));
   const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
-  // The organizer mail is Romanian, but the event name itself must stay in German.
-  const germanOffer = await getLocalizedEmailOffer(env, booking, "de");
-  const germanExperienceName = String(
-    germanOffer?.title || booking.experience_name || "Erlebnis FiiViu"
+  const romanianOffer = await getLocalizedEmailOffer(env, booking, "ro");
+  const romanianExperienceName = String(
+    romanianOffer?.title || booking.experience_name || "Experiență FiiViu"
   ).trim();
-  const subject = "Rezervare nouă – " + germanExperienceName;
+  const romanianMeetingPoint = String(
+    romanianOffer?.meetingPoint || booking.meeting_point_name || ""
+  ).trim();
+  const romanianInstructions = String(
+    romanianOffer?.instructions || booking.meeting_instructions || ""
+  ).trim();
+  const subject = "Rezervare nouă – " + romanianExperienceName;
   const text = [
     "Rezervare nouă la FiiViu",
     "",
-    "Experiență: " + germanExperienceName,
+    "Experiență: " + romanianExperienceName,
     "Rezervare: " + (booking.booking_id || ""),
     "Data: " + (booking.booking_date || ""),
     "Ora: " + (booking.booking_time || ""),
@@ -1495,7 +1500,7 @@ async function sendProviderBookingNotification(env, booking) {
     "Telefon: " + (booking.customer_phone || ""),
     "Valoarea rezervării: " + amount,
     "",
-    "Punct de întâlnire: " + (booking.meeting_point_name || ""),
+    "Punct de întâlnire: " + romanianMeetingPoint,
     "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
     "",
     "FiiViu"
@@ -1642,37 +1647,52 @@ async function sendCancellationNotifications(env, booking) {
       : "<br>"
   ).join("");
 
-  const providerSubject = "Buchung storniert – " + experience;
+  const providerOffer = await getLocalizedEmailOffer(env, booking, "ro");
+  const providerExperience = String(
+    providerOffer?.title || experience || "Experiență FiiViu"
+  ).trim();
+  const providerMeetingPoint = String(
+    providerOffer?.meetingPoint || booking.meeting_point_name || ""
+  ).trim();
+  const providerInstructions = String(
+    providerOffer?.instructions || booking.meeting_instructions || ""
+  ).trim();
+  const providerSubject = "Rezervarea a fost anulată – " + providerExperience;
   const providerText = [
-    "Eine Buchung bei FiiViu wurde storniert.",
+    "O rezervare la FiiViu a fost anulată.",
     "",
-    "Erlebnis: " + experience,
+    "Experiență: " + providerExperience,
     "Buchungs-ID: " + bookingId,
-    "Datum: " + date,
-    "Beginn: " + time,
-    "Personen: " + guests,
-    "Buchungswert: " + amount,
-    "Kunde: " + String(booking.customer_name || ""),
-    "E-Mail: " + String(booking.customer_email || ""),
+    "Data: " + date,
+    "Ora: " + time,
+    "Persoane: " + guests,
+    "Valoarea rezervării: " + amount,
+    "Client: " + String(booking.customer_name || ""),
+    "E-mail: " + String(booking.customer_email || ""),
     "Telefon: " + String(booking.customer_phone || ""),
-    refundId ? "Stripe-Rückerstattung: " + refundId : "",
+    refundId ? "Rambursare Stripe: " + refundId : "",
     "",
-    "Die Buchung ist im System jetzt als storniert und die Rückerstattung wurde angestoßen.",
+    "Rezervarea este acum anulată în sistem, iar rambursarea a fost inițiată.",
+    providerMeetingPoint ? "" : "",
+    providerMeetingPoint ? "Punct de întâlnire: " + providerMeetingPoint : "",
+    providerInstructions ? "Instrucțiuni: " + providerInstructions : "",
     "",
     "FiiViu"
   ].filter(Boolean).join("\n");
-  const providerHtml = "<h2>Buchung storniert</h2><p>" +
-    "<strong>Erlebnis:</strong> " + safe(experience) + "<br>" +
-    "<strong>Buchungs-ID:</strong> " + safe(bookingId) + "<br>" +
-    "<strong>Datum:</strong> " + safe(date) + "<br>" +
-    "<strong>Beginn:</strong> " + safe(time) + "<br>" +
-    "<strong>Personen:</strong> " + safe(guests) + "<br>" +
-    "<strong>Buchungswert:</strong> " + safe(amount) + "</p><p>" +
-    "<strong>Kunde:</strong> " + safe(booking.customer_name) + "<br>" +
-    "<strong>E-Mail:</strong> " + safe(booking.customer_email) + "<br>" +
+  const providerHtml = "<h2>Rezervarea a fost anulată</h2><p>" +
+    "<strong>Experiență:</strong> " + safe(providerExperience) + "<br>" +
+    "<strong>ID rezervare:</strong> " + safe(bookingId) + "<br>" +
+    "<strong>Data:</strong> " + safe(date) + "<br>" +
+    "<strong>Ora:</strong> " + safe(time) + "<br>" +
+    "<strong>Persoane:</strong> " + safe(guests) + "<br>" +
+    "<strong>Valoarea rezervării:</strong> " + safe(amount) + "</p><p>" +
+    "<strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
+    "<strong>E-mail:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
-    (refundId ? "<p><strong>Stripe-Rückerstattung:</strong> " + safe(refundId) + "</p>" : "") +
-    "<p>Die Buchung ist im System jetzt als storniert und die Rückerstattung wurde angestoßen.</p>";
+    (refundId ? "<p><strong>Rambursare Stripe:</strong> " + safe(refundId) + "</p>" : "") +
+    (providerMeetingPoint ? "<p><strong>Punct de întâlnire:</strong> " + safe(providerMeetingPoint) + "</p>" : "") +
+    (providerInstructions ? "<p><strong>Instrucțiuni:</strong> " + safe(providerInstructions) + "</p>" : "") +
+    "<p>Rezervarea este acum anulată în sistem, iar rambursarea a fost inițiată.</p>";
 
   const adminSubject = "Stornierung – " + experience + " – " + bookingId;
   const adminText = [
@@ -1859,7 +1879,7 @@ async function sendCancellationNotifications(env, booking) {
       ).first();
       providerRecipient = clean(provider?.contact_email) || "";
       if (!providerRecipient) throw new Error("Keine Veranstalter-E-Mail hinterlegt.");
-      await send(providerRecipient, providerSubject, providerHtml, providerText, "de", "Buchung storniert");
+      await send(providerRecipient, providerSubject, providerHtml, providerText, "ro", "Rezervarea a fost anulată");
       await updateStatus("organizer", null);
       results.organizer = "sent";
     } catch (error) {
