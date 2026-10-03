@@ -253,11 +253,10 @@ async function autoTranslateExistingOffers(){
     console.warn("Traducerea automată a eșuat:", e.message);
   }
 }
-async function loadOffers(){
+async function loadOffers(options={){
   try{
-    await autoTranslateExistingOffers();
     const d=await api("/api/admin/offers");
-    const offers=d.offers||[];
+    offers=d.offers||[];
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${o.capacity?escapeHtml(String(o.capacity))+" Plätze/Termin · ":""}${escapeHtml(o.available_times||"keine Zeiten")} · ${escapeHtml(o.duration||"keine Dauer")} · ${escapeHtml(o.guide_language||"keine Guide-Sprache")} · ${o.active?"Activ":"Dezactivat"}</div></div>
@@ -266,10 +265,16 @@ async function loadOffers(){
           <button class="danger border border-red-200 bg-white" onclick="deleteOfferById(${o.id})">${o.active?"Löschen":"Deaktiviert"}</button>
         </div>
       </div>`).join(""):"<p class='muted'>Nu există încă oferte.</p>";
+    if(options.translate!==false){
+      try{
+        const translated=await api("/api/admin/translate-offers",{method:"POST",body:JSON.stringify({})});
+        if(Number(translated?.updated||0)>0) showMessage(translated.updated+" oferte existente au fost traduse automat.");
+      }catch(translationError){ console.warn("Traducerea automată a eșuat:",translationError.message); }
+    }
   }catch(e){showMessage(e.message,true)}
 }
 let offers=[];
-async function refreshOffersRaw(){const d=await api("/api/admin/offers");offers=d.offers||[];await loadOffers()}
+async function refreshOffersRaw(){await loadOffers({translate:false});}
 async function deleteOfferById(id){
   const offer=offers.find(x=>Number(x.id)===Number(id));
   if(!offer)return;
