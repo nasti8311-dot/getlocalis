@@ -3935,6 +3935,10 @@ function proceedToCheckout({ pushHistory = true } = {}) {
         );
 
     if (!item) return;
+    if (item.availableTimes?.length && !selectedTourTime) {
+        alert(currentLang==="ro" ? "Nu mai există locuri disponibile pentru acest termen." : currentLang==="en" ? "No places are available for this date and time." : "Für diesen Termin sind keine Plätze mehr verfügbar.");
+        return;
+    }
 
 
     const guests =
