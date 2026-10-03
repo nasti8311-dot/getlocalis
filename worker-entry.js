@@ -1572,7 +1572,8 @@ async function sendCancellationNotifications(env, booking) {
   const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) +
     " " + String(booking.currency || "eur").toUpperCase();
   const refundId = String(booking.cancellation_refund_id || "");
-  const experience = String(booking.experience_name || "FiiViu Erlebnis");
+  const localizedOffer = await getLocalizedEmailOffer(env, booking, language);
+  const experience = String(localizedOffer?.title || booking.experience_name || "FiiViu Erlebnis").trim();
   const bookingId = String(booking.booking_id || "");
   const date = String(booking.booking_date || "");
   const time = String(booking.booking_time || "");
@@ -2062,10 +2063,10 @@ async function sendEmailJsConfirmation(
 
   const subject =
     language === "de"
-      ? `Buchung bestätigt – ${booking.experience_name}`
+      ? `Buchung bestätigt – ${localizedTitle}`
       : language === "ro"
-        ? `Rezervare confirmată – ${booking.experience_name}`
-        : `Booking confirmed – ${booking.experience_name}`;
+        ? `Rezervare confirmată – ${localizedTitle}`
+        : `Booking confirmed – ${localizedTitle}`;
 
   const appUrl = String(
     env.PUBLIC_APP_URL || DEFAULT_APP_URL
@@ -2115,7 +2116,9 @@ async function sendEmailJsConfirmation(
   const params = {
     user_name: booking.customer_name,
     user_email: booking.customer_email,
-    tour_title: booking.experience_name,
+    tour_title: localizedTitle,
+    experience_name: localizedTitle,
+    localized_title: localizedTitle,
     booking_date: booking.booking_date || "",
     booking_time: bookingTime,
     guests: String(booking.guests || 1),
@@ -2147,6 +2150,7 @@ async function sendEmailJsConfirmation(
     mail_cancel_label: language === "de" ? "Buchung stornieren" : language === "ro" ? "Anulează rezervarea" : "Cancel booking",
     mail_cancel_policy: language === "de" ? "Kostenlose Stornierung bis " + cancellationHours + " Stunden vor Beginn." : language === "ro" ? "Anulare gratuită până la " + cancellationHours + " ore înainte de începere." : "Free cancellation up to " + cancellationHours + " hours before the start.",
     mail_provider_label: language === "de" ? "Angeboten von" : language === "ro" ? "Oferit de" : "Provided by",
+    provider_label: language === "de" ? "Angeboten von" : language === "ro" ? "Oferit de" : "Provided by",
     mail_provider_text: language === "de" ? "Dieses Erlebnis wird von " + provider + " durchgeführt." : language === "ro" ? "Această experiență este organizată de " + provider + "." : "This experience is operated by " + provider + ".",
     provider_name: provider,
     meeting_point_name: meetingPoint,
