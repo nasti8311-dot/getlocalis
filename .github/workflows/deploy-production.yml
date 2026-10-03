@@ -36,17 +36,37 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
-      - name: Apply production D1 migrations
+      - name: Repair production D1 schema
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          set -uo pipefail
-          if npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote; then
-            echo "D1 migrations applied."
-          else
-            echo "::warning::D1 migration step failed; continuing Worker deployment. The Cloudflare token/account authorization must be repaired separately."
-          fi
+          set -euo pipefail
+
+          add_column_if_missing() {
+            local table="$1"
+            local column="$2"
+            local definition="$3"
+            local output
+            if output="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "ALTER TABLE $table ADD COLUMN $column $definition" 2>&1)"; then
+              echo "Added $table.$column"
+              return 0
+            fi
+            if printf '%s' "$output" | grep -qi "duplicate column name: $column"; then
+              echo "$table.$column already exists."
+              return 0
+            fi
+            printf '%s\\n' "$output"
+            return 1
+          }
+
+          add_column_if_missing "offers" "capacity" "INTEGER"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_offers_capacity ON offers(capacity)"
+
+          add_column_if_missing "bookings" "offer_id" "INTEGER"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_bookings_offer_slot ON bookings(offer_id,booking_date,booking_time,status,payment_status)"
+
+          echo "Production D1 schema repair completed."
 
       - name: Upload Worker version
         shell: bash
