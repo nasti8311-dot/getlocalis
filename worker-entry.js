@@ -1700,21 +1700,70 @@ async function sendCancellationNotifications(env, booking) {
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
     (refundId ? "<p><strong>Stripe-Rückerstattung:</strong> " + safe(refundId) + "</p>" : "");
 
-  const send = async (recipient, subject, html, text) => {
+  const send = async (recipient, subject, html, text, language = "de", title = "Buchung storniert") => {
     const email = clean(recipient);
     if (!email) throw new Error("Keine Empfänger-E-Mail-Adresse vorhanden.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error("Ungültige Empfänger-E-Mail-Adresse.");
     }
 
-    if (env.EMAIL && typeof env.EMAIL.send === "function") {
-      await env.EMAIL.send({
-        to: email,
-        from: "noreply@fiiviu.ro",
-        subject,
-        html,
-        text
+    const serviceId = String(env.EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID).trim();
+    const templateId = String(env.EMAILJS_TEMPLATE_ID || EMAILJS_TEMPLATE_ID).trim();
+    const publicKey = String(env.EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY).trim();
+    const privateKey = String(env.EMAILJS_PRIVATE_KEY || "").trim();
+
+    if (privateKey) {
+      const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: serviceId,
+          template_id: templateId,
+          user_id: publicKey,
+          accessToken: privateKey,
+          template_params: {
+            user_name: booking.customer_name || "FiiViu",
+            user_email: email,
+            to_email: email,
+            recipient_email: email,
+            tour_title: experience,
+            booking_date: date,
+            booking_time: time,
+            guests,
+            total_price: amount,
+            booking_id: bookingId,
+            subject,
+            customer_language: language,
+            mail_language: language,
+            mail_greeting: language === "de" ? "Hallo" : language === "ro" ? "Bună" : "Hello",
+            mail_confirmation_title: title,
+            mail_date_label: language === "de" ? "Datum" : language === "ro" ? "Data" : "Date",
+            mail_time_label: language === "de" ? "Beginn" : language === "ro" ? "Ora" : "Start time",
+            mail_guests_label: language === "de" ? "Personen" : language === "ro" ? "Persoane" : "Guests",
+            mail_total_label: language === "de" ? "Gesamtpreis" : language === "ro" ? "Preț total" : "Total price",
+            mail_booking_id_label: language === "de" ? "Buchungs-ID" : language === "ro" ? "ID rezervare" : "Booking ID",
+            mail_provider_label: language === "de" ? "Veranstalter" : language === "ro" ? "Organizator" : "Organizer",
+            provider_name: providerName,
+            provider: providerName,
+            organizer: providerName,
+            mail_provider_text: "FiiViu",
+            cancellation_url: "",
+            cancel_url: "",
+            cancel_link: "",
+            booking_url: "",
+            booking_link: "",
+            refund_id: refundId,
+            refund: refundId,
+            cancellation_status: "cancelled",
+            status: "cancelled",
+            cancellation_message: title
+          }
+        })
       });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error("EmailJS " + response.status + ": " + body.slice(0, 500));
+      }
       return;
     }
 
@@ -1740,6 +1789,17 @@ async function sendCancellationNotifications(env, booking) {
       return;
     }
 
+    if (env.EMAIL && typeof env.EMAIL.send === "function") {
+      await env.EMAIL.send({
+        to: email,
+        from: "noreply@fiiviu.ro",
+        subject,
+        html,
+        text
+      });
+      return;
+    }
+
     throw new Error("Kein E-Mail-Versand ist konfiguriert.");
   };
 
@@ -1750,20 +1810,30 @@ async function sendCancellationNotifications(env, booking) {
       admin: ["cancellation_admin_email_sent_at", "cancellation_admin_email_error"]
     }[kind];
     if (!fields) return;
-    if (error) {
-      await env.DB.prepare(
-        "UPDATE bookings SET " + fields[1] + "=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
-      ).bind(String(error).slice(0, 1000), booking.booking_id).run();
-    } else {
-      await env.DB.prepare(
-        "UPDATE bookings SET " + fields[0] + "=CURRENT_TIMESTAMP," + fields[1] + "=NULL,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
-      ).bind(booking.booking_id).run();
+    try {
+      if (error) {
+        await env.DB.prepare(
+          "UPDATE bookings SET " + fields[1] + "=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+        ).bind(String(error).slice(0, 1000), booking.booking_id).run();
+      } else {
+        await env.DB.prepare(
+          "UPDATE bookings SET " + fields[0] + "=CURRENT_TIMESTAMP," + fields[1] + "=NULL,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+        ).bind(booking.booking_id).run();
+      }
+    } catch (dbError) {
+      // Notification bookkeeping must never turn a successful cancellation
+      // into an API error. Log the D1 issue and keep the mail result.
+      console.error("FiiViu cancellation notification bookkeeping failed", {
+        bookingId: booking.booking_id,
+        kind,
+        error: dbError?.message || String(dbError)
+      });
     }
   };
 
   if (!booking.cancellation_customer_email_sent_at) {
     try {
-      await send(booking.customer_email, customerSubject, customerHtml, customerTextBody);
+      await send(booking.customer_email, customerSubject, customerHtml, customerTextBody, customerLanguage, customerLanguage === "de" ? "Buchung storniert" : customerLanguage === "ro" ? "Rezervarea a fost anulată" : "Booking cancelled");
       await updateStatus("customer", null);
       results.customer = "sent";
     } catch (error) {
@@ -1784,7 +1854,7 @@ async function sendCancellationNotifications(env, booking) {
       ).first();
       providerRecipient = clean(provider?.contact_email) || "";
       if (!providerRecipient) throw new Error("Keine Veranstalter-E-Mail hinterlegt.");
-      await send(providerRecipient, providerSubject, providerHtml, providerText);
+      await send(providerRecipient, providerSubject, providerHtml, providerText, "de", "Buchung storniert");
       await updateStatus("organizer", null);
       results.organizer = "sent";
     } catch (error) {
@@ -1797,7 +1867,7 @@ async function sendCancellationNotifications(env, booking) {
   if (!booking.cancellation_admin_email_sent_at) {
     try {
       const adminRecipient = clean(env.ADMIN_BOOKING_EMAIL) || "info@fiiviu.ro";
-      await send(adminRecipient, adminSubject, adminHtml, adminText);
+      await send(adminRecipient, adminSubject, adminHtml, adminText, "de", "FiiViu-Buchung storniert");
       await updateStatus("admin", null);
       results.admin = "sent";
     } catch (error) {
