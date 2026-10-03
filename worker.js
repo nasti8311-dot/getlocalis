@@ -722,31 +722,27 @@ function getBookingEventTimestamp(dateValue,timeValue){
   const match=date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const timeMatch=time.match(/^(\d{1,2}):(\d{2})/);
   if(!match||!timeMatch)return null;
-  const year=Number(match[1]);
-  const month=Number(match[2]);
-  const day=Number(match[3]);
-  const hour=Number(timeMatch[1]);
-  const minute=Number(timeMatch[2]);
+  const year=Number(match[1]), month=Number(match[2]), day=Number(match[3]);
+  const hour=Number(timeMatch[1]), minute=Number(timeMatch[2]);
   if(!Number.isInteger(year)||!Number.isInteger(month)||!Number.isInteger(day)||!Number.isInteger(hour)||!Number.isInteger(minute))return null;
-  const wallUtc=Date.UTC(year,month-1,day,hour,minute,0);
-  if(!Number.isFinite(wallUtc))return null;
-  const getOffsetMs=(timestamp)=>{
-    const parts=new Intl.DateTimeFormat("en-US",{
-      timeZone:"Europe/Bucharest",
-      year:"numeric",month:"2-digit",day:"2-digit",
-      hour:"2-digit",minute:"2-digit",second:"2-digit",
-      hourCycle:"h23"
-    }).formatToParts(new Date(timestamp));
-    const values={};
-    for(const part of parts)if(part.type!=="literal")values[part.type]=Number(part.value);
-    const localAsUtc=Date.UTC(values.year,values.month-1,values.day,values.hour,values.minute,values.second);
-    return localAsUtc-timestamp;
-  };
-  let utc=wallUtc-getOffsetMs(wallUtc);
-  utc=wallUtc-getOffsetMs(utc);
+
+  // Booking dates/times are entered as Bucharest local wall-clock time.
+  // Cloudflare Workers run in UTC, so do not let the runtime's timezone
+  // interpretation change the meaning of the customer's selected time.
+  const localText = String(date)+"T"+String(hour).padStart(2,"0")+":"+String(minute).padStart(2,"0")+":00";
+  const probe = Date.UTC(year,month-1,day,hour,minute,0);
+  const parts = new Intl.DateTimeFormat("en-US",{
+    timeZone:"Europe/Bucharest",year:"numeric",month:"2-digit",day:"2-digit",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"
+  }).formatToParts(new Date(probe));
+  const values={};
+  for(const part of parts) if(part.type!=="literal") values[part.type]=Number(part.value);
+  const shownWallUtc=Date.UTC(values.year,values.month-1,values.day,values.hour,values.minute,values.second);
+  const offsetMs=shownWallUtc-probe;
+  const utc=probe-offsetMs;
+  if(!Number.isFinite(utc)) return null;
   return Math.floor(utc/1000);
 }
-
 function getPartnerHoldDays(env){const value=Number(env.PARTNER_COMMISSION_HOLD_DAYS??14);return Number.isFinite(value)?Math.max(0,Math.min(Math.floor(value),90)):14}
 async function getPartnerStats(env,partnerRef){
   if(!env.STRIPE_SECRET_KEY)throw new Error("Stripe secret not configured");
