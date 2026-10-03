@@ -3389,6 +3389,51 @@ function createExperienceCard(item, categoryKey) {
    DETAIL
 ============================================================ */
 
+async function refreshDetailSlotAvailability(item){
+    if(!item || !String(item.id||"").startsWith("offer-")) return;
+    const date=String(selectedDetailDate||"").trim();
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return;
+    const offerId=String(item.id).slice(6);
+    try{
+        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(date),{cache:"no-store"});
+        if(!response.ok)return;
+        const data=await response.json();
+        const slots=data.slots||{};
+        const soldLabel=currentLang==="ro"?"Epuizat":currentLang==="en"?"Sold out":"Ausgebucht";
+        document.querySelectorAll(".time-slot-btn").forEach(button=>{
+            const time=String(button.dataset.time||"");
+            const slot=slots[time];
+            const soldOut=Boolean(slot?.soldOut);
+            button.disabled=soldOut;
+            button.classList.toggle("opacity-50",soldOut);
+            button.classList.toggle("cursor-not-allowed",soldOut);
+            button.innerText=localizeTimeSlotLabel(time,currentLang)+(soldOut?" · "+soldLabel:"");
+            button.dataset.remaining=slot?.remaining==null?"":String(slot.remaining);
+        });
+        const selected=document.querySelector(".time-slot-btn.active");
+        const selectedSlot=selected?slots[String(selected.dataset.time||"")]:null;
+        const guestInput=document.getElementById("detail-guest-count");
+        if(guestInput){
+            const maxGuests=selectedSlot&&Number.isInteger(Number(selectedSlot.remaining))
+                ? Math.max(1,Number(selectedSlot.remaining))
+                : (Number.isFinite(Number(item.maxGuests))&&Number(item.maxGuests)>0?Number(item.maxGuests):50);
+            guestInput.max=String(maxGuests);
+            if(Number(guestInput.value||1)>maxGuests)guestInput.value=String(maxGuests);
+            updateDetailPrice();
+        }
+        if(selected?.disabled){
+            const next=document.querySelector(".time-slot-btn:not(:disabled)");
+            document.querySelectorAll(".time-slot-btn").forEach(btn=>btn.classList.remove("active"));
+            if(next){
+                next.classList.add("active");
+                selectedTourTime=String(next.dataset.time||"");
+            }else{
+                selectedTourTime="";
+            }
+        }
+    }catch(_){}
+}
+
 function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
     const category = categoriesData[categoryKey];
@@ -3495,6 +3540,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                             d.getFullYear() + "-" +
                             String(d.getMonth() + 1).padStart(2, "0") + "-" +
                             String(d.getDate()).padStart(2, "0");
+                        refreshDetailSlotAvailability(item);
                     }
                 }
             }
@@ -3519,9 +3565,11 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
             button.className =
                 `time-slot-btn ${index === 0 ? "active" : ""}`;
 
+            button.dataset.time = time;
             button.innerText = localizeTimeSlotLabel(time, currentLang);
 
             button.onclick = () => {
+                if(button.disabled)return;
 
                 document
                     .querySelectorAll(".time-slot-btn")
@@ -3538,6 +3586,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
             slots.appendChild(button);
 
         });
+        refreshDetailSlotAvailability(item);
 
     } else {
 
