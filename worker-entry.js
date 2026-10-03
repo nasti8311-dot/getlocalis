@@ -1374,6 +1374,7 @@ async function finalizePaidBooking(
       .bind(
         bookingId,
         paymentIntent.id,
+        Number.isInteger(offerId) && offerId > 0 ? offerId : null,
         "confirmed",
         "paid",
         name || "Customer",
