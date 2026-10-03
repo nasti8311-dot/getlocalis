@@ -259,7 +259,7 @@ async function loadOffers(options={}){
     offers=d.offers||[];
     document.getElementById("offersList").innerHTML=offers.length?offers.map(o=>`
       <div class="border border-black/5 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · ${o.capacity?escapeHtml(String(o.capacity))+" Plätze/Termin · ":""}${escapeHtml(o.available_times||"keine Zeiten")} · ${escapeHtml(o.duration||"keine Dauer")} · ${escapeHtml(o.guide_language||"keine Guide-Sprache")} · ${o.active?"Activ":"Dezactivat"}</div></div>
+        <div><div class="font-black">${escapeHtml(o.title)}</div><div class="text-sm muted mt-1">${escapeHtml(o.provider_ref)} · ${euro(o.price_cents)} · Kapazität: ${o.capacity!=null&&o.capacity!==""?escapeHtml(String(o.capacity))+" Plätze/Termin":"unbegrenzt"} · ${escapeHtml(o.available_times||"keine Zeiten")} · ${escapeHtml(o.duration||"keine Dauer")} · ${escapeHtml(o.guide_language||"keine Guide-Sprache")} · ${o.active?"Activ":"Dezactivat"}</div></div>
         <div class="flex gap-2">
           <button class="bg-white border border-black/10" onclick="editOfferById(${o.id})">Editează</button>
           <button class="danger border border-red-200 bg-white" onclick="deleteOfferById(${o.id})">${o.active?"Löschen":"Deaktiviert"}</button>
@@ -385,6 +385,11 @@ document.getElementById("offerForm").onsubmit=async(e)=>{
     const savedOffer=saved?.offer||{};
     const expectedDuration=body.duration;
     const expectedGuideLanguage=body.guideLanguage;
+    const expectedCapacity=body.capacity;
+    const savedCapacity=savedOffer.capacity==null||savedOffer.capacity===""?null:Number(savedOffer.capacity);
+    if(savedCapacity!==expectedCapacity){
+      throw new Error("Kapazität wurde vom Server nicht gespeichert. Gespeichert erwartet: "+(expectedCapacity==null?"unbegrenzt":expectedCapacity)+"; zurückgegeben: "+(savedCapacity==null?"unbegrenzt":savedCapacity)+".");
+    }
     if(expectedDuration && String(savedOffer.duration||"").trim()!==expectedDuration){
       throw new Error("Dauer wurde vom Server nicht gespeichert. Bitte erneut versuchen.");
     }
