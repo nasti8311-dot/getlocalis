@@ -5,6 +5,7 @@ import { authenticateProviderSession } from "./provider-auth.js";
 const CORS={"Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization","Cache-Control":"no-store","Vary":"Origin"};
 
 export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname==="/api/partner-login"||url.pathname==="/api/partner-logout"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="GET"&&url.pathname==="/api/offers")return handlePublicOffers(request,env);
+if(request.method==="GET"&&url.pathname==="/api/offer-availability")return handleOfferAvailability(request,env);
 if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
 
 async function handleProviderRoute(request,env,ctx){
@@ -90,6 +91,34 @@ async function resolveProviderAccount(request,env){
   const sessionProvider=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(sessionProviderRef).first();
   const sessionAccount=String(sessionProvider?.connect_account_id||"").trim();
   return /^acct_[A-Za-z0-9]+$/.test(sessionAccount)?sessionAccount:"";
+}
+
+async function handleOfferAvailability(request,env){
+  if(!env.DB)return json({error:"D1 database not configured"},500);
+  const offerId=Number(new URL(request.url).searchParams.get("offerId")||0);
+  const date=String(new URL(request.url).searchParams.get("date")||"").trim();
+  const requestedTime=String(new URL(request.url).searchParams.get("time")||"").trim();
+  if(!Number.isInteger(offerId)||offerId<1||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Ungültiges Angebot oder Datum."},400);
+  const offer=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+  if(!offer||Number(offer.active)!==1)return json({error:"Inserat nicht gefunden."},404);
+  const times=normalizeAvailableTimes(offer.available_times);
+  const targetTimes=requestedTime?times.filter(time=>time===requestedTime):times;
+  if(requestedTime&&!targetTimes.length)return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
+  const capacity=Number(offer.capacity);
+  const result={offerId,date,capacity:Number.isInteger(capacity)&&capacity>0?capacity:null,slots:{}};
+  if(!result.capacity){
+    for(const time of targetTimes)result.slots[time]={capacity:null,booked:0,remaining:null,soldOut:false};
+    return json(result);
+  }
+  for(const time of targetTimes){
+    const booked=await env.DB.prepare(
+      "SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid'"
+    ).bind(offerId,date,time).first();
+    const bookedGuests=Number(booked?.guests||0);
+    const remaining=Math.max(result.capacity-bookedGuests,0);
+    result.slots[time]={capacity:result.capacity,booked:bookedGuests,remaining,soldOut:remaining<=0};
+  }
+  return json(result);
 }
 
 async function handlePublicOffers(request,env){
