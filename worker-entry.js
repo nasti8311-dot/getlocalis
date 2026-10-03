@@ -790,7 +790,8 @@ function buildCancellationView(booking) {
 function getCancellationState(booking) {
   const start = parseBookingDateTime(
     booking.booking_date,
-    booking.booking_time
+    booking.booking_time,
+    booking.customer_language
   );
 
   if (!start) {
@@ -800,6 +801,9 @@ function getCancellationState(booking) {
     };
   }
 
+  // The policy is an exact 24-hour window before the actual local
+  // experience start, converted to an absolute instant. This keeps the
+  // calculation correct across Europe/Bucharest DST changes.
   const deadlineMs =
     start.getTime() - CANCELLATION_HOURS * 60 * 60 * 1000;
 
@@ -809,45 +813,135 @@ function getCancellationState(booking) {
   };
 }
 
-function parseBookingDateTime(dateValue, timeValue) {
-  const date = String(dateValue || "").trim();
-  const time = String(timeValue || "").trim();
+function parseBookingDateTime(dateValue, timeValue, language) {
+  const rawDate = String(dateValue || "").trim();
+  const rawTime = String(timeValue || "").trim();
 
-  let normalizedDate = date;
+  if (!rawDate || !rawTime) return null;
 
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
-    const parts = date.split(".");
-    normalizedDate =
-      parts[2] + "-" + parts[1] + "-" + parts[0];
+  // Accept both the canonical stored date and legacy/localized booking
+  // values. Existing bookings may contain DD.MM.YYYY or DD/MM/YYYY.
+  let normalizedDate = "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+    normalizedDate = rawDate;
+  } else {
+    const match = rawDate.match(/^(\d{1,2})[.\\/-](\d{1,2})[.\\/-](\d{4})$/);
+    if (!match) {
+      // Also accept an ISO datetime accidentally persisted in the date field.
+      const isoDate = rawDate.match(/^(\d{4}-\d{2}-\d{2})[T ]/);
+      if (!isoDate) return null;
+      normalizedDate = isoDate[1];
+    } else {
+      const first = Number(match[1]);
+      const second = Number(match[2]);
+      const year = Number(match[3]);
+      const lang = String(language || "").slice(0, 2).toLowerCase();
+
+      let day;
+      let month;
+      if (lang === "en") {
+        month = first;
+        day = second;
+      } else if (lang === "de" || lang === "ro") {
+        day = first;
+        month = second;
+      } else if (first > 12) {
+        day = first;
+        month = second;
+      } else if (second > 12) {
+        day = second;
+        month = first;
+      } else {
+        // Ambiguous legacy values default to the site's established
+        // European format rather than silently swapping the date.
+        day = first;
+        month = second;
+      }
+
+      normalizedDate =
+        year + "-" +
+        String(month).padStart(2, "0") + "-" +
+        String(day).padStart(2, "0");
+    }
   }
 
+  // Strip harmless legacy suffixes and normalize 18.00 -> 18:00.
+  let normalizedTime = rawTime
+    .replace(/\s*(?:Uhr|o'?clock)\s*$/i, "")
+    .trim()
+    .replace(/^(\d{1,2})[.]([0-5]\d)$/, "$1:$2");
+
+  // If the time was stored as part of an ISO datetime, extract the clock.
+  const isoTime = normalizedTime.match(/(?:T|\s)(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/);
+  if (isoTime) {
+    normalizedTime = isoTime[1] + ":" + isoTime[2];
+  }
+
+  let hour;
+  let minute;
+
+  const ampm = normalizedTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (ampm) {
+    hour = Number(ampm[1]);
+    minute = Number(ampm[2]);
+    if (hour < 1 || hour > 12 || minute > 59) return null;
+    const period = ampm[3].toUpperCase();
+    if (period === "AM") hour = hour === 12 ? 0 : hour;
+    else hour = hour === 12 ? 12 : hour + 12;
+  } else {
+    const timeMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (!timeMatch) return null;
+    hour = Number(timeMatch[1]);
+    minute = Number(timeMatch[2]);
+    if (hour > 23 || minute > 59) return null;
+  }
+
+  const year = Number(normalizedDate.slice(0, 4));
+  const month = Number(normalizedDate.slice(5, 7));
+  const day = Number(normalizedDate.slice(8, 10));
+
+  const calendarCheck = new Date(Date.UTC(year, month - 1, day));
   if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate) ||
-    !/^\d{1,2}:\d{2}$/.test(time)
+    calendarCheck.getUTCFullYear() !== year ||
+    calendarCheck.getUTCMonth() + 1 !== month ||
+    calendarCheck.getUTCDate() !== day
   ) {
     return null;
   }
 
-  const [hour, minute] = time
-    .padStart(5, "0")
-    .split(":")
-    .map(Number);
-
-  const utcGuess = Date.UTC(
-    Number(normalizedDate.slice(0, 4)),
-    Number(normalizedDate.slice(5, 7)) - 1,
-    Number(normalizedDate.slice(8, 10)),
+  return zonedLocalDateTimeToInstant(
+    year,
+    month,
+    day,
     hour,
-    minute
+    minute,
+    0,
+    BOOKING_TIME_ZONE
   );
+}
 
-  return new Date(
-    utcGuess -
-      timeZoneOffsetMs(
-        new Date(utcGuess),
-        BOOKING_TIME_ZONE
-      )
-  );
+function zonedLocalDateTimeToInstant(
+  year,
+  month,
+  day,
+  hour,
+  minute,
+  second,
+  timeZone
+) {
+  // Convert a wall-clock time in the configured booking timezone to an
+  // absolute instant. Iterating the timezone offset avoids the one-pass DST
+  // edge case around the spring/fall clock changes.
+  let instantMs = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  for (let i = 0; i < 4; i++) {
+    const offsetMs = timeZoneOffsetMs(new Date(instantMs), timeZone);
+    const corrected = Date.UTC(year, month - 1, day, hour, minute, second) - offsetMs;
+    if (corrected === instantMs) break;
+    instantMs = corrected;
+  }
+
+  return new Date(instantMs);
 }
 
 function timeZoneOffsetMs(date, timeZone) {
