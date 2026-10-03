@@ -1572,7 +1572,8 @@ async function sendCancellationNotifications(env, booking) {
   const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) +
     " " + String(booking.currency || "eur").toUpperCase();
   const refundId = String(booking.cancellation_refund_id || "");
-  const localizedOffer = await getLocalizedEmailOffer(env, booking, language);
+  const customerLanguage = normalizeLanguage(booking.customer_language);
+  const localizedOffer = await getLocalizedEmailOffer(env, booking, customerLanguage);
   const experience = String(localizedOffer?.title || booking.experience_name || "FiiViu Erlebnis").trim();
   const bookingId = String(booking.booking_id || "");
   const date = String(booking.booking_date || "");
@@ -1580,7 +1581,6 @@ async function sendCancellationNotifications(env, booking) {
   const guests = String(booking.guests || 1);
   const providerName = String(booking.provider_name || "FiiViu");
 
-  const customerLanguage = normalizeLanguage(booking.customer_language);
   const customerSubject = customerLanguage === "de"
     ? "Buchung storniert – " + experience
     : customerLanguage === "ro"
