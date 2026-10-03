@@ -3648,9 +3648,9 @@ function renderDetailTrustInfo(item) {
     if (!container) return;
 
     const labels = {
-        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", guide: "Live-Tourguide", duration: "Dauer" },
-        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", guide: "Live tour guide", duration: "Duration" },
-        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", guide: "Live-Tourguide", duration: "Durată" }
+        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", guide: "Live-Tourguide", duration: "Dauer", capacity: "Kapazität" },
+        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", guide: "Live tour guide", duration: "Duration", capacity: "Capacity" },
+        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", guide: "Live-Tourguide", duration: "Durată", capacity: "Capacitate" }
     };
 
     const l = labels[currentLang] || labels.de;
@@ -3659,9 +3659,17 @@ function renderDetailTrustInfo(item) {
     const meeting = [item.meetingPoint?.[currentLang] || item.meetingPoint?.de, item.meetingAddress, item.meetingCity].filter(Boolean).join(", ");
     const duration = translateDetailMetadataValue(item.duration);
     const guideLanguage = translateDetailMetadataValue(item.guideLanguage);
+    const capacity = Number.isFinite(Number(item.maxGuests)) && Number(item.maxGuests) > 0
+        ? (currentLang === "de"
+            ? Number(item.maxGuests) + " Teilnehmer pro Termin"
+            : currentLang === "ro"
+                ? Number(item.maxGuests) + " participanți per interval"
+                : Number(item.maxGuests) + " participants per time slot")
+        : "";
 
     rows.push(["fa-user-tie", l.provider, provider || "—"]);
     rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
+    if (capacity) rows.push(["fa-users", l.capacity, capacity]);
     rows.push(["fa-rotate-left", l.cancellation, currentLang === "ro" ? "Poți anula cu până la 24 de ore înainte, cu rambursare integrală" : currentLang === "en" ? "Cancel up to 24 hours in advance for a full refund" : "Bis 24 Stunden vorher stornierbar, volle Rückerstattung"]);
     rows.push(["fa-clock", l.duration, duration || "—"]);
     rows.push(["fa-person-chalkboard", l.guide, guideLanguage || "—"]);
