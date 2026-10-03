@@ -665,11 +665,13 @@ async function handleCancellation(request, env) {
     }
 
     if (String(booking.status || "") === "cancelled") {
+      const notificationStatus = await sendCancellationNotifications(env, booking);
       return json(
         {
           success: true,
           status: "cancelled",
-          message: "Diese Buchung wurde bereits storniert."
+          message: "Diese Buchung wurde bereits storniert.",
+          notifications: notificationStatus
         },
         200,
         corsHeaders
@@ -733,13 +735,24 @@ async function handleCancellation(request, env) {
         .bind(refund.id, token)
         .run();
 
+      const cancelledBooking = await env.DB
+        .prepare("SELECT * FROM bookings WHERE cancellation_token=? LIMIT 1")
+        .bind(token)
+        .first();
+
+      const notificationStatus = await sendCancellationNotifications(
+        env,
+        cancelledBooking || { ...booking, status: "cancelled", payment_status: "refunded", cancellation_refund_id: refund.id }
+      );
+
       return json(
         {
           success: true,
           status: "cancelled",
           refund_id: refund.id,
           message:
-            "Deine Buchung wurde storniert. Die Rückerstattung wurde bei Stripe angestoßen."
+            "Deine Buchung wurde storniert. Die Rückerstattung wurde bei Stripe angestoßen.",
+          notifications: notificationStatus
         },
         200,
         corsHeaders
@@ -1529,6 +1542,272 @@ async function sendProviderBookingNotification(env, booking) {
   await env.DB.prepare(
     "UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL"
   ).bind(booking.payment_intent_id).run();
+}
+
+async function sendCancellationNotifications(env, booking) {
+  if (!env.DB || !booking) {
+    return { customer: "skipped", organizer: "skipped", admin: "skipped" };
+  }
+
+  const results = {
+    customer: booking.cancellation_customer_email_sent_at ? "sent" : "pending",
+    organizer: booking.cancellation_provider_email_sent_at ? "sent" : "pending",
+    admin: booking.cancellation_admin_email_sent_at ? "sent" : "pending"
+  };
+
+  const safe = value => String(value ?? "").replace(/[&<>"]/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
+  }[c]));
+
+  const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) +
+    " " + String(booking.currency || "eur").toUpperCase();
+  const refundId = String(booking.cancellation_refund_id || "");
+  const experience = String(booking.experience_name || "FiiViu Erlebnis");
+  const bookingId = String(booking.booking_id || "");
+  const date = String(booking.booking_date || "");
+  const time = String(booking.booking_time || "");
+  const guests = String(booking.guests || 1);
+  const providerName = String(booking.provider_name || "FiiViu");
+
+  const customerLanguage = normalizeLanguage(booking.customer_language);
+  const customerSubject = customerLanguage === "de"
+    ? "Buchung storniert – " + experience
+    : customerLanguage === "ro"
+      ? "Rezervarea a fost anulată – " + experience
+      : "Booking cancelled – " + experience;
+
+  const customerText = customerLanguage === "de"
+    ? [
+        "Hallo " + String(booking.customer_name || "") + ",",
+        "",
+        "deine Buchung wurde erfolgreich storniert.",
+        "",
+        "Erlebnis: " + experience,
+        "Buchungs-ID: " + bookingId,
+        "Datum: " + date,
+        "Beginn: " + time,
+        "Personen: " + guests,
+        "Betrag: " + amount,
+        refundId ? "Rückerstattung: " + refundId : "",
+        "",
+        "Die Rückerstattung wurde bei Stripe angestoßen. Die tatsächliche Gutschrift auf deinem Konto kann je nach Zahlungsanbieter etwas Zeit benötigen.",
+        "",
+        "FiiViu"
+      ]
+    : customerLanguage === "ro"
+      ? [
+          "Bună " + String(booking.customer_name || "") + ",",
+          "",
+          "rezervarea ta a fost anulată cu succes.",
+          "",
+          "Experiență: " + experience,
+          "ID rezervare: " + bookingId,
+          "Data: " + date,
+          "Ora: " + time,
+          "Persoane: " + guests,
+          "Valoare: " + amount,
+          refundId ? "Rambursare: " + refundId : "",
+          "",
+          "Rambursarea a fost inițiată prin Stripe. Creditarea efectivă în cont poate dura puțin, în funcție de furnizorul de plată.",
+          "",
+          "FiiViu"
+        ]
+      : [
+          "Hello " + String(booking.customer_name || "") + ",",
+          "",
+          "your booking has been cancelled successfully.",
+          "",
+          "Experience: " + experience,
+          "Booking ID: " + bookingId,
+          "Date: " + date,
+          "Start time: " + time,
+          "Guests: " + guests,
+          "Amount: " + amount,
+          refundId ? "Refund: " + refundId : "",
+          "",
+          "The refund has been initiated through Stripe. The actual credit to your account may take some time depending on your payment provider.",
+          "",
+          "FiiViu"
+        ];
+
+  const customerTextBody = customerText.filter(Boolean).join("\n");
+  const customerHtml = customerTextBody.split("\n").map(line =>
+    line
+      ? "<p style=\"margin:0 0 8px\">" + safe(line) + "</p>"
+      : "<br>"
+  ).join("");
+
+  const providerSubject = "Buchung storniert – " + experience;
+  const providerText = [
+    "Eine Buchung bei FiiViu wurde storniert.",
+    "",
+    "Erlebnis: " + experience,
+    "Buchungs-ID: " + bookingId,
+    "Datum: " + date,
+    "Beginn: " + time,
+    "Personen: " + guests,
+    "Buchungswert: " + amount,
+    "Kunde: " + String(booking.customer_name || ""),
+    "E-Mail: " + String(booking.customer_email || ""),
+    "Telefon: " + String(booking.customer_phone || ""),
+    refundId ? "Stripe-Rückerstattung: " + refundId : "",
+    "",
+    "Die Buchung ist im System jetzt als storniert und die Rückerstattung wurde angestoßen.",
+    "",
+    "FiiViu"
+  ].filter(Boolean).join("\n");
+  const providerHtml = "<h2>Buchung storniert</h2><p>" +
+    "<strong>Erlebnis:</strong> " + safe(experience) + "<br>" +
+    "<strong>Buchungs-ID:</strong> " + safe(bookingId) + "<br>" +
+    "<strong>Datum:</strong> " + safe(date) + "<br>" +
+    "<strong>Beginn:</strong> " + safe(time) + "<br>" +
+    "<strong>Personen:</strong> " + safe(guests) + "<br>" +
+    "<strong>Buchungswert:</strong> " + safe(amount) + "</p><p>" +
+    "<strong>Kunde:</strong> " + safe(booking.customer_name) + "<br>" +
+    "<strong>E-Mail:</strong> " + safe(booking.customer_email) + "<br>" +
+    "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
+    (refundId ? "<p><strong>Stripe-Rückerstattung:</strong> " + safe(refundId) + "</p>" : "") +
+    "<p>Die Buchung ist im System jetzt als storniert und die Rückerstattung wurde angestoßen.</p>";
+
+  const adminSubject = "Stornierung – " + experience + " – " + bookingId;
+  const adminText = [
+    "Eine FiiViu-Buchung wurde storniert.",
+    "",
+    "Buchungs-ID: " + bookingId,
+    "Erlebnis: " + experience,
+    "Veranstalter: " + providerName,
+    "Datum: " + date,
+    "Beginn: " + time,
+    "Personen: " + guests,
+    "Buchungswert: " + amount,
+    "Kunde: " + String(booking.customer_name || ""),
+    "E-Mail: " + String(booking.customer_email || ""),
+    "Telefon: " + String(booking.customer_phone || ""),
+    refundId ? "Stripe-Rückerstattung: " + refundId : "",
+    "",
+    "FiiViu"
+  ].filter(Boolean).join("\n");
+  const adminHtml = "<h2>FiiViu-Buchung storniert</h2><p>" +
+    "<strong>Buchungs-ID:</strong> " + safe(bookingId) + "<br>" +
+    "<strong>Erlebnis:</strong> " + safe(experience) + "<br>" +
+    "<strong>Veranstalter:</strong> " + safe(providerName) + "<br>" +
+    "<strong>Datum:</strong> " + safe(date) + "<br>" +
+    "<strong>Beginn:</strong> " + safe(time) + "<br>" +
+    "<strong>Personen:</strong> " + safe(guests) + "<br>" +
+    "<strong>Buchungswert:</strong> " + safe(amount) + "</p><p>" +
+    "<strong>Kunde:</strong> " + safe(booking.customer_name) + "<br>" +
+    "<strong>E-Mail:</strong> " + safe(booking.customer_email) + "<br>" +
+    "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
+    (refundId ? "<p><strong>Stripe-Rückerstattung:</strong> " + safe(refundId) + "</p>" : "");
+
+  const send = async (recipient, subject, html, text) => {
+    const email = clean(recipient);
+    if (!email) throw new Error("Keine Empfänger-E-Mail-Adresse vorhanden.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Ungültige Empfänger-E-Mail-Adresse.");
+    }
+
+    if (env.EMAIL && typeof env.EMAIL.send === "function") {
+      await env.EMAIL.send({
+        to: email,
+        from: "noreply@fiiviu.ro",
+        subject,
+        html,
+        text
+      });
+      return;
+    }
+
+    if (env.RESEND_API_KEY) {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + env.RESEND_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: "FiiViu <noreply@fiiviu.ro>",
+          to: [email],
+          subject,
+          html,
+          text
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(result?.message || result?.error || ("Resend HTTP " + response.status)).slice(0, 1000));
+      }
+      return;
+    }
+
+    throw new Error("Kein E-Mail-Versand ist konfiguriert.");
+  };
+
+  const updateStatus = async (kind, error) => {
+    const fields = {
+      customer: ["cancellation_customer_email_sent_at", "cancellation_customer_email_error"],
+      organizer: ["cancellation_provider_email_sent_at", "cancellation_provider_email_error"],
+      admin: ["cancellation_admin_email_sent_at", "cancellation_admin_email_error"]
+    }[kind];
+    if (!fields) return;
+    if (error) {
+      await env.DB.prepare(
+        "UPDATE bookings SET " + fields[1] + "=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      ).bind(String(error).slice(0, 1000), booking.booking_id).run();
+    } else {
+      await env.DB.prepare(
+        "UPDATE bookings SET " + fields[0] + "=CURRENT_TIMESTAMP," + fields[1] + "=NULL,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
+      ).bind(booking.booking_id).run();
+    }
+  };
+
+  if (!booking.cancellation_customer_email_sent_at) {
+    try {
+      await send(booking.customer_email, customerSubject, customerHtml, customerTextBody);
+      await updateStatus("customer", null);
+      results.customer = "sent";
+    } catch (error) {
+      console.error("FiiViu cancellation customer email failed", error);
+      await updateStatus("customer", error?.message || "Kunden-E-Mail konnte nicht gesendet werden.");
+      results.customer = "error";
+    }
+  }
+
+  let providerRecipient = "";
+  if (!booking.cancellation_provider_email_sent_at) {
+    try {
+      const provider = await env.DB.prepare(
+        "SELECT contact_email FROM providers WHERE (provider_ref=? OR name=?) AND active=1 LIMIT 1"
+      ).bind(
+        clean(booking.partner_ref) || "",
+        clean(booking.provider_name) || ""
+      ).first();
+      providerRecipient = clean(provider?.contact_email) || "";
+      if (!providerRecipient) throw new Error("Keine Veranstalter-E-Mail hinterlegt.");
+      await send(providerRecipient, providerSubject, providerHtml, providerText);
+      await updateStatus("organizer", null);
+      results.organizer = "sent";
+    } catch (error) {
+      console.error("FiiViu cancellation organizer email failed", error);
+      await updateStatus("organizer", error?.message || "Veranstalter-E-Mail konnte nicht gesendet werden.");
+      results.organizer = "error";
+    }
+  }
+
+  if (!booking.cancellation_admin_email_sent_at) {
+    try {
+      const adminRecipient = clean(env.ADMIN_BOOKING_EMAIL) || "info@fiiviu.ro";
+      await send(adminRecipient, adminSubject, adminHtml, adminText);
+      await updateStatus("admin", null);
+      results.admin = "sent";
+    } catch (error) {
+      console.error("FiiViu cancellation admin email failed", error);
+      await updateStatus("admin", error?.message || "Admin-E-Mail konnte nicht gesendet werden.");
+      results.admin = "error";
+    }
+  }
+
+  return results;
 }
 
 async function sendConfirmationWithRetry(
