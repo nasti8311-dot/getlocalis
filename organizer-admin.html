@@ -253,7 +253,7 @@ async function autoTranslateExistingOffers(){
     console.warn("Traducerea automată a eșuat:", e.message);
   }
 }
-async function loadOffers(options={){
+async function loadOffers(options={}){
   try{
     const d=await api("/api/admin/offers");
     offers=d.offers||[];
