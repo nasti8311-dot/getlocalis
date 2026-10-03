@@ -112,8 +112,8 @@ async function handleOfferAvailability(request,env){
   }
   for(const time of targetTimes){
     const booked=await env.DB.prepare(
-      "SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid'"
-    ).bind(offerId,date,time).first();
+      "SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid' AND (offer_id=? OR (offer_id IS NULL AND experience_name=(SELECT title FROM offers WHERE id=? LIMIT 1)))"
+    ).bind(date,time,offerId,offerId).first();
     const bookedGuests=Number(booked?.guests||0);
     const remaining=Math.max(result.capacity-bookedGuests,0);
     result.slots[time]={capacity:result.capacity,booked:bookedGuests,remaining,soldOut:remaining<=0};
@@ -341,8 +341,8 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(experienceId.startsWith("offer-") && Number.isInteger(capacity) && capacity>0){
       const offerId=Number(experienceId.slice(6));
       const booked=await env.DB.prepare(
-        "SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid'"
-      ).bind(offerId,bookingDate,bookingTime).first();
+        "SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid' AND (offer_id=? OR (offer_id IS NULL AND experience_name=(SELECT title FROM offers WHERE id=? LIMIT 1)))"
+      ).bind(bookingDate,bookingTime,offerId,offerId).first();
       const bookedGuests=Number(booked?.guests||0);
       if(bookedGuests+guests>capacity){
         const remaining=Math.max(capacity-bookedGuests,0);
