@@ -3395,7 +3395,8 @@ async function refreshDetailSlotAvailability(item){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const offerId=String(item.id).slice(6);
     try{
-        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(date),{cache:"no-store"});
+        const selectedTime=String(selectedTourTime||"").trim();
+        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(date)+(selectedTime?"&time="+encodeURIComponent(selectedTime):""),{cache:"no-store"});
         if(!response.ok)return;
         const data=await response.json();
         const slots=data.slots||{};
