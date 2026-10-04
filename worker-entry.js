@@ -1548,17 +1548,18 @@ async function sendProviderBookingNotification(env, booking) {
   ].join("\n");
 
   const html = "<h2>Rezervare nouă la FiiViu</h2>" +
-    "<p><strong>Experiență:</strong> " + safe(booking.experience_name) + "<br>" +
+    "<p><strong>Experiență:</strong> " + safe(romanianExperienceName) + "<br>" +
     "<strong>Rezervare:</strong> " + safe(booking.booking_id) + "<br>" +
     "<strong>Data:</strong> " + safe(booking.booking_date) + "<br>" +
     "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
     "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
     "<strong>Valoarea rezervării:</strong> " + safe(amount) + "</p>" +
     "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
-    "<strong>E-mail:</strong> " + safe(booking.customer_email) + "<br>" +
+    "<strong>E-mail client:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
-    "<p><strong>Punct de întâlnire:</strong> " + safe(booking.meeting_point_name) + "<br>" +
-    "<strong>Adresă:</strong> " + safe([booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", ")) + "</p>";
+    "<p><strong>Punct de întâlnire:</strong> " + safe(romanianMeetingPoint) + "<br>" +
+    "<strong>Adresă:</strong> " + safe([booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", ")) + "</p>" +
+    (romanianInstructions ? "<p><strong>Instrucțiuni:</strong> " + safe(romanianInstructions) + "</p>" : "");
 
   if (!env.RESEND_API_KEY) {
     await env.DB.prepare(
@@ -1935,7 +1936,11 @@ async function sendCancellationNotifications(env, booking) {
   if (!booking.cancellation_admin_email_sent_at) {
     try {
       const adminRecipient = clean(env.ADMIN_BOOKING_EMAIL) || "info@fiiviu.ro";
-      await send(adminRecipient, adminSubject, adminHtml, adminText, "de", "FiiViu-Buchung storniert");
+      if (clean(adminRecipient).toLowerCase() === clean(providerRecipient).toLowerCase()) {
+        results.admin = "skipped_duplicate_recipient";
+      } else {
+        await send(adminRecipient, adminSubject, adminHtml, adminText, "de", "FiiViu-Buchung storniert");
+      }
       await updateStatus("admin", null);
       results.admin = "sent";
     } catch (error) {
