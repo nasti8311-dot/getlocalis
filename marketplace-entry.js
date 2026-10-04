@@ -389,7 +389,7 @@ async function handleOfferAvailability(request,env){
   const date=String(params.get("date")||"").trim();
   const time=String(params.get("time")||"").trim();
   if(!Number.isInteger(offerId)||offerId<1)return json({error:"Ungültige Angebots-ID."},400);
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
   const offer=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
   if(!offer||Number(offer.active)!==1)return json({error:"Inserat nicht gefunden."},404);
   const times=normalizeAvailableTimes(offer.available_times);
