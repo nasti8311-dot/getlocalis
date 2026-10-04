@@ -3428,24 +3428,36 @@ async function refreshDetailAvailability(item){
             const key=Object.keys(slots).find(k=>normalizeCapacityTime(k)===normalizeCapacityTime(time));
             const slot=key?slots[key]:null;
             const soldOut=Boolean(slot?.soldOut);
-            button.disabled=soldOut;
-            button.classList.toggle("opacity-40",soldOut);
-            button.classList.toggle("cursor-not-allowed",soldOut);
+            const guestCount=Math.max(1,Number(document.getElementById("detail-guest-count")?.value||1));
+            const insufficientCapacity=Number.isFinite(Number(slot?.remaining)) && guestCount>Number(slot.remaining);
+            const unavailable=soldOut||insufficientCapacity;
+            button.disabled=unavailable;
+            button.classList.toggle("opacity-40",unavailable);
+            button.classList.toggle("cursor-not-allowed",unavailable);
         });
 
         const selectedKey=Object.keys(slots).find(k=>normalizeCapacityTime(k)===normalizeCapacityTime(selectedTourTime));
         const selectedSlot=selectedKey?slots[selectedKey]:null;
         if(selectedSlot&&Number.isFinite(Number(selectedSlot.remaining))){
             const n=Number(selectedSlot.remaining);
+            const guestCount=Math.max(1,Number(document.getElementById("detail-guest-count")?.value||1));
             if(n<=0){
                 box.textContent=currentLang==="de"?"Dieser Termin ist ausgebucht.":currentLang==="ro"?"Acest interval este epuizat.":"This time slot is sold out.";
                 bookButton.disabled=true;
                 bookButton.classList.add("opacity-50","cursor-not-allowed");
+            }else if(guestCount>n){
+                box.textContent=currentLang==="de"?"Nur noch "+n+" Plätze verfügbar.":currentLang==="ro"?"Mai sunt disponibile doar "+n+" locuri.":"Only "+n+" spots are available.";
+                bookButton.disabled=true;
+                bookButton.classList.add("opacity-50","cursor-not-allowed");
             }else{
                 box.textContent=currentLang==="de"?n+" Plätze für diesen Termin verfügbar":currentLang==="ro"?n+" locuri disponibile pentru acest interval":n+" spots available for this time slot";
+                bookButton.disabled=false;
+                bookButton.classList.remove("opacity-50","cursor-not-allowed");
             }
         }else{
             box.textContent="";
+            bookButton.disabled=false;
+            bookButton.classList.remove("opacity-50","cursor-not-allowed");
         }
     }catch(error){
         console.error("FiiViu availability check failed",error);
@@ -3843,6 +3855,13 @@ function updateDetailPrice() {
 
     document.getElementById("detail-total-price").innerText =
         formatPrice(total);
+
+    // Capacity is per booking slot and must react immediately to the
+    // selected guest count, not only when the date/time changes.
+    const item = categoriesData[currentCategoryKey]?.items?.find(product => product.id === currentTourKey);
+    if (item && typeof refreshDetailAvailability === "function") {
+        refreshDetailAvailability(item);
+    }
 
 }
 
