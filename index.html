@@ -3410,7 +3410,7 @@ async function refreshDetailAvailability(item){
     box.textContent=currentLang==="de"?"Verfügbarkeit wird geprüft…":currentLang==="ro"?"Se verifică disponibilitatea…":"Checking availability…";
     try{
         const offerId=String(item.id).slice(6);
-        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(selectedDetailDate),{cache:"no-store"});
+        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(selectedDetailDate)+"&time="+encodeURIComponent(selectedTourTime),{cache:"no-store"});
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||"Availability check failed");
         const slots=data.slots&&typeof data.slots==="object"?data.slots:{};
