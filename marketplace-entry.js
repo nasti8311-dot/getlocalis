@@ -378,9 +378,29 @@ function normalizeMarketplaceBookingDate(value, language){
   return candidate;
 }
 
+function normalizeAvailabilityDate(value){
+  const raw=String(value||"").trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+  const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  if(!match)return raw;
+  return String(Number(match[3])).padStart(4,"0")+"-"+String(Number(match[2])).padStart(2,"0")+"-"+String(Number(match[1])).padStart(2,"0");
+}
+function normalizeAvailabilityTime(value){
+  const raw=String(value||"").trim();
+  const match=raw.match(/^(\d{1,2}):(\d{2})$/);
+  return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
+}
 async function countPaidOfferGuests(env,offerId,date,time){
-  const row=await env.DB.prepare("SELECT COALESCE(SUM(guests),0) AS booked FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND booking_date=? AND booking_time=?").bind(offerId,date,time).first();
-  return Math.max(0,Number(row?.booked||0));
+  const rows=await env.DB.prepare(
+    "SELECT guests,booking_date,booking_time FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded')"
+  ).bind(offerId).all();
+  const targetDate=normalizeAvailabilityDate(date);
+  const targetTime=normalizeAvailabilityTime(time);
+  return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
+    return normalizeAvailabilityDate(booking?.booking_date)===targetDate &&
+      normalizeAvailabilityTime(booking?.booking_time)===targetTime
+      ? sum+Number(booking?.guests||0) : sum;
+  },0));
 }
 async function handleOfferAvailability(request,env){
   if(!env.DB)return json({error:"D1 database not configured"},500);
