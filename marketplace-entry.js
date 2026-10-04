@@ -386,9 +386,23 @@ function normalizeAvailabilityDate(value,language){
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
   const iso=raw.match(/(\d{4}-\d{2}-\d{2})[T\s]/);
   if(iso)return iso[1];
-  const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  const match=raw.match(/^(\d{1,2})([.\/-])(\d{1,2})\2(\d{4})$/);
   if(!match)return raw;
-  return String(Number(match[3])).padStart(4,"0")+"-"+String(Number(match[2])).padStart(2,"0")+"-"+String(Number(match[1])).padStart(2,"0");
+  const first=Number(match[1]), second=Number(match[3]), year=Number(match[4]);
+  let day=first, month=second;
+  if(match[2]==="/" && String(language||"").slice(0,2).toLowerCase()==="en"){month=first;day=second;}
+  else if(first<=12 && second>12){month=first;day=second;}
+  return String(year).padStart(4,"0")+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+}
+function availabilityDateMatches(value,target,language){
+  const raw=String(value||"").trim();
+  const normalized=normalizeAvailabilityDate(raw,language);
+  if(normalized===target)return true;
+  const match=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!match)return false;
+  const first=Number(match[1]),second=Number(match[2]),year=Number(match[3]);
+  const alternate=String(year).padStart(4,"0")+"-"+String(first).padStart(2,"0")+"-"+String(second).padStart(2,"0");
+  return alternate===target;
 }
 function normalizeAvailabilityTime(value){
   const raw=String(value||"").trim().replace(/\s*(?:uhr|h)\s*$/i,"");
@@ -414,7 +428,7 @@ async function countPaidOfferGuests(env,offerId,date,time){
   return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
     const bookingDate=normalizeAvailabilityDate(booking?.booking_date,booking?.customer_language);
     const bookingTime=normalizeAvailabilityTime(booking?.booking_time);
-    if(bookingDate!==targetDate||bookingTime!==targetTime)return sum;
+    if(!availabilityDateMatches(booking?.booking_date,targetDate,booking?.customer_language)||bookingTime!==targetTime)return sum;
 
     const bookingOfferId=Number(booking?.offer_id||0);
     const bookingName=normalizeAvailabilityName(booking?.experience_name);
