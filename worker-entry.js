@@ -1218,10 +1218,6 @@ async function finalizePaidBooking(
       Number(metadata.guests || 1)
     );
 
-    const offerId = Number(metadata.offer_id || 0);
-    const bookingDate = clean(metadata.booking_date);
-    const bookingTime = clean(metadata.booking_time);
-
     const amountCents = Number(
       pi.amount_received || pi.amount || 0
     );
@@ -1235,39 +1231,6 @@ async function finalizePaidBooking(
         metadata.tour_name ||
         "Experience"
     ).trim();
-
-    const existingBooking = await env.DB
-      .prepare("SELECT booking_id FROM bookings WHERE payment_intent_id=? LIMIT 1")
-      .bind(paymentIntent.id)
-      .first();
-
-    if (!existingBooking && Number.isInteger(offerId) && offerId > 0 && bookingDate && bookingTime) {
-      const offer = await env.DB
-        .prepare("SELECT capacity FROM offers WHERE id=? AND active=1 LIMIT 1")
-        .bind(offerId)
-        .first();
-      const capacity = Number(offer?.capacity);
-      if (Number.isInteger(capacity) && capacity > 0) {
-        const booked = await env.DB
-          .prepare("SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid'")
-          .bind(offerId, bookingDate, bookingTime)
-          .first();
-        const bookedGuests = Number(booked?.guests || 0);
-        if (bookedGuests + guests > capacity) {
-          await stripePostForm(env, "/v1/refunds", { payment_intent: paymentIntent.id });
-          console.warn("FiiViu payment refunded because offer capacity was reached", {
-            paymentIntentId: paymentIntent.id,
-            offerId,
-            bookingDate,
-            bookingTime,
-            capacity,
-            bookedGuests,
-            guests
-          });
-          return;
-        }
-      }
-    }
 
     const fallback =
       resolveMeetingDefaults(experienceName);
@@ -1309,7 +1272,6 @@ async function finalizePaidBooking(
         `INSERT INTO bookings (
           booking_id,
           payment_intent_id,
-          offer_id,
           status,
           payment_status,
           customer_name,
@@ -1341,7 +1303,6 @@ async function finalizePaidBooking(
         )
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
-          offer_id=excluded.offer_id,
           status='confirmed',
           payment_status='paid',
           customer_name=excluded.customer_name,
@@ -1374,7 +1335,6 @@ async function finalizePaidBooking(
       .bind(
         bookingId,
         paymentIntent.id,
-        Number.isInteger(offerId) && offerId > 0 ? offerId : null,
         "confirmed",
         "paid",
         name || "Customer",
@@ -3247,7 +3207,7 @@ async function recordBookingSettlement(env, booking) {
 
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","offer_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
