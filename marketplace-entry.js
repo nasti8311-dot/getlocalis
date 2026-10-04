@@ -428,8 +428,11 @@ async function handleOfferAvailability(request,env){
   const offer=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
   if(!offer||Number(offer.active)!==1)return json({error:"Inserat nicht gefunden."},404);
   const times=normalizeAvailableTimes(offer.available_times);
-  if(time&&!times.some(value=>String(value).trim()===time))return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
-  const selectedTimes=time?[time]:times;
+  const normalizedRequestedTime=normalizeAvailabilityTime(time);
+  if(time&&!times.some(value=>normalizeAvailabilityTime(value)===normalizedRequestedTime))return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
+  const selectedTimes=time
+    ? times.filter(value=>normalizeAvailabilityTime(value)===normalizedRequestedTime)
+    : times;
   const capacity=Number(offer.capacity);
   const slots={};
   for(const slotTime of selectedTimes){
