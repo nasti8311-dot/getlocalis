@@ -380,14 +380,15 @@ function normalizeMarketplaceBookingDate(value, language){
 
 function normalizeAvailabilityDate(value){
   const raw=String(value||"").trim();
-  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
-  const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  const isoMatch=raw.match(/^(\d{4}-\d{2}-\d{2})(?:[T ].*)?$/);
+  if(isoMatch)return isoMatch[1];
+  const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})(?:[T ].*)?$/);
   if(!match)return raw;
   return String(Number(match[3])).padStart(4,"0")+"-"+String(Number(match[2])).padStart(2,"0")+"-"+String(Number(match[1])).padStart(2,"0");
 }
 function normalizeAvailabilityTime(value){
   const raw=String(value||"").trim();
-  const match=raw.match(/^(\d{1,2}):(\d{2})$/);
+  const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
 }
 async function countPaidOfferGuests(env,offerId,date,time){
@@ -404,7 +405,7 @@ async function countPaidOfferGuests(env,offerId,date,time){
   const titleC=uniqueTitles[2]||titleA;
 
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND (offer_id=? OR experience_name IN (?,?,?))"
+    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND (CAST(offer_id AS INTEGER)=? OR lower(trim(experience_name)) IN (lower(trim(?)),lower(trim(?)),lower(trim(?))))"
   ).bind(offerId,titleA,titleB,titleC).all();
 
   const targetDate=normalizeAvailabilityDate(date);
