@@ -3227,7 +3227,7 @@ async function ensureBookingColumns(env) {
   const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
-  for(const name of missing){if(name==="offer_id"){await env.DB.prepare("ALTER TABLE bookings ADD COLUMN offer_id INTEGER").run();}else{throw new Error("Bookings schema is missing required columns: "+missing.join(", "));}}
+  if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
 }
 
 function normalizeLanguage(value) {
