@@ -5,6 +5,7 @@ import { authenticateProviderSession } from "./provider-auth.js";
 const CORS={"Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization","Cache-Control":"no-store","Vary":"Origin"};
 
 export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname==="/api/partner-login"||url.pathname==="/api/partner-logout"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="GET"&&url.pathname==="/api/offers")return handlePublicOffers(request,env);
+if(request.method==="GET"&&url.pathname==="/api/offer-availability")return handleOfferAvailability(request,env);
 if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
 
 async function handleProviderRoute(request,env,ctx){
@@ -98,7 +99,7 @@ async function handlePublicOffers(request,env){
   try{
     await ensureExperiencesTable(env);
     await ensureOffersTable(env);
-    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
+    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.capacity,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
     const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
     for (const offer of legacyOffers) {
@@ -177,7 +178,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const numericOfferId=offerIdRaw.replace(/^offer-/i,"").trim();
     if(numericOfferId && /^\d+$/.test(numericOfferId)){
       const offer=await env.DB.prepare(`
-        SELECT id,provider_ref,title,price_cents,currency,meeting_point_name,
+        SELECT id,provider_ref,title,price_cents,currency,capacity,meeting_point_name,
                meeting_address,meeting_city,meeting_country,meeting_instructions,
                arrival_minutes_before,available_times,active
         FROM offers WHERE id=? LIMIT 1
@@ -196,6 +197,8 @@ async function createMarketplacePaymentIntent(request,env,ctx){
           provider_name:String(provider?.name||""),
           price_cents:Number(offer.price_cents||0),
           currency:String(offer.currency||"eur").toLowerCase(),
+          capacity:Number.isInteger(Number(offer.capacity))&&Number(offer.capacity)>0?Number(offer.capacity):null,
+          offer_id:Number(offer.id),
           meeting_point_name:String(offer.meeting_point_name||""),
           meeting_address:String(offer.meeting_address||""),
           meeting_city:String(offer.meeting_city||""),
@@ -307,6 +310,12 @@ async function createMarketplacePaymentIntent(request,env,ctx){
       return json({error:"Die gewählte Uhrzeit ist für dieses Erlebnis nicht verfügbar."},409);
     }
 
+    const capacity=Number(experience.capacity);
+    if(Number.isInteger(capacity)&&capacity>0&&experience.offer_id){
+      const booked=await countPaidOfferGuests(env,Number(experience.offer_id),bookingDate,bookingTime);
+      const remaining=Math.max(capacity-booked,0);
+      if(remaining<guests)return json({error:remaining<=0?"Dieser Termin ist ausgebucht.":"Für diesen Termin sind nur noch "+remaining+" Plätze verfügbar."},409);
+    }
     const unitPrice=Number(experience.price_cents);
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
 
@@ -369,6 +378,37 @@ function normalizeMarketplaceBookingDate(value, language){
   return candidate;
 }
 
+async function countPaidOfferGuests(env,offerId,date,time){
+  const row=await env.DB.prepare("SELECT COALESCE(SUM(guests),0) AS booked FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND booking_date=? AND booking_time=?").bind(offerId,date,time).first();
+  return Math.max(0,Number(row?.booked||0));
+}
+async function handleOfferAvailability(request,env){
+  if(!env.DB)return json({error:"D1 database not configured"},500);
+  const params=new URL(request.url).searchParams;
+  const offerId=Number(params.get("offerId")||0);
+  const date=String(params.get("date")||"").trim();
+  const time=String(params.get("time")||"").trim();
+  if(!Number.isInteger(offerId)||offerId<1)return json({error:"Ungültige Angebots-ID."},400);
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
+  const offer=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+  if(!offer||Number(offer.active)!==1)return json({error:"Inserat nicht gefunden."},404);
+  const times=normalizeAvailableTimes(offer.available_times);
+  if(time&&!times.some(value=>String(value).trim()===time))return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
+  const selectedTimes=time?[time]:times;
+  const capacity=Number(offer.capacity);
+  const slots={};
+  for(const slotTime of selectedTimes){
+    const normalized=String(slotTime).trim();
+    if(!Number.isInteger(capacity)||capacity<1){
+      slots[normalized]={capacity:null,booked:0,remaining:null,soldOut:false};
+      continue;
+    }
+    const booked=await countPaidOfferGuests(env,offerId,date,normalized);
+    const remaining=Math.max(capacity-booked,0);
+    slots[normalized]={capacity,booked,remaining,soldOut:remaining<=0};
+  }
+  return json({offerId,date,slots});
+}
 function normalizeAvailableTimes(value){
   if(Array.isArray(value))return value.map(String).map(v=>v.trim()).filter(Boolean);
   const raw=String(value||"").trim();
