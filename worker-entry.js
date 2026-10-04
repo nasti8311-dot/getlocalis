@@ -1232,6 +1232,20 @@ async function finalizePaidBooking(
         "Experience"
     ).trim();
 
+    const offerId=Number(metadata.offer_id||0);
+    if(Number.isInteger(offerId)&&offerId>0){
+      const offer=await env.DB.prepare("SELECT capacity,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+      const capacity=Number(offer?.capacity);
+      if(Number(offer?.active)!==1)return;
+      if(Number.isInteger(capacity)&&capacity>0){
+        const booked=await env.DB.prepare("SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded')").bind(offerId,clean(metadata.booking_date),clean(metadata.booking_time)).first();
+        if(Number(booked?.guests||0)+guests>capacity){
+          try{await stripePostForm(env,"/v1/refunds",{payment_intent:paymentIntent.id});}catch(error){console.error("FiiViu capacity refund failed",error)}
+          return;
+        }
+      }
+    }
+
     const fallback =
       resolveMeetingDefaults(experienceName);
 
@@ -1296,6 +1310,7 @@ async function finalizePaidBooking(
           provider_name,
           provider_connect_account_id,
           cancellation_token,
+          offer_id,
           created_at,
           updated_at
         ) VALUES (
@@ -3207,10 +3222,10 @@ async function recordBookingSettlement(env, booking) {
 
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
-  if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
+  for(const name of missing){if(name==="offer_id"){await env.DB.prepare("ALTER TABLE bookings ADD COLUMN offer_id INTEGER").run();}else{throw new Error("Bookings schema is missing required columns: "+missing.join(", "));}}
 }
 
 function normalizeLanguage(value) {
