@@ -387,34 +387,52 @@ function normalizeAvailabilityDate(value){
 }
 function normalizeAvailabilityTime(value){
   const raw=String(value||"").trim();
-  const match=raw.match(/^(\d{1,2}):(\d{2})$/);
+  const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
+}
+function normalizeAvailabilityName(value){
+  return String(value||"").trim().toLowerCase().replace(/\s+/g," ");
 }
 async function countPaidOfferGuests(env,offerId,date,time){
   const offer=await env.DB.prepare(
     "SELECT title,title_en,title_ro FROM offers WHERE id=? LIMIT 1"
   ).bind(offerId).first();
 
-  const titles=[offer?.title,offer?.title_en,offer?.title_ro]
-    .map(value=>String(value||"").trim())
+  const names=[offer?.title,offer?.title_en,offer?.title_ro]
+    .map(normalizeAvailabilityName)
     .filter(Boolean);
-  const uniqueTitles=[...new Set(titles)];
-  const titleA=uniqueTitles[0]||"";
-  const titleB=uniqueTitles[1]||titleA;
-  const titleC=uniqueTitles[2]||titleA;
+  const uniqueNames=[...new Set(names)];
 
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE (payment_status='paid' OR status='confirmed') AND status NOT IN ('cancelled','canceled','refunded') AND (offer_id=? OR experience_name IN (?,?,?))"
-  ).bind(offerId,titleA,titleB,titleC).all();
+    "SELECT guests,booking_date,booking_time,offer_id,experience_name,payment_status,status FROM bookings WHERE status NOT IN ('cancelled','canceled','refunded')"
+  ).all();
 
   const targetDate=normalizeAvailabilityDate(date);
   const targetTime=normalizeAvailabilityTime(time);
 
   return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
-    const bookingDate=normalizeAvailabilityDate(booking?.booking_date);
-    const bookingTime=normalizeAvailabilityTime(booking?.booking_time);
-    if(bookingDate!==targetDate||bookingTime!==targetTime)return sum;
-    return sum+Number(booking?.guests||0);
+    const paymentStatus=String(booking?.payment_status||"").toLowerCase();
+    const status=String(booking?.status||"").toLowerCase();
+    if(paymentStatus!=="paid" && status!=="confirmed")return sum;
+
+    if(normalizeAvailabilityDate(booking?.booking_date)!==targetDate)return sum;
+    if(normalizeAvailabilityTime(booking?.booking_time)!==targetTime)return sum;
+
+    const bookingOfferId=Number(booking?.offer_id||0);
+    if(Number.isInteger(bookingOfferId)&&bookingOfferId>0 && bookingOfferId===Number(offerId)){
+      return sum+Number(booking?.guests||0);
+    }
+
+    // Older bookings may have been created before offer_id was persisted.
+    // Match their stored experience name against all current offer languages.
+    const bookingName=normalizeAvailabilityName(booking?.experience_name);
+    const matches=uniqueNames.some(name=>
+      bookingName===name ||
+      bookingName.startsWith(name+" ·") ||
+      bookingName.startsWith(name+" -") ||
+      bookingName.includes(name)
+    );
+    return matches ? sum+Number(booking?.guests||0) : sum;
   },0));
 }
 async function handleOfferAvailability(request,env){
