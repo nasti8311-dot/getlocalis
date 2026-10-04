@@ -381,7 +381,7 @@ function normalizeMarketplaceBookingDate(value, language){
 function normalizeAvailabilityName(value){
   return String(value||"").trim().toLowerCase().replace(/\s+/g," ");
 }
-function normalizeAvailabilityDate(value){
+function normalizeAvailabilityDate(value,language){
   const raw=String(value||"").trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
   const iso=raw.match(/(\d{4}-\d{2}-\d{2})[T\s]/);
@@ -405,14 +405,14 @@ async function countPaidOfferGuests(env,offerId,date,time){
     .filter(Boolean);
   const uniqueTitles=[...new Set(titles)];
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time,offer_id,experience_name,status,payment_status FROM bookings WHERE (payment_status='paid' OR status='confirmed') AND status NOT IN ('cancelled','canceled','refunded')"
+    "SELECT guests,booking_date,booking_time,offer_id,experience_name,customer_language,status,payment_status FROM bookings WHERE (payment_status='paid' OR status='confirmed') AND status NOT IN ('cancelled','canceled','refunded')"
   ).all();
 
   const targetDate=normalizeAvailabilityDate(date);
   const targetTime=normalizeAvailabilityTime(time);
 
   return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
-    const bookingDate=normalizeAvailabilityDate(booking?.booking_date);
+    const bookingDate=normalizeAvailabilityDate(booking?.booking_date,booking?.customer_language);
     const bookingTime=normalizeAvailabilityTime(booking?.booking_time);
     if(bookingDate!==targetDate||bookingTime!==targetTime)return sum;
 
