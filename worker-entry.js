@@ -1236,7 +1236,7 @@ async function finalizePaidBooking(
     if(Number.isInteger(offerId)&&offerId>0){
       const offer=await env.DB.prepare("SELECT capacity,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
       const capacity=Number(offer?.capacity);
-      if(Number(offer?.active)!==1)return;
+      if(!offer||Number(offer.active)!==1){try{await stripePostForm(env,"/v1/refunds",{payment_intent:paymentIntent.id});}catch(error){console.error("FiiViu capacity refund failed",error)}return;}
       if(Number.isInteger(capacity)&&capacity>0){
         const booked=await env.DB.prepare("SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded')").bind(offerId,clean(metadata.booking_date),clean(metadata.booking_time)).first();
         if(Number(booked?.guests||0)+guests>capacity){
