@@ -1155,6 +1155,18 @@ function timingSafeEqualHex(a, b) {
   return difference === 0;
 }
 
+function normalizeCapacityBookingDate(value){
+  const raw=String(value||"").trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+  const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  if(!match)return raw;
+  return String(Number(match[3])).padStart(4,"0")+"-"+String(Number(match[2])).padStart(2,"0")+"-"+String(Number(match[1])).padStart(2,"0");
+}
+function normalizeCapacityBookingTime(value){
+  const raw=String(value||"").trim();
+  const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+  return match?String(Number(match[1])).padStart(2,"0")+":"+match[2]:raw;
+}
 async function finalizePaidBooking(
   env,
   paymentIntent
@@ -1269,8 +1281,14 @@ async function finalizePaidBooking(
       if(offer&&Number(offer.active)===1){
         const capacity=Number(offer.capacity);
         if(Number.isInteger(capacity)&&capacity>0){
-          const bookedRow=await env.DB.prepare("SELECT COALESCE(SUM(guests),0) AS booked FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND booking_date=? AND booking_time=? AND payment_intent_id<>?").bind(offerId,clean(metadata.booking_date),clean(metadata.booking_time),paymentIntent.id).first();
-          const booked=Number(bookedRow?.booked||0);
+          const bookedRows=await env.DB.prepare("SELECT guests,booking_date,booking_time,payment_status,status FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND payment_intent_id<>?").bind(offerId,paymentIntent.id).all();
+          const targetDate=normalizeCapacityBookingDate(metadata.booking_date);
+          const targetTime=normalizeCapacityBookingTime(metadata.booking_time);
+          const booked=(bookedRows.results||[]).reduce((sum,row)=>{
+            if(normalizeCapacityBookingDate(row?.booking_date)!==targetDate)return sum;
+            if(normalizeCapacityBookingTime(row?.booking_time)!==targetTime)return sum;
+            return sum+Math.max(0,Number(row?.guests||0));
+          },0);
           if(booked+guests>capacity){
             try{
               await stripePostForm(env,"/v1/refunds",{payment_intent:paymentIntent.id});
