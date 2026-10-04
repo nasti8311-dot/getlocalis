@@ -129,10 +129,7 @@ export default {
           return json({ error: "PaymentIntent is not a valid FiiViu checkout." }, 409);
         }
 
-        const finalized = await finalizePaidBooking(env, paymentIntent);
-        if (finalized?.capacityExceeded) {
-          return json({ error: finalized.remaining > 0 ? "Für diesen Termin sind nur noch " + finalized.remaining + " Plätze verfügbar." : "Dieser Termin ist ausgebucht.", remaining: finalized.remaining, capacity: finalized.capacity }, 409);
-        }
+        await finalizePaidBooking(env, paymentIntent);
 
         const booking = await env.DB
           .prepare("SELECT booking_id,confirmation_email_sent_at,confirmation_email_error FROM bookings WHERE payment_intent_id=? LIMIT 1")
@@ -1266,17 +1263,6 @@ async function finalizePaidBooking(
         fallback.longitude
     };
 
-    const offerId = Number(metadata.offer_id || 0);
-    const existingBooking = await env.DB.prepare("SELECT booking_id FROM bookings WHERE payment_intent_id=? LIMIT 1").bind(paymentIntent.id).first();
-    if (!existingBooking && Number.isInteger(offerId) && offerId > 0) {
-      const capacityState = await getOfferCapacityState(env, offerId, clean(metadata.booking_date), clean(metadata.booking_time), paymentIntent.id);
-      if (capacityState && capacityState.booked + guests > capacityState.capacity) {
-        try { await stripePostForm(env, "/v1/refunds", { payment_intent: paymentIntent.id }); }
-        catch (refundError) { console.error("FiiViu capacity refund failed", refundError); }
-        return { capacityExceeded: true, remaining: capacityState.remaining, capacity: capacityState.capacity };
-      }
-    }
-
     const cancellationToken =
       crypto.randomUUID().replace(/-/g, "") +
       crypto.randomUUID().replace(/-/g, "");
@@ -1293,7 +1279,6 @@ async function finalizePaidBooking(
           customer_phone,
           customer_language,
           experience_name,
-          offer_id,
           booking_date,
           booking_time,
           guests,
@@ -1314,7 +1299,7 @@ async function finalizePaidBooking(
           created_at,
           updated_at
         ) VALUES (
-          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
         )
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
@@ -1325,7 +1310,6 @@ async function finalizePaidBooking(
           customer_phone=excluded.customer_phone,
           customer_language=excluded.customer_language,
           experience_name=excluded.experience_name,
-          offer_id=excluded.offer_id,
           booking_date=excluded.booking_date,
           booking_time=excluded.booking_time,
           guests=excluded.guests,
@@ -1358,7 +1342,6 @@ async function finalizePaidBooking(
         clean(metadata.customer_phone),
         language,
         experienceName,
-        Number.isInteger(offerId) && offerId > 0 ? offerId : null,
         clean(metadata.booking_date),
         clean(metadata.booking_time),
         guests,
@@ -1785,7 +1768,8 @@ async function sendCancellationNotifications(env, booking) {
             mail_guests_label: language === "de" ? "Personen" : language === "ro" ? "Persoane" : "Guests",
             mail_total_label: language === "de" ? "Gesamtpreis" : language === "ro" ? "Preț total" : "Total price",
             mail_booking_id_label: language === "de" ? "Buchungs-ID" : language === "ro" ? "ID rezervare" : "Booking ID",
-            mail_provider_label: language === "de" ? "Veranstalter" : language === "ro" ? "Organizator" : "Organizer",
+            mail_provider_label: language === "de" ? "Veranstalter" : language === "ro" ? "Organizator" : "Provided by",
+            provider_label: language === "de" ? "Veranstalter" : language === "ro" ? "Organizator" : "Provided by",
             provider_name: providerName,
             provider: providerName,
             organizer: providerName,
@@ -3221,28 +3205,9 @@ async function recordBookingSettlement(env, booking) {
   ).run();
 }
 
-async function getOfferCapacityState(env,offerId,bookingDate,bookingTime,excludePaymentIntentId=""){
-  const id=Number(offerId);
-  if(!Number.isInteger(id)||id<1)return null;
-  const offer=await env.DB.prepare("SELECT id,title,title_en,title_ro,capacity,active FROM offers WHERE id=? LIMIT 1").bind(id).first();
-  const capacity=Number(offer?.capacity);
-  if(!offer||!Number.isInteger(capacity)||capacity<1)return null;
-  const titles=[offer.title,offer.title_en,offer.title_ro].map(v=>String(v||"").trim()).filter(Boolean);
-  const unique=[...new Set(titles)];
-  const titleA=unique[0]||"";
-  const titleB=unique[1]||titleA;
-  const titleC=unique[2]||titleA;
-  const excluded=String(excludePaymentIntentId||"").trim();
-  const query=excluded ? "SELECT guests FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND booking_date=? AND booking_time=? AND (offer_id=? OR (offer_id IS NULL AND experience_name IN (?,?,?))) AND payment_intent_id<>?" : "SELECT guests FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND booking_date=? AND booking_time=? AND (offer_id=? OR (offer_id IS NULL AND experience_name IN (?,?,?)))";
-  const params=excluded?[bookingDate,bookingTime,id,titleA,titleB,titleC,excluded]:[bookingDate,bookingTime,id,titleA,titleB,titleC];
-  const rows=await env.DB.prepare(query).bind(...params).all();
-  const booked=(rows.results||[]).reduce((sum,row)=>sum+Math.max(0,Number(row.guests||0)),0);
-  return {offerId:id,capacity,booked,remaining:Math.max(capacity-booked,0),soldOut:booked>=capacity};
-}
-
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
