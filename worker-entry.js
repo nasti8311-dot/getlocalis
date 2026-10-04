@@ -129,7 +129,10 @@ export default {
           return json({ error: "PaymentIntent is not a valid FiiViu checkout." }, 409);
         }
 
-        await finalizePaidBooking(env, paymentIntent);
+        const finalized = await finalizePaidBooking(env, paymentIntent);
+        if (finalized?.capacityExceeded) {
+          return json({ error: finalized.remaining > 0 ? "Für diesen Termin sind nur noch " + finalized.remaining + " Plätze verfügbar." : "Dieser Termin ist ausgebucht.", remaining: finalized.remaining, capacity: finalized.capacity }, 409);
+        }
 
         const booking = await env.DB
           .prepare("SELECT booking_id,confirmation_email_sent_at,confirmation_email_error FROM bookings WHERE payment_intent_id=? LIMIT 1")
