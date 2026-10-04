@@ -1900,7 +1900,13 @@ async function sendCancellationNotifications(env, booking) {
     }
   };
 
-  if (!booking.cancellation_customer_email_sent_at) {
+  const knownProviderEmail = clean((await env.DB.prepare(
+    "SELECT contact_email FROM providers WHERE (provider_ref=? OR name=?) AND active=1 LIMIT 1"
+  ).bind(clean(booking.partner_ref) || "", clean(booking.provider_name) || "").first())?.contact_email || "").toLowerCase();
+  const customerEmail = clean(booking.customer_email)?.toLowerCase() || "";
+  const customerIsOrganizerMailbox = Boolean(knownProviderEmail && customerEmail && knownProviderEmail === customerEmail);
+
+  if (!booking.cancellation_customer_email_sent_at && !customerIsOrganizerMailbox) {
     try {
       await send(booking.customer_email, customerSubject, customerHtml, customerTextBody, customerLanguage, customerLanguage === "de" ? "Buchung storniert" : customerLanguage === "ro" ? "Rezervarea a fost anulată" : "Booking cancelled");
       await updateStatus("customer", null);
@@ -1923,7 +1929,24 @@ async function sendCancellationNotifications(env, booking) {
       ).first();
       providerRecipient = clean(provider?.contact_email) || "";
       if (!providerRecipient) throw new Error("Keine Veranstalter-E-Mail hinterlegt.");
-      await send(providerRecipient, providerSubject, providerHtml, providerText, "ro", "Rezervarea a fost anulată");
+      await send(providerRecipient, "Buchung storniert – " + providerExperience, providerHtml, [
+        "Eine Buchung bei FiiViu wurde storniert.",
+        "",
+        "Erlebnis: " + providerExperience,
+        "Buchungs-ID: " + bookingId,
+        "Datum: " + date,
+        "Beginn: " + time,
+        "Personen: " + guests,
+        "Buchungswert: " + amount,
+        "Kunde: " + String(booking.customer_name || ""),
+        "E-Mail: " + String(booking.customer_email || ""),
+        "Telefon: " + String(booking.customer_phone || ""),
+        refundId ? "Stripe-Rückerstattung: " + refundId : "",
+        "",
+        "Die Buchung ist im System storniert und die Rückerstattung wurde angestoßen.",
+        "",
+        "FiiViu"
+      ].filter(Boolean).join("\n"), "de", "Buchung storniert");
       await updateStatus("organizer", null);
       results.organizer = "sent";
     } catch (error) {
@@ -1933,22 +1956,9 @@ async function sendCancellationNotifications(env, booking) {
     }
   }
 
-  if (!booking.cancellation_admin_email_sent_at) {
-    try {
-      const adminRecipient = clean(env.ADMIN_BOOKING_EMAIL) || "info@fiiviu.ro";
-      if (clean(adminRecipient).toLowerCase() === clean(providerRecipient).toLowerCase()) {
-        results.admin = "skipped_duplicate_recipient";
-      } else {
-        await send(adminRecipient, adminSubject, adminHtml, adminText, "de", "FiiViu-Buchung storniert");
-      }
-      await updateStatus("admin", null);
-      results.admin = "sent";
-    } catch (error) {
-      console.error("FiiViu cancellation admin email failed", error);
-      await updateStatus("admin", error?.message || "Admin-E-Mail konnte nicht gesendet werden.");
-      results.admin = "error";
-    }
-  }
+  // Cancellation notifications go only to the customer and organizer.
+  // The organizer receives exactly one German cancellation email; the admin mailbox
+  // must not create a second/third copy of the same cancellation.
 
   return results;
 }
