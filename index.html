@@ -1188,6 +1188,7 @@ html, body, main,
                                     <div id="time-slots-container"
                                          class="flex flex-wrap gap-2">
                                     </div>
+                                    <div id="detail-capacity" class="hidden text-xs font-semibold mt-2"></div>
 
                                 </div>
 
@@ -2949,7 +2950,8 @@ function mapPublicOffer(offer) {
             ? offer.languages.map(String).map(v => v.trim()).filter(Boolean)
             : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
         minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
-        maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
+        maxGuests: Number.isFinite(Number(offer.max_guests)) ? Number(offer.max_guests) : null,
+        capacity: Number.isFinite(Number(offer.capacity)) && Number(offer.capacity) > 0 ? Number(offer.capacity) : null,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
@@ -3495,6 +3497,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                             d.getFullYear() + "-" +
                             String(d.getMonth() + 1).padStart(2, "0") + "-" +
                             String(d.getDate()).padStart(2, "0");
+                        refreshDetailCapacity(item);
                     }
                 }
             }
@@ -3532,6 +3535,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                 button.classList.add("active");
 
                 selectedTourTime = time;
+                refreshDetailCapacity(item);
 
             };
 
@@ -3552,11 +3556,46 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
     document.getElementById("detail-guest-count").value = 2;
 
     updateDetailPrice();
+    refreshDetailCapacity(item);
 
     showView("detail-view");
 
 }
 
+
+
+async function refreshDetailCapacity(item){
+    const capacityEl=document.getElementById("detail-capacity");
+    const bookBtn=document.getElementById("detail-book-btn");
+    const guestInput=document.getElementById("detail-guest-count");
+    if(!capacityEl)return;
+    capacityEl.classList.add("hidden");
+    capacityEl.textContent="";
+    if(bookBtn)bookBtn.disabled=false;
+    if(!item || !item.id || !String(item.id).startsWith("offer-") || !item.capacity || !selectedDetailDate || !selectedTourTime)return;
+    const offerId=String(item.id).slice(6);
+    try{
+        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(selectedDetailDate)+"&time="+encodeURIComponent(selectedTourTime),{cache:"no-store"});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||"availability failed");
+        const slot=Object.values(data.slots||{})[0];
+        if(!slot || !Number.isFinite(Number(slot.remaining)))return;
+        const remaining=Math.max(0,Number(slot.remaining));
+        capacityEl.classList.remove("hidden");
+        if(remaining<=0){
+            capacityEl.textContent=currentLang==="de"?"Dieser Termin ist ausgebucht.":currentLang==="ro"?"Acest interval este complet.":"This time slot is sold out.";
+            capacityEl.classList.add("text-red-600");
+            if(bookBtn)bookBtn.disabled=true;
+            if(guestInput){guestInput.max="1";guestInput.value="1";}
+        }else{
+            capacityEl.classList.remove("text-red-600");
+            capacityEl.textContent=currentLang==="de"?remaining+" Plätze für diesen Termin verfügbar":currentLang==="ro"?remaining+" locuri disponibile pentru acest interval":remaining+" spots available for this time slot";
+            if(guestInput){guestInput.max=String(Math.min(20,remaining));if(Number(guestInput.value)>remaining)guestInput.value=String(remaining);}
+        }
+    }catch(_){
+        // Capacity is informational here; checkout performs the authoritative server-side check.
+    }
+}
 
 /* ============================================================
    CUSTOMER TRUST DETAILS
