@@ -404,7 +404,7 @@ async function countPaidOfferGuests(env,offerId,date,time){
   const titleC=uniqueTitles[2]||titleA;
 
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND (offer_id=? OR experience_name IN (?,?,?))"
+    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE (payment_status='paid' OR status='confirmed') AND status NOT IN ('cancelled','canceled','refunded') AND (offer_id=? OR experience_name IN (?,?,?))"
   ).bind(offerId,titleA,titleB,titleC).all();
 
   const targetDate=normalizeAvailabilityDate(date);
