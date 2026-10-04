@@ -378,6 +378,9 @@ function normalizeMarketplaceBookingDate(value, language){
   return candidate;
 }
 
+function normalizeAvailabilityName(value){
+  return String(value||"").trim().toLowerCase().replace(/\s+/g," ");
+}
 function normalizeAvailabilityDate(value){
   const raw=String(value||"").trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
