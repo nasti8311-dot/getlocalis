@@ -1188,7 +1188,6 @@ html, body, main,
                                     <div id="time-slots-container"
                                          class="flex flex-wrap gap-2">
                                     </div>
-                                    <div id="detail-slot-availability" class="text-xs text-gray-500 mt-2"></div>
 
                                 </div>
 
@@ -3496,7 +3495,6 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                             d.getFullYear() + "-" +
                             String(d.getMonth() + 1).padStart(2, "0") + "-" +
                             String(d.getDate()).padStart(2, "0");
-                        refreshDetailSlotAvailability(item);
                     }
                 }
             }
@@ -3532,16 +3530,14 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                     );
 
                 button.classList.add("active");
+
                 selectedTourTime = time;
-                refreshDetailSlotAvailability(item);
 
             };
 
             slots.appendChild(button);
 
         });
-
-        refreshDetailSlotAvailability(item);
 
     } else {
 
@@ -3561,73 +3557,6 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
 }
 
-
-async function refreshDetailSlotAvailability(item) {
-    const el = document.getElementById("detail-slot-availability");
-    if (!el) return;
-
-    const id = String(item?.id || "");
-    const date = String(selectedDetailDate || "");
-    const time = String(selectedTourTime || "");
-
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !time) {
-        el.textContent = "";
-        return;
-    }
-
-    let url = "/api/offer-availability?date=" + encodeURIComponent(date) +
-        "&time=" + encodeURIComponent(time);
-
-    if (id.startsWith("offer-")) {
-        url += "&offerId=" + encodeURIComponent(id.slice(6));
-    } else if (id.startsWith("experience-")) {
-        url += "&experienceId=" + encodeURIComponent(id.slice(11));
-    } else {
-        el.textContent = "";
-        return;
-    }
-
-    el.classList.remove("text-red-600");
-    el.textContent = currentLang === "ro"
-        ? "Se verifică disponibilitatea..."
-        : currentLang === "en"
-            ? "Checking availability..."
-            : "Verfügbarkeit wird geprüft...";
-
-    try {
-        const response = await fetch(url, { cache: "no-store" });
-        if (!response.ok) throw new Error("availability request failed");
-        const data = await response.json();
-        const slot = data?.slots?.[time] || Object.values(data?.slots || {})[0];
-
-        if (!slot || !Number.isFinite(Number(slot.capacity))) {
-            el.textContent = "";
-            return;
-        }
-
-        const remaining = Math.max(Number(slot.remaining), 0);
-
-        if (slot.soldOut || remaining <= 0) {
-            el.textContent = currentLang === "ro"
-                ? "Epuizat pentru acest interval."
-                : currentLang === "en"
-                    ? "Sold out for this time slot."
-                    : "Für diese Uhrzeit ausgebucht.";
-            el.classList.add("text-red-600");
-            return;
-        }
-
-        el.classList.remove("text-red-600");
-        el.textContent = currentLang === "ro"
-            ? remaining + " locuri disponibile pentru această oră."
-            : currentLang === "en"
-                ? remaining + " spots available for this time slot."
-                : remaining + " Plätze für diese Uhrzeit verfügbar.";
-    } catch (error) {
-        console.warn("FiiViu slot availability check failed", error);
-        el.textContent = "";
-    }
-}
 
 /* ============================================================
    CUSTOMER TRUST DETAILS
