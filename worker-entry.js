@@ -1263,6 +1263,26 @@ async function finalizePaidBooking(
         fallback.longitude
     };
 
+    const offerId=Number(metadata.offer_id||0);
+    if(Number.isInteger(offerId)&&offerId>0){
+      const offer=await env.DB.prepare("SELECT capacity,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+      if(offer&&Number(offer.active)===1){
+        const capacity=Number(offer.capacity);
+        if(Number.isInteger(capacity)&&capacity>0){
+          const bookedRow=await env.DB.prepare("SELECT COALESCE(SUM(guests),0) AS booked FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND booking_date=? AND booking_time=? AND payment_intent_id<>?").bind(offerId,clean(metadata.booking_date),clean(metadata.booking_time),paymentIntent.id).first();
+          const booked=Number(bookedRow?.booked||0);
+          if(booked+guests>capacity){
+            try{
+              await stripePostForm(env,"/v1/refunds",{payment_intent:paymentIntent.id});
+            }catch(refundError){
+              throw new Error("Kapazität überschritten und Rückerstattung fehlgeschlagen: "+String(refundError?.message||refundError));
+            }
+            throw new Error("Der gewählte Termin war inzwischen ausgebucht. Die Zahlung wurde automatisch zurückerstattet.");
+          }
+        }
+      }
+    }
+
     const cancellationToken =
       crypto.randomUUID().replace(/-/g, "") +
       crypto.randomUUID().replace(/-/g, "");
@@ -1279,6 +1299,7 @@ async function finalizePaidBooking(
           customer_phone,
           customer_language,
           experience_name,
+          offer_id,
           booking_date,
           booking_time,
           guests,
@@ -1299,7 +1320,7 @@ async function finalizePaidBooking(
           created_at,
           updated_at
         ) VALUES (
-          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
         )
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
@@ -1310,6 +1331,7 @@ async function finalizePaidBooking(
           customer_phone=excluded.customer_phone,
           customer_language=excluded.customer_language,
           experience_name=excluded.experience_name,
+          offer_id=excluded.offer_id,
           booking_date=excluded.booking_date,
           booking_time=excluded.booking_time,
           guests=excluded.guests,
@@ -1342,6 +1364,7 @@ async function finalizePaidBooking(
         clean(metadata.customer_phone),
         language,
         experienceName,
+        Number.isInteger(offerId)&&offerId>0?offerId:null,
         clean(metadata.booking_date),
         clean(metadata.booking_time),
         guests,
@@ -3207,7 +3230,7 @@ async function recordBookingSettlement(env, booking) {
 
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
