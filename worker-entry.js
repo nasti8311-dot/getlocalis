@@ -1155,7 +1155,7 @@ function timingSafeEqualHex(a, b) {
   return difference === 0;
 }
 
-function normalizeCapacityBookingDate(value){
+function normalizeCapacityBookingDate(value,language){
   const raw=String(value||"").trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
   const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
@@ -1281,11 +1281,11 @@ async function finalizePaidBooking(
       if(offer&&Number(offer.active)===1){
         const capacity=Number(offer.capacity);
         if(Number.isInteger(capacity)&&capacity>0){
-          const bookedRows=await env.DB.prepare("SELECT guests,booking_date,booking_time,payment_status,status FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND payment_intent_id<>?").bind(offerId,paymentIntent.id).all();
+          const bookedRows=await env.DB.prepare("SELECT guests,booking_date,booking_time,customer_language,payment_status,status FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND payment_intent_id<>?").bind(offerId,paymentIntent.id).all();
           const targetDate=normalizeCapacityBookingDate(metadata.booking_date);
           const targetTime=normalizeCapacityBookingTime(metadata.booking_time);
           const booked=(bookedRows.results||[]).reduce((sum,row)=>{
-            if(normalizeCapacityBookingDate(row?.booking_date)!==targetDate)return sum;
+            if(normalizeCapacityBookingDate(row?.booking_date,row?.customer_language)!==targetDate)return sum;
             if(normalizeCapacityBookingTime(row?.booking_time)!==targetTime)return sum;
             return sum+Math.max(0,Number(row?.guests||0));
           },0);
