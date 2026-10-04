@@ -384,7 +384,7 @@ function normalizeAvailabilityName(value){
 function normalizeAvailabilityDate(value){
   const raw=String(value||"").trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
-  const iso=raw.match(/^(\d{4}-\d{2}-\d{2})[T\s]/);
+  const iso=raw.match(/(\d{4}-\d{2}-\d{2})[T\s]/);
   if(iso)return iso[1];
   const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
   if(!match)return raw;
@@ -392,7 +392,7 @@ function normalizeAvailabilityDate(value){
 }
 function normalizeAvailabilityTime(value){
   const raw=String(value||"").trim().replace(/\s*(?:uhr|h)\s*$/i,"");
-  const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+  const match=raw.match(/(?:^|\b)(\d{1,2})[:.](\d{2})(?::\d{2}(?:\.\d+)?)?(?:\s*(?:uhr|h))?(?:\b|$)/i);
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
 }
 async function countPaidOfferGuests(env,offerId,date,time){
