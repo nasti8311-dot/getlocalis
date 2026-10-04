@@ -3541,6 +3541,8 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
         });
 
+        refreshDetailSlotAvailability(item);
+
     } else {
 
         wrapper.classList.add("hidden");
@@ -3585,6 +3587,7 @@ async function refreshDetailSlotAvailability(item) {
         return;
     }
 
+    el.classList.remove("text-red-600");
     el.textContent = currentLang === "ro"
         ? "Se verifică disponibilitatea..."
         : currentLang === "en"
