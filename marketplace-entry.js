@@ -387,7 +387,7 @@ function normalizeAvailabilityDate(value){
 }
 function normalizeAvailabilityTime(value){
   const raw=String(value||"").trim();
-  const match=raw.match(/^(\d{1,2}):(\d{2})$/);
+  const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
 }
 async function countPaidOfferGuests(env,offerId,date,time){
