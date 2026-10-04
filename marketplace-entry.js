@@ -418,12 +418,12 @@ async function countPaidOfferGuests(env,offerId,date,time){
 
     const bookingOfferId=Number(booking?.offer_id||0);
     const bookingName=normalizeAvailabilityName(booking?.experience_name);
-    const sameOffer=Number.isInteger(bookingOfferId)&&bookingOfferId>0
-      ? bookingOfferId===Number(offerId)
-      : uniqueTitles.some(title=>{
-          if(!bookingName)return false;
-          return bookingName===title || bookingName.startsWith(title+" ·") || bookingName.startsWith(title+" -");
-        });
+    const sameOfferById=Number.isInteger(bookingOfferId)&&bookingOfferId>0&&bookingOfferId===Number(offerId);
+    const sameOfferByName=uniqueTitles.some(title=>{
+      if(!bookingName)return false;
+      return bookingName===title || bookingName.startsWith(title+" ·") || bookingName.startsWith(title+" -") || bookingName.includes(title);
+    });
+    const sameOffer=sameOfferById||sameOfferByName;
 
     if(!sameOffer)return sum;
     return sum+Math.max(0,Number(booking?.guests||0));
