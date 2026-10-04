@@ -3405,7 +3405,7 @@ async function refreshDetailAvailability(item){
     bookButton.disabled=false;
     bookButton.classList.remove("opacity-50","cursor-not-allowed");
     if(!item||!String(item.id||"").startsWith("offer-"))return;
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(selectedDetailDate||"")))return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(selectedDetailDate||"")))return;
 
     box.textContent=currentLang==="de"?"Verfügbarkeit wird geprüft…":currentLang==="ro"?"Se verifică disponibilitatea…":"Checking availability…";
     try{
