@@ -3653,12 +3653,14 @@ function translateDetailMetadataValue(value, lang = currentLang) {
         "Spanisch": { en: "Spanish", ro: "Spaniolă" },
         "Italienisch": { en: "Italian", ro: "Italiană" },
         "Rumänisch/ Englisch": { en: "Romanian / English", ro: "Română / Engleză" },
-        "Rumänisch / Englisch": { en: "Romanian / English", ro: "Română / Engleză" }
+        "Rumänisch / Englisch": { en: "Romanian / English", ro: "Română / Engleză" },
+        "Englisch/Rumänisch": { en: "English / Romanian", ro: "Engleză / Română" },
+        "Englisch / Rumänisch": { en: "English / Romanian", ro: "Engleză / Română" }
     };
     const mappedLanguage = languageMap[source];
     if (mappedLanguage) return lang === "de" ? source : (mappedLanguage[lang] || source);
 
-    const durationMatch = source.match(/^ca\.?\s*(\d+(?:[.,]\d+)?)\s*(Stunde|Stunden|Std\.?|Minute|Minuten|Min\.?|Tag|Tage)$/i);
+    const durationMatch = source.match(/^ca\.?\s*(\d+(?:[.,]\d+)?)\s*(Stunde|Stunden|Std\.?|Minute|Minuten|Min\.?|Tag|Tage)$/i) || source.match(/^(\d+(?:[.,]\d+)?)\s*(Stunde|Stunden|Std\.?|Minute|Minuten|Min\.?|Tag|Tage)$/i);
     if (durationMatch) {
         const amount = durationMatch[1];
         const unit = durationMatch[2].toLowerCase();
