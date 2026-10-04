@@ -11,10 +11,10 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect paid booking aggregates
+      - name: Inspect offer 5
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          echo "=== 2026-10-04 18:00 BOOKINGS ==="
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT offer_id, booking_date, booking_time, guests, experience_name, provider_name, status, payment_status FROM bookings WHERE booking_date IN ('2026-10-04','04.10.2026','10/04/2026') AND (booking_time LIKE '18:00%' OR booking_time LIKE '18.00%') ORDER BY id"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT id,title,title_en,title_ro,capacity,available_times,active FROM offers WHERE id=5"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT COUNT(*) AS rows, COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=5 AND booking_date IN ('2026-10-04','04.10.2026','10/04/2026') AND (booking_time LIKE '18:00%' OR booking_time LIKE '18.00%') AND (lower(trim(payment_status))='paid' OR lower(trim(status))='confirmed') AND lower(trim(status)) NOT IN ('cancelled','canceled','refunded')"
