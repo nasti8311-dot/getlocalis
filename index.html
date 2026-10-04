@@ -3591,6 +3591,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                 button.classList.add("active");
 
                 selectedTourTime = time;
+                refreshDetailCapacity(item);
 
             };
 
@@ -3611,6 +3612,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
     document.getElementById("detail-guest-count").value = 2;
 
     updateDetailPrice();
+    refreshDetailCapacity(item);
 
     showView("detail-view");
 
