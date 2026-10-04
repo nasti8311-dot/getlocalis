@@ -98,7 +98,7 @@ async function handlePublicOffers(request,env){
   try{
     await ensureExperiencesTable(env);
     await ensureOffersTable(env);
-    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.capacity,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
+    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
     const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
     for (const offer of legacyOffers) {
@@ -148,7 +148,7 @@ async function handlePublicOffers(request,env){
         id:x.id,experience_id:x.experience_id,provider_ref:"",provider_name:x.provider_name||"",
         title:x.title,title_en:x.title_en||"",title_ro:x.title_ro||"",
         description:x.description||"",description_en:x.description_en||"",description_ro:x.description_ro||"",
-        price_cents:x.price_cents,currency:x.currency||"eur",capacity:x.capacity==null?null:Number(x.capacity),available_times:x.available_times||"",
+        price_cents:x.price_cents,currency:x.currency||"eur",available_times:x.available_times||"",
         meeting_point_name:x.meeting_point_name||"",meeting_point_name_en:x.meeting_point_name_en||"",meeting_point_name_ro:x.meeting_point_name_ro||"",
         meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
         meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:x.meeting_instructions_en||"",meeting_instructions_ro:x.meeting_instructions_ro||"",
@@ -195,7 +195,6 @@ async function createMarketplacePaymentIntent(request,env,ctx){
           provider_connect_account_id:String(provider?.connect_account_id||""),
           provider_name:String(provider?.name||""),
           price_cents:Number(offer.price_cents||0),
-          capacity:offer.capacity==null?null:Number(offer.capacity),
           currency:String(offer.currency||"eur").toLowerCase(),
           meeting_point_name:String(offer.meeting_point_name||""),
           meeting_address:String(offer.meeting_address||""),
@@ -306,19 +305,6 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const configuredTimes=normalizeAvailableTimes(experience.available_times);
     if(configuredTimes.length && !configuredTimes.includes(bookingTime)){
       return json({error:"Die gewählte Uhrzeit ist für dieses Erlebnis nicht verfügbar."},409);
-    }
-
-    const capacity=Number(experience.capacity);
-    if(experienceId.startsWith("offer-") && Number.isInteger(capacity) && capacity>0){
-      const offerId=Number(experienceId.slice(6));
-      const booked=await env.DB.prepare(
-        "SELECT COALESCE(SUM(guests),0) AS guests FROM bookings WHERE offer_id=? AND booking_date=? AND booking_time=? AND status IN ('confirmed','completed') AND payment_status='paid'"
-      ).bind(offerId,bookingDate,bookingTime).first();
-      const bookedGuests=Number(booked?.guests||0);
-      if(bookedGuests+guests>capacity){
-        const remaining=Math.max(capacity-bookedGuests,0);
-        return json({error:remaining>0?"Für diesen Termin sind nur noch "+remaining+" Plätze verfügbar.":"Dieser Termin ist ausgebucht.",remaining,capacity},409);
-      }
     }
 
     const unitPrice=Number(experience.price_cents);
