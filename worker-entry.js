@@ -1314,7 +1314,7 @@ async function finalizePaidBooking(
           created_at,
           updated_at
         ) VALUES (
-          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
         )
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
@@ -1341,6 +1341,7 @@ async function finalizePaidBooking(
           partner_ref=excluded.partner_ref,
           provider_name=excluded.provider_name,
           provider_connect_account_id=excluded.provider_connect_account_id,
+          offer_id=excluded.offer_id,
           cancellation_token=COALESCE(
             bookings.cancellation_token,
             excluded.cancellation_token
@@ -1374,7 +1375,8 @@ async function finalizePaidBooking(
         clean(metadata.provider_name) ||
           fallback.providerName,
         clean(metadata.provider_connect_account_id),
-        cancellationToken
+        cancellationToken,
+        Number.isInteger(offerId)&&offerId>0?offerId:null
       )
       .run();
 
