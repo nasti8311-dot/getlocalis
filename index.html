@@ -1189,6 +1189,8 @@ html, body, main,
                                          class="flex flex-wrap gap-2">
                                     </div>
 
+                                    <div id="detail-availability" class="text-xs font-semibold text-gray-500 mt-3 min-h-[18px]"></div>
+
                                 </div>
 
                             </div>
@@ -3389,6 +3391,58 @@ function createExperienceCard(item, categoryKey) {
    DETAIL
 ============================================================ */
 
+function normalizeCapacityTime(value){
+    const raw=String(value||"").trim();
+    const match=raw.match(/^(\\d{1,2}):(\\d{2})$/);
+    return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
+}
+
+async function refreshDetailAvailability(item){
+    const box=document.getElementById("detail-availability");
+    const bookButton=document.getElementById("detail-book-btn");
+    if(!box||!bookButton)return;
+    box.textContent="";
+    bookButton.disabled=false;
+    bookButton.classList.remove("opacity-50","cursor-not-allowed");
+    if(!item||!String(item.id||"").startsWith("offer-"))return;
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(selectedDetailDate||"")))return;
+
+    box.textContent=currentLang==="de"?"Verfügbarkeit wird geprüft…":currentLang==="ro"?"Se verifică disponibilitatea…":"Checking availability…";
+    try{
+        const offerId=String(item.id).slice(6);
+        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(selectedDetailDate),{cache:"no-store"});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||"Availability check failed");
+        const slots=data.slots&&typeof data.slots==="object"?data.slots:{};
+        Array.from(document.querySelectorAll(".time-slot-btn")).forEach(button=>{
+            const time=String(button.dataset.time||"").trim();
+            const key=Object.keys(slots).find(k=>normalizeCapacityTime(k)===normalizeCapacityTime(time));
+            const slot=key?slots[key]:null;
+            const soldOut=Boolean(slot?.soldOut);
+            button.disabled=soldOut;
+            button.classList.toggle("opacity-40",soldOut);
+            button.classList.toggle("cursor-not-allowed",soldOut);
+        });
+        const selectedKey=Object.keys(slots).find(k=>normalizeCapacityTime(k)===normalizeCapacityTime(selectedTourTime));
+        const selectedSlot=selectedKey?slots[selectedKey]:null;
+        if(selectedSlot&&Number.isFinite(Number(selectedSlot.remaining))){
+            const n=Number(selectedSlot.remaining);
+            if(n<=0){
+                box.textContent=currentLang==="de"?"Dieser Termin ist ausgebucht.":currentLang==="ro"?"Acest interval este epuizat.":"This time slot is sold out.";
+                bookButton.disabled=true;
+                bookButton.classList.add("opacity-50","cursor-not-allowed");
+            }else{
+                box.textContent=currentLang==="de"?n+" Plätze für diesen Termin verfügbar":currentLang==="ro"?n+" locuri disponibile pentru acest interval":n+" spots available for this time slot";
+            }
+        }else{
+            box.textContent="";
+        }
+    }catch(error){
+        console.error("FiiViu availability check failed",error);
+        box.textContent="";
+    }
+}
+
 function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
     const category = categoriesData[categoryKey];
@@ -3495,6 +3549,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                             d.getFullYear() + "-" +
                             String(d.getMonth() + 1).padStart(2, "0") + "-" +
                             String(d.getDate()).padStart(2, "0");
+                        refreshDetailAvailability(item);
                     }
                 }
             }
@@ -3520,6 +3575,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                 `time-slot-btn ${index === 0 ? "active" : ""}`;
 
             button.innerText = localizeTimeSlotLabel(time, currentLang);
+            button.dataset.time = time;
 
             button.onclick = () => {
 
@@ -3532,12 +3588,14 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                 button.classList.add("active");
 
                 selectedTourTime = time;
+                refreshDetailAvailability(item);
 
             };
 
             slots.appendChild(button);
 
         });
+        refreshDetailAvailability(item);
 
     } else {
 
