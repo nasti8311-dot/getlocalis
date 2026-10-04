@@ -241,7 +241,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
     if(!experience){
       experience=await env.DB.prepare(
-        "SELECT experience_id,title,provider_connect_account_id,provider_name,price_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,available_times,meeting_latitude,meeting_longitude,status FROM experiences WHERE experience_id=? LIMIT 1"
+        "SELECT experience_id,title,title_en,title_ro,capacity,provider_connect_account_id,provider_name,price_cents,currency,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,available_times,meeting_latitude,meeting_longitude,status FROM experiences WHERE experience_id=? LIMIT 1"
       ).bind(experienceId).first();
     }
 
@@ -311,8 +311,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     }
 
     const capacity=Number(experience.capacity);
-    if(Number.isInteger(capacity)&&capacity>0&&experience.offer_id){
-      const booked=await countPaidOfferGuests(env,Number(experience.offer_id),bookingDate,bookingTime);
+    if(Number.isInteger(capacity)&&capacity>0){
+      const booked=experience.offer_id
+        ? await countPaidOfferGuests(env,Number(experience.offer_id),bookingDate,bookingTime)
+        : await countPaidExperienceGuests(env,String(experience.experience_id||experienceId),bookingDate,bookingTime);
       const remaining=Math.max(capacity-booked,0);
       if(remaining<guests)return json({error:remaining<=0?"Dieser Termin ist ausgebucht.":"Für diesen Termin sind nur noch "+remaining+" Plätze verfügbar."},409);
     }
@@ -391,69 +393,90 @@ function normalizeAvailabilityTime(value){
   const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
 }
-async function countPaidOfferGuests(env,offerId,date,time){
-  const offer=await env.DB.prepare(
-    "SELECT title,title_en,title_ro FROM offers WHERE id=? LIMIT 1"
-  ).bind(offerId).first();
-
-  const titles=[offer?.title,offer?.title_en,offer?.title_ro]
-    .map(value=>String(value||"").trim())
-    .filter(Boolean);
-  const uniqueTitles=[...new Set(titles)];
-  const titleA=uniqueTitles[0]||"";
-  const titleB=uniqueTitles[1]||titleA;
-  const titleC=uniqueTitles[2]||titleA;
-
+function normalizeAvailabilityName(value){
+  return String(value||"").trim().toLowerCase().replace(/\s+/g," ");
+}
+async function countPaidNamedGuests(env,names,date,time){
+  const unique=[...new Set((names||[]).map(normalizeAvailabilityName).filter(Boolean))];
+  if(!unique.length)return 0;
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND (CAST(offer_id AS INTEGER)=? OR lower(trim(experience_name)) IN (lower(trim(?)),lower(trim(?)),lower(trim(?))))"
-  ).bind(offerId,titleA,titleB,titleC).all();
-
+    "SELECT guests,booking_date,booking_time,experience_name FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded')"
+  ).all();
   const targetDate=normalizeAvailabilityDate(date);
   const targetTime=normalizeAvailabilityTime(time);
-
   return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
-    const bookingDate=normalizeAvailabilityDate(booking?.booking_date);
-    const bookingTime=normalizeAvailabilityTime(booking?.booking_time);
-    if(bookingDate!==targetDate||bookingTime!==targetTime)return sum;
-    return sum+Number(booking?.guests||0);
+    if(normalizeAvailabilityDate(booking?.booking_date)!==targetDate)return sum;
+    if(normalizeAvailabilityTime(booking?.booking_time)!==targetTime)return sum;
+    const bookingName=normalizeAvailabilityName(booking?.experience_name);
+    const matches=unique.some(name=>bookingName===name||bookingName.startsWith(name+" ·")||bookingName.startsWith(name+" -")||bookingName.includes(name));
+    return matches?sum+Number(booking?.guests||0):sum;
   },0));
+}
+async function countPaidOfferGuests(env,offerId,date,time){
+  const offer=await env.DB.prepare("SELECT title,title_en,title_ro FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+  const names=[offer?.title,offer?.title_en,offer?.title_ro];
+  const rows=await env.DB.prepare(
+    "SELECT guests,booking_date,booking_time,offer_id FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND CAST(offer_id AS INTEGER)=?"
+  ).bind(offerId).all();
+  const targetDate=normalizeAvailabilityDate(date);
+  const targetTime=normalizeAvailabilityTime(time);
+  return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
+    return normalizeAvailabilityDate(booking?.booking_date)===targetDate &&
+      normalizeAvailabilityTime(booking?.booking_time)===targetTime
+      ?sum+Number(booking?.guests||0):sum;
+  },0)) + await countPaidNamedGuests(env,names,date,time);
+}
+async function countPaidExperienceGuests(env,experienceId,date,time){
+  const experience=await env.DB.prepare("SELECT title,title_en,title_ro FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
+  return countPaidNamedGuests(env,[experience?.title,experience?.title_en,experience?.title_ro],date,time);
 }
 async function handleOfferAvailability(request,env){
   if(!env.DB)return json({error:"D1 database not configured"},500);
   const params=new URL(request.url).searchParams;
   const offerId=Number(params.get("offerId")||0);
+  const experienceId=String(params.get("experienceId")||"").trim();
   const date=String(params.get("date")||"").trim();
   const time=String(params.get("time")||"").trim();
-  if(!Number.isInteger(offerId)||offerId<1)return json({error:"Ungültige Angebots-ID."},400);
+  if((!Number.isInteger(offerId)||offerId<1)&&!experienceId)return json({error:"Ungültiges Angebot oder Erlebnis."},400);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
-  const offer=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
-  if(!offer||Number(offer.active)!==1)return json({error:"Inserat nicht gefunden."},404);
-  const times=normalizeAvailableTimes(offer.available_times);
-  if(time&&!times.some(value=>String(value).trim()===time))return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
-  const selectedTimes=time?[time]:times;
-  const capacity=Number(offer.capacity);
-  const slots={};
-  for(const slotTime of selectedTimes){
+
+  let source="offer";
+  let item;
+  if(Number.isInteger(offerId)&&offerId>0){
+    item=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+  }else{
+    source="experience";
+    item=await env.DB.prepare("SELECT experience_id,capacity,available_times,status,title,title_en,title_ro FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
+  }
+  if(!item||((source==="offer"&&Number(item.active)!==1)||(source==="experience"&&String(item.status||"")!=="published"))){
+    return json({error:"Inserat nicht gefunden."},404);
+  }
+
+  const times=normalizeAvailableTimes(item.available_times);
+  const targetTimes=time ? times.filter(value=>normalizeAvailabilityTime(value)===normalizeAvailabilityTime(time)) : times;
+  if(time&&!targetTimes.length)return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
+
+  const capacity=Number(item.capacity);
+  const result={
+    offerId:source==="offer"?Number(item.id):null,
+    experienceId:source==="experience"?String(item.experience_id||experienceId):null,
+    date,
+    capacity:Number.isInteger(capacity)&&capacity>0?capacity:null,
+    slots:{}
+  };
+  for(const slotTime of targetTimes){
     const normalized=String(slotTime).trim();
-    if(!Number.isInteger(capacity)||capacity<1){
-      slots[normalized]={capacity:null,booked:0,remaining:null,soldOut:false};
+    if(!result.capacity){
+      result.slots[normalized]={capacity:null,booked:0,remaining:null,soldOut:false};
       continue;
     }
-    const booked=await countPaidOfferGuests(env,offerId,date,normalized);
-    const remaining=Math.max(capacity-booked,0);
-    slots[normalized]={capacity,booked,remaining,soldOut:remaining<=0};
+    const booked=source==="offer"
+      ? await countPaidOfferGuests(env,Number(item.id),date,normalized)
+      : await countPaidExperienceGuests(env,String(item.experience_id||experienceId),date,normalized);
+    const remaining=Math.max(result.capacity-booked,0);
+    result.slots[normalized]={capacity:result.capacity,booked,remaining,soldOut:remaining<=0};
   }
-  return json({offerId,date,slots});
-}
-function normalizeAvailableTimes(value){
-  if(Array.isArray(value))return value.map(String).map(v=>v.trim()).filter(Boolean);
-  const raw=String(value||"").trim();
-  if(!raw)return [];
-  try{
-    const parsed=JSON.parse(raw);
-    if(Array.isArray(parsed))return parsed.map(String).map(v=>v.trim()).filter(Boolean);
-  }catch(_){ }
-  return raw.split(",").map(v=>v.trim()).filter(Boolean);
+  return json(result);
 }
 function toBucharestDate(dateValue,timeValue){
   const date=String(dateValue||"").trim(), time=String(timeValue||"").trim();
