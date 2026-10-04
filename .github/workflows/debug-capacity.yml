@@ -1,0 +1,19 @@
+name: Temporary capacity diagnostics
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect paid booking aggregates
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT offer_id, booking_date, booking_time, COUNT(*) AS booking_rows, SUM(guests) AS booked_guests, GROUP_CONCAT(DISTINCT status) AS statuses, GROUP_CONCAT(DISTINCT payment_status) AS payment_statuses FROM bookings WHERE (lower(trim(payment_status))='paid' OR lower(trim(status))='confirmed') AND lower(trim(status)) NOT IN ('cancelled','canceled','refunded') GROUP BY offer_id, booking_date, booking_time ORDER BY booking_date DESC, booking_time DESC, offer_id"
