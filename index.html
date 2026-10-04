@@ -1188,6 +1188,7 @@ html, body, main,
                                     <div id="time-slots-container"
                                          class="flex flex-wrap gap-2">
                                     </div>
+                                    <div id="detail-capacity-status" class="hidden text-xs font-semibold mt-2"></div>
 
                                 </div>
 
@@ -2949,7 +2950,8 @@ function mapPublicOffer(offer) {
             ? offer.languages.map(String).map(v => v.trim()).filter(Boolean)
             : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
         minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
-        maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
+        maxGuests: Number.isFinite(Number(offer.max_guests)) ? Number(offer.max_guests) : null,
+        capacity: Number.isFinite(Number(offer.capacity)) ? Number(offer.capacity) : null,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
@@ -3389,6 +3391,62 @@ function createExperienceCard(item, categoryKey) {
    DETAIL
 ============================================================ */
 
+async function refreshDetailCapacity(item){
+    const status=document.getElementById("detail-capacity-status");
+    const bookButton=document.getElementById("detail-book-btn");
+    const guestInput=document.getElementById("detail-guest-count");
+    if(!status||!bookButton||!guestInput)return;
+
+    const offerId=String(item?.id||"").startsWith("offer-") ? String(item.id).slice(6) : "";
+    const date=String(selectedDetailDate||"").trim();
+    const time=String(selectedTourTime||"").trim();
+
+    status.classList.add("hidden");
+    bookButton.disabled=false;
+    bookButton.classList.remove("opacity-50","cursor-not-allowed");
+    guestInput.max="20";
+
+    if(!offerId||!/^\\d+$/.test(offerId)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time))return;
+    if(!Number.isInteger(Number(item.capacity))||Number(item.capacity)<1)return;
+
+    status.classList.remove("hidden");
+    status.textContent=currentLang==="ro"?"Se verifică disponibilitatea…":currentLang==="en"?"Checking availability…":"Verfügbarkeit wird geprüft…";
+
+    try{
+        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(date)+"&time="+encodeURIComponent(time),{cache:"no-store"});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||"availability");
+
+        const remaining=Number(data.remaining);
+        if(!Number.isFinite(remaining)){
+            status.classList.add("hidden");
+            return;
+        }
+
+        const label=remaining===0
+            ? (currentLang==="ro"?"Complet rezervat":currentLang==="en"?"Sold out":"Ausgebucht")
+            : currentLang==="ro"
+                ? remaining+" locuri disponibile pentru această oră"
+                : currentLang==="en"
+                    ? remaining+" spots available for this time slot"
+                    : remaining+" Plätze für diesen Termin verfügbar";
+
+        status.textContent=label;
+        guestInput.max=String(Math.max(1,Math.min(20,remaining)));
+
+        const currentGuests=Math.max(1,Number(guestInput.value||1));
+        if(remaining===0){
+            bookButton.disabled=true;
+            bookButton.classList.add("opacity-50","cursor-not-allowed");
+        }else if(currentGuests>remaining){
+            guestInput.value=String(remaining);
+            updateDetailPrice();
+        }
+    }catch(error){
+        status.textContent=currentLang==="ro"?"Disponibilitatea va fi verificată la rezervare.":currentLang==="en"?"Availability will be checked when booking.":"Die Verfügbarkeit wird bei der Buchung geprüft.";
+    }
+}
+
 function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
 
     const category = categoriesData[categoryKey];
@@ -3495,6 +3553,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
                             d.getFullYear() + "-" +
                             String(d.getMonth() + 1).padStart(2, "0") + "-" +
                             String(d.getDate()).padStart(2, "0");
+                        refreshDetailCapacity(item);
                     }
                 }
             }
