@@ -396,16 +396,12 @@ async function countPaidOfferGuests(env,offerId,date,time){
   ).bind(offerId).first();
 
   const titles=[offer?.title,offer?.title_en,offer?.title_ro]
-    .map(value=>String(value||"").trim())
+    .map(value=>normalizeAvailabilityName(value))
     .filter(Boolean);
   const uniqueTitles=[...new Set(titles)];
-  const titleA=uniqueTitles[0]||"";
-  const titleB=uniqueTitles[1]||titleA;
-  const titleC=uniqueTitles[2]||titleA;
-
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE (payment_status='paid' OR status='confirmed') AND status NOT IN ('cancelled','canceled','refunded') AND (offer_id=? OR experience_name IN (?,?,?))"
-  ).bind(offerId,titleA,titleB,titleC).all();
+    "SELECT guests,booking_date,booking_time,offer_id,experience_name,status,payment_status FROM bookings WHERE (payment_status='paid' OR status='confirmed') AND status NOT IN ('cancelled','canceled','refunded')"
+  ).all();
 
   const targetDate=normalizeAvailabilityDate(date);
   const targetTime=normalizeAvailabilityTime(time);
@@ -414,7 +410,18 @@ async function countPaidOfferGuests(env,offerId,date,time){
     const bookingDate=normalizeAvailabilityDate(booking?.booking_date);
     const bookingTime=normalizeAvailabilityTime(booking?.booking_time);
     if(bookingDate!==targetDate||bookingTime!==targetTime)return sum;
-    return sum+Number(booking?.guests||0);
+
+    const bookingOfferId=Number(booking?.offer_id||0);
+    const bookingName=normalizeAvailabilityName(booking?.experience_name);
+    const sameOffer=Number.isInteger(bookingOfferId)&&bookingOfferId>0
+      ? bookingOfferId===Number(offerId)
+      : uniqueTitles.some(title=>{
+          if(!bookingName)return false;
+          return bookingName===title || bookingName.startsWith(title+" ·") || bookingName.startsWith(title+" -");
+        });
+
+    if(!sameOffer)return sum;
+    return sum+Math.max(0,Number(booking?.guests||0));
   },0));
 }
 async function handleOfferAvailability(request,env){
