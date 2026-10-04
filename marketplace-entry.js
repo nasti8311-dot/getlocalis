@@ -384,12 +384,14 @@ function normalizeAvailabilityName(value){
 function normalizeAvailabilityDate(value){
   const raw=String(value||"").trim();
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+  const iso=raw.match(/^(\d{4}-\d{2}-\d{2})[T\s]/);
+  if(iso)return iso[1];
   const match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
   if(!match)return raw;
   return String(Number(match[3])).padStart(4,"0")+"-"+String(Number(match[2])).padStart(2,"0")+"-"+String(Number(match[1])).padStart(2,"0");
 }
 function normalizeAvailabilityTime(value){
-  const raw=String(value||"").trim();
+  const raw=String(value||"").trim().replace(/\s*(?:uhr|h)\s*$/i,"");
   const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
 }
