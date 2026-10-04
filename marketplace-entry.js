@@ -391,15 +391,30 @@ function normalizeAvailabilityTime(value){
   return match ? String(Number(match[1])).padStart(2,"0")+":"+match[2] : raw;
 }
 async function countPaidOfferGuests(env,offerId,date,time){
+  const offer=await env.DB.prepare(
+    "SELECT title,title_en,title_ro FROM offers WHERE id=? LIMIT 1"
+  ).bind(offerId).first();
+
+  const titles=[offer?.title,offer?.title_en,offer?.title_ro]
+    .map(value=>String(value||"").trim())
+    .filter(Boolean);
+  const uniqueTitles=[...new Set(titles)];
+  const titleA=uniqueTitles[0]||"";
+  const titleB=uniqueTitles[1]||titleA;
+  const titleC=uniqueTitles[2]||titleA;
+
   const rows=await env.DB.prepare(
-    "SELECT guests,booking_date,booking_time FROM bookings WHERE offer_id=? AND payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded')"
-  ).bind(offerId).all();
+    "SELECT guests,booking_date,booking_time,offer_id,experience_name FROM bookings WHERE payment_status='paid' AND status NOT IN ('cancelled','canceled','refunded') AND (offer_id=? OR experience_name IN (?,?,?))"
+  ).bind(offerId,titleA,titleB,titleC).all();
+
   const targetDate=normalizeAvailabilityDate(date);
   const targetTime=normalizeAvailabilityTime(time);
+
   return Math.max(0,(rows.results||[]).reduce((sum,booking)=>{
-    return normalizeAvailabilityDate(booking?.booking_date)===targetDate &&
-      normalizeAvailabilityTime(booking?.booking_time)===targetTime
-      ? sum+Number(booking?.guests||0) : sum;
+    const bookingDate=normalizeAvailabilityDate(booking?.booking_date);
+    const bookingTime=normalizeAvailabilityTime(booking?.booking_time);
+    if(bookingDate!==targetDate||bookingTime!==targetTime)return sum;
+    return sum+Number(booking?.guests||0);
   },0));
 }
 async function handleOfferAvailability(request,env){
