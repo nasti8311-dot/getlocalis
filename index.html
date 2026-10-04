@@ -2952,6 +2952,7 @@ function mapPublicOffer(offer) {
             : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
         minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
         maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
+        capacity: Number.isFinite(Number(offer.capacity)) ? Number(offer.capacity) : null,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
@@ -3404,17 +3405,25 @@ async function refreshDetailAvailability(item){
     box.textContent="";
     bookButton.disabled=false;
     bookButton.classList.remove("opacity-50","cursor-not-allowed");
-    if(!item||!String(item.id||"").startsWith("offer-"))return;
+    if(!item)return;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(selectedDetailDate||"")))return;
+
+    const isOffer=String(item.id||"").startsWith("offer-");
+    const experienceId=String(item.experienceId||"").trim();
+    if(!isOffer&&!experienceId)return;
 
     box.textContent=currentLang==="de"?"Verfügbarkeit wird geprüft…":currentLang==="ro"?"Se verifică disponibilitatea…":"Checking availability…";
     try{
-        const offerId=String(item.id).slice(6);
-        const response=await fetch("/api/offer-availability?offerId="+encodeURIComponent(offerId)+"&date="+encodeURIComponent(selectedDetailDate)+"&time="+encodeURIComponent(selectedTourTime),{cache:"no-store"});
+        const params=new URLSearchParams({date:String(selectedDetailDate),time:String(selectedTourTime)});
+        if(isOffer)params.set("offerId",String(item.id).slice(6));
+        else params.set("experienceId",experienceId);
+
+        const response=await fetch("/api/offer-availability?"+params.toString(),{cache:"no-store"});
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||"Availability check failed");
+
         const slots=data.slots&&typeof data.slots==="object"?data.slots:{};
-        Array.from(document.querySelectorAll(".time-slot-btn")).forEach(button=>{
+        document.querySelectorAll(".time-slot-btn").forEach(button=>{
             const time=String(button.dataset.time||"").trim();
             const key=Object.keys(slots).find(k=>normalizeCapacityTime(k)===normalizeCapacityTime(time));
             const slot=key?slots[key]:null;
@@ -3423,6 +3432,7 @@ async function refreshDetailAvailability(item){
             button.classList.toggle("opacity-40",soldOut);
             button.classList.toggle("cursor-not-allowed",soldOut);
         });
+
         const selectedKey=Object.keys(slots).find(k=>normalizeCapacityTime(k)===normalizeCapacityTime(selectedTourTime));
         const selectedSlot=selectedKey?slots[selectedKey]:null;
         if(selectedSlot&&Number.isFinite(Number(selectedSlot.remaining))){
