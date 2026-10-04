@@ -607,7 +607,7 @@ async function ensureOffersTable(env){
   const current=new Set((rows.results||[]).map(row=>String(row.name||"")));
   const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration","guide_language","capacity"];
   const missing=required.filter(name=>!current.has(name));
-  for(const name of missing){if(name==="capacity"){await env.DB.prepare("ALTER TABLE offers ADD COLUMN capacity INTEGER").run();}else{throw new Error("Offers schema is incomplete: "+missing.join(", "));}}
+  if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
 async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   const safe=(value)=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
