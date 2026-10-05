@@ -1,6 +1,6 @@
-const { default: marketplaceWorker } = await import("./marketplace-entry.js");
-const { default: adminWorker } = await import("./worker-entry.js");
-const { handleStripeWebhook, releaseDueProviderSettlements } = await import("./stripe-webhook.js");
+import marketplaceWorker from "./marketplace-entry.js";
+import adminWorker from "./worker-entry.js";
+import { handleStripeWebhook, releaseDueProviderSettlements } from "./stripe-webhook.js";
 
 function getAdminCors(request, env) {
   const origin = String(request.headers.get("Origin") || "").trim();
