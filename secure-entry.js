@@ -201,7 +201,9 @@ export default {
 
     if (url.pathname === "/api/stripe/webhook") {
       return handleStripeWebhook(request, env);
-    }\n\n    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname === "/api/provider-test-booking" || url.pathname === "/api/partner-stats" || url.pathname.startsWith("/api/provider/")) {
+    }
+
+    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname === "/api/provider-test-booking" || url.pathname === "/api/partner-stats" || url.pathname.startsWith("/api/provider/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
