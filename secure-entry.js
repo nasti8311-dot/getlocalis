@@ -32,22 +32,133 @@ function underConstructionResponse() {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>FiiViu — Under Construction</title>
+  <meta name="theme-color" content="#f4efe7">
+  <title>FiiViu — Coming Soon</title>
   <style>
-    :root { color-scheme: light; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --ink: #18221d;
+      --muted: #667169;
+      --paper: #f7f3ec;
+      --accent: #d86f45;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f7f7f5; color: #171717; }
-    main { width: min(680px, calc(100% - 40px)); text-align: center; padding: 56px 24px; }
-    .logo { font-size: 42px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 32px; }
-    h1 { font-size: clamp(32px, 7vw, 52px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -1.5px; }
-    p { margin: 0 auto; max-width: 540px; font-size: 18px; line-height: 1.6; color: #5f5f5f; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 15%, rgba(216,111,69,.18), transparent 32%),
+        radial-gradient(circle at 88% 78%, rgba(57,105,78,.15), transparent 34%),
+        linear-gradient(135deg, #fbf8f2 0%, var(--paper) 48%, #edf2eb 100%);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .32;
+      background-image: radial-gradient(rgba(24,34,29,.09) .7px, transparent .7px);
+      background-size: 7px 7px;
+      mask-image: linear-gradient(to bottom, black, transparent 75%);
+    }
+    main {
+      position: relative;
+      min-height: 100vh;
+      width: min(920px, 100%);
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 28px;
+      text-align: center;
+    }
+    .mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 48px;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -1.7px;
+    }
+    .mark-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 7px rgba(216,111,69,.12);
+    }
+    .eyebrow {
+      margin: 0 0 18px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(44px, 8vw, 82px);
+      line-height: .98;
+      letter-spacing: -4px;
+      font-weight: 800;
+    }
+    .lead {
+      max-width: 590px;
+      margin: 28px auto 0;
+      color: var(--muted);
+      font-size: clamp(17px, 2.2vw, 20px);
+      line-height: 1.65;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 38px;
+      padding: 11px 17px;
+      border: 1px solid rgba(24,34,29,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.58);
+      box-shadow: 0 8px 30px rgba(24,34,29,.06);
+      color: #445048;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #5f916d;
+      box-shadow: 0 0 0 5px rgba(95,145,109,.13);
+    }
+    footer {
+      position: absolute;
+      bottom: 28px;
+      color: #89928c;
+      font-size: 12px;
+      letter-spacing: .04em;
+    }
+    @media (max-width: 600px) {
+      main { padding: 36px 24px; }
+      .mark { margin-bottom: 40px; }
+      h1 { letter-spacing: -2.5px; }
+      footer { bottom: 20px; }
+    }
   </style>
 </head>
 <body>
   <main>
-    <div class="logo">FiiViu</div>
-    <h1>We’re making FiiViu even better.</h1>
-    <p>Our website is currently under construction. We’ll be back soon.</p>
+    <div class="mark"><span class="mark-dot"></span>FiiViu</div>
+    <p class="eyebrow">Coming soon</p>
+    <h1>Romania is waiting to be discovered.</h1>
+    <p class="lead">We’re putting the finishing touches on FiiViu — your place to discover memorable local experiences in Romania.</p>
+    <div class="pill"><span class="pulse"></span>We’ll be back soon</div>
+    <footer>Discover local. Experience more. &nbsp;·&nbsp; FiiViu</footer>
   </main>
 </body>
 </html>`, {
