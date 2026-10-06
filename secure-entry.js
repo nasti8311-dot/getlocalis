@@ -155,8 +155,8 @@ function underConstructionResponse() {
   <main>
     <div class="mark"><span class="mark-dot"></span>FiiViu</div>
     <p class="eyebrow">Coming soon</p>
-    <h1>Romania is waiting to be discovered.</h1>
-    <p class="lead">We’re putting the finishing touches on FiiViu — your place to discover memorable local experiences in Romania.</p>
+    <h1>Bucharest is waiting to be discovered.</h1>
+    <p class="lead">We’re putting the finishing touches on FiiViu — your place to discover memorable local experiences in Bucharest.</p>
     <div class="pill"><span class="pulse"></span>We’ll be back soon</div>
     <footer>Discover local. Experience more. &nbsp;·&nbsp; FiiViu</footer>
   </main>
