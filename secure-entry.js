@@ -24,6 +24,43 @@ function getAdminCors(request, env) {
   return headers;
 }
 
+
+function underConstructionResponse() {
+  return new Response(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>FiiViu — Under Construction</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f7f7f5; color: #171717; }
+    main { width: min(680px, calc(100% - 40px)); text-align: center; padding: 56px 24px; }
+    .logo { font-size: 42px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 32px; }
+    h1 { font-size: clamp(32px, 7vw, 52px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -1.5px; }
+    p { margin: 0 auto; max-width: 540px; font-size: 18px; line-height: 1.6; color: #5f5f5f; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo">FiiViu</div>
+    <h1>We’re making FiiViu even better.</h1>
+    <p>Our website is currently under construction. We’ll be back soon.</p>
+  </main>
+</body>
+</html>`, {
+    status: 503,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store, max-age=0",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+      "Retry-After": "3600"
+    }
+  });
+}
+
 function applyApiSecurityHeaders(response, request, env, restrictCors = false) {
   const headers = new Headers(response.headers);
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -208,6 +245,10 @@ export default {
         return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
       return applyApiSecurityHeaders(await adminWorker.fetch(request, env, ctx), request, env, true);
+    }
+
+    if (String(env.UNDER_CONSTRUCTION || "").trim().toLowerCase() === "true") {
+      return underConstructionResponse();
     }
 
     return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);
