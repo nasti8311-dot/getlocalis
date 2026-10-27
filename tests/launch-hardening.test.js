@@ -907,3 +907,12 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
   assert.doesNotMatch(workflow, /command:\s*deploy\b/);
 });
+
+
+test("production marketplace is not blocked by an under-construction gate", () => {
+  const secure = read("secure-entry.js");
+  const config = read("wrangler.jsonc");
+  assert.doesNotMatch(secure, /env\.UNDER_CONSTRUCTION/);
+  assert.doesNotMatch(secure, /return underConstructionResponse\(\)/);
+  assert.doesNotMatch(config, /UNDER_CONSTRUCTION/);
+});
