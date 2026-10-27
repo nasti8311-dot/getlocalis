@@ -862,12 +862,17 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy does not block on GitHub D1 migration access", () => {
+test("production deploy never mutates remote D1 schema implicitly", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(workflow, /d1 migrations apply .*--remote/);
   assert.doesNotMatch(workflow, /d1 execute .*--remote/);
-  assert.doesNotMatch(workflow, /Apply production D1 migrations/);
+  assert.doesNotMatch(workflow, /Repair production D1 schema/);
   assert.match(workflow, /Deploy Worker version/);
+
+  const maintenance = read(".github/workflows/repair-production-d1.yml");
+  assert.match(maintenance, /workflow_dispatch:/);
+  assert.match(maintenance, /inputs\.confirm == 'APPLY_SCHEMA_REPAIR'/);
+  assert.match(maintenance, /d1 execute .*--remote/);
 });
 
 test("iOS app icon references an existing static asset", () => {
