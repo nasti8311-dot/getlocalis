@@ -862,17 +862,20 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy never mutates remote D1 schema implicitly", () => {
+test("production deploy verifies D1 read-only and never repairs schema implicitly", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(workflow, /d1 migrations apply .*--remote/);
-  assert.doesNotMatch(workflow, /d1 execute .*--remote/);
-  assert.doesNotMatch(workflow, /Repair production D1 schema/);
+  assert.doesNotMatch(workflow, /ALTER TABLE/i);
+  assert.doesNotMatch(workflow, /CREATE INDEX IF NOT EXISTS/i);
+  assert.match(workflow, /Verify required production D1 schema \(read-only\)/);
+  assert.match(workflow, /PRAGMA table_info\(\$table\)/);
+  assert.match(workflow, /check_columns "bookings" "booking_id offer_id booking_date booking_time status payment_status"/);
   assert.match(workflow, /Deploy Worker version/);
 
   const maintenance = read(".github/workflows/repair-production-d1.yml");
   assert.match(maintenance, /workflow_dispatch:/);
   assert.match(maintenance, /inputs\.confirm == 'APPLY_SCHEMA_REPAIR'/);
-  assert.match(maintenance, /d1 execute .*--remote/);
+  assert.match(maintenance, /ALTER TABLE/);
 });
 
 test("iOS app icon references an existing static asset", () => {
