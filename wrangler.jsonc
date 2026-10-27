@@ -33,8 +33,5 @@
   "route": {
     "pattern": "fiiviu.ro/*",
     "zone_name": "fiiviu.ro"
-  },
-  "vars": {
-    "UNDER_CONSTRUCTION": "true"
   }
 }
