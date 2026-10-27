@@ -54,7 +54,7 @@ jobs:
           const result = Array.isArray(data) ? data[0] : data;
           const rows = result?.results || result?.result?.results || [];
           const actual = new Set(rows.map(row => String(row.name || "")));
-          const required = process.env.D1_SCHEMA_REQUIRED.split(/\\s+/).filter(Boolean);
+          const required = process.env.D1_SCHEMA_REQUIRED.split(/\s+/).filter(Boolean);
           const missing = required.filter(name => !actual.has(name));
           if (missing.length) {
             console.error(`Production D1 table ${process.env.D1_SCHEMA_TABLE} is missing required columns: ${missing.join(", ")}`);
