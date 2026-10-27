@@ -36,6 +36,39 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
+      - name: Verify required production D1 schema (read-only)
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+
+          check_columns() {
+            local table="$1"
+            local required="$2"
+            local output
+            output="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --json --command "PRAGMA table_info($table)")"
+            D1_SCHEMA_JSON="$output" D1_SCHEMA_TABLE="$table" D1_SCHEMA_REQUIRED="$required" node <<'NODE'
+          const data = JSON.parse(process.env.D1_SCHEMA_JSON);
+          const result = Array.isArray(data) ? data[0] : data;
+          const rows = result?.results || result?.result?.results || [];
+          const actual = new Set(rows.map(row => String(row.name || "")));
+          const required = process.env.D1_SCHEMA_REQUIRED.split(/\\s+/).filter(Boolean);
+          const missing = required.filter(name => !actual.has(name));
+          if (missing.length) {
+            console.error(`Production D1 table ${process.env.D1_SCHEMA_TABLE} is missing required columns: ${missing.join(", ")}`);
+            process.exit(1);
+          }
+          console.log(`Production D1 schema verified: ${process.env.D1_SCHEMA_TABLE}`);
+          NODE
+          }
+
+          check_columns "offers" "id capacity active provider_ref title price_cents available_times"
+          check_columns "bookings" "booking_id offer_id booking_date booking_time status payment_status"
+          check_columns "experiences" "experience_id provider_connect_account_id status price_cents available_times"
+          check_columns "booking_settlements" "booking_id payment_intent_id settlement_status release_at"
+          
       - name: Upload Worker version
         shell: bash
         env:
