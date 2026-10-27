@@ -365,9 +365,9 @@ test("legacy worker payment-intent endpoint is disabled", () => {
 
 test("secure entry routes payment creation through marketplace worker", () => {
   const source = read("secure-entry.js");
-  const marketplaceIndex = source.indexOf('const { default: marketplaceWorker }');
-  const fallbackIndex = source.indexOf('return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);');
-  assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
+  assert.match(source, /import marketplaceWorker from "\.\/marketplace-entry\.js"/);
+  assert.match(source, /return applyApiSecurityHeaders\(await marketplaceWorker\.fetch\(request, env, ctx\), request, env\)/);
+  assert.doesNotMatch(source, /env\.UNDER_CONSTRUCTION/);
 });
 test("provider auth schema is migration-owned, not runtime-created", () => {
   const source = read("provider-auth.js");
@@ -769,10 +769,8 @@ test("retired partner token helpers and schema are no longer reachable", () => {
 test("provider test booking endpoint is routed through the authenticated worker", () => {
   const source = read("secure-entry.js");
   assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
-  assert.match(
-    source,
-    /url\.pathname === "\/api\/provider-test-booking" \|\| url\.pathname\.startsWith\("\/api\/provider\/"\)/
-  );
+  assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
+  assert.match(source, /url\.pathname\.startsWith\("\/api\/provider\/"\)/);
 });
 
 
