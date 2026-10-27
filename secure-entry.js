@@ -358,10 +358,6 @@ export default {
       return applyApiSecurityHeaders(await adminWorker.fetch(request, env, ctx), request, env, true);
     }
 
-    if (String(env.UNDER_CONSTRUCTION || "").trim().toLowerCase() === "true") {
-      return underConstructionResponse();
-    }
-
     return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);
   }
 };

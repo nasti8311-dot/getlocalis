@@ -365,9 +365,9 @@ test("legacy worker payment-intent endpoint is disabled", () => {
 
 test("secure entry routes payment creation through marketplace worker", () => {
   const source = read("secure-entry.js");
-  const marketplaceIndex = source.indexOf('const { default: marketplaceWorker }');
-  const fallbackIndex = source.indexOf('return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);');
-  assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
+  assert.match(source, /import marketplaceWorker from "\.\/marketplace-entry\.js"/);
+  assert.match(source, /return applyApiSecurityHeaders\(await marketplaceWorker\.fetch\(request, env, ctx\), request, env\)/);
+  assert.doesNotMatch(source, /env\.UNDER_CONSTRUCTION/);
 });
 test("provider auth schema is migration-owned, not runtime-created", () => {
   const source = read("provider-auth.js");
@@ -769,10 +769,8 @@ test("retired partner token helpers and schema are no longer reachable", () => {
 test("provider test booking endpoint is routed through the authenticated worker", () => {
   const source = read("secure-entry.js");
   assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
-  assert.match(
-    source,
-    /url\.pathname === "\/api\/provider-test-booking" \|\| url\.pathname\.startsWith\("\/api\/provider\/"\)/
-  );
+  assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
+  assert.match(source, /url\.pathname\.startsWith\("\/api\/provider\/"\)/);
 });
 
 
@@ -864,12 +862,20 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy does not block on GitHub D1 migration access", () => {
+test("production deploy verifies D1 read-only and never repairs schema implicitly", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(workflow, /d1 migrations apply .*--remote/);
-  assert.doesNotMatch(workflow, /d1 execute .*--remote/);
-  assert.doesNotMatch(workflow, /Apply production D1 migrations/);
+  assert.doesNotMatch(workflow, /ALTER TABLE/i);
+  assert.doesNotMatch(workflow, /CREATE INDEX IF NOT EXISTS/i);
+  assert.match(workflow, /Verify required production D1 schema \(read-only\)/);
+  assert.match(workflow, /PRAGMA table_info\(\$table\)/);
+  assert.match(workflow, /check_columns "bookings" "booking_id offer_id booking_date booking_time status payment_status"/);
   assert.match(workflow, /Deploy Worker version/);
+
+  const maintenance = read(".github/workflows/repair-production-d1.yml");
+  assert.match(maintenance, /workflow_dispatch:/);
+  assert.match(maintenance, /inputs\.confirm == 'APPLY_SCHEMA_REPAIR'/);
+  assert.match(maintenance, /ALTER TABLE/);
 });
 
 test("iOS app icon references an existing static asset", () => {
@@ -906,4 +912,13 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.match(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
   assert.doesNotMatch(workflow, /command:\s*deploy\b/);
+});
+
+
+test("production marketplace is not blocked by an under-construction gate", () => {
+  const secure = read("secure-entry.js");
+  const config = read("wrangler.jsonc");
+  assert.doesNotMatch(secure, /env\.UNDER_CONSTRUCTION/);
+  assert.doesNotMatch(secure, /return underConstructionResponse\(\)/);
+  assert.doesNotMatch(config, /UNDER_CONSTRUCTION/);
 });
