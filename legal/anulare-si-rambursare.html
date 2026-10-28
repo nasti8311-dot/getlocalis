@@ -4,39 +4,52 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Anulare și rambursare – FiiViu</title>
-<style>body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:900px;margin:0 auto;padding:32px 20px;line-height:1.65;color:#171717}h1,h2{line-height:1.2}h2{margin-top:32px}a{color:#c9581d}</style>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:900px;margin:0 auto;padding:32px 20px;line-height:1.65;color:#171717;background:#F8F6F1}
+main{background:#fff;border-radius:24px;padding:32px;box-shadow:0 12px 45px rgba(21,21,21,.08)}
+h1,h2{line-height:1.2}h2{margin-top:28px}a{color:#c9581d}
+.lang{display:flex;gap:6px;justify-content:flex-end;margin-bottom:20px}
+.lang button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:7px 10px;cursor:pointer;font-weight:700}
+.lang button.active{background:#151515;color:#fff}.notice{padding:14px 16px;border-radius:12px;background:#fff3cd}
+</style>
 </head>
 <body>
-<h1>Politica de anulare și rambursare</h1>
-<p><strong>FiiViu S.R.L.</strong>, București, Piața Unirii, România, <a href="mailto:info@fiiviu.ro">info@fiiviu.ro</a>.</p>
-
-<h2>1. Regula aplicabilă rezervării</h2>
-<p>Fiecare experiență are propriile condiții de anulare stabilite de furnizor. Condițiile aplicabile sunt afișate clientului înainte de plată și fac parte din rezervare.</p>
-
-<h2>2. Anulare de către client</h2>
-<p>Dacă experiența permite anularea gratuită până la un anumit termen, clientul primește rambursarea conform condițiilor afișate. Dacă termenul a expirat, se aplică politica specifică a experienței.</p>
-
-<h2>3. No-show</h2>
-<p>În cazul în care clientul nu se prezintă la ora și locul stabilite, suma plătită nu se rambursează, cu excepția cazurilor în care condițiile experienței sau legea prevăd altfel.</p>
-
-<h2>4. Furnizorul anulează</h2>
-<p>Dacă furnizorul nu poate presta serviciul și anulează rezervarea, FiiViu va facilita, după caz, reprogramarea sau rambursarea integrală a sumei aferente serviciului neprestat.</p>
-
-<h2>5. Vreme nefavorabilă</h2>
-<p>Pentru activități dependente de vreme, furnizorul decide dacă prestarea este sigură. Dacă activitatea este anulată din cauza vremii, clientului i se va oferi, conform condițiilor aplicabile, o reprogramare sau rambursarea corespunzătoare.</p>
-
-<h2>6. Forță majoră și circumstanțe inevitabile și extraordinare</h2>
-<p>În cazul unor evenimente extraordinare care împiedică prestarea, FiiViu va informa clientul și va facilita soluția disponibilă conform legii și condițiilor experienței, inclusiv reprogramare sau rambursare atunci când serviciul nu poate fi furnizat.</p>
-
-<h2>7. Dreptul de retragere</h2>
-<p>În măsura în care o rezervare intră într-o excepție legală de la dreptul de retragere, această excepție va fi comunicată înainte de plată. Pentru serviciile care nu intră într-o astfel de excepție, drepturile consumatorului se aplică potrivit legislației române.</p>
-
-<h2>8. Cum solicită clientul o rambursare</h2>
-<p>Solicitarea poate fi transmisă la <a href="mailto:info@fiiviu.ro">info@fiiviu.ro</a>, indicând numărul rezervării, numele și motivul solicitării. Rambursările aprobate se efectuează, în principiu, prin aceeași metodă de plată utilizată pentru tranzacția inițială, în limitele și termenele prevăzute de lege.</p>
-
-<h2>9. Servicii de transfer aeroportuar</h2>
-<p>Transferurile aeroportuare sunt servicii individuale și nu sunt combinate cu alte experiențe. Condițiile specifice privind ora preluării, întârzierea zborului, anularea și no-show-ul vor fi afișate pentru fiecare ofertă.</p>
-
-<p><small>Regulile concrete trebuie configurate pentru fiecare experiență înainte de publicarea ofertei.</small></p>
+<main><div class="lang"><button type="button" data-lang="de" onclick="setLanguage('de')">DE</button><button type="button" data-lang="en" onclick="setLanguage('en')">EN</button><button type="button" data-lang="ro" onclick="setLanguage('ro')">RO</button></div><div id="content"></div></main>
+<script>
+const docs={
+ro:{title:"Politica de anulare și rambursare",back:"← Înapoi la FiiViu",updated:"Actualizată la 28 octombrie 2026",notice:"Această politică descrie procesul general al platformei. Condițiile concrete ale fiecărei experiențe trebuie configurate și afișate înainte de plată. Datele juridice complete ale FiiViu S.R.L. sunt încă necesare și nu trebuie presupuse.",sections:[
+["1. Condițiile aplicabile rezervării","Înainte de plată, clientului trebuie să i se afișeze furnizorul, serviciul, prețul total, data/ora și condițiile specifice de anulare. Aceste condiții trebuie să corespundă setărilor efective ale ofertei și nu pot înlătura drepturile obligatorii ale consumatorului."],
+["2. Anularea de către client","Dacă oferta permite anularea gratuită până la un anumit termen, rambursarea se face potrivit condițiilor afișate. După expirarea termenului, se aplică regulile ofertei, în măsura în care sunt legale. Regula tehnică de 24 de ore nu trebuie prezentată ca regulă universală dacă oferta stabilește altceva."],
+["3. Neprezentare (no-show)","Neprezentarea poate duce la pierderea dreptului contractual la rambursare numai dacă această consecință a fost comunicată clar înainte de plată și este permisă de lege. Drepturile legale obligatorii rămân aplicabile."],
+["4. Anularea de către furnizor","Dacă furnizorul nu poate presta serviciul, FiiViu gestionează solicitarea clientului și inițierea rambursării atunci când aceasta este datorată. Clientul nu trebuie obligat să accepte un voucher sau reprogramarea în locul unei rambursări pe care legea o impune."],
+["5. Vreme și circumstanțe extraordinare","Pentru activități dependente de vreme sau siguranță, oferta trebuie să explice ce se întâmplă dacă furnizorul anulează. Se aplică legea și condițiile concrete afișate înainte de plată."],
+["6. Dreptul legal de retragere","Nu toate experiențele sunt automat exceptate de la dreptul de retragere. Excepția pentru anumite servicii de agrement legate de o dată/perioadă specifică se aplică numai dacă sunt îndeplinite condițiile legale. Dacă dreptul există, informațiile și procedura legală trebuie prezentate înainte de comandă."],
+["7. Cum solicitați o rambursare","Scrieți la <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a> și includeți numărul rezervării și datele necesare identificării. FiiViu va verifica solicitarea și va comunica rezultatul. Rambursările datorate se efectuează, de regulă, prin metoda de plată inițială, cu respectarea termenelor legale aplicabile. Termenul operațional exact trebuie confirmat cu fluxul real Stripe."],
+["8. Transferuri aeroportuare","Pentru transferuri individuale, oferta trebuie să specifice regulile privind ora preluării, întârzierea zborului, anularea și neprezentarea. Aceste servicii nu trebuie combinate cu alte servicii într-o singură rezervare dacă modelul comercial declarat exclude pachetele."],
+["9. Datele operatorului","FiiViu S.R.L. · București, România · <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>. CUI, numărul ONRC, adresa juridică completă și statutul TVA rămân de completat pe baza documentelor oficiale."]]},
+en:{title:"Cancellation and Refund Policy",back:"← Back to FiiViu",updated:"Updated 28 October 2026",notice:"This policy describes the platform's general process. The specific rules for each experience must be configured and shown before payment. Complete legal details for FiiViu S.R.L. are still required and must not be guessed.",sections:[
+["1. Conditions for the booking","Before payment, the customer must be shown the provider, service, total price, date/time and specific cancellation terms. These terms must match the actual listing settings and cannot remove mandatory consumer rights."],
+["2. Customer cancellation","If the listing permits free cancellation until a stated deadline, a refund is made under the displayed terms. After that deadline, the listing rules apply to the extent lawful. The technical 24-hour rule must not be presented as universal if the listing says otherwise."],
+["3. No-show","A no-show may result in loss of a contractual refund only where this consequence was clearly disclosed before payment and is lawful. Mandatory statutory rights remain unaffected."],
+["4. Provider cancellation","If the provider cannot perform, FiiViu handles the customer's request and initiates a refund where one is due. A customer must not be forced to accept a voucher or rescheduling instead of a refund required by law."],
+["5. Weather and extraordinary circumstances","For weather-dependent or safety-sensitive activities, the listing must explain what happens if the provider cancels. Applicable law and the concrete terms shown before payment govern."],
+["6. Statutory right of withdrawal","Not every experience is automatically exempt from withdrawal rights. The exception for certain leisure services tied to a specific date/period applies only where statutory conditions are met. If a withdrawal right exists, the required information and procedure must be shown before the order."],
+["7. How to request a refund","Email <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a> and include the booking number and information needed to identify the booking. FiiViu will review the request and communicate the outcome. Refunds due are generally made through the original payment method, subject to applicable legal deadlines. The exact operational timeline must be confirmed against the live Stripe flow."],
+["8. Airport transfers","For individual transfers, each listing must state pickup-time, flight-delay, cancellation and no-show rules. These services should not be combined with other services in one booking where the declared business model excludes packages."],
+["9. Operator details","FiiViu S.R.L. · Bucharest, Romania · <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>. CUI, ONRC number, full registered address and VAT status remain to be completed from official records."]]},
+de:{title:"Stornierungs- und Erstattungsrichtlinie",back:"← Zurück zu FiiViu",updated:"Aktualisiert am 28. Oktober 2026",notice:"Diese Richtlinie beschreibt den allgemeinen Plattformprozess. Die konkreten Regeln jeder Erfahrung müssen konfiguriert und vor der Zahlung angezeigt werden. Die vollständigen Unternehmensdaten von FiiViu S.R.L. fehlen noch und dürfen nicht geschätzt werden.",sections:[
+["1. Bedingungen der Buchung","Vor der Zahlung müssen Anbieter, Leistung, Gesamtpreis, Datum/Uhrzeit und die konkreten Stornobedingungen angezeigt werden. Diese müssen den tatsächlichen Angebotseinstellungen entsprechen und dürfen zwingende Verbraucherrechte nicht ausschließen."],
+["2. Stornierung durch den Kunden","Erlaubt das Angebot eine kostenlose Stornierung bis zu einer angegebenen Frist, erfolgt die Erstattung nach den angezeigten Bedingungen. Danach gelten die Angebotsregeln, soweit rechtmäßig. Die technische 24-Stunden-Regel darf nicht als universell dargestellt werden, wenn das Angebot etwas anderes vorsieht."],
+["3. Nichterscheinen (No-show)","Das Nichterscheinen kann zum Verlust eines vertraglichen Erstattungsanspruchs führen, wenn dies vor Zahlung klar mitgeteilt wurde und rechtlich zulässig ist. Zwingende gesetzliche Rechte bleiben unberührt."],
+["4. Stornierung durch den Anbieter","Kann der Anbieter die Leistung nicht erbringen, bearbeitet FiiViu die Kundenanfrage und veranlasst eine Erstattung, soweit diese geschuldet ist. Kunden dürfen nicht gezwungen werden, einen Gutschein oder eine Umbuchung anstelle einer gesetzlich geschuldeten Erstattung anzunehmen."],
+["5. Wetter und außergewöhnliche Umstände","Bei wetterabhängigen oder sicherheitsrelevanten Aktivitäten muss das Angebot erklären, was bei einer Stornierung durch den Anbieter geschieht. Es gelten das anwendbare Recht und die vor Zahlung angezeigten konkreten Bedingungen."],
+["6. Gesetzliches Widerrufsrecht","Nicht jede Erfahrung ist automatisch vom Widerrufsrecht ausgenommen. Die Ausnahme für bestimmte Freizeitdienstleistungen mit einem spezifischen Datum/Zeitraum gilt nur, wenn die gesetzlichen Voraussetzungen erfüllt sind. Besteht ein Widerrufsrecht, müssen die erforderlichen Informationen und das Verfahren vor der Bestellung angezeigt werden."],
+["7. Erstattung beantragen","Schreiben Sie an <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a> und nennen Sie die Buchungsnummer sowie die zur Zuordnung erforderlichen Angaben. FiiViu prüft die Anfrage und teilt das Ergebnis mit. Geschuldete Erstattungen erfolgen grundsätzlich über das ursprüngliche Zahlungsmittel und innerhalb der anwendbaren gesetzlichen Fristen. Die konkrete Bearbeitungszeit muss mit dem produktiven Stripe-Ablauf abgeglichen werden."],
+["8. Flughafentransfers","Bei individuellen Transfers müssen Abholzeit, Flugverspätung, Stornierung und Nichterscheinen im jeweiligen Angebot geregelt sein. Diese Leistungen dürfen nicht mit anderen Leistungen in einer Buchung kombiniert werden, wenn das erklärte Geschäftsmodell Pakete ausschließt."],
+["9. Angaben zum Betreiber","FiiViu S.R.L. · Bukarest, Rumänien · <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>. CUI, ONRC-Nummer, vollständige Geschäftsanschrift und TVA-Status müssen anhand offizieller Unterlagen ergänzt werden."]]}
+};
+function setLanguage(lang){const d=docs[lang]||docs.ro;document.documentElement.lang=lang;document.title=d.title+" – FiiViu";document.getElementById("content").innerHTML="<p><a href='/?lang="+encodeURIComponent(lang)+"'>"+d.back+"</a></p><h1>"+d.title+"</h1><p><strong>"+d.updated+"</strong></p><p class='notice'>"+d.notice+"</p>"+d.sections.map(s=>"<h2>"+s[0]+"</h2><p>"+s[1]+"</p>").join("");document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));}
+const p=new URLSearchParams(location.search).get("lang");const saved=(()=>{try{return localStorage.getItem("fiiviu_language")}catch(_){return null}})();setLanguage(["ro","de","en"].includes(p)?p:(["ro","de","en"].includes(saved)?saved:"ro"));
+</script>
 </body>
 </html>
