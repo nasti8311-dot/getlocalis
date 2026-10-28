@@ -65,3 +65,20 @@ The legal index currently omits the cookie policy and provider terms. Link all r
 
 ## Definition of done
 Do not mark the legal set “final” until all owner facts above are confirmed, each blocking item is implemented in both documents and product flows, translations are checked for parity, automated checks pass, and Romanian counsel has reviewed the final version against the real business and tax model.
+
+
+## Additional product-code findings – 28 October 2026
+
+### Provider traceability is not yet evidenced by the current admin data model — BLOCKER
+A code review of `worker-entry.js` shows that the current admin provider create/update endpoints persist only `provider_ref`, `name`, `connect_account_id`, `contact_email` and `active` (plus generated IDs/timestamps). The returned provider record does not show fields for registered legal name, full business address, phone, registration number, identity-verification evidence, licensing/insurance details or an explicit trader self-certification. The provider listing page also does not by itself prove that these records are collected and verified before a listing can be published. Stripe Connect onboarding/KYC should not be treated as a substitute for FiiViu’s own assessment of all applicable DSA Article 30 information and the provider’s service-specific permits.
+
+**Required implementation before consumer-facing marketplace offers are enabled:** add a provider verification record and workflow; collect the information required by DSA Article 30 where applicable (trader name/address/phone/email, ID or equivalent identification, payment account details, register and registration number where applicable, and self-certification of legal compliance); record verification status/date and who reviewed it; require approved status before publication/activation; make the required trader identity information available to customers on the offer page; define a re-check, complaint and removal process. Do not store identity-document images or sensitive copies unless there is a documented lawful need, security controls and retention schedule; prefer a verified status and reference where possible.
+
+### Stripe Connect and refund model — MUST BE CONFIRMED
+The technical code creates the payment intent in the platform Worker path, associates the provider’s Connect account ID in metadata, and uses a separate settlement ledger / transfer process. This is evidence of technical routing only. Confirm in Stripe Dashboard and the Stripe agreement the charge type, merchant-of-record/customer statement descriptor, who legally receives the funds, the commission/application-fee arrangement, transfer timing, refund/chargeback liability and tax-document flow. Customer-facing terms must describe the real legal model and not infer it from a Connect account ID.
+
+### Cancellation behavior — MUST BE RECONCILED
+The Worker has a 24-hour cancellation boundary, while the legal policy says offer-specific terms govern. Before enabling an offer, test the exact displayed cancellation deadline, whether the server permits cancellation, who authorizes refunds, and when the refund is actually created in Stripe. A success message must not be shown before the server has accepted the cancellation and initiated the refund flow.
+
+### Cookie and external-resource inventory — PRODUCTION TEST REQUIRED
+The main HTML references Stripe.js, Tailwind CDN, Font Awesome CDN and Flatpickr CDN assets. The legal notice page stores the selected language in `localStorage` (`fiiviu_language`). Verify the production browser’s cookies, local/session storage and third-party requests; ensure the privacy/cookie notices reflect the observed state and that no non-essential terminal storage/access is activated without consent where required.
