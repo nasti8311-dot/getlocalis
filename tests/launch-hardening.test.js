@@ -993,3 +993,21 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
   assert.doesNotMatch(workflow, /command:\s*deploy\b/);
 });
+
+test("provider contract v1.1 contains the 20/80 clauses in all languages and acceptance snapshot", () => {
+  const terms = read("legal/anbieter-bedingungen.html");
+  const worker = read("worker-entry.js");
+  const registration = read("anbieter-register.html");
+  assert.match(terms, /Vertragsfassung v1\.1/);
+  assert.match(terms, /c\.en\.s=\[/);
+  assert.match(terms, /c\.ro\.s=\[/);
+  for (const heading of ["14. Bookings, performance and disruption", "15. On-site payment and receipts", "16. Commission, refunds and reconciliation", "20. Contract version and evidence"]) {
+    assert.ok(terms.includes(heading), `Missing English provider clause: ${heading}`);
+  }
+  for (const heading of ["14. Rezervări, executare și întreruperi", "15. Plăți la fața locului și documente", "16. Comision, rambursări și reconciliere", "20. Versiunea contractului și dovada"]) {
+    assert.ok(terms.includes(heading), `Missing Romanian provider clause: ${heading}`);
+  }
+  assert.match(worker, /const contractVersion="v1\.1"/);
+  assert.match(worker, /20\. Vertragsfassung:/);
+  assert.match(registration, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
+});
