@@ -2741,13 +2741,7 @@ async function handleProviderRegistration(request,env){
   try{
     await ensureProvidersTable(env);
     await ensureProviderAuthTables(env);
-    const columns=await env.DB.prepare("PRAGMA table_info(providers)").all();
-    const names=new Set((columns.results||[]).map(row=>String(row.name||"")));
-    for(const column of ["company_name","cui","representative_name"]){
-      if(!names.has(column))return json({error:"Anbieteregistrierung ist noch nicht vollständig bereit. Bitte Datenbankmigration 018_provider_self_registration_contracts.sql anwenden."},503);
-    }
-    const logTable=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vendor_contract_logs' LIMIT 1").first();
-    if(!logTable)return json({error:"Vertragsprotokoll-Tabelle fehlt. Bitte Datenbankmigration 018_provider_self_registration_contracts.sql anwenden."},503);
+    await ensureProviderRegistrationSchema(env);
     const body=await request.json().catch(()=>({}));
     const companyName=String(body.company_name||"").trim().slice(0,180);
     const cuiRaw=String(body.cui||"").trim().toUpperCase().replace(/\s+/g,"");
@@ -2884,6 +2878,21 @@ function buildProviderContractPdf(snapshot){
   for(let id=1;id<objects.length;id++)pdf+=String(offsets[id]).padStart(10,"0")+" 00000 n \n";
   pdf+="trailer\n<< /Size "+objects.length+" /Root 1 0 R /Info 4 0 R >>\nstartxref\n"+xrefOffset+"\n%%EOF";
   return btoa(pdf);
+}
+
+
+async function ensureProviderRegistrationSchema(env){
+  const rows=await env.DB.prepare("PRAGMA table_info(providers)").all();
+  const columns=new Set((rows.results||[]).map(row=>String(row.name||"")));
+  for(const entry of [["company_name","TEXT"],["cui","TEXT"],["representative_name","TEXT"]]){
+    if(columns.has(entry[0]))continue;
+    try{await env.DB.prepare("ALTER TABLE providers ADD COLUMN "+entry[0]+" "+entry[1]).run();}
+    catch(error){if(!String(error?.message||"").toLowerCase().includes("duplicate column"))throw error;}
+  }
+  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_providers_cui ON providers(cui) WHERE cui IS NOT NULL AND trim(cui) <> ''").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS vendor_contract_logs (id TEXT PRIMARY KEY,provider_ref TEXT NOT NULL REFERENCES providers(provider_ref),accepted_at TEXT NOT NULL,ip_address TEXT NOT NULL,user_agent TEXT NOT NULL,contract_version TEXT NOT NULL,contract_sha256 TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_provider_ref ON vendor_contract_logs(provider_ref)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_accepted_at ON vendor_contract_logs(accepted_at)").run();
 }
 
 function handleProviderLogin(request,env){
