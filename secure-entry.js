@@ -181,7 +181,7 @@ function applyApiSecurityHeaders(response, request, env, restrictCors = false) {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
   headers.set("Cache-Control", "no-store");
   const requestPath = new URL(request.url).pathname;
-  if (requestPath === "/provider.html" || requestPath === "/organizer-admin.html" || requestPath === "/partner.html" || requestPath === "/booking.html") {
+  if (requestPath === "/provider.html" || requestPath === "/organizer-admin.html" || requestPath === "/partner.html" || requestPath === "/booking.html" || requestPath.startsWith("/anbieter/")) {
     headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
   if (restrictCors) {
@@ -347,11 +347,22 @@ export default {
       return new Response("Admin UI asset is not configured.", { status: 503 });
     }
 
+    if (request.method === "GET" && ["/anbieter/register","/anbieter/register/","/anbieter/login","/anbieter/login/","/anbieter/dashboard","/anbieter/dashboard/"].includes(url.pathname)) {
+      if (!env.ASSETS || typeof env.ASSETS.fetch !== "function") return new Response("Anbieterportal ist nicht konfiguriert.", { status: 503 });
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname = url.pathname.startsWith("/anbieter/register") ? "/anbieter-register.html" : "/provider.html";
+      const assetResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), { method: "GET", headers: request.headers }));
+      const headers = new Headers(assetResponse.headers);
+      headers.set("Cache-Control", "no-store");
+      headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+      return new Response(assetResponse.body, { status: assetResponse.status, statusText: assetResponse.statusText, headers });
+    }
+
     if (url.pathname === "/api/stripe/webhook") {
       return handleStripeWebhook(request, env);
     }
 
-    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname === "/api/provider-test-booking" || url.pathname === "/api/partner-stats" || url.pathname.startsWith("/api/provider/")) {
+    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/provider-register" || url.pathname === "/api/provider-login" || url.pathname === "/api/provider-session" || url.pathname === "/api/provider-logout" || url.pathname === "/api/provider-test-booking" || url.pathname === "/api/partner-stats" || url.pathname.startsWith("/api/provider/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: getAdminCors(request, env) });
       }
