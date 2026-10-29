@@ -187,13 +187,13 @@ jobs:
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
               echo "ADMIN /api/admin/partners HTTP $admin_api_status"
               if [ "$admin_api_status" != "401" ]; then
-                cat /tmp/admin.json
+                echo "Admin endpoint did not return the expected unauthorized status."
                 exit 1
               fi
               stats_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/stats.json -w '%{http_code}' 'https://fiiviu.ro/api/partner-stats?ref=TEST')"
               echo "PARTNER STATS HTTP $stats_status"
               if [ "$stats_status" != "401" ]; then
-                cat /tmp/stats.json
+                echo "Partner stats endpoint did not return the expected unauthorized status."
                 exit 1
               fi
               exit 0
