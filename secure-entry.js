@@ -380,7 +380,7 @@ export default {
       if (request.method === "GET" && publicStaticAssets.has(url.pathname)) {
         return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);
       }
-      return underConstructionResponse();
+      return applyApiSecurityHeaders(underConstructionResponse(), request, env);
     }
 
     return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);
