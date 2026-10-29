@@ -88,6 +88,37 @@ jobs:
 
           echo "Production D1 schema repair completed."
 
+      - name: Find last known-good Worker version
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail-with-body \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions" \
+            --output /tmp/worker-versions.json
+          jq -e '.success == true and (.result | type == "array")' /tmp/worker-versions.json >/dev/null
+          known_good=""
+          while IFS= read -r version_id; do
+            [ -n "$version_id" ] || continue
+            curl --silent --show-error --fail-with-body \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions/$version_id" \
+              --output /tmp/worker-version-detail.json || continue
+            if jq -e '.success == true and ([.result.resources.bindings[]?.name] | index("ADMIN_PAYOUT_KEY") != null) and ([.result.resources.bindings[]?.name] | index("STRIPE_SECRET_KEY") != null)' /tmp/worker-version-detail.json >/dev/null; then
+              known_good="$version_id"
+              break
+            fi
+          done < <(jq -r '.[].id // empty' /tmp/worker-versions.json)
+          if [ -z "$known_good" ]; then
+            echo "No historical Worker version with both ADMIN_PAYOUT_KEY and STRIPE_SECRET_KEY bindings was found; refusing another production upload."
+            exit 1
+          fi
+          echo "Found a rollback target with required bindings: $known_good"
+          printf 'KNOWN_GOOD_VERSION_ID=%s\\n' "$known_good" >> "$GITHUB_ENV"
+
       - name: Upload Worker version while reusing existing assets
         shell: bash
         env:
@@ -223,3 +254,13 @@ jobs:
           done
           echo "Production catalog did not become healthy after deployment."
           exit 1
+      - name: Roll back if production verification fails
+        if: failure() && env.KNOWN_GOOD_VERSION_ID != ''
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Verification failed; restoring last known-good version $KNOWN_GOOD_VERSION_ID."
+          npx --yes wrangler@4 versions deploy "${KNOWN_GOOD_VERSION_ID}@100%" --yes
+
