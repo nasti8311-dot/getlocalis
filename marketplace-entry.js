@@ -327,6 +327,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.experienceId=experienceId;
     body.offerId=offerIdRaw || (experienceId.startsWith("offer-") ? experienceId.slice(6) : "");
     body.providerConnectAccountId=validProviderAccount;
+    body.providerRef=String(activeProvider.provider_ref||"");
     body.providerName=String(bodyProviderName||experience.provider_name||"");
     body.experienceName=experience.title||body.tourName||"";
     // Collect only FiiViu's 20% fee online; the remaining 80% is paid directly to the provider.
