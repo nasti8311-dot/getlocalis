@@ -25,6 +25,7 @@ export default {
       (url.pathname === "/api/admin/providers" ||
         url.pathname === "/api/admin/provider-payout" ||
         url.pathname === "/api/admin/resend-confirmation" ||
+        url.pathname === "/api/admin/resend-provider-contract" ||
         url.pathname === "/api/admin/offers" ||
         url.pathname === "/api/admin/translate-offers" ||
         url.pathname === "/api/admin/control-center")
@@ -46,6 +47,9 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/admin/resend-confirmation") {
       return handleAdminResendConfirmation(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/resend-provider-contract") {
+      return handleAdminResendProviderContract(request, env);
     }
 
     if (url.pathname === "/api/admin/offers") {
@@ -2796,6 +2800,24 @@ async function handleAdminProviderPassword(request,env){
   }
 }
 
+async function handleAdminResendProviderContract(request, env) {
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (!env.DB || !String(env.RESEND_API_KEY || "").trim()) return json({ error: "Database or email service is not configured." }, 503);
+  try {
+    await ensureProvidersTable(env); await ensureProviderAuthTables(env); await ensureProviderRegistrationSchema(env);
+    const body = await request.json().catch(() => ({})); const email = String(body.email || "").trim().toLowerCase();
+    if (!email) return json({ error: "email is required." }, 400);
+    const row = await env.DB.prepare("SELECT p.provider_ref,p.name,p.company_name,p.cui,p.representative_name,a.email,l.accepted_at,l.contract_version,l.contract_sha256 FROM provider_accounts a JOIN providers p ON p.provider_ref=a.provider_ref JOIN vendor_contract_logs l ON l.provider_ref=p.provider_ref WHERE lower(a.email)=? AND lower(p.contact_email)=? ORDER BY l.accepted_at DESC LIMIT 1").bind(email,email).first();
+    if (!row) return json({ error: "No matching provider contract found." }, 404);
+    const acceptedAt = String(row.accepted_at || ""); const version = String(row.contract_version || "");
+    if (!acceptedAt || version !== "v1.0") return json({ error: "Stored contract metadata is incomplete." }, 409);
+    const snapshot = ["FiiViu Partnervertrag / Bedingungen fuer Erlebnisanbieter","Vertragsversion: " + version,"Plattform: FiiViu S.R.L. | https://fiiviu.ro/legal/anbieter-bedingungen.html","Anbieter: " + String(row.company_name || row.name || ""),"CUI: " + String(row.cui || ""),"Gesetzlicher Vertreter: " + String(row.representative_name || ""),"E-Mail: " + email,"Akzeptiert am (UTC): " + acceptedAt,"","1. Gegenstand und Vermittlung: FiiViu vermittelt Kunden an Anbieter und stellt Buchungs-, Zahlungs- und Kommunikationsfunktionen bereit. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande. Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu; die verbleibenden 80 Prozent zahlt er direkt vor Ort an den Anbieter.","2. Anbieterangaben: Der Anbieter stellt vollstaendige und richtige Unternehmens-, Kontakt-, Register- und Zahlungsdaten sowie gesetzlich erforderliche Nachweise bereit.","3. Qualitaet und Rechtmaessigkeit: Der Anbieter bietet nur rechtmaessige Leistungen an, fuer die erforderliche Genehmigungen, Versicherungen und Qualifikationen vorliegen. Preise, Verfuegbarkeit, Treffpunkt, Teilnahme-, Sicherheits- und Stornierungsangaben muessen aktuell sein.","4. Provision und Zahlungen: Die 20-Prozent-Online-Anzahlung wird ueber Stripe direkt an FiiViu gezahlt und deckt die vereinbarte Vermittlungsprovision vollstaendig ab. Der Anbieter zieht die verbleibenden 80 Prozent direkt vor Ort ein, bar und/oder per Kartenterminal entsprechend den im Angebot angegebenen Zahlungsarten.","5. Ranking und Sichtbarkeit: Die Platzierung kann von Kategorie, Verfuegbarkeit, Relevanz, Aktualitaet, Preis, Nachfrage, Qualitaet und Vollstaendigkeit abhaengen. Eine bestimmte Platzierung wird nicht garantiert.","6. Sperrung und Beendigung: FiiViu kann Angebote bei gesetzlichen Pflichten, Sicherheitsrisiken, fehlenden Nachweisen, erheblichen Vertragsverletzungen oder unrichtigen Angaben sperren oder entfernen. Gesetzliche Rechte bleiben unberuehrt.","7. Anbieterbeschwerden: Beschwerden zu technischen Problemen, Massnahmen oder diesen Bedingungen koennen kostenlos an info@fiiviu.ro gerichtet werden.","8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze. Der Anbieter verwendet Kundendaten nur im rechtlich zulaessigen Umfang.","9. Geistiges Eigentum: Der Anbieter gewaehrleistet die rechtmaessige Nutzung seiner Bilder, Texte, Marken und sonstigen Inhalte und raeumt FiiViu ein einfaches Nutzungsrecht fuer die Plattformdarstellung ein.","10. Haftung: Der Anbieter haftet nach den gesetzlichen Vorschriften fuer seine Leistung und fuer rechtswidrige oder unrichtige von ihm bereitgestellte Inhalte.","11. Aenderungen: Bedingungen werden mit angemessener Vorankuendigung geaendert, soweit gesetzlich erforderlich. Wesentliche Aenderungen wirken nicht unzulaessig auf bereits geschlossene Buchungen zurueck.","12. Anwendbares Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.","13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.","","Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."].join("\n");
+    if (await hashProviderSession(snapshot) !== String(row.contract_sha256 || "")) return json({ error: "Contract hash mismatch; no email sent." }, 409);
+    const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { "Authorization": "Bearer " + String(env.RESEND_API_KEY).trim(), "Content-Type": "application/json" }, body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [email], subject: "Ihr akzeptierter FiiViu-Partnervertrag (" + version + ")", text: "Im Anhang finden Sie den am " + acceptedAt + " UTC akzeptierten Partnervertrag.", attachments: [{ filename: "FiiViu-Partnervertrag-" + version + ".pdf", content: buildProviderContractPdf(snapshot) }] }) });
+    const result = await response.json().catch(() => ({})); if (!response.ok) return json({ error: result.message || result.error || "Resend rejected the request." }, 502);
+    return json({ success: true, providerRef: row.provider_ref, email: email, contractAcceptedAt: acceptedAt });
+  } catch (error) { console.error("Provider contract resend failed", { message: error && error.message || "unknown" }); return json({ error: "Provider contract resend failed." }, 500); }
+}
 async function handleProviderRegistration(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured."},500);
