@@ -2789,7 +2789,7 @@ async function handleAdminProviderPassword(request,env){
       }else{
         throw new Error("Kein E-Mail-Versand konfiguriert.");
       }
-      return json({success:true,providerRef,email,emailSent:true,loginUrl:"https://fiiviu.ro/provider.html",message:"Zugang wurde erstellt und per E-Mail versendet."});
+      return json({success:true,providerRef,email,emailSent:true,loginUrl:"https://fiiviu.ro/provider.html",message:"Contul a fost creat, iar datele de acces au fost trimise prin e-mail."});
     }catch(emailError){
       console.error("FiiViu provider access email delivery failed",{code:emailError?.code||"",message:emailError?.message||"",providerRef,email});
       return json({success:true,providerRef,email,emailSent:false,emailErrorCode:emailError?.code||"EMAIL_SEND_FAILED",emailError:String(emailError?.message||"E-Mail konnte nicht versendet werden."),temporaryPassword:password,message:"Zugang wurde erstellt, aber die E-Mail konnte nicht versendet werden. Das temporäre Passwort wird einmalig angezeigt."});
@@ -2899,8 +2899,8 @@ async function handleProviderRegistration(request,env){
           from:"FiiViu <noreply@fiiviu.ro>",
           to:[email],
           subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.0)",
-          text:"Vielen Dank fuer Ihre Registrierung bei FiiViu. Im Anhang finden Sie den Partnervertrag der Version v1.0, den Sie am "+acceptedAt+" UTC akzeptiert haben. Anmeldung: https://fiiviu.ro/anbieter/login",
-          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.0</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
+          text:"Îți mulțumim pentru înregistrarea la FiiViu. În atașament găsești contractul de parteneriat, versiunea v1.0, acceptat la data de "+acceptedAt+" UTC. Autentificare: https://fiiviu.ro/anbieter/login",
+          html:"<p>Îți mulțumim pentru înregistrarea la FiiViu.</p><p>În atașament găsești contractul de parteneriat, versiunea <strong>v1.0</strong>, acceptat la data de "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
           attachments:[{filename:"FiiViu-Partnervertrag-v1.0.pdf",content:pdf}]
         })
       });
