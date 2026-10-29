@@ -62,6 +62,7 @@ jobs:
 
           add_column_if_missing "offers" "capacity" "INTEGER"
           add_column_if_missing "offers" "duration" "TEXT"
+          add_column_if_missing "offers" "availability_rules" "TEXT"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_offers_capacity ON offers(capacity)"
 
           # Provider self-registration fields and accepted-contract evidence.
@@ -110,7 +111,7 @@ jobs:
           versions_response="$(curl --silent --show-error --fail-with-body \
             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions?per_page=1")"
-          known_good="$(printf '%s' "$versions_response" | jq -r '.result[0].id // empty')"
+          known_good="$(printf '%s' "$versions_response" | jq -r 'if (.result | type) == "array" then .result[0].id // empty elif (.result.versions | type) == "array" then .result.versions[0].id // empty else empty end')"
           if [ -n "$known_good" ]; then
             echo "Captured current production version $known_good for rollback."
           else
@@ -164,6 +165,7 @@ jobs:
           const bindings = [
             { type: "assets", name: "ASSETS" },
             { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
+            { type: "r2_bucket", name: "PROVIDER_IMAGES", bucket_name: "fiiviu-provider-images" },
             { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
             { type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey },
             { type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret },
@@ -225,7 +227,7 @@ jobs:
                 exit 1
               fi
               provider_register_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/provider-register.html -w '%{http_code}' https://fiiviu.ro/anbieter/register)"
-              if [ "$provider_register_status" != "200" ] || ! grep -q "accept_contract" /tmp/provider-register.html || ! grep -q "Partnervertrag" /tmp/provider-register.html; then
+              if [ "$provider_register_status" != "200" ] || ! grep -q "accept_contract" /tmp/provider-register.html || ! grep -q "contractul de parteneriat" /tmp/provider-register.html; then
                 echo "Provider registration page is unavailable or missing required contract acceptance (HTTP $provider_register_status)."
                 exit 1
               fi
