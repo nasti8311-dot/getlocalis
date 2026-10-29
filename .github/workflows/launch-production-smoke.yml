@@ -99,7 +99,7 @@ jobs:
           set -euo pipefail
           status="$(curl --silent --show-error --location --max-time 20             --output /tmp/provider-session.json             --write-out '%{http_code}'             https://fiiviu.ro/api/provider-session)"
           test "$status" = "401"
-          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-session.json","utf8")); if(!d.error) throw new Error("Provider session endpoint did not return an error");'
+          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-session.json","utf8")); if(d.authenticated!==false && !d.error) throw new Error("Provider session endpoint did not reject unauthenticated access");'
 
       - name: Check protected admin surface
         run: |
