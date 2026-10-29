@@ -61,6 +61,7 @@ jobs:
           }
 
           add_column_if_missing "offers" "capacity" "INTEGER"
+          add_column_if_missing "offers" "duration" "TEXT"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_offers_capacity ON offers(capacity)"
 
           # Provider self-registration fields and accepted-contract evidence.
