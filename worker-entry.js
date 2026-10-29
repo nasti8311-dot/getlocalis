@@ -1637,7 +1637,7 @@ async function sendProviderBookingNotification(env, booking) {
   const romanianInstructions = String(
     romanianOffer?.instructions || booking.meeting_instructions || ""
   ).trim();
-  const subject = "Rezervare nouă – " + romanianExperienceName;
+  const subject = "Neue Buchung erhalten! – " + romanianExperienceName;
   const text = [
     "Rezervare nouă la FiiViu",
     "",
@@ -1665,7 +1665,7 @@ async function sendProviderBookingNotification(env, booking) {
     "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
     "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
     "<strong>Valoarea totală a rezervării:</strong> " + safe(amount) + "<br>" +
-    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Taxă FiiViu plătită online (20%):</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) : "") + "</p>" +
+    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Taxă FiiViu plătită online (20%):</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) + "<br><strong>Metode acceptate la fața locului:</strong> " + safe(onSiteMethods) : "") + "</p>" +
     "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
     "<strong>E-mail client:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
