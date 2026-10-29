@@ -573,18 +573,27 @@ async function handleBookingAccess(request, env) {
         experience_name,
         booking_date,
         booking_time,
-        guests,
-        meeting_point_name,
-        meeting_address,
-        meeting_city,
-        meeting_country,
-        meeting_instructions,
-        arrival_minutes_before,
-        meeting_latitude,
-        meeting_longitude,
-        status
-      FROM bookings
-      WHERE booking_id=? AND booking_access_token=?
+        b.guests,
+        b.meeting_point_name,
+        b.meeting_address,
+        b.meeting_city,
+        b.meeting_country,
+        b.meeting_instructions,
+        b.arrival_minutes_before,
+        b.meeting_latitude,
+        b.meeting_longitude,
+        b.status,
+        b.payment_model,
+        b.currency,
+        b.amount_cents,
+        b.total_amount_cents,
+        b.fiiviu_fee_cents,
+        b.provider_due_cents,
+        o.pay_on_site_cash,
+        o.pay_on_site_card
+      FROM bookings b
+      LEFT JOIN offers o ON o.id=b.offer_id
+      WHERE b.booking_id=? AND b.booking_access_token=?
       LIMIT 1
     `).bind(bookingId, token).first();
 
@@ -1598,6 +1607,8 @@ async function sendProviderBookingNotification(env, booking) {
     clean(booking.provider_name) || ""
   ).first();
 
+  const onSiteOffer = booking.offer_id ? await env.DB.prepare("SELECT pay_on_site_cash,pay_on_site_card FROM offers WHERE id=? LIMIT 1").bind(booking.offer_id).first().catch(()=>null) : null;
+  const onSiteMethods = [Number(onSiteOffer?.pay_on_site_cash)===1?"bar":"",Number(onSiteOffer?.pay_on_site_card)===1?"card":""] .filter(Boolean).join(" / ") || "conform ofertă";
   const recipient = clean(provider?.contact_email);
   if (!recipient) {
     await env.DB.prepare(
@@ -1639,7 +1650,7 @@ async function sendProviderBookingNotification(env, booking) {
     "E-mail client: " + (booking.customer_email || ""),
     "Telefon: " + (booking.customer_phone || ""),
     "Valoarea totală a rezervării: " + amount,
-    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Taxă FiiViu plătită online (20%): " + onlineFee, "De încasat direct de la client (80%): " + providerDue] : []),
+    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Taxă FiiViu plătită online (20%): " + onlineFee, "De încasat direct de la client (80%): " + providerDue, "Metode de plată acceptate la fața locului: " + onSiteMethods] : []),
     "",
     "Punct de întâlnire: " + romanianMeetingPoint,
     "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
