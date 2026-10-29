@@ -888,7 +888,7 @@ test("production smoke runs after a successful production deploy", () => {
   const deploy = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(deploy, /Wait for public Pages deployment/);
   assert.doesNotMatch(deploy, /sha256sum index\\.html/);
-  assert.match(deploy, /Deploy Worker version/);
+  assert.match(deploy, /Upload and deploy Worker with secrets while reusing existing assets/);
   assert.match(deploy, /Verify production endpoint/);
 });
 
@@ -958,17 +958,19 @@ test("production deploy does not depend on GitHub Pages readiness", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(workflow, /Wait for public Pages deployment/);
   assert.doesNotMatch(workflow, /pages build and deployment/);
-  assert.match(workflow, /Deploy Worker version/);
+  assert.match(workflow, /Upload and deploy Worker with secrets while reusing existing assets/);
   assert.match(workflow, /Verify production endpoint/);
 });
 
 test("production deploy avoids route-write permission dependency", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  assert.match(workflow, /workers\/scripts\/getlocalis\/versions/);
+  assert.match(workflow, /workers\/scripts\/getlocalis"/);
+  assert.match(workflow, /--request PUT/);
   assert.match(workflow, /keep_assets:\s*true/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
-  assert.match(workflow, /wrangler@4 versions deploy/);
-  assert.match(workflow, /WORKER_VERSION_ID/);
+  assert.match(workflow, /type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey/);
+  assert.match(workflow, /wrangler@4 versions deploy/); // rollback path only
+  assert.doesNotMatch(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
   assert.doesNotMatch(workflow, /command:\s*deploy\b/);
 });
