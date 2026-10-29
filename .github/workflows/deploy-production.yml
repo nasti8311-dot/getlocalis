@@ -206,9 +206,17 @@ jobs:
             if [ "$status" = "503" ] && grep -qi "Coming Soon" /tmp/offers-response; then
               echo "Worker is deployed. Public catalog remains gated by UNDER_CONSTRUCTION=true (expected 503); checkout is not publicly available yet."
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
-              test "$admin_api_status" = "401"
+              echo "ADMIN /api/admin/partners HTTP $admin_api_status"
+              if [ "$admin_api_status" != "401" ]; then
+                echo "Admin endpoint did not return the expected unauthorized status."
+                exit 1
+              fi
               stats_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/stats.json -w '%{http_code}' 'https://fiiviu.ro/api/partner-stats?ref=TEST')"
-              test "$stats_status" = "401"
+              echo "PARTNER STATS HTTP $stats_status"
+              if [ "$stats_status" != "401" ]; then
+                echo "Partner stats endpoint did not return the expected unauthorized status."
+                exit 1
+              fi
               exit 0
             fi
             echo "Unexpected production catalog response: HTTP $status (attempt $attempt/5)."
