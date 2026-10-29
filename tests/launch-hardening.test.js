@@ -126,7 +126,7 @@ test("provider self-registration records automatic contract acceptance and store
   assert.match(page, /accept_contract:true/);
   assert.match(page, /Acceptarea este înregistrată automat la finalizarea înregistrării/);
   assert.doesNotMatch(page, /name="accept_contract" type="checkbox" required/);
-  assert.match(page, /20% Anzahlung per Online-Buchung/);
+  assert.match(page, /avans de 20% la rezervarea online/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
   assert.match(migration, /pay_on_site_cash/);
