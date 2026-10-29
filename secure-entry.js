@@ -370,6 +370,16 @@ export default {
     }
 
     if (String(env.UNDER_CONSTRUCTION || "").trim().toLowerCase() === "true") {
+      const publicStaticAssets = new Set([
+        "/robots.txt",
+        "/sitemap.xml",
+        "/manifest.json",
+        "/icons/icon-192.svg",
+        "/icons/icon-512.svg"
+      ]);
+      if (request.method === "GET" && publicStaticAssets.has(url.pathname)) {
+        return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);
+      }
       return underConstructionResponse();
     }
 
