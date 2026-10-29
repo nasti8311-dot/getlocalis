@@ -79,6 +79,7 @@ export default {
     if (url.pathname === "/api/provider-login") return handleProviderLogin(request, env);
     if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
     if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
+    if (url.pathname === "/api/provider-account-cancel") return handleProviderAccountCancellation(request, env);
     if (url.pathname === "/api/provider-test-booking") return handleProviderTestBooking(request, env);
     if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
     if (url.pathname === "/api/provider/overview") return handleProviderOverview(request, env);
@@ -3093,6 +3094,48 @@ async function handleProviderTestBooking(request, env) {
   } catch (error) {
     console.error("FiiViu provider test booking failed", error);
     return json({ error: error?.message || "Testbuchung konnte nicht erstellt werden." }, 500);
+  }
+}
+
+async function handleProviderAccountCancellation(request, env) {
+  if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.DB) return json({ error: "D1 database not configured." }, 500);
+
+  const providerRef = await providerRefFromSession(request, env);
+  if (!providerRef) return json({ error: "Bitte melden Sie sich an, um die Anbieter-Kündigung zu bestätigen." }, 401);
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    if (body.confirm_cancellation !== true) {
+      return json({ error: "Bitte bestätigen Sie die Kündigung ausdrücklich." }, 400);
+    }
+
+    await ensureProvidersTable(env);
+    await ensureProviderAuthTables(env);
+    const provider = await env.DB.prepare(
+      "SELECT provider_ref, name, active FROM providers WHERE provider_ref=? LIMIT 1"
+    ).bind(providerRef).first();
+    if (!provider) return json({ error: "Anbieter nicht gefunden." }, 404);
+
+    // Keep contract acceptance and booking/settlement history for audit and legal retention.
+    // Disable access instead of deleting historical or financial records.
+    await env.DB.batch([
+      env.DB.prepare("UPDATE providers SET active=0, updated_at=CURRENT_TIMESTAMP WHERE provider_ref=?").bind(providerRef),
+      env.DB.prepare("UPDATE provider_accounts SET active=0, updated_at=CURRENT_TIMESTAMP WHERE provider_ref=?").bind(providerRef),
+      env.DB.prepare("DELETE FROM provider_sessions WHERE provider_ref=?").bind(providerRef)
+    ]);
+
+    const response = json({
+      success: true,
+      cancelled: true,
+      provider_ref: providerRef,
+      message: "Der Anbieterzugang wurde deaktiviert. Vertrags- und Buchungsnachweise bleiben entsprechend den Aufbewahrungspflichten erhalten."
+    });
+    response.headers.set("Set-Cookie", providerSessionCookie("", 0));
+    return response;
+  } catch (error) {
+    console.error("FiiViu provider account cancellation failed", error);
+    return json({ error: error?.message || "Kündigung konnte nicht verarbeitet werden." }, 500);
   }
 }
 
