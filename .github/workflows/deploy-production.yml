@@ -203,6 +203,22 @@ jobs:
                 sed -n '1,80p' /tmp/admin-slash.html
                 exit 1
               fi
+              provider_register_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/provider-register.html -w '%{http_code}' https://fiiviu.ro/anbieter/register)"
+              if [ "$provider_register_status" != "200" ] || ! grep -q "accept_contract" /tmp/provider-register.html || ! grep -q "Partnervertrag" /tmp/provider-register.html; then
+                echo "Provider registration page is unavailable or missing required contract acceptance (HTTP $provider_register_status)."
+                exit 1
+              fi
+              provider_login_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/provider-login.html -w '%{http_code}' https://fiiviu.ro/anbieter/login)"
+              if [ "$provider_login_status" != "200" ] || ! grep -q "providerLoginForm" /tmp/provider-login.html; then
+                echo "Provider login page is unavailable (HTTP $provider_login_status)."
+                exit 1
+              fi
+              provider_terms_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/provider-terms.html -w '%{http_code}' https://fiiviu.ro/legal/anbieter-bedingungen.html)"
+              if [ "$provider_terms_status" != "200" ] || ! grep -q "20/80" /tmp/provider-terms.html; then
+                echo "Provider terms page is unavailable or missing 20/80 terms (HTTP $provider_terms_status)."
+                exit 1
+              fi
+              echo "Provider registration, login, and contract terms pages are reachable."
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
               echo "ADMIN /api/admin/partners HTTP $admin_api_status"
               if [ "$admin_api_status" != "401" ]; then
