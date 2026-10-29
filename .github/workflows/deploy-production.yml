@@ -111,7 +111,7 @@ jobs:
           echo "Using the previously confirmed production version as rollback target."
           printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
 
-      - name: Upload Worker version while reusing existing assets
+      - name: Upload and deploy Worker with secrets while reusing existing assets
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -125,7 +125,7 @@ jobs:
           fi
 
           # Build output already exists from the dry-run validation step. Use the
-          # documented Version Upload API keep_assets option to bypass the broken
+          # documented Script Upload API keep_assets option to bypass the broken
           # assets-upload-session endpoint and retain the currently deployed assets.
           bundle_file="$(find .wrangler-dry-run -maxdepth 1 -type f -name '*.js' ! -name '*.map' -print -quit)"
           if [ -z "$bundle_file" ]; then
@@ -161,32 +161,18 @@ jobs:
 
           response_file=/tmp/worker-upload-response.json
           if ! curl --silent --show-error --fail-with-body \
-            --request POST \
+            --request PUT \
             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             --form "metadata=@/tmp/worker-metadata.json;type=application/json" \
             --form "$main_module=@$bundle_file;type=application/javascript+module" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis" \
             --output "$response_file"; then
-            echo "Direct Worker version upload failed:"
+            echo "Direct Worker script upload failed:"
             cat "$response_file" || true
             exit 1
           fi
 
           cat "$response_file" | jq .
-          version_id="$(jq -r '.result.id // .result.version_id // empty' "$response_file")"
-          if [ -z "$version_id" ]; then
-            echo "Cloudflare accepted the request but returned no version ID."
-            exit 1
-          fi
-          printf 'WORKER_VERSION_ID=%s\n' "$version_id" >> "$GITHUB_ENV"
-
-      - name: Deploy Worker version
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 versions deploy "${WORKER_VERSION_ID}@100%" --yes
 
       - name: Verify production endpoint
         shell: bash
