@@ -95,7 +95,7 @@ td,th{border-bottom:1px solid #eee9e1}
 </form>
 <h2 style="margin-top:28px">Experiențele mele</h2><button id="reload" class="secondary">Reîncarcă</button><div id="list" class="muted" style="margin-top:14px">Încă nu s-a încărcat.</div></section>
 <script>
-function localizeProviderError(message){const translations={"E-Mail oder Passwort ist falsch.":"Adresa de e-mail sau parola este incorectă.","D1 database not configured":"Baza de date nu este configurată.","Unauthorized provider credentials":"Sesiunea a expirat. Autentifică-te din nou.","Veranstalter nicht gefunden.":"Organizatorul nu a fost găsit.","Method Not Allowed":"Metodă nepermisă.","Dashboard konnte nicht geladen werden.":"Panoul nu a putut fi încărcat.","Erlebnis konnte nicht geladen werden.":"Experiența nu a putut fi încărcată.","Der Titel ist erforderlich.":"Titlul este obligatoriu.","Neue Anbieterangebote müssen in RON ausgezeichnet werden.":"Ofertele noi trebuie să aibă prețurile afișate în RON.","Ein Erlebnis mit diesem Titel existiert bereits.":"Există deja o experiență cu acest titlu.","Bitte eine gültige Test-E-Mail-Adresse eingeben.":"Introdu o adresă de e-mail validă pentru test."};return translations[message]||message||"A apărut o eroare. Încearcă din nou.";}
+function localizeProviderError(message){const translations={"E-Mail oder Passwort ist falsch.":"Adresa de e-mail sau parola este incorectă.","E-Mail und Passwort sind erforderlich.":"Introdu adresa de e-mail și parola.","Login fehlgeschlagen.":"Autentificarea a eșuat.","Bitte geben Sie eine gültige E-Mail-Adresse ein.":"Introdu o adresă de e-mail validă.","Das Passwort muss zwischen 12 und 128 Zeichen lang sein.":"Parola trebuie să aibă între 12 și 128 de caractere.","Für diese E-Mail-Adresse besteht bereits ein Anbieterzugang. Bitte melden Sie sich an.":"Există deja un cont pentru această adresă de e-mail. Autentifică-te.","Diese CUI ist bereits registriert. Bitte kontaktieren Sie info@fiiviu.ro, falls Sie Hilfe benötigen.":"Acest CUI este deja înregistrat. Pentru ajutor, contactează info@fiiviu.ro.","Bitte füllen Sie alle Pflichtfelder aus.":"Completează toate câmpurile obligatorii.","Sie müssen den Partnervertrag und die Provisionsbedingungen ausdrücklich akzeptieren.":"Trebuie să accepți în mod explicit contractul și condițiile comisionului.","D1 database not configured":"Baza de date nu este configurată.","Unauthorized provider credentials":"Sesiunea a expirat. Autentifică-te din nou.","Veranstalter nicht gefunden.":"Organizatorul nu a fost găsit.","Veranstalter nicht gefunden oder deaktiviert.":"Organizatorul nu a fost găsit sau este dezactivat.","Method Not Allowed":"Metodă nepermisă.","Dashboard konnte nicht geladen werden.":"Panoul nu a putut fi încărcat.","Erlebnis konnte nicht geladen werden.":"Experiența nu a putut fi încărcată.","Der Titel ist erforderlich.":"Titlul este obligatoriu.","Neue Anbieterangebote müssen in RON ausgezeichnet werden.":"Ofertele noi trebuie să aibă prețurile afișate în RON.","Ein Erlebnis mit diesem Titel existiert bereits.":"Există deja o experiență cu acest titlu.","Bitte eine gültige Test-E-Mail-Adresse eingeben.":"Introdu o adresă de e-mail validă pentru test.","Die Stornierung wird bereits bearbeitet.":"Anularea este deja în curs de procesare.","Diese Buchung kann nicht mehr storniert werden.":"Această rezervare nu mai poate fi anulată.","Diese Buchung gehört nicht zu deinem Anbieter-Konto.":"Această rezervare nu aparține contului tău de organizator.","Stornierung durch Anbieter fehlgeschlagen.":"Anularea de către organizator a eșuat.","bookingId is required.":"ID-ul rezervării este obligatoriu.","Invalid JSON payload":"Datele trimise nu sunt valide.","Cancellation service is not configured.":"Serviciul de anulare nu este configurat."};return translations[message]||message||"A apărut o eroare. Încearcă din nou.";}
 const API='/api/provider/experiences';
 const OVERVIEW_API='/api/provider/overview';
 const headers=()=>({'Content-Type':'application/json'});
@@ -171,16 +171,16 @@ async function cancelProviderBooking(bookingId){
   try{
     const response=await fetch('/api/provider/cancel-booking',{method:'POST',headers:headers(),credentials:'same-origin',body:JSON.stringify({bookingId})});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||!data.success) throw new Error(data.error||'Anularea rezervării a eșuat.');
+    if(!response.ok||!data.success) throw new Error(data.error||'Anularea rezervării a eșuat.'));
     alert('Rezervarea a fost anulată. Cei 20% vor fi rambursați integral.');
     await loadProviderOverview();
-  }catch(error){alert(error.message||'Anularea rezervării a eșuat.');}
+  }catch(error){alert(error.message||'Anularea rezervării a eșuat.'));}
 }
 async function loadProviderOverview(){
   try{
     const r=await fetch(OVERVIEW_API,{headers:headers(),credentials:'same-origin'});
     const d=await r.json();
-    if(!r.ok) throw Error(d.error||'Panoul nu a putut fi încărcat.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Panoul nu a putut fi încărcat.'));
     const s=d.stats||{};
     document.getElementById('providerStatBookings').textContent=String(s.bookings??0);
     document.getElementById('providerStatRevenue').textContent=money(s.grossRevenueCents);
@@ -210,7 +210,7 @@ async function load(){
   try{
     const r=await fetch(API,{headers:headers(),credentials:'same-origin'});
     const d=await r.json();
-    if(!r.ok) throw Error(d.error||'Încărcarea a eșuat.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Încărcarea a eșuat.'));
     const rows=d.experiences||[];
     if(!rows.length){box.textContent='Noch keine Experiențăse.';return;}
     box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(x.status)+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
@@ -255,7 +255,7 @@ experienceForm?.addEventListener('submit',async event=>{
  try{
   const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify(payload)});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(d.error||'Experiența nu a putut fi salvată.');
+  if(!r.ok)throw Error(localizeProviderError(d.error||'Experiența nu a putut fi salvată.'));
   result.className='result ok';result.style.display='block';result.textContent='Experiența a fost salvată. Plătit online: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; de plătit la locație: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
   experienceForm.reset();document.getElementById('expCity').value='București';document.getElementById('expCash').checked=true;document.getElementById('expCard').checked=true;updateExperiencePreview();await load();
  }catch(error){result.className='result error';result.style.display='block';result.textContent=error.message;}
@@ -274,7 +274,7 @@ document.getElementById('providerTestBooking')?.addEventListener('click',async()
   try{
     const r=await fetch('/api/provider-test-booking',{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify({customerEmail:email})});
     const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw Error(d.error||'Crearea rezervării de test a eșuat.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Crearea rezervării de test a eșuat.'));
     result.className='result '+(d.email_errors?.length?'error':'ok');
     result.textContent=(d.message||'Rezervarea de test a fost creată.')+'\nID rezervare: '+d.booking_id+(d.provider_email?'\nE-mail organizator: '+d.provider_email:'')+(d.email_errors?.length?'\n\n'+d.email_errors.join('\n'):'');
     result.style.display='block';
