@@ -1593,7 +1593,7 @@ async function sendProviderBookingNotification(env, booking) {
   const provider = await env.DB.prepare(
     "SELECT provider_ref,name,contact_email,active FROM providers WHERE (provider_ref=? OR name=?) AND active=1 LIMIT 1"
   ).bind(
-    clean(booking.partner_ref) || "",
+    clean(booking.provider_ref) || "",
     clean(booking.provider_name) || ""
   ).first();
 
