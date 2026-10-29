@@ -683,6 +683,16 @@ async function handleCancellation(request, env) {
     });
   }
 
+  const url = new URL(request.url);
+  const token = String(url.searchParams.get("token") || "").trim();
+  if (!token || token.length < 32) {
+    return json(
+      { error: "Ungültiger Stornierungslink." },
+      400,
+      corsHeaders
+    );
+  }
+
   if (!env.DB || !env.STRIPE_SECRET_KEY) {
     return json(
       { error: "Cancellation service is not configured." },
@@ -693,17 +703,6 @@ async function handleCancellation(request, env) {
 
   try {
     await ensureBookingColumns(env);
-
-    const url = new URL(request.url);
-    const token = String(url.searchParams.get("token") || "").trim();
-
-    if (!token || token.length < 32) {
-      return json(
-        { error: "Ungültiger Stornierungslink." },
-        400,
-        corsHeaders
-      );
-    }
 
     const booking = await env.DB
       .prepare("SELECT * FROM bookings WHERE cancellation_token=? LIMIT 1")
