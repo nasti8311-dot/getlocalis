@@ -1025,4 +1025,6 @@ test("provider portal and registration are Romanian-first", () => {
   assert.match(registration, /contractul pentru organizatori \(versiunea v1\.1\)/);
   assert.match(registration, /anbieter-bedingungen\.html\?lang=ro/);
   assert.doesNotMatch(registration, /Als Anbieter registrieren|Bereits registriert\?|Zum Anbieter-Login|Registrierung wird verarbeitet/);
+  assert.match(dashboard, /A apărut o eroare\\. Încearcă din nou\\./);
+  assert.match(registration, /A apărut o eroare la înregistrare\\. Încearcă din nou\\./);
 });
