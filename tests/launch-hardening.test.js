@@ -1011,3 +1011,19 @@ test("provider contract v1.1 contains the 20/80 clauses in all languages and acc
   assert.match(worker, /20\. Vertragsfassung:/);
   assert.match(registration, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
 });
+
+test("provider portal and registration are Romanian-first", () => {
+  const dashboard = read("provider.html");
+  const registration = read("anbieter-register.html");
+  assert.match(dashboard, /<html lang="ro">/);
+  assert.match(registration, /<html lang="ro">/);
+  assert.match(dashboard, /Autentificare organizator/);
+  assert.match(dashboard, /Rezervări viitoare/);
+  assert.match(dashboard, /toLocaleString\('ro-RO'/);
+  assert.match(dashboard, /anbieternbedingungen/);
+  assert.match(dashboard, /Condiții pentru organizatori/);
+  assert.match(registration, /Înregistrare ca organizator/);
+  assert.match(registration, /contractul pentru organizatori \(versiunea v1\.1\)/);
+  assert.match(registration, /anbieter-bedingungen\.html\?lang=ro/);
+  assert.doesNotMatch(registration, /Als Anbieter registrieren|Bereits registriert\?|Zum Anbieter-Login|Registrierung wird verarbeitet/);
+});
