@@ -928,6 +928,9 @@ test("production deploy performs only idempotent, explicit schema repair before 
     assert.match(workflow, new RegExp('add_column_if_missing "bookings" "' + column + '"'));
   }
   assert.match(workflow, /Deploy Worker version/);
+  assert.match(workflow, /type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey/);
+  assert.doesNotMatch(workflow, /Ensure ADMIN_PAYOUT_KEY is installed as a Worker secret/);
+  assert.match(workflow, /Verify production endpoint/);
 });
 
 test("iOS app icon references an existing static asset", () => {
