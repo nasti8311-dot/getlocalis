@@ -115,12 +115,6 @@ jobs:
             compatibility_date: "2026-09-14",
             keep_assets: true,
             annotations: { "workers/message": "GitHub Actions " + sha },
-            assets: {
-              config: {
-                run_worker_first: true,
-                not_found_handling: "single-page-application"
-              }
-            },
             bindings: [
               { type: "assets", name: "ASSETS" },
               { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
