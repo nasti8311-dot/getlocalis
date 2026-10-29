@@ -1544,6 +1544,16 @@ html, body, main,
 
                 </div>
 
+                <div class="mt-3 space-y-2 border-t border-white/10 pt-4 text-sm">
+                    <div class="flex justify-between gap-3 text-white/70">
+                        <span data-i18n="online_payment_label">Jetzt online an FiiViu (20 %)</span>
+                        <strong id="online-fee-price">0 €</strong>
+                    </div>
+                    <div class="flex justify-between gap-3 text-white/70">
+                        <span data-i18n="provider_payment_label">Vor Ort an Anbieter (80 %)</span>
+                        <strong id="provider-due-price">0 €</strong>
+                    </div>
+                </div>
 
                 <div class="mt-7 space-y-3 text-xs text-white/50">
 
@@ -2461,7 +2471,7 @@ const translations = {
         trust_title: "Gut zu wissen",
         trust_stripe: "Sichere Zahlung über Stripe.",
         trust_after_booking: "Nach erfolgreicher Zahlung erhältst du deine Buchungsbestätigung per E-Mail mit den Buchungs- und Treffpunktdetails.",
-        trust_cancellation: "Für dieses Erlebnis gelten die vor der Zahlung angezeigten Storno- und Rückerstattungsbedingungen.",
+        trust_cancellation: "Bei Stornierung mindestens 24 Stunden vorher wird die Onlinegebühr erstattet; bei Anbieter-Stornierung erhältst du sie vollständig zurück.",
 
         checkout_label: "Fast da",
         checkout_title: "Deinen Moment buchen",
@@ -2473,11 +2483,11 @@ const translations = {
         guests: "Personen *",
         notes: "Nachricht / Wünsche",
         payment: "Zahlung",
-        payment_note: "Die Zahlungsabwicklung erfolgt sicher über Stripe.",
-        pay_book: "Zahlungspflichtig buchen",
+        payment_note: "Du zahlst jetzt 20 % des Gesamtpreises online an FiiViu. Die restlichen 80 % zahlst du direkt vor Ort an den Anbieter.",
+        pay_book: "20 % zahlen & buchen",
         legal_acceptance: 'Ich akzeptiere die <a href="/legal/termeni-si-conditii.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">AGB &amp; Buchungsbedingungen</a> und die für dieses Erlebnis geltenden Storno- und Rückerstattungsbedingungen. Ich habe die <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Datenschutzerklärung</a> gelesen.',
         provider_notice: "Die Leistung wird vom jeweiligen Erlebnisanbieter erbracht. FiiViu vermittelt die Buchung.",
-        cancellation_notice: "Storno- und Rückerstattungsbedingungen sind erlebnisspezifisch und vor der Zahlung einzusehen.",
+        cancellation_notice: "Bei Stornierung mindestens 24 Stunden vorher wird die Onlinegebühr von 20 % erstattet. Bei späterer Stornierung bleibt sie bei FiiViu. Wenn der Anbieter storniert, erhältst du die 20 % vollständig zurück.",
         terms_link: "AGB & Buchungsbedingungen",
         refund_link: "Storno & Rückerstattung",
         privacy_link: "Datenschutz",
@@ -2573,7 +2583,7 @@ const translations = {
         trust_title: "Good to know",
         trust_stripe: "Secure payment via Stripe.",
         trust_after_booking: "After successful payment, you will receive your booking confirmation by email with the booking and meeting point details.",
-        trust_cancellation: "The cancellation and refund conditions shown before payment apply to this experience.",
+        trust_cancellation: "The 20% online fee is refunded for cancellations at least 24 hours ahead; provider cancellations are fully refunded.",
 
         checkout_label: "Almost there",
         checkout_title: "Book your moment",
@@ -2585,11 +2595,11 @@ const translations = {
         guests: "People *",
         notes: "Message / requests",
         payment: "Payment",
-        payment_note: "Payment is securely processed via Stripe.",
-        pay_book: "Book and pay",
+        payment_note: "Pay 20% of the total online to FiiViu now. Pay the remaining 80% directly to the provider in person.",
+        pay_book: "Pay 20% & book",
         legal_acceptance: 'I accept the <a href="/legal/termeni-si-conditii.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Terms &amp; Booking Conditions</a> and the cancellation and refund conditions applicable to this experience. I have read the <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Privacy Policy</a>.',
         provider_notice: "The service is provided by the respective experience provider. FiiViu acts as intermediary for the booking.",
-        cancellation_notice: "Cancellation and refund conditions are specific to the experience and are shown before payment.",
+        cancellation_notice: "Cancel at least 24 hours ahead for a refund of the 20% online fee. Later cancellations are non-refundable. If the provider cancels, the 20% is fully refunded.",
         terms_link: "Terms & Booking Conditions",
         refund_link: "Cancellation & Refunds",
         privacy_link: "Privacy Policy",
@@ -2684,7 +2694,7 @@ const translations = {
         trust_title: "Bine de știut",
         trust_stripe: "Plată sigură prin Stripe.",
         trust_after_booking: "După plata cu succes, primești confirmarea rezervării prin email, cu detaliile rezervării și ale locului de întâlnire.",
-        trust_cancellation: "Pentru această experiență se aplică condițiile de anulare și rambursare afișate înainte de plată.",
+        trust_cancellation: "Taxa online se rambursează la anularea cu cel puțin 24 de ore înainte; anularea de către operator este rambursată integral.",
 
         checkout_label: "Aproape gata",
         checkout_title: "Rezervă momentul",
@@ -2696,11 +2706,11 @@ const translations = {
         guests: "Persoane *",
         notes: "Mesaj / dorințe",
         payment: "Plată",
-        payment_note: "Plata este procesată în siguranță prin Stripe.",
-        pay_book: "Plătește și rezervă",
+        payment_note: "Plătești acum online către FiiViu 20% din preț. Restul de 80% îl plătești direct operatorului, la fața locului.",
+        pay_book: "Plătește 20% și rezervă",
         legal_acceptance: 'Accept <a href="/legal/termeni-si-conditii.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Termenii și condițiile de rezervare</a> și condițiile de anulare și rambursare aplicabile acestei experiențe. Am citit <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener" class="underline hover:text-fii-orange">Politica de confidențialitate</a>.',
         provider_notice: "Serviciul este furnizat de operatorul experienței. FiiViu acționează ca intermediar al rezervării.",
-        cancellation_notice: "Condițiile de anulare și rambursare sunt specifice experienței și sunt afișate înainte de plată.",
+        cancellation_notice: "Dacă anulezi cu cel puțin 24 de ore înainte, primești înapoi taxa online de 20%. Anulările mai târzii nu sunt rambursabile. Dacă operatorul anulează, primești integral înapoi cei 20%.",
         terms_link: "Termeni și condiții",
         refund_link: "Anulare și rambursare",
         privacy_link: "Politica de confidențialitate",
@@ -4097,6 +4107,14 @@ function updateTotal() {
 
     document.getElementById("total-price").innerText =
         formatPrice(total);
+
+    const totalCents = Math.round(total * 100);
+    const onlineFeeCents = Math.round(totalCents * 0.20);
+    const providerDueCents = totalCents - onlineFeeCents;
+    const onlineFee = document.getElementById("online-fee-price");
+    const providerDue = document.getElementById("provider-due-price");
+    if (onlineFee) onlineFee.innerText = formatPrice(onlineFeeCents / 100);
+    if (providerDue) providerDue.innerText = formatPrice(providerDueCents / 100);
 
 }
 
