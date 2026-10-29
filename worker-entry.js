@@ -2882,24 +2882,15 @@ function buildProviderContractPdf(snapshot){
 
 
 async function ensureProviderRegistrationSchema(env){
-  const rows=await env.DB.prepare("PRAGMA table_info(providers)").all();
-  const columns=new Set((rows.results||[]).map(row=>String(row.name||"")));
-  for(const entry of [["company_name","TEXT"],["cui","TEXT"],["representative_name","TEXT"]]){
-    if(columns.has(entry[0]))continue;
-    try{await env.DB.prepare("ALTER TABLE providers ADD COLUMN "+entry[0]+" "+entry[1]).run();}
-    catch(error){if(!String(error?.message||"").toLowerCase().includes("duplicate column"))throw error;}
-  }
+  const providerRows=await env.DB.prepare("PRAGMA table_info(providers)").all();
+  const providerColumns=new Set((providerRows.results||[]).map(row=>String(row.name||"")));
   const offerRows=await env.DB.prepare("PRAGMA table_info(offers)").all();
   const offerColumns=new Set((offerRows.results||[]).map(row=>String(row.name||"")));
-  for(const entry of [["pay_on_site_cash","INTEGER NOT NULL DEFAULT 1"],["pay_on_site_card","INTEGER NOT NULL DEFAULT 1"]]){
-    if(offerColumns.has(entry[0]))continue;
-    try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN "+entry[0]+" "+entry[1]).run();}
-    catch(error){if(!String(error?.message||"").toLowerCase().includes("duplicate column"))throw error;}
-  }
-  await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_providers_cui ON providers(cui) WHERE cui IS NOT NULL AND trim(cui) <> ''").run();
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS vendor_contract_logs (id TEXT PRIMARY KEY,provider_ref TEXT NOT NULL REFERENCES providers(provider_ref),accepted_at TEXT NOT NULL,ip_address TEXT NOT NULL,user_agent TEXT NOT NULL,contract_version TEXT NOT NULL,contract_sha256 TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_provider_ref ON vendor_contract_logs(provider_ref)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_accepted_at ON vendor_contract_logs(accepted_at)").run();
+  const logTable=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vendor_contract_logs' LIMIT 1").first();
+  const missing=["company_name","cui","representative_name"].filter(name=>!providerColumns.has(name));
+  for(const name of ["pay_on_site_cash","pay_on_site_card"])if(!offerColumns.has(name))missing.push("offers."+name);
+  if(!logTable)missing.push("vendor_contract_logs");
+  if(missing.length)throw new Error("Provider registration schema is incomplete. Apply migration 018_provider_self_registration_contracts.sql. Missing: "+missing.join(", "));
 }
 
 function handleProviderLogin(request,env){
