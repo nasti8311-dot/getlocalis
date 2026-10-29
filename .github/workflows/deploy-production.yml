@@ -25,6 +25,14 @@ jobs:
         with:
           node-version: 22
 
+      # Work around Workers Assets manifest deduplication/stale-session failures:
+      # always give the upload manifest one new content hash per deployment.
+      - name: Add unique asset manifest marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'commit=%s\nrun=%s\nattempt=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > deployment-marker.txt
+
       - name: Validate JavaScript syntax
         shell: bash
         run: |
@@ -94,14 +102,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          output="$(npx --yes wrangler@4 versions upload --message "GitHub Actions \$GITHUB_SHA")"
-          printf '%s\n' "$output"
-          version_id="$(printf '%s\n' "$output" | sed -nE 's/.*Version ID[^0-9a-f]*([0-9a-f-]{36}).*/\1/p' | tail -n 1)"
+          output="$(npx --yes wrangler@4 versions upload --message "GitHub Actions $GITHUB_SHA")"
+          printf '%s\\n' "$output"
+          version_id="$(printf '%s\\n' "$output" | sed -nE 's/.*Version ID[^0-9a-f]*([0-9a-f-]{36}).*/\\1/p' | tail -n 1)"
           if [ -z "$version_id" ]; then
             echo "Could not determine uploaded Worker version ID."
             exit 1
           fi
-          printf 'WORKER_VERSION_ID=%s\n' "$version_id" >> "$GITHUB_ENV"
+          printf 'WORKER_VERSION_ID=%s\\n' "$version_id" >> "$GITHUB_ENV"
 
       - name: Deploy Worker version
         shell: bash
@@ -151,4 +159,3 @@ jobs:
           done
           echo "Production catalog did not become healthy after deployment."
           exit 1
-
