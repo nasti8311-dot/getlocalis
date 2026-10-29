@@ -2732,7 +2732,7 @@ async function handleAdminProviderPassword(request,env){
   if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key is not configured."},500);
   if(!isAdminRequest(request,env))return json({error:"Unauthorized"},401);
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
-  if(!env.DB)return json({error:"D1 database not configured."},500);
+  if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
   try{
     await ensureProvidersTable(env);
     await ensureProviderAuthTables(env);
@@ -2811,7 +2811,7 @@ async function handleAdminResendProviderContract(request, env) {
     if (!row) return json({ error: "No matching provider contract found." }, 404);
     const acceptedAt = String(row.accepted_at || ""); const version = String(row.contract_version || "");
     if (!acceptedAt || version !== "v1.0") return json({ error: "Stored contract metadata is incomplete." }, 409);
-    const snapshot = ["FiiViu Partnervertrag / Bedingungen fuer Erlebnisanbieter","Vertragsversion: " + version,"Plattform: FiiViu S.R.L. | https://fiiviu.ro/legal/anbieter-bedingungen.html","Anbieter: " + String(row.company_name || row.name || ""),"CUI: " + String(row.cui || ""),"Gesetzlicher Vertreter: " + String(row.representative_name || ""),"E-Mail: " + email,"Akzeptiert am (UTC): " + acceptedAt,"","1. Gegenstand und Vermittlung: FiiViu vermittelt Kunden an Anbieter und stellt Buchungs-, Zahlungs- und Kommunikationsfunktionen bereit. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande. Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu; die verbleibenden 80 Prozent zahlt er direkt vor Ort an den Anbieter.","2. Anbieterangaben: Der Anbieter stellt vollstaendige und richtige Unternehmens-, Kontakt-, Register- und Zahlungsdaten sowie gesetzlich erforderliche Nachweise bereit.","3. Qualitaet und Rechtmaessigkeit: Der Anbieter bietet nur rechtmaessige Leistungen an, fuer die erforderliche Genehmigungen, Versicherungen und Qualifikationen vorliegen. Preise, Verfuegbarkeit, Treffpunkt, Teilnahme-, Sicherheits- und Stornierungsangaben muessen aktuell sein.","4. Provision und Zahlungen: Die 20-Prozent-Online-Anzahlung wird ueber Stripe direkt an FiiViu gezahlt und deckt die vereinbarte Vermittlungsprovision vollstaendig ab. Der Anbieter zieht die verbleibenden 80 Prozent direkt vor Ort ein, bar und/oder per Kartenterminal entsprechend den im Angebot angegebenen Zahlungsarten.","5. Ranking und Sichtbarkeit: Die Platzierung kann von Kategorie, Verfuegbarkeit, Relevanz, Aktualitaet, Preis, Nachfrage, Qualitaet und Vollstaendigkeit abhaengen. Eine bestimmte Platzierung wird nicht garantiert.","6. Sperrung und Beendigung: FiiViu kann Angebote bei gesetzlichen Pflichten, Sicherheitsrisiken, fehlenden Nachweisen, erheblichen Vertragsverletzungen oder unrichtigen Angaben sperren oder entfernen. Gesetzliche Rechte bleiben unberuehrt.","7. Anbieterbeschwerden: Beschwerden zu technischen Problemen, Massnahmen oder diesen Bedingungen koennen kostenlos an info@fiiviu.ro gerichtet werden.","8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze. Der Anbieter verwendet Kundendaten nur im rechtlich zulaessigen Umfang.","9. Geistiges Eigentum: Der Anbieter gewaehrleistet die rechtmaessige Nutzung seiner Bilder, Texte, Marken und sonstigen Inhalte und raeumt FiiViu ein einfaches Nutzungsrecht fuer die Plattformdarstellung ein.","10. Haftung: Der Anbieter haftet nach den gesetzlichen Vorschriften fuer seine Leistung und fuer rechtswidrige oder unrichtige von ihm bereitgestellte Inhalte.","11. Aenderungen: Bedingungen werden mit angemessener Vorankuendigung geaendert, soweit gesetzlich erforderlich. Wesentliche Aenderungen wirken nicht unzulaessig auf bereits geschlossene Buchungen zurueck.","12. Anwendbares Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.","13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.","","Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."].join("\n");
+    const snapshot = ["FiiViu – Contract de parteneriat și condiții pentru furnizorii de experiențe","Vertragsversion: " + version,"Plattform: FiiViu S.R.L. | https://fiiviu.ro/legal/anbieter-bedingungen.html","Anbieter: " + String(row.company_name || row.name || ""),"CUI: " + String(row.cui || ""),"Gesetzlicher Vertreter: " + String(row.representative_name || ""),"E-Mail: " + email,"Akzeptiert am (UTC): " + acceptedAt,"","1. Obiect și intermediere: FiiViu conectează clienții cu furnizorii și oferă funcții de rezervare, plată și comunicare. Contractul de prestare a serviciului se încheie direct între client și furnizor. În modelul 20/80, clientul plătește online către FiiViu 20% din prețul total, iar restul de 80% direct furnizorului, la fața locului.","2. Datele furnizorului: Furnizorul transmite date complete și corecte despre companie, contact, registru și plăți, precum și documentele justificative cerute de lege.","3. Calitate și legalitate: Furnizorul oferă numai servicii legale pentru care deține autorizațiile, asigurările și calificările necesare. Informațiile despre preț, disponibilitate, locul întâlnirii, participare, siguranță și anulare trebuie să fie actuale.","4. Comision și plăți: Avansul online de 20% este plătit prin Stripe direct către FiiViu și acoperă integral comisionul de intermediere convenit. Furnizorul încasează restul de 80% direct la fața locului, în numerar și/sau prin terminal de card, conform metodelor indicate în ofertă.","5. Ordine și vizibilitate: Poziționarea poate depinde de categorie, disponibilitate, relevanță, actualitate, preț, cerere, calitate și completitudinea datelor. Nu este garantată o anumită poziție.","6. Suspendare și încetare: FiiViu poate suspenda sau elimina ofertele atunci când o impun obligațiile legale, riscurile de siguranță, lipsa documentelor, încălcările contractuale grave sau informațiile incorecte. Drepturile prevăzute de lege rămân valabile.","7. Reclamațiile furnizorilor: Reclamațiile privind probleme tehnice, măsuri sau aceste condiții pot fi trimise gratuit la info@fiiviu.ro.","8. Protecția datelor: Ambele părți respectă legislația aplicabilă privind protecția datelor. Furnizorul utilizează datele clienților numai în limitele permise de lege.","9. Proprietate intelectuală: Furnizorul garantează utilizarea legală a imaginilor, textelor, mărcilor și celorlalte materiale și acordă FiiViu un drept neexclusiv de utilizare pentru afișarea pe platformă.","10. Răspundere: Furnizorul răspunde potrivit legii pentru serviciile sale și pentru conținutul ilegal sau incorect furnizat.","11. Modificări: Modificările condițiilor sunt comunicate cu un preaviz rezonabil atunci când legea o cere. Modificările importante nu se aplică retroactiv rezervărilor încheiate, cu excepția cazurilor permise de lege.","12. Legea aplicabilă: Se aplică dreptul român, cu respectarea normelor imperative ale UE și a protecției consumatorilor.","13. Datele societății: Datele complete ale FiiViu S.R.L. vor fi publicate înainte de lansarea publică pe pagina de informații juridice.","","Această versiune a contractului este acceptată prin consimțământul electronic expres al reprezentantului legal indicat. Acceptarea este înregistrată cu marcaj temporal, adresă IP, User-Agent, versiunea contractului și amprenta SHA-256."].join("\n");
     if (await hashProviderSession(snapshot) !== String(row.contract_sha256 || "")) return json({ error: "Contract hash mismatch; no email sent." }, 409);
     const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { "Authorization": "Bearer " + String(env.RESEND_API_KEY).trim(), "Content-Type": "application/json" }, body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [email], subject: "Ihr akzeptierter FiiViu-Partnervertrag (" + version + ")", text: "Im Anhang finden Sie den am " + acceptedAt + " UTC akzeptierten Partnervertrag.", attachments: [{ filename: "FiiViu-Partnervertrag-" + version + ".pdf", content: buildProviderContractPdf(snapshot) }] }) });
     const result = await response.json().catch(() => ({})); if (!response.ok) return json({ error: result.message || result.error || "Resend rejected the request." }, 502);
@@ -2820,8 +2820,8 @@ async function handleAdminResendProviderContract(request, env) {
 }
 async function handleProviderRegistration(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
-  if(!env.DB)return json({error:"D1 database not configured."},500);
-  if(!String(env.RESEND_API_KEY||"").trim())return json({error:"Der PDF-Vertragsversand ist nicht konfiguriert. Bitte RESEND_API_KEY einrichten und erneut versuchen."},503);
+  if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
+  if(!String(env.RESEND_API_KEY||"").trim())return json({error:"Trimiterea contractului PDF nu este configurată. Configurați RESEND_API_KEY și încercați din nou."},503);
   try{
     await ensureProvidersTable(env);
     await ensureProviderAuthTables(env);
@@ -2833,15 +2833,15 @@ async function handleProviderRegistration(request,env){
     const representativeName=String(body.representative_name||"").trim().slice(0,160);
     const email=String(body.email||"").trim().toLowerCase();
     const password=String(body.password||"");
-    if(!companyName||!representativeName||!email||!cui)return json({error:"Bitte füllen Sie alle Pflichtfelder aus."},400);
+    if(!companyName||!representativeName||!email||!cui)return json({error:"Completați toate câmpurile obligatorii."},400);
     if(!/^\d{2,10}$/.test(cui))return json({error:"Bitte geben Sie eine gültige rumänische CUI/Steuernummer mit 2 bis 10 Ziffern ein."},400);
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return json({error:"Bitte geben Sie eine gültige E-Mail-Adresse ein."},400);
-    if(password.length<12||password.length>128)return json({error:"Das Passwort muss zwischen 12 und 128 Zeichen lang sein."},400);
-    if(body.accept_contract!==true)return json({error:"Sie müssen den Partnervertrag und die Provisionsbedingungen ausdrücklich akzeptieren."},400);
+    if(password.length<12||password.length>128)return json({error:"Parola trebuie să conțină între 12 și 128 de caractere."},400);
+    if(body.accept_contract!==true)return json({error:"Trebuie să acceptați în mod explicit contractul de parteneriat și condițiile privind comisionul."},400);
     const existingEmail=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? LIMIT 1").bind(email).first();
-    if(existingEmail)return json({error:"Für diese E-Mail-Adresse besteht bereits ein Anbieterzugang. Bitte melden Sie sich an."},409);
+    if(existingEmail)return json({error:"Există deja un cont de furnizor pentru această adresă de e-mail. Autentificați-vă."},409);
     const existingCui=await env.DB.prepare("SELECT provider_ref FROM providers WHERE cui=? LIMIT 1").bind(cui).first();
-    if(existingCui)return json({error:"Diese CUI ist bereits registriert. Bitte kontaktieren Sie info@fiiviu.ro, falls Sie Hilfe benötigen."},409);
+    if(existingCui)return json({error:"Acest CUI este deja înregistrat. Pentru ajutor, contactați info@fiiviu.ro."},409);
     const base=companyName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,10)||"PROVIDER";
     let providerRef="";
     for(let attempt=0;attempt<8;attempt++){
@@ -2855,32 +2855,32 @@ async function handleProviderRegistration(request,env){
     const acceptedAt=new Date().toISOString();
     const ipAddress=String(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,128);
     const userAgent=String(request.headers.get("User-Agent")||"unknown").slice(0,1000);
-    const contractVersion="v1.0";
+    const contractVersion="v1.1";
     const contractSnapshot=[
-      "FiiViu Partnervertrag / Bedingungen fuer Erlebnisanbieter",
-      "Vertragsversion: "+contractVersion,
+      "FiiViu – Contract de parteneriat și condiții pentru furnizorii de experiențe",
+      "Versiunea contractului: "+contractVersion,
       "Plattform: FiiViu S.R.L. | https://fiiviu.ro/legal/anbieter-bedingungen.html",
-      "Anbieter: "+companyName,
+      "Furnizor: "+companyName,
       "CUI: "+cui,
-      "Gesetzlicher Vertreter: "+representativeName,
+      "Reprezentant legal: "+representativeName,
       "E-Mail: "+email,
-      "Akzeptiert am (UTC): "+acceptedAt,
+      "Acceptat la (UTC): "+acceptedAt,
       "",
-      "1. Gegenstand und Vermittlung: FiiViu vermittelt Kunden an Anbieter und stellt Buchungs-, Zahlungs- und Kommunikationsfunktionen bereit. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande. Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu; die verbleibenden 80 Prozent zahlt er direkt vor Ort an den Anbieter.",
-      "2. Anbieterangaben: Der Anbieter stellt vollstaendige und richtige Unternehmens-, Kontakt-, Register- und Zahlungsdaten sowie gesetzlich erforderliche Nachweise bereit.",
-      "3. Qualitaet und Rechtmaessigkeit: Der Anbieter bietet nur rechtmaessige Leistungen an, fuer die erforderliche Genehmigungen, Versicherungen und Qualifikationen vorliegen. Preise, Verfuegbarkeit, Treffpunkt, Teilnahme-, Sicherheits- und Stornierungsangaben muessen aktuell sein.",
-      "4. Provision und Zahlungen: Die 20-Prozent-Online-Anzahlung wird ueber Stripe direkt an FiiViu gezahlt und deckt die vereinbarte Vermittlungsprovision vollstaendig ab. Der Anbieter zieht die verbleibenden 80 Prozent direkt vor Ort ein, bar und/oder per Kartenterminal entsprechend den im Angebot angegebenen Zahlungsarten.",
-      "5. Ranking und Sichtbarkeit: Die Platzierung kann von Kategorie, Verfuegbarkeit, Relevanz, Aktualitaet, Preis, Nachfrage, Qualitaet und Vollstaendigkeit abhaengen. Eine bestimmte Platzierung wird nicht garantiert.",
-      "6. Sperrung und Beendigung: FiiViu kann Angebote bei gesetzlichen Pflichten, Sicherheitsrisiken, fehlenden Nachweisen, erheblichen Vertragsverletzungen oder unrichtigen Angaben sperren oder entfernen. Gesetzliche Rechte bleiben unberuehrt.",
-      "7. Anbieterbeschwerden: Beschwerden zu technischen Problemen, Massnahmen oder diesen Bedingungen koennen kostenlos an info@fiiviu.ro gerichtet werden.",
-      "8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze. Der Anbieter verwendet Kundendaten nur im rechtlich zulaessigen Umfang.",
-      "9. Geistiges Eigentum: Der Anbieter gewaehrleistet die rechtmaessige Nutzung seiner Bilder, Texte, Marken und sonstigen Inhalte und raeumt FiiViu ein einfaches Nutzungsrecht fuer die Plattformdarstellung ein.",
-      "10. Haftung: Der Anbieter haftet nach den gesetzlichen Vorschriften fuer seine Leistung und fuer rechtswidrige oder unrichtige von ihm bereitgestellte Inhalte.",
-      "11. Aenderungen: Bedingungen werden mit angemessener Vorankuendigung geaendert, soweit gesetzlich erforderlich. Wesentliche Aenderungen wirken nicht unzulaessig auf bereits geschlossene Buchungen zurueck.",
-      "12. Anwendbares Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.",
-      "13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.",
+      "1. Obiect și intermediere: FiiViu conectează clienții cu furnizorii și oferă funcții de rezervare, plată și comunicare. Contractul de prestare a serviciului se încheie direct între client și furnizor. În modelul 20/80, clientul plătește online către FiiViu 20% din prețul total, iar restul de 80% direct furnizorului, la fața locului.",
+      "2. Datele furnizorului: Furnizorul transmite date complete și corecte despre companie, contact, registru și plăți, precum și documentele justificative cerute de lege.",
+      "3. Calitate și legalitate: Furnizorul oferă numai servicii legale pentru care deține autorizațiile, asigurările și calificările necesare. Informațiile despre preț, disponibilitate, locul întâlnirii, participare, siguranță și anulare trebuie să fie actuale.",
+      "4. Comision și plăți: Avansul online de 20% este plătit prin Stripe direct către FiiViu și acoperă integral comisionul de intermediere convenit. Furnizorul încasează restul de 80% direct la fața locului, în numerar și/sau prin terminal de card, conform metodelor indicate în ofertă.",
+      "5. Ordine și vizibilitate: Poziționarea poate depinde de categorie, disponibilitate, relevanță, actualitate, preț, cerere, calitate și completitudinea datelor. Nu este garantată o anumită poziție.",
+      "6. Suspendare și încetare: FiiViu poate suspenda sau elimina ofertele atunci când o impun obligațiile legale, riscurile de siguranță, lipsa documentelor, încălcările contractuale grave sau informațiile incorecte. Drepturile prevăzute de lege rămân valabile.",
+      "7. Reclamațiile furnizorilor: Reclamațiile privind probleme tehnice, măsuri sau aceste condiții pot fi trimise gratuit la info@fiiviu.ro.",
+      "8. Protecția datelor: Ambele părți respectă legislația aplicabilă privind protecția datelor. Furnizorul utilizează datele clienților numai în limitele permise de lege.",
+      "9. Proprietate intelectuală: Furnizorul garantează utilizarea legală a imaginilor, textelor, mărcilor și celorlalte materiale și acordă FiiViu un drept neexclusiv de utilizare pentru afișarea pe platformă.",
+      "10. Răspundere: Furnizorul răspunde potrivit legii pentru serviciile sale și pentru conținutul ilegal sau incorect furnizat.",
+      "11. Modificări: Modificările condițiilor sunt comunicate cu un preaviz rezonabil atunci când legea o cere. Modificările importante nu se aplică retroactiv rezervărilor încheiate, cu excepția cazurilor permise de lege.",
+      "12. Legea aplicabilă: Se aplică dreptul român, cu respectarea normelor imperative ale UE și a protecției consumatorilor.",
+      "13. Datele societății: Datele complete ale FiiViu S.R.L. vor fi publicate înainte de lansarea publică pe pagina de informații juridice.",
       "",
-      "Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."
+      "Această versiune a contractului este acceptată prin consimțământul electronic expres al reprezentantului legal indicat. Acceptarea este înregistrată cu marcaj temporal, adresă IP, User-Agent, versiunea contractului și amprenta SHA-256."
     ].join("\n");
     const contractHash=await hashProviderSession(contractSnapshot);
     const contractLogId=crypto.randomUUID();
@@ -2898,10 +2898,10 @@ async function handleProviderRegistration(request,env){
         body:JSON.stringify({
           from:"FiiViu <noreply@fiiviu.ro>",
           to:[email],
-          subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.0)",
-          text:"Îți mulțumim pentru înregistrarea la FiiViu. În atașament găsești contractul de parteneriat, versiunea v1.0, acceptat la data de "+acceptedAt+" UTC. Autentificare: https://fiiviu.ro/anbieter/login",
+          subject:"Contractul de parteneriat FiiViu acceptat (v1.1)",
+          text:"Îți mulțumim pentru înregistrarea la FiiViu. În atașament găsești contractul de parteneriat, versiunea v1.1, acceptat la data de "+acceptedAt+" UTC. Autentificare: https://fiiviu.ro/provider.html",
           html:"<p>Îți mulțumim pentru înregistrarea la FiiViu.</p><p>În atașament găsești contractul de parteneriat, versiunea <strong>v1.0</strong>, acceptat la data de "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
-          attachments:[{filename:"FiiViu-Partnervertrag-v1.0.pdf",content:pdf}]
+          attachments:[{filename:"FiiViu-Contract-Parteneriat-v1.1.pdf",content:pdf}]
         })
       });
       const result=await response.json().catch(()=>({}));
@@ -2910,10 +2910,10 @@ async function handleProviderRegistration(request,env){
     }catch(mailError){
       console.error("Provider contract email delivery failed",{providerRef,code:mailError?.code||"EMAIL_SEND_FAILED",message:mailError?.message||""});
     }
-    return json({success:true,providerRef,emailSent,contractVersion,contractAcceptedAt:acceptedAt,message:emailSent?"Registrierung abgeschlossen; der akzeptierte Partnervertrag wurde als PDF versendet.":"Konto und Vertragsannahme wurden gespeichert, aber der PDF-E-Mail-Versand ist fehlgeschlagen. Bitte kontaktieren Sie info@fiiviu.ro."},201);
+    return json({success:true,providerRef,emailSent,contractVersion,contractAcceptedAt:acceptedAt,message:emailSent?"Înregistrarea a fost finalizată, iar contractul de parteneriat acceptat a fost trimis în format PDF.":"Contul și acceptarea contractului au fost înregistrate, dar trimiterea contractului PDF prin e-mail a eșuat. Contactați info@fiiviu.ro."},201);
   }catch(error){
     console.error("Provider self-registration failed",{message:error?.message||"unknown"});
-    return json({error:error?.message||"Registrierung fehlgeschlagen."},500);
+    return json({error:error?.message||"Înregistrarea a eșuat."},500);
   }
 }
 
