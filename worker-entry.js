@@ -3078,7 +3078,9 @@ async function handleProviderExperiences(request,env){
       const body=await request.json().catch(()=>({}));
       const title=String(body.title||"").trim();
       const priceCents=Number(body.priceCents);
+      const currency=String(body.currency||"ron").toLowerCase();
       if(!title)return json({error:"Der Titel ist erforderlich."},400);
+      if(currency!=="ron")return json({error:"Neue Anbieterangebote müssen in RON ausgezeichnet werden."},400);
       if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 RON eingeben."},400);
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
@@ -3088,7 +3090,7 @@ async function handleProviderExperiences(request,env){
       const active=body.publish===true?1:0;
       const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
       const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
-        providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"ron").toLowerCase(),
+        providerRef,title,String(body.description||"").trim()||null,priceCents,currency,
         String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
         String(body.meetingCity||"București").trim()||"București",String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
         Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"wellness").trim().toLowerCase()||"wellness",
