@@ -122,9 +122,9 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(worker, /body\.accept_contract!==true/);
   assert.match(worker, /INSERT INTO vendor_contract_logs/);
   assert.match(worker, /contract_sha256/);
-  assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.0\.pdf",content:pdf\}\]/);
+  assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.1\.pdf",content:pdf\}\]/);
   assert.match(page, /name="accept_contract" type="checkbox" required/);
-  assert.match(page, /20% Anzahlung per Online-Buchung/);
+  assert.match(page, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
   assert.match(migration, /pay_on_site_cash/);
@@ -992,4 +992,22 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.doesNotMatch(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
   assert.doesNotMatch(workflow, /command:\s*deploy\b/);
+});
+
+test("provider contract v1.1 contains the 20/80 clauses in all languages and acceptance snapshot", () => {
+  const terms = read("legal/anbieter-bedingungen.html");
+  const worker = read("worker-entry.js");
+  const registration = read("anbieter-register.html");
+  assert.match(terms, /Vertragsfassung v1\.1/);
+  assert.match(terms, /c\.en\.s=\[/);
+  assert.match(terms, /c\.ro\.s=\[/);
+  for (const heading of ["14. Bookings, performance and disruption", "15. On-site payment and receipts", "16. Commission, refunds and reconciliation", "20. Contract version and evidence"]) {
+    assert.ok(terms.includes(heading), `Missing English provider clause: ${heading}`);
+  }
+  for (const heading of ["14. Rezervări, executare și întreruperi", "15. Plăți la fața locului și documente", "16. Comision, rambursări și reconciliere", "20. Versiunea contractului și dovada"]) {
+    assert.ok(terms.includes(heading), `Missing Romanian provider clause: ${heading}`);
+  }
+  assert.match(worker, /const contractVersion="v1\.1"/);
+  assert.match(worker, /20\. Vertragsfassung:/);
+  assert.match(registration, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
 });
