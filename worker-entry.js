@@ -2982,19 +2982,19 @@ async function ensureProviderRegistrationSchema(env){
 
 async function handleProviderLogin(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
-  if(!env.DB)return json({error:"D1 database not configured"},500);
+  if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
   try{
     await ensureProvidersTable(env); await ensureProviderAuthTables(env);
     const body=await request.json(),email=clean(body.email).toLowerCase(),password=String(body.password||"");
-    if(!email||!password)return json({error:"E-Mail und Passwort sind erforderlich."},400);
+    if(!email||!password)return json({error:"Adresa de e-mail și parola sunt obligatorii."},400);
     const account=await env.DB.prepare("SELECT a.provider_ref,a.password_salt,a.password_hash,a.active,p.name,p.connect_account_id,p.active AS provider_active FROM provider_accounts a JOIN providers p ON p.provider_ref=a.provider_ref WHERE lower(a.email)=? LIMIT 1").bind(email).first();
-    if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return json({error:"E-Mail oder Passwort ist falsch."},401);
-    if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return json({error:"E-Mail oder Passwort ist falsch."},401);
+    if(!account||Number(account.active)!==1||Number(account.provider_active)!==1)return json({error:"Adresa de e-mail sau parola sunt incorecte."},401);
+    if(await hashProviderPassword(password,account.password_salt)!==String(account.password_hash||""))return json({error:"Adresa de e-mail sau parola sunt incorecte."},401);
     const session=await createProviderSession(env,String(account.provider_ref));
     const response=json({success:true,providerRef:String(account.provider_ref),provider:{name:account.name,connectAccountId:account.connect_account_id}});
     response.headers.set("Set-Cookie",providerSessionCookie(session.raw));
     return response;
-  }catch(error){return json({error:error?.message||"Login fehlgeschlagen."},500)}
+  }catch(error){return json({error:error?.message||"Autentificarea nu a reușit."},500)}
 }
 
 async function handleProviderSession(request,env){
@@ -3189,14 +3189,14 @@ async function ensureOffersTable(env){
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
 async function handleProviderExperiences(request,env){
-  if(!env.DB)return json({error:"D1 database not configured"},500);
+  if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
   try{
     await ensureProviderRegistrationSchema(env);
     await ensureOffersTable(env);
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
-    if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
+    if(!provider)return json({error:"Furnizorul nu a fost găsit."},404);
     if(request.method==="GET"){
       const rows=await env.DB.prepare("SELECT * FROM offers WHERE provider_ref=? ORDER BY active DESC,title ASC,id ASC").bind(providerRef).all();
       return json({provider,experiences:(rows.results||[]).map(x=>({...x,status:Number(x.active)===1?"published":"draft"}))});
@@ -3206,14 +3206,14 @@ async function handleProviderExperiences(request,env){
       const title=String(body.title||"").trim();
       const priceCents=Number(body.priceCents);
       const currency=String(body.currency||"ron").toLowerCase();
-      if(!title)return json({error:"Der Titel ist erforderlich."},400);
-      if(currency!=="ron")return json({error:"Neue Anbieterangebote müssen in RON ausgezeichnet werden."},400);
-      if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Bitte einen Preis von mindestens 2,50 RON eingeben, damit die Online-Anzahlung mindestens 0,50 RON beträgt."},400);
+      if(!title)return json({error:"Titlul este obligatoriu."},400);
+      if(currency!=="ron")return json({error:"Noile oferte trebuie să aibă prețurile afișate în RON."},400);
+      if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Introduceți un preț de cel puțin 2,50 RON, astfel încât avansul online să fie de minimum 0,50 RON."},400);
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
-      if(!payCash&&!payCard)return json({error:"Bitte mindestens eine Zahlungsart vor Ort auswählen."},400);
+      if(!payCash&&!payCard)return json({error:"Selectați cel puțin o metodă de plată la fața locului."},400);
       const existing=await env.DB.prepare("SELECT id FROM offers WHERE provider_ref=? AND lower(title)=lower(?) LIMIT 1").bind(providerRef,title).first();
-      if(existing)return json({error:"Ein Erlebnis mit diesem Titel existiert bereits."},409);
+      if(existing)return json({error:"Există deja o experiență cu acest titlu."},409);
       const active=body.publish===true?1:0;
       const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
       const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
@@ -3226,10 +3226,10 @@ async function handleProviderExperiences(request,env){
       const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
       return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?experienceId:null}},201);
     }
-    return json({error:"Method Not Allowed"},405);
+    return json({error:"Metodă nepermisă."},405);
   }catch(error){
     console.error("FiiViu provider experiences failed",error);
-    return json({error:error?.message||"Erlebnis konnte nicht geladen werden."},500);
+    return json({error:error?.message||"Experiența nu a putut fi încărcată."},500);
   }
 }
 
@@ -3297,8 +3297,8 @@ async function handleProviderConnectStatus(request,env){
 }
 
 async function handleProviderOverview(request,env){
-  if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
-  if(!env.DB)return json({error:"D1 database not configured"},500);
+  if(request.method!=="GET")return json({error:"Metodă nepermisă."},405);
+  if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
   try{
@@ -3306,7 +3306,7 @@ async function handleProviderOverview(request,env){
     await ensureProviderRegistrationSchema(env);
     await ensureBookingColumns(env);
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
-    if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
+    if(!provider)return json({error:"Furnizorul nu a fost găsit."},404);
 
     // Financial dashboard values come from the settlement ledger, not raw booking
     // amounts. This keeps provider revenue/payout figures consistent with Stripe.
@@ -3346,7 +3346,7 @@ async function handleProviderOverview(request,env){
     });
   }catch(error){
     console.error("FiiViu provider overview failed",error);
-    return json({error:error?.message||"Dashboard konnte nicht geladen werden."},500);
+    return json({error:error?.message||"Panoul furnizorului nu a putut fi încărcat."},500);
   }
 }
 
