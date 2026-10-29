@@ -648,20 +648,23 @@ async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
 }
 
 function isAdmin(request,env){return String(env.ADMIN_PAYOUT_KEY||"").trim()!==""&&String(request.headers.get("Authorization")||"").trim()==="Bearer "+String(env.ADMIN_PAYOUT_KEY||"").trim()}
+async function requireTables(env, tableNames){
+  for (const tableName of tableNames) {
+    const row = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1").bind(tableName).first();
+    if (!row) throw new Error("Required D1 table is missing: " + tableName + ". Apply the repository migrations before enabling this route.");
+  }
+}
 async function ensurePartnerTrackingTable(env){
-  await env.DB.batch([
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_scan_events (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_visitors (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, visitor_id TEXT NOT NULL, first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(partner_ref, visitor_id))")
-  ]);
+  await requireTables(env, ["partner_scan_events", "partner_visitors"]);
 }
 async function ensurePartnersTable(env){
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'Hotel', partner_ref TEXT NOT NULL UNIQUE, contact_name TEXT, contact_email TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await requireTables(env, ["partners"]);
 }
 async function ensurePartnerAccountsTable(env){
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL UNIQUE, email TEXT NOT NULL UNIQUE, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await requireTables(env, ["partner_accounts"]);
 }
 async function ensurePartnerSessionsTable(env){
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, session_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL)").run();
+  await requireTables(env, ["partner_sessions"]);
 }
 function randomHex(bytesLength=32){
   const bytes=new Uint8Array(bytesLength); crypto.getRandomValues(bytes);
@@ -708,7 +711,7 @@ function partnerSessionCookie(value,maxAge=2592000){
   return "__Host-fiiviu_partner_session="+encodeURIComponent(value)+"; Path=/; Max-Age="+maxAge+"; HttpOnly; Secure; SameSite=Lax";
 }
 async function ensurePayoutsTable(env){
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS partner_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_ref TEXT NOT NULL, amount_cents INTEGER NOT NULL, payout_date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'paid', reference TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await requireTables(env, ["partner_payouts"]);
 }
 async function ensureBookingSettlementsTable(env){
   const rows=await env.DB.prepare("PRAGMA table_info(booking_settlements)").all();
