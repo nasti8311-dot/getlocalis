@@ -3046,7 +3046,7 @@ async function handleProviderTestBooking(request, env) {
       customer_email: customerEmail,
       customer_phone: "",
       customer_language: "de",
-      experience_name: "FiiViu Testbuchung",
+      experience_name: "Rezervare de test FiiViu",
       booking_date: bookingDate,
       booking_time: bookingTime,
       guests: 2,
@@ -3056,7 +3056,7 @@ async function handleProviderTestBooking(request, env) {
       meeting_address: "Teststraße 1",
       meeting_city: "Bucharest",
       meeting_country: "Romania",
-      meeting_instructions: "Dies ist eine interne Testbuchung.",
+      meeting_instructions: "Aceasta este o rezervare internă de test.",
       arrival_minutes_before: 15,
       meeting_latitude: "",
       meeting_longitude: "",
@@ -3088,7 +3088,7 @@ async function handleProviderTestBooking(request, env) {
     try {
       await sendProviderBookingNotification(env, booking);
     } catch (error) {
-      emailErrors.push("Veranstalter-Mail: " + String(error?.message || error));
+      emailErrors.push("E-mail către furnizor: trimiterea nu a reușit.");
     }
 
     try {
@@ -3111,12 +3111,12 @@ async function handleProviderTestBooking(request, env) {
       provider_email: clean(provider.contact_email),
       email_errors: emailErrors,
       message: emailErrors.length
-        ? "Testbuchung erstellt, aber mindestens eine E-Mail konnte nicht gesendet werden."
-        : "Testbuchung erstellt und E-Mails wurden versendet."
+        ? "Rezervarea de test a fost creată, dar cel puțin un e-mail nu a putut fi trimis."
+        : "Rezervarea de test a fost creată, iar e-mailurile au fost trimise."
     });
   } catch (error) {
     console.error("FiiViu provider test booking failed", error);
-    return json({ error: error?.message || "Testbuchung konnte nicht erstellt werden." }, 500);
+    return json({ error: error?.message || "Rezervarea de test nu a putut fi creată." }, 500);
   }
 }
 
