@@ -197,10 +197,11 @@ export default {
             // Safety guard: never finalize a live event while the Worker is
             // configured with test credentials, or vice versa.
             const paymentIntent = event.data?.object;
+            const directPaymentModel = String(paymentIntent?.metadata?.payment_model || "") === "fiiviu_fee_20_direct_80";
             const isFiiViuCheckout =
               String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
               String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
-              (configuredTestMode ||
+              (configuredTestMode || directPaymentModel ||
                 /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || "")));
 
             if (configuredTestMode !== eventIsTestMode) {
