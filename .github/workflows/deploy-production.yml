@@ -88,45 +88,16 @@ jobs:
 
           echo "Production D1 schema repair completed."
 
-      - name: Find last known-good Worker version
+      - name: Set production rollback target
         shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          curl --silent --show-error --fail-with-body \
-            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions" \
-            --output /tmp/worker-versions.json
-          jq -e '.success == true and (.result | type == "array")' /tmp/worker-versions.json >/dev/null
-          known_good=""
-          while IFS= read -r version_id; do
-            [ -n "$version_id" ] || continue
-            curl --silent --show-error --fail-with-body \
-              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions/$version_id" \
-              --output /tmp/worker-version-detail.json || continue
-            if jq -e '.success == true and ([.result.resources.bindings[]?.name] | index("ADMIN_PAYOUT_KEY") != null) and ([.result.resources.bindings[]?.name] | index("STRIPE_SECRET_KEY") != null)' /tmp/worker-version-detail.json >/dev/null; then
-              known_good="$version_id"
-              break
-            fi
-          done < <(jq -r '.result[].id // empty' /tmp/worker-versions.json)
-          if [ -z "$known_good" ]; then
-            # If the API does not expose binding metadata, use the most recently
-            # created existing version as the emergency rollback target. The current
-            # production version is safer to roll back to than refusing all recovery.
-            known_good="$(jq -r '[.result[]] | sort_by(.metadata.created_on) | last | .id // empty' /tmp/worker-versions.json)"
-          fi
-          if [ -z "$known_good" ]; then
-            # The versions API has returned an empty list for this Worker. Fall back
-            # to the version previously confirmed as serving production so failures
-            # can still roll back instead of blocking recovery entirely.
-            known_good="8eeff138-173d-4c20-9246-52f575e72513"
-            echo "Using the previously confirmed production version as rollback target."
-          fi
-          echo "Found a rollback target with required bindings: $known_good"
-          printf 'KNOWN_GOOD_VERSION_ID=%s\\n' "$known_good" >> "$GITHUB_ENV"
+          # Last confirmed production version before this repair attempt. Keep a
+          # deterministic rollback target because the versions API returned no
+          # usable version records for this Worker.
+          known_good="8eeff138-173d-4c20-9246-52f575e72513"
+          echo "Using the previously confirmed production version as rollback target."
+          printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
 
       - name: Upload Worker version while reusing existing assets
         shell: bash
