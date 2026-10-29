@@ -75,6 +75,7 @@ export default {
       return handleAdminProviderPassword(request, env);
     }
 
+    if (url.pathname === "/api/provider-register") return handleProviderRegistration(request, env);
     if (url.pathname === "/api/provider-login") return handleProviderLogin(request, env);
     if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
     if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
@@ -2731,7 +2732,161 @@ async function handleAdminProviderPassword(request,env){
   }
 }
 
-async function handleProviderLogin(request,env){
+async 
+
+async function handleProviderRegistration(request,env){
+  if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({error:"D1 database not configured."},500);
+  if(!String(env.RESEND_API_KEY||"").trim())return json({error:"Der PDF-Vertragsversand ist nicht konfiguriert. Bitte RESEND_API_KEY einrichten und erneut versuchen."},503);
+  try{
+    await ensureProvidersTable(env);
+    await ensureProviderAuthTables(env);
+    const columns=await env.DB.prepare("PRAGMA table_info(providers)").all();
+    const names=new Set((columns.results||[]).map(row=>String(row.name||"")));
+    for(const column of ["company_name","cui","representative_name"]){
+      if(!names.has(column))return json({error:"Anbieteregistrierung ist noch nicht vollständig bereit. Bitte Datenbankmigration 018_provider_self_registration_contracts.sql anwenden."},503);
+    }
+    const logTable=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vendor_contract_logs' LIMIT 1").first();
+    if(!logTable)return json({error:"Vertragsprotokoll-Tabelle fehlt. Bitte Datenbankmigration 018_provider_self_registration_contracts.sql anwenden."},503);
+    const body=await request.json().catch(()=>({}));
+    const companyName=String(body.company_name||"").trim().slice(0,180);
+    const cuiRaw=String(body.cui||"").trim().toUpperCase().replace(/\s+/g,"");
+    const cui=cuiRaw.replace(/^RO/,"");
+    const representativeName=String(body.representative_name||"").trim().slice(0,160);
+    const email=String(body.email||"").trim().toLowerCase();
+    const password=String(body.password||"");
+    if(!companyName||!representativeName||!email||!cui)return json({error:"Bitte füllen Sie alle Pflichtfelder aus."},400);
+    if(!/^\d{2,10}$/.test(cui))return json({error:"Bitte geben Sie eine gültige rumänische CUI/Steuernummer mit 2 bis 10 Ziffern ein."},400);
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return json({error:"Bitte geben Sie eine gültige E-Mail-Adresse ein."},400);
+    if(password.length<12||password.length>128)return json({error:"Das Passwort muss zwischen 12 und 128 Zeichen lang sein."},400);
+    if(body.accept_contract!==true)return json({error:"Sie müssen den Partnervertrag und die Provisionsbedingungen ausdrücklich akzeptieren."},400);
+    const existingEmail=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? LIMIT 1").bind(email).first();
+    if(existingEmail)return json({error:"Für diese E-Mail-Adresse besteht bereits ein Anbieterzugang. Bitte melden Sie sich an."},409);
+    const existingCui=await env.DB.prepare("SELECT provider_ref FROM providers WHERE cui=? LIMIT 1").bind(cui).first();
+    if(existingCui)return json({error:"Diese CUI ist bereits registriert. Bitte kontaktieren Sie info@fiiviu.ro, falls Sie Hilfe benötigen."},409);
+    const base=companyName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,10)||"PROVIDER";
+    let providerRef="";
+    for(let attempt=0;attempt<8;attempt++){
+      const candidate=base+"-"+providerRandomHex(4).toUpperCase();
+      const collision=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? LIMIT 1").bind(candidate).first();
+      if(!collision){providerRef=candidate;break;}
+    }
+    if(!providerRef)throw new Error("Provider reference could not be generated.");
+    const salt=providerRandomHex(16);
+    const passwordHash=await hashProviderPassword(password,salt);
+    const acceptedAt=new Date().toISOString();
+    const ipAddress=String(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,128);
+    const userAgent=String(request.headers.get("User-Agent")||"unknown").slice(0,1000);
+    const contractVersion="v1.0";
+    const contractSnapshot=[
+      "FiiViu Partnervertrag / Bedingungen fuer Erlebnisanbieter",
+      "Vertragsversion: "+contractVersion,
+      "Plattform: FiiViu S.R.L. | https://fiiviu.ro/legal/anbieter-bedingungen.html",
+      "Anbieter: "+companyName,
+      "CUI: "+cui,
+      "Gesetzlicher Vertreter: "+representativeName,
+      "E-Mail: "+email,
+      "Akzeptiert am (UTC): "+acceptedAt,
+      "",
+      "1. Vermittlung: FiiViu vermittelt Kunden an Anbieter. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande.",
+      "2. Verantwortung: Der Anbieter ist fuer Rechtmaessigkeit, Sicherheit, Qualitaet und ordnungsgemaesse Erbringung der angebotenen Leistung verantwortlich.",
+      "3. Richtigkeit: Unternehmensdaten, Preise, Verfuegbarkeit, Treffpunkt, Sicherheits- und Teilnahmebedingungen muessen vollstaendig und aktuell sein.",
+      "4. Preis und Zahlung: Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu. Die verbleibenden 80 Prozent zahlt der Kunde direkt vor Ort an den Anbieter.",
+      "5. Vor-Ort-Zahlung: Der Anbieter muss die im Angebot angegebene Bar- und/oder Kartenzahlung akzeptieren und den Restbetrag selbst einziehen.",
+      "6. Stornierung: Es gelten die zum Buchungszeitpunkt veroeffentlichten Stornierungsbedingungen. Gesetzliche Rechte bleiben unberuehrt.",
+      "7. Inhalte: Der Anbieter darf nur Inhalte und Bilder verwenden, deren Nutzungsrechte vorliegen.",
+      "8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze und verwenden Kundendaten nur fuer zulaessige Zwecke.",
+      "9. Sperrung und Beendigung: FiiViu kann Angebote bei Sicherheitsrisiken, fehlenden Nachweisen, Rechtsverstoessen oder erheblichen Vertragsverletzungen sperren.",
+      "10. Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.",
+      "",
+      "Der vollstaendige Bedingungstext ist Bestandteil dieser Vereinbarung und wird in der jeweils akzeptierten Fassung unter der oben genannten URL bereitgestellt.",
+      "Die elektronische Bestaetigung dokumentiert die Annahme der Vertragsversion v1.0 durch den angegebenen gesetzlichen Vertreter."
+    ].join("\n");
+    const contractHash=await hashProviderSession(contractSnapshot);
+    const contractLogId=crypto.randomUUID();
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO providers (provider_ref,name,contact_email,company_name,cui,representative_name,active) VALUES (?,?,?,?,?,?,1)").bind(providerRef,companyName,email,companyName,cui,representativeName),
+      env.DB.prepare("INSERT INTO provider_accounts (provider_ref,email,password_salt,password_hash,active,updated_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP)").bind(providerRef,email,salt,passwordHash),
+      env.DB.prepare("INSERT INTO vendor_contract_logs (id,provider_ref,accepted_at,ip_address,user_agent,contract_version,contract_sha256) VALUES (?,?,?,?,?,?,?)").bind(contractLogId,providerRef,acceptedAt,ipAddress,userAgent,contractVersion,contractHash)
+    ]);
+    let emailSent=false;
+    try{
+      const pdf=buildProviderContractPdf(contractSnapshot);
+      const response=await fetch("https://api.resend.com/emails",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+String(env.RESEND_API_KEY).trim(),"Content-Type":"application/json"},
+        body:JSON.stringify({
+          from:"FiiViu <noreply@fiiviu.ro>",
+          to:[email],
+          subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.0)",
+          text:"Vielen Dank fuer Ihre Registrierung bei FiiViu. Im Anhang finden Sie den Partnervertrag der Version v1.0, den Sie am "+acceptedAt+" UTC akzeptiert haben. Anmeldung: https://fiiviu.ro/anbieter/login",
+          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.0</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\\"https://fiiviu.ro/anbieter/login\\">Zum Anbieter-Login</a></p>",
+          attachments:[{filename:"FiiViu-Partnervertrag-v1.0.pdf",content:pdf}]
+        })
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result?.message||result?.error||("Resend HTTP "+response.status));
+      emailSent=true;
+    }catch(mailError){
+      console.error("Provider contract email delivery failed",{providerRef,code:mailError?.code||"EMAIL_SEND_FAILED",message:mailError?.message||""});
+    }
+    return json({success:true,providerRef,emailSent,contractVersion,contractAcceptedAt:acceptedAt,message:emailSent?"Registrierung abgeschlossen; der akzeptierte Partnervertrag wurde als PDF versendet.":"Konto und Vertragsannahme wurden gespeichert, aber der PDF-E-Mail-Versand ist fehlgeschlagen. Bitte kontaktieren Sie info@fiiviu.ro."},201);
+  }catch(error){
+    console.error("Provider self-registration failed",{message:error?.message||"unknown"});
+    return json({error:error?.message||"Registrierung fehlgeschlagen."},500);
+  }
+}
+
+function buildProviderContractPdf(snapshot){
+  const ascii=String(snapshot||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[–—]/g,"-").replace(/[“”]/g,'"').replace(/[’‘]/g,"'").replace(/[^\x20-\x7E\n]/g," ");
+  const wrapped=[];
+  for(const sourceLine of ascii.split("\n")){
+    if(!sourceLine){wrapped.push("");continue;}
+    let remaining=sourceLine;
+    while(remaining.length>88){
+      let cut=remaining.lastIndexOf(" ",88);
+      if(cut<35)cut=88;
+      wrapped.push(remaining.slice(0,cut));
+      remaining=remaining.slice(cut).trimStart();
+    }
+    wrapped.push(remaining);
+  }
+  const pages=[];
+  for(let i=0;i<wrapped.length;i+=48)pages.push(wrapped.slice(i,i+48));
+  if(!pages.length)pages.push(["FiiViu Partnervertrag"]);
+  const objects=[];
+  objects[1]="<< /Type /Catalog /Pages 2 0 R >>";
+  const pageRefs=pages.map((_,i)=>(5+i*2)+" 0 R").join(" ");
+  objects[2]="<< /Type /Pages /Kids ["+pageRefs+"] /Count "+pages.length+" >>";
+  objects[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  objects[4]="<< /Producer (FiiViu) /Title (FiiViu Partnervertrag v1.0) >>";
+  pages.forEach((lines,i)=>{
+    const pageId=5+i*2,streamId=pageId+1;
+    const commands=["BT","/F1 10 Tf","48 790 Td","13 TL"];
+    for(const line of lines){
+      const safe=line.replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+      commands.push("("+safe+") Tj","T*");
+    }
+    commands.push("ET");
+    const stream=commands.join("\n");
+    objects[pageId]="<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents "+streamId+" 0 R >>";
+    objects[streamId]="<< /Length "+stream.length+" >>\nstream\n"+stream+"\nendstream";
+  });
+  let pdf="%PDF-1.4\n";
+  const offsets=[0];
+  for(let id=1;id<objects.length;id++){
+    offsets[id]=pdf.length;
+    pdf+=id+" 0 obj\n"+objects[id]+"\nendobj\n";
+  }
+  const xrefOffset=pdf.length;
+  pdf+="xref\n0 "+objects.length+"\n0000000000 65535 f \n";
+  for(let id=1;id<objects.length;id++)pdf+=String(offsets[id]).padStart(10,"0")+" 00000 n \n";
+  pdf+="trailer\n<< /Size "+objects.length+" /Root 1 0 R /Info 4 0 R >>\nstartxref\n"+xrefOffset+"\n%%EOF";
+  return btoa(pdf);
+}
+
+function handleProviderLogin(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured"},500);
   try{
