@@ -284,7 +284,8 @@ test("PaymentIntent carries complete FiiViu metadata at creation time", () => {
     "customer_language","booking_date","booking_time","experience_name","provider_name",
     "meeting_point_name","meeting_address","meeting_city","meeting_country",
     "meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude",
-    "provider_connect_account_id"
+    "provider_connect_account_id","provider_ref","payment_model","total_amount_cents",
+    "fiiviu_fee_cents","provider_due_cents"
   ]) {
     assert.match(createBlock, new RegExp('metadata\\[' + field + '\\]'));
   }
