@@ -17,6 +17,7 @@ export default {
 
     if (url.pathname === "/api/booking") return handleBookingAccess(request, env);
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
+    if (url.pathname === "/api/provider/cancel-booking") return handleProviderCancellation(request, env);
 
     // Admin UI is served from Pages and calls this Worker cross-origin.
     if (
@@ -124,7 +125,8 @@ export default {
         if (
           String(paymentIntent?.metadata?.fiiviu_checkout || "") !== "1" ||
           !String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") ||
-          (!configuredTestMode && !validProviderConnectAccount)
+          (String(paymentIntent?.metadata?.payment_model || "") !== "fiiviu_fee_20_direct_80" &&
+            !configuredTestMode && !validProviderConnectAccount)
         ) {
           return json({ error: "PaymentIntent is not a valid FiiViu checkout." }, 409);
         }
@@ -257,6 +259,10 @@ export default {
         params.set("amount",String(amount));
         params.set("currency",currency);
         params.set("metadata[fiiviu_checkout]","1");
+        params.set("metadata[payment_model]",String(data.paymentModel||"legacy_connect"));
+        params.set("metadata[total_amount_cents]",String(Number.isSafeInteger(Number(data.totalAmountCents))?Number(data.totalAmountCents):amount));
+        params.set("metadata[fiiviu_fee_cents]",String(Number.isSafeInteger(Number(data.fiiviuFeeCents))?Number(data.fiiviuFeeCents):amount));
+        params.set("metadata[provider_due_cents]",String(Number.isSafeInteger(Number(data.providerDueCents))?Number(data.providerDueCents):0));
         params.set("metadata[booking_id]",String(data.bookingId||""));
         params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
         params.set("metadata[experience_id]",String(data.experienceId||""));
@@ -693,10 +699,10 @@ async function handleCancellation(request, env) {
 
     const cancellation = getCancellationState(booking);
 
-    if (!cancellation.allowed) {
+    if (!cancellation.canCancel) {
       return json(
         {
-          error: "Die kostenlose Stornierungsfrist ist abgelaufen.",
+          error: "Das Erlebnis hat bereits begonnen; die Buchung kann nicht mehr online storniert werden.",
           cancellation_deadline: cancellation.deadline
         },
         409,
@@ -722,17 +728,15 @@ async function handleCancellation(request, env) {
     }
 
     try {
-      const refund = await stripeRefundPaymentIntent(
-        env,
-        booking.payment_intent_id,
-        token
-      );
+      const refund = cancellation.allowed
+        ? await stripeRefundPaymentIntent(env, booking.payment_intent_id, token)
+        : null;
 
       await env.DB
         .prepare(
-          "UPDATE bookings SET status='cancelled', payment_status='refunded', cancelled_at=CURRENT_TIMESTAMP, cancellation_refund_id=?, updated_at=CURRENT_TIMESTAMP WHERE cancellation_token=? AND status='cancellation_processing'"
+          "UPDATE bookings SET status='cancelled', payment_status=?, cancelled_at=CURRENT_TIMESTAMP, cancellation_refund_id=?, cancellation_reason='customer', updated_at=CURRENT_TIMESTAMP WHERE cancellation_token=? AND status='cancellation_processing'"
         )
-        .bind(refund.id, token)
+        .bind(refund ? "refunded" : "paid", refund?.id || null, token)
         .run();
 
       const cancelledBooking = await env.DB
@@ -742,16 +746,18 @@ async function handleCancellation(request, env) {
 
       const notificationStatus = await sendCancellationNotifications(
         env,
-        cancelledBooking || { ...booking, status: "cancelled", payment_status: "refunded", cancellation_refund_id: refund.id }
+        cancelledBooking || { ...booking, status: "cancelled", payment_status: refund ? "refunded" : "paid", cancellation_refund_id: refund?.id || null }
       );
 
       return json(
         {
           success: true,
           status: "cancelled",
-          refund_id: refund.id,
-          message:
-            "Deine Buchung wurde storniert. Die Rückerstattung wurde bei Stripe angestoßen.",
+          refunded: Boolean(refund),
+          refund_id: refund?.id || null,
+          message: refund
+            ? "Deine Buchung wurde storniert. Die Rückerstattung der Onlinegebühr wurde bei Stripe angestoßen."
+            : "Deine Buchung wurde storniert. Da die Stornierung weniger als 24 Stunden vor Beginn erfolgt, bleibt die Onlinegebühr bei FiiViu.",
           notifications: notificationStatus
         },
         200,
@@ -780,6 +786,48 @@ async function handleCancellation(request, env) {
   }
 }
 
+async function handleProviderCancellation(request, env) {
+  if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.DB || !env.STRIPE_SECRET_KEY) return json({ error: "Cancellation service is not configured." }, 500);
+  const providerRef = await providerRefFromSession(request, env);
+  if (!providerRef) return json({ error: "Unauthorized provider credentials" }, 401);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "Invalid JSON payload" }, 400); }
+  const bookingId = String(body?.bookingId || "").trim();
+  if (!bookingId) return json({ error: "bookingId is required." }, 400);
+  try {
+    const provider = await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
+    if (!provider) return json({ error: "Veranstalter nicht gefunden." }, 404);
+    const booking = await env.DB.prepare("SELECT * FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
+    if (!booking) return json({ error: "Buchung nicht gefunden." }, 404);
+    if (String(booking.provider_name || "") !== String(provider.name || "") &&
+        String(booking.provider_connect_account_id || "") !== String(provider.connect_account_id || "")) {
+      return json({ error: "Diese Buchung gehört nicht zu deinem Anbieter-Konto." }, 403);
+    }
+    if (String(booking.status || "") === "cancelled" && String(booking.cancellation_reason || "") === "provider") {
+      return json({ success: true, status: "cancelled", refunded: true, refund_id: booking.cancellation_refund_id || null });
+    }
+    if (String(booking.status || "") !== "confirmed" || String(booking.payment_status || "") !== "paid") {
+      return json({ error: "Diese Buchung kann nicht mehr storniert werden." }, 409);
+    }
+    const lock = await env.DB.prepare("UPDATE bookings SET status='cancellation_processing',updated_at=CURRENT_TIMESTAMP WHERE booking_id=? AND status='confirmed' AND payment_status='paid'").bind(bookingId).run();
+    if (Number(lock.meta?.changes || 0) !== 1) return json({ error: "Die Stornierung wird bereits bearbeitet." }, 409);
+    try {
+      const refund = await stripeRefundPaymentIntent(env, booking.payment_intent_id, "provider-cancel-" + booking.booking_id);
+      await env.DB.prepare("UPDATE bookings SET status='cancelled',payment_status='refunded',cancelled_at=CURRENT_TIMESTAMP,cancellation_refund_id=?,cancellation_reason='provider',updated_at=CURRENT_TIMESTAMP WHERE booking_id=? AND status='cancellation_processing'").bind(refund.id, bookingId).run();
+      const cancelledBooking = await env.DB.prepare("SELECT * FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
+      const notifications = await sendCancellationNotifications(env, cancelledBooking || { ...booking, status: "cancelled", payment_status: "refunded", cancellation_refund_id: refund.id });
+      return json({ success: true, status: "cancelled", refunded: true, refund_id: refund.id, message: "Anbieter-Stornierung: Die Onlinegebühr wurde vollständig zur Rückerstattung angewiesen.", notifications });
+    } catch (error) {
+      await env.DB.prepare("UPDATE bookings SET status='confirmed',updated_at=CURRENT_TIMESTAMP WHERE booking_id=? AND status='cancellation_processing'").bind(bookingId).run();
+      throw error;
+    }
+  } catch (error) {
+    console.error("FiiViu provider cancellation failed", error);
+    return json({ error: error?.message || "Stornierung durch Anbieter fehlgeschlagen." }, 500);
+  }
+}
+
 function buildCancellationView(booking) {
   const cancellation = getCancellationState(booking);
 
@@ -789,7 +837,10 @@ function buildCancellationView(booking) {
     booking_date: booking.booking_date || "",
     booking_time: booking.booking_time || "",
     guests: Number(booking.guests || 1),
-    total_price: Number(booking.amount_cents || 0) / 100 + " " + String(booking.currency || "eur").toUpperCase(),
+    total_price: Number(booking.total_amount_cents || booking.amount_cents || 0) / 100 + " " + String(booking.currency || "eur").toUpperCase(),
+    paid_online: Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100 + " " + String(booking.currency || "eur").toUpperCase(),
+    due_to_provider: Number(booking.provider_due_cents || 0) / 100 + " " + String(booking.currency || "eur").toUpperCase(),
+    payment_model: String(booking.payment_model || "legacy_connect"),
     status: booking.status,
     allowed: cancellation.allowed,
     cancellation_deadline: cancellation.deadline,
@@ -820,8 +871,10 @@ function getCancellationState(booking) {
   const deadlineMs =
     start.getTime() - CANCELLATION_HOURS * 60 * 60 * 1000;
 
+  const now = Date.now();
   return {
-    allowed: Date.now() <= deadlineMs,
+    allowed: now <= deadlineMs,
+    canCancel: now < start.getTime(),
     deadline: new Date(deadlineMs).toISOString()
   };
 }
@@ -1233,6 +1286,15 @@ async function finalizePaidBooking(
     const amountCents = Number(
       pi.amount_received || pi.amount || 0
     );
+    const paymentModel = String(metadata.payment_model || "legacy_connect");
+    const totalAmountCents = Number(metadata.total_amount_cents || amountCents);
+    const fiiviuFeeCents = Number(metadata.fiiviu_fee_cents || amountCents);
+    const providerDueCents = Number(metadata.provider_due_cents || 0);
+    if (paymentModel === "fiiviu_fee_20_direct_80" &&
+        (!Number.isSafeInteger(totalAmountCents) || totalAmountCents < amountCents ||
+         fiiviuFeeCents !== amountCents || providerDueCents !== totalAmountCents - fiiviuFeeCents)) {
+      throw new Error("PaymentIntent metadata has an invalid FiiViu payment split");
+    }
 
     const currency = String(
       pi.currency || "eur"
@@ -1322,6 +1384,10 @@ async function finalizePaidBooking(
           booking_time,
           guests,
           amount_cents,
+          total_amount_cents,
+          fiiviu_fee_cents,
+          provider_due_cents,
+          payment_model,
           currency,
           meeting_point_name,
           meeting_address,
@@ -1337,9 +1403,7 @@ async function finalizePaidBooking(
           cancellation_token,
           created_at,
           updated_at
-        ) VALUES (
-          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
-        )
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
           status='confirmed',
@@ -1354,6 +1418,10 @@ async function finalizePaidBooking(
           booking_time=excluded.booking_time,
           guests=excluded.guests,
           amount_cents=excluded.amount_cents,
+          total_amount_cents=excluded.total_amount_cents,
+          fiiviu_fee_cents=excluded.fiiviu_fee_cents,
+          provider_due_cents=excluded.provider_due_cents,
+          payment_model=excluded.payment_model,
           currency=excluded.currency,
           meeting_point_name=excluded.meeting_point_name,
           meeting_address=excluded.meeting_address,
@@ -1387,6 +1455,10 @@ async function finalizePaidBooking(
         clean(metadata.booking_time),
         guests,
         amountCents,
+        totalAmountCents,
+        fiiviuFeeCents,
+        providerDueCents,
+        paymentModel,
         currency,
         meeting.name,
         meeting.address,
@@ -1424,7 +1496,9 @@ async function finalizePaidBooking(
       booking.booking_access_token = bookingAccessToken;
     }
 
-    await recordBookingSettlement(env, booking);
+    if (String(booking.payment_model || "legacy_connect") !== "fiiviu_fee_20_direct_80") {
+      await recordBookingSettlement(env, booking);
+    }
 
     // Notify FiiViu about every paid booking as well.\n    try {\n      const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();\n      const subject = "Neue FiiViu-Buchung – " + String(booking.experience_name || "Erlebnis");\n      const text = [\n        "Neue Buchung bei FiiViu", "",\n        "Buchung: " + (booking.booking_id || ""),\n        "Erlebnis: " + (booking.experience_name || ""),\n        "Veranstalter: " + (booking.provider_name || ""),\n        "Datum: " + (booking.booking_date || ""),\n        "Uhrzeit: " + (booking.booking_time || ""),\n        "Personen: " + (booking.guests || 1),\n        "Umsatz: " + ((Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase()),\n        "", "Gast: " + (booking.customer_name || ""),\n        "E-Mail: " + (booking.customer_email || ""),\n        "Telefon: " + (booking.customer_phone || "")\n      ].join("\\n");\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");\n      if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY ist nicht konfiguriert.");\n      const response = await fetch("https://api.resend.com/emails", {\n        method: "POST",\n        headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },\n        body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, text })\n      });\n      if (!response.ok) throw new Error("Admin-Buchungs-Mail konnte nicht versendet werden.");\n    } catch (error) {\n      console.error("FiiViu admin booking notification failed", error);\n    }\n\n    // Notify the organizer independently from the customer confirmation.
     // A provider notification failure must never block the booking itself.
@@ -3175,6 +3249,7 @@ function calculateSettlementReleaseAt(dateValue, timeValue) {
 
 async function recordBookingSettlement(env, booking) {
   if (!env.DB || !booking?.booking_id) return;
+  if (String(booking.payment_model || "legacy_connect") === "fiiviu_fee_20_direct_80") return;
 
   await ensureProvidersTable(env);
   await ensureBookingSettlementsTable(env);
@@ -3263,7 +3338,7 @@ async function recordBookingSettlement(env, booking) {
 
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
