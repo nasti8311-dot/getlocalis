@@ -61,7 +61,19 @@ jobs:
           }
 
           add_column_if_missing "offers" "capacity" "INTEGER"
+          add_column_if_missing "offers" "duration" "TEXT"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_offers_capacity ON offers(capacity)"
+
+          # Provider self-registration fields and accepted-contract evidence.
+          add_column_if_missing "providers" "company_name" "TEXT"
+          add_column_if_missing "providers" "cui" "TEXT"
+          add_column_if_missing "providers" "representative_name" "TEXT"
+          add_column_if_missing "offers" "pay_on_site_cash" "INTEGER NOT NULL DEFAULT 1"
+          add_column_if_missing "offers" "pay_on_site_card" "INTEGER NOT NULL DEFAULT 1"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE UNIQUE INDEX IF NOT EXISTS idx_providers_cui ON providers(cui) WHERE cui IS NOT NULL"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE TABLE IF NOT EXISTS vendor_contract_logs (id TEXT PRIMARY KEY, provider_ref TEXT NOT NULL REFERENCES providers(provider_ref), accepted_at TEXT NOT NULL, ip_address TEXT NOT NULL, user_agent TEXT NOT NULL, contract_version TEXT NOT NULL, contract_sha256 TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_provider_ref ON vendor_contract_logs(provider_ref)"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_accepted_at ON vendor_contract_logs(accepted_at)"
 
           add_column_if_missing "bookings" "offer_id" "INTEGER"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_bookings_offer_slot ON bookings(offer_id,booking_date,booking_time,status,payment_status)"

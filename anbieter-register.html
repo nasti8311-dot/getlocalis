@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>FiiViu – Anbieterregistrierung</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#211a16;background:#f8f5ef;--orange:#e86f2d;--line:#e3d9cf}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:36px 16px;background:radial-gradient(circle at 5% 0,rgba(232,111,45,.14),transparent 32%),#f8f5ef}
+main{max-width:760px;margin:0 auto}.brand{font-weight:900;letter-spacing:-.04em;font-size:22px}.brand span{color:var(--orange)}h1{font-size:clamp(32px,5vw,48px);letter-spacing:-.05em;line-height:1.02;margin:32px 0 10px}.intro{color:#6e6259;line-height:1.6}
+form{margin-top:26px;padding:28px;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 18px 55px #241a160d}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.field{margin-bottom:16px}.wide{grid-column:1/-1}label{display:block;font-size:13px;font-weight:750;margin-bottom:7px}input{width:100%;padding:13px 14px;border:1px solid #d8cec4;border-radius:12px;font:inherit}input:focus{outline:3px solid #e86f2d22;border-color:var(--orange)}
+.check{display:flex;gap:11px;align-items:flex-start;padding:16px;background:#faf7f2;border-radius:14px;line-height:1.55;font-size:14px}.check input{width:18px;height:18px;flex:0 0 auto;margin-top:2px;accent-color:var(--orange)}.check label{font-weight:500;margin:0}
+button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:999px;background:#211a16;color:white;font:inherit;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.message{display:none;margin-top:16px;padding:13px 15px;border-radius:12px;white-space:pre-wrap;line-height:1.5}.ok{display:block;background:#edf7ef;color:#285633}.error{display:block;background:#fff0ed;color:#8a2f20}
+small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a}footer{margin:20px 0;text-align:center;color:#756b63;font-size:13px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}form{padding:20px}}
+</style></head>
+<body><main>
+<div class="brand">Fii<span>Viu</span></div>
+<h1>Als Anbieter registrieren</h1>
+<p class="intro">Erstellen Sie Ihr Anbieter-Konto für Erlebnisse in Bukarest. Nach der Registrierung können Sie sich anmelden und Ihre Angebote sowie Buchungen verwalten.</p>
+<form id="registerForm">
+<div class="grid">
+<div class="field wide"><label for="companyName">Unternehmensname (S.R.L. / PFA) *</label><input id="companyName" name="company_name" autocomplete="organization" required maxlength="180"></div>
+<div class="field"><label for="cui">Rumänische Steuernummer / CUI *</label><input id="cui" name="cui" required maxlength="24" autocomplete="off" placeholder="z. B. RO12345678"></div>
+<div class="field"><label for="representative">Gesetzlicher Vertreter *</label><input id="representative" name="representative_name" autocomplete="name" required maxlength="160"></div>
+<div class="field wide"><label for="email">Geschäftliche E-Mail-Adresse *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
+<div class="field wide"><label for="password">Passwort *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Mindestens 12 Zeichen. Verwenden Sie ein einzigartiges Passwort.</small></div>
+</div>
+<div class="check"><input id="accept" name="accept_contract" type="checkbox" required><label for="accept">Ich bestätige, dass ich gesetzlicher Vertreter des angegebenen Unternehmens bin. Ich habe den <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">Partnervertrag</a> sowie die Provisionsbedingungen (20% Anzahlung per Online-Buchung) gelesen und stimme diesen verbindlich zu.</label></div>
+<button id="submitButton" type="submit">Registrierung & Vertrag akzeptieren</button>
+<div id="message" class="message" role="status" aria-live="polite"></div>
+</form>
+<footer>Bereits registriert? <a href="/anbieter/login">Zum Anbieter-Login</a></footer>
+</main>
+<script>
+const form=document.getElementById('registerForm'),button=document.getElementById('submitButton'),message=document.getElementById('message');
+form.addEventListener('submit',async event=>{
+ event.preventDefault(); if(!form.reportValidity())return;
+ button.disabled=true;button.textContent='Registrierung wird verarbeitet…';message.className='message';message.style.display='none';
+ const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:form.accept_contract.checked};
+ try{
+  const response=await fetch('/api/provider-register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Registrierung fehlgeschlagen.');
+  message.className='message '+(data.emailSent?'ok':'error');message.style.display='block';
+  message.textContent=data.emailSent?'Registrierung erfolgreich. Der akzeptierte Partnervertrag wurde als PDF per E-Mail versendet. Sie können sich jetzt anmelden.':('Das Konto wurde angelegt und die Vertragsannahme protokolliert, aber der E-Mail-Versand des PDF-Vertrags ist fehlgeschlagen. Bitte wenden Sie sich an info@fiiviu.ro. Referenz: '+(data.providerRef||'registriert'));
+  if(data.emailSent){form.reset();setTimeout(()=>location.href='/anbieter/login',1600);}
+ }catch(error){message.className='message error';message.style.display='block';message.textContent=error.message;}
+ finally{button.disabled=false;button.textContent='Registrierung & Vertrag akzeptieren';}
+});
+</script></body></html>

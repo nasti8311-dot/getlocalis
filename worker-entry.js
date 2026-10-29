@@ -75,6 +75,7 @@ export default {
       return handleAdminProviderPassword(request, env);
     }
 
+    if (url.pathname === "/api/provider-register") return handleProviderRegistration(request, env);
     if (url.pathname === "/api/provider-login") return handleProviderLogin(request, env);
     if (url.pathname === "/api/provider-session") return handleProviderSession(request, env);
     if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
@@ -572,17 +573,26 @@ async function handleBookingAccess(request, env) {
         experience_name,
         booking_date,
         booking_time,
-        guests,
-        meeting_point_name,
-        meeting_address,
-        meeting_city,
-        meeting_country,
-        meeting_instructions,
-        arrival_minutes_before,
-        meeting_latitude,
-        meeting_longitude,
-        status
-      FROM bookings
+        b.guests,
+        b.meeting_point_name,
+        b.meeting_address,
+        b.meeting_city,
+        b.meeting_country,
+        b.meeting_instructions,
+        b.arrival_minutes_before,
+        b.meeting_latitude,
+        b.meeting_longitude,
+        b.status,
+        b.payment_model,
+        b.currency,
+        b.amount_cents,
+        b.total_amount_cents,
+        b.fiiviu_fee_cents,
+        b.provider_due_cents,
+        o.pay_on_site_cash,
+        o.pay_on_site_card
+      FROM bookings b
+      LEFT JOIN offers o ON o.id=b.offer_id
       WHERE booking_id=? AND booking_access_token=?
       LIMIT 1
     `).bind(bookingId, token).first();
@@ -1521,7 +1531,7 @@ async function finalizePaidBooking(
       await recordBookingSettlement(env, booking);
     }
 
-    // Notify FiiViu about every paid booking as well.\n    try {\n      const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();\n      const subject = "Neue FiiViu-Buchung – " + String(booking.experience_name || "Erlebnis");\n      const text = [\n        "Neue Buchung bei FiiViu", "",\n        "Buchung: " + (booking.booking_id || ""),\n        "Erlebnis: " + (booking.experience_name || ""),\n        "Veranstalter: " + (booking.provider_name || ""),\n        "Datum: " + (booking.booking_date || ""),\n        "Uhrzeit: " + (booking.booking_time || ""),\n        "Personen: " + (booking.guests || 1),\n        "Umsatz: " + ((Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase()),\n        "", "Gast: " + (booking.customer_name || ""),\n        "E-Mail: " + (booking.customer_email || ""),\n        "Telefon: " + (booking.customer_phone || "")\n      ].join("\\n");\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");\n      if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY ist nicht konfiguriert.");\n      const response = await fetch("https://api.resend.com/emails", {\n        method: "POST",\n        headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },\n        body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, text })\n      });\n      if (!response.ok) throw new Error("Admin-Buchungs-Mail konnte nicht versendet werden.");\n    } catch (error) {\n      console.error("FiiViu admin booking notification failed", error);\n    }\n\n    // Notify the organizer independently from the customer confirmation.
+    // Notify FiiViu about every paid booking as well.\n    try {\n      const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();\n      const subject = "Neue FiiViu-Buchung – " + String(booking.experience_name || "Erlebnis");\n      const text = [\n        "Neue Buchung bei FiiViu", "",\n        "Buchung: " + (booking.booking_id || ""),\n        "Erlebnis: " + (booking.experience_name || ""),\n        "Veranstalter: " + (booking.provider_name || ""),\n        "Datum: " + (booking.booking_date || ""),\n        "Uhrzeit: " + (booking.booking_time || ""),\n        "Personen: " + (booking.guests || 1),\n        "Umsatz: " + ((Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase()),\n        "", "Gast: " + (booking.customer_name || ""),\n        "E-Mail: " + (booking.customer_email || ""),\n        "Telefon: " + (booking.customer_phone || "")\n      ].join("\n");\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");\n      if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY ist nicht konfiguriert.");\n      const response = await fetch("https://api.resend.com/emails", {\n        method: "POST",\n        headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },\n        body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, text })\n      });\n      if (!response.ok) throw new Error("Admin-Buchungs-Mail konnte nicht versendet werden.");\n    } catch (error) {\n      console.error("FiiViu admin booking notification failed", error);\n    }\n\n    // Notify the organizer independently from the customer confirmation.
     // A provider notification failure must never block the booking itself.
     try {
       await sendProviderBookingNotification(env, booking);
@@ -1597,6 +1607,8 @@ async function sendProviderBookingNotification(env, booking) {
     clean(booking.provider_name) || ""
   ).first();
 
+  const onSiteOffer = booking.offer_id ? await env.DB.prepare("SELECT pay_on_site_cash,pay_on_site_card FROM offers WHERE id=? LIMIT 1").bind(booking.offer_id).first().catch(()=>null) : null;
+  const onSiteMethods = [Number(onSiteOffer?.pay_on_site_cash)===1?"bar":"",Number(onSiteOffer?.pay_on_site_card)===1?"card":""] .filter(Boolean).join(" / ") || "conform ofertă";
   const recipient = clean(provider?.contact_email);
   if (!recipient) {
     await env.DB.prepare(
@@ -1625,7 +1637,7 @@ async function sendProviderBookingNotification(env, booking) {
   const romanianInstructions = String(
     romanianOffer?.instructions || booking.meeting_instructions || ""
   ).trim();
-  const subject = "Rezervare nouă – " + romanianExperienceName;
+  const subject = "Neue Buchung erhalten! – " + romanianExperienceName;
   const text = [
     "Rezervare nouă la FiiViu",
     "",
@@ -1638,7 +1650,7 @@ async function sendProviderBookingNotification(env, booking) {
     "E-mail client: " + (booking.customer_email || ""),
     "Telefon: " + (booking.customer_phone || ""),
     "Valoarea totală a rezervării: " + amount,
-    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Taxă FiiViu plătită online (20%): " + onlineFee, "De încasat direct de la client (80%): " + providerDue] : []),
+    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Taxă FiiViu plătită online (20%): " + onlineFee, "De încasat direct de la client (80%): " + providerDue, "Metode de plată acceptate la fața locului: " + onSiteMethods] : []),
     "",
     "Punct de întâlnire: " + romanianMeetingPoint,
     "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
@@ -1653,7 +1665,7 @@ async function sendProviderBookingNotification(env, booking) {
     "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
     "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
     "<strong>Valoarea totală a rezervării:</strong> " + safe(amount) + "<br>" +
-    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Taxă FiiViu plătită online (20%):</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) : "") + "</p>" +
+    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Taxă FiiViu plătită online (20%):</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) + "<br><strong>Metode acceptate la fața locului:</strong> " + safe(onSiteMethods) : "") + "</p>" +
     "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
     "<strong>E-mail client:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
@@ -2731,6 +2743,167 @@ async function handleAdminProviderPassword(request,env){
   }
 }
 
+async function handleProviderRegistration(request,env){
+  if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
+  if(!env.DB)return json({error:"D1 database not configured."},500);
+  if(!String(env.RESEND_API_KEY||"").trim())return json({error:"Der PDF-Vertragsversand ist nicht konfiguriert. Bitte RESEND_API_KEY einrichten und erneut versuchen."},503);
+  try{
+    await ensureProvidersTable(env);
+    await ensureProviderAuthTables(env);
+    await ensureProviderRegistrationSchema(env);
+    const body=await request.json().catch(()=>({}));
+    const companyName=String(body.company_name||"").trim().slice(0,180);
+    const cuiRaw=String(body.cui||"").trim().toUpperCase().replace(/\s+/g,"");
+    const cui=cuiRaw.replace(/^RO/,"");
+    const representativeName=String(body.representative_name||"").trim().slice(0,160);
+    const email=String(body.email||"").trim().toLowerCase();
+    const password=String(body.password||"");
+    if(!companyName||!representativeName||!email||!cui)return json({error:"Bitte füllen Sie alle Pflichtfelder aus."},400);
+    if(!/^\d{2,10}$/.test(cui))return json({error:"Bitte geben Sie eine gültige rumänische CUI/Steuernummer mit 2 bis 10 Ziffern ein."},400);
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return json({error:"Bitte geben Sie eine gültige E-Mail-Adresse ein."},400);
+    if(password.length<12||password.length>128)return json({error:"Das Passwort muss zwischen 12 und 128 Zeichen lang sein."},400);
+    if(body.accept_contract!==true)return json({error:"Sie müssen den Partnervertrag und die Provisionsbedingungen ausdrücklich akzeptieren."},400);
+    const existingEmail=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? LIMIT 1").bind(email).first();
+    if(existingEmail)return json({error:"Für diese E-Mail-Adresse besteht bereits ein Anbieterzugang. Bitte melden Sie sich an."},409);
+    const existingCui=await env.DB.prepare("SELECT provider_ref FROM providers WHERE cui=? LIMIT 1").bind(cui).first();
+    if(existingCui)return json({error:"Diese CUI ist bereits registriert. Bitte kontaktieren Sie info@fiiviu.ro, falls Sie Hilfe benötigen."},409);
+    const base=companyName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g,"").slice(0,10)||"PROVIDER";
+    let providerRef="";
+    for(let attempt=0;attempt<8;attempt++){
+      const candidate=base+"-"+providerRandomHex(4).toUpperCase();
+      const collision=await env.DB.prepare("SELECT provider_ref FROM providers WHERE provider_ref=? LIMIT 1").bind(candidate).first();
+      if(!collision){providerRef=candidate;break;}
+    }
+    if(!providerRef)throw new Error("Provider reference could not be generated.");
+    const salt=providerRandomHex(16);
+    const passwordHash=await hashProviderPassword(password,salt);
+    const acceptedAt=new Date().toISOString();
+    const ipAddress=String(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,128);
+    const userAgent=String(request.headers.get("User-Agent")||"unknown").slice(0,1000);
+    const contractVersion="v1.0";
+    const contractSnapshot=[
+      "FiiViu Partnervertrag / Bedingungen fuer Erlebnisanbieter",
+      "Vertragsversion: "+contractVersion,
+      "Plattform: FiiViu S.R.L. | https://fiiviu.ro/legal/anbieter-bedingungen.html",
+      "Anbieter: "+companyName,
+      "CUI: "+cui,
+      "Gesetzlicher Vertreter: "+representativeName,
+      "E-Mail: "+email,
+      "Akzeptiert am (UTC): "+acceptedAt,
+      "",
+      "1. Gegenstand und Vermittlung: FiiViu vermittelt Kunden an Anbieter und stellt Buchungs-, Zahlungs- und Kommunikationsfunktionen bereit. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande. Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu; die verbleibenden 80 Prozent zahlt er direkt vor Ort an den Anbieter.",
+      "2. Anbieterangaben: Der Anbieter stellt vollstaendige und richtige Unternehmens-, Kontakt-, Register- und Zahlungsdaten sowie gesetzlich erforderliche Nachweise bereit.",
+      "3. Qualitaet und Rechtmaessigkeit: Der Anbieter bietet nur rechtmaessige Leistungen an, fuer die erforderliche Genehmigungen, Versicherungen und Qualifikationen vorliegen. Preise, Verfuegbarkeit, Treffpunkt, Teilnahme-, Sicherheits- und Stornierungsangaben muessen aktuell sein.",
+      "4. Provision und Zahlungen: Die 20-Prozent-Online-Anzahlung wird ueber Stripe direkt an FiiViu gezahlt und deckt die vereinbarte Vermittlungsprovision vollstaendig ab. Der Anbieter zieht die verbleibenden 80 Prozent direkt vor Ort ein, bar und/oder per Kartenterminal entsprechend den im Angebot angegebenen Zahlungsarten.",
+      "5. Ranking und Sichtbarkeit: Die Platzierung kann von Kategorie, Verfuegbarkeit, Relevanz, Aktualitaet, Preis, Nachfrage, Qualitaet und Vollstaendigkeit abhaengen. Eine bestimmte Platzierung wird nicht garantiert.",
+      "6. Sperrung und Beendigung: FiiViu kann Angebote bei gesetzlichen Pflichten, Sicherheitsrisiken, fehlenden Nachweisen, erheblichen Vertragsverletzungen oder unrichtigen Angaben sperren oder entfernen. Gesetzliche Rechte bleiben unberuehrt.",
+      "7. Anbieterbeschwerden: Beschwerden zu technischen Problemen, Massnahmen oder diesen Bedingungen koennen kostenlos an info@fiiviu.ro gerichtet werden.",
+      "8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze. Der Anbieter verwendet Kundendaten nur im rechtlich zulaessigen Umfang.",
+      "9. Geistiges Eigentum: Der Anbieter gewaehrleistet die rechtmaessige Nutzung seiner Bilder, Texte, Marken und sonstigen Inhalte und raeumt FiiViu ein einfaches Nutzungsrecht fuer die Plattformdarstellung ein.",
+      "10. Haftung: Der Anbieter haftet nach den gesetzlichen Vorschriften fuer seine Leistung und fuer rechtswidrige oder unrichtige von ihm bereitgestellte Inhalte.",
+      "11. Aenderungen: Bedingungen werden mit angemessener Vorankuendigung geaendert, soweit gesetzlich erforderlich. Wesentliche Aenderungen wirken nicht unzulaessig auf bereits geschlossene Buchungen zurueck.",
+      "12. Anwendbares Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.",
+      "13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.",
+      "",
+      "Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."
+    ].join("\n");
+    const contractHash=await hashProviderSession(contractSnapshot);
+    const contractLogId=crypto.randomUUID();
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO providers (provider_ref,name,contact_email,company_name,cui,representative_name,active) VALUES (?,?,?,?,?,?,1)").bind(providerRef,companyName,email,companyName,cui,representativeName),
+      env.DB.prepare("INSERT INTO provider_accounts (provider_ref,email,password_salt,password_hash,active,updated_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP)").bind(providerRef,email,salt,passwordHash),
+      env.DB.prepare("INSERT INTO vendor_contract_logs (id,provider_ref,accepted_at,ip_address,user_agent,contract_version,contract_sha256) VALUES (?,?,?,?,?,?,?)").bind(contractLogId,providerRef,acceptedAt,ipAddress,userAgent,contractVersion,contractHash)
+    ]);
+    let emailSent=false;
+    try{
+      const pdf=buildProviderContractPdf(contractSnapshot);
+      const response=await fetch("https://api.resend.com/emails",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+String(env.RESEND_API_KEY).trim(),"Content-Type":"application/json"},
+        body:JSON.stringify({
+          from:"FiiViu <noreply@fiiviu.ro>",
+          to:[email],
+          subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.0)",
+          text:"Vielen Dank fuer Ihre Registrierung bei FiiViu. Im Anhang finden Sie den Partnervertrag der Version v1.0, den Sie am "+acceptedAt+" UTC akzeptiert haben. Anmeldung: https://fiiviu.ro/anbieter/login",
+          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.0</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
+          attachments:[{filename:"FiiViu-Partnervertrag-v1.0.pdf",content:pdf}]
+        })
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result?.message||result?.error||("Resend HTTP "+response.status));
+      emailSent=true;
+    }catch(mailError){
+      console.error("Provider contract email delivery failed",{providerRef,code:mailError?.code||"EMAIL_SEND_FAILED",message:mailError?.message||""});
+    }
+    return json({success:true,providerRef,emailSent,contractVersion,contractAcceptedAt:acceptedAt,message:emailSent?"Registrierung abgeschlossen; der akzeptierte Partnervertrag wurde als PDF versendet.":"Konto und Vertragsannahme wurden gespeichert, aber der PDF-E-Mail-Versand ist fehlgeschlagen. Bitte kontaktieren Sie info@fiiviu.ro."},201);
+  }catch(error){
+    console.error("Provider self-registration failed",{message:error?.message||"unknown"});
+    return json({error:error?.message||"Registrierung fehlgeschlagen."},500);
+  }
+}
+
+function buildProviderContractPdf(snapshot){
+  const ascii=String(snapshot||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[–—]/g,"-").replace(/[“”]/g,'"').replace(/[’‘]/g,"'").replace(/[^\x20-\x7E\n]/g," ");
+  const wrapped=[];
+  for(const sourceLine of ascii.split("\n")){
+    if(!sourceLine){wrapped.push("");continue;}
+    let remaining=sourceLine;
+    while(remaining.length>88){
+      let cut=remaining.lastIndexOf(" ",88);
+      if(cut<35)cut=88;
+      wrapped.push(remaining.slice(0,cut));
+      remaining=remaining.slice(cut).trimStart();
+    }
+    wrapped.push(remaining);
+  }
+  const pages=[];
+  for(let i=0;i<wrapped.length;i+=48)pages.push(wrapped.slice(i,i+48));
+  if(!pages.length)pages.push(["FiiViu Partnervertrag"]);
+  const objects=[];
+  objects[1]="<< /Type /Catalog /Pages 2 0 R >>";
+  const pageRefs=pages.map((_,i)=>(5+i*2)+" 0 R").join(" ");
+  objects[2]="<< /Type /Pages /Kids ["+pageRefs+"] /Count "+pages.length+" >>";
+  objects[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  objects[4]="<< /Producer (FiiViu) /Title (FiiViu Partnervertrag v1.0) >>";
+  pages.forEach((lines,i)=>{
+    const pageId=5+i*2,streamId=pageId+1;
+    const commands=["BT","/F1 10 Tf","48 790 Td","13 TL"];
+    for(const line of lines){
+      const safe=line.replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+      commands.push("("+safe+") Tj","T*");
+    }
+    commands.push("ET");
+    const stream=commands.join("\n");
+    objects[pageId]="<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents "+streamId+" 0 R >>";
+    objects[streamId]="<< /Length "+stream.length+" >>\nstream\n"+stream+"\nendstream";
+  });
+  let pdf="%PDF-1.4\n";
+  const offsets=[0];
+  for(let id=1;id<objects.length;id++){
+    offsets[id]=pdf.length;
+    pdf+=id+" 0 obj\n"+objects[id]+"\nendobj\n";
+  }
+  const xrefOffset=pdf.length;
+  pdf+="xref\n0 "+objects.length+"\n0000000000 65535 f \n";
+  for(let id=1;id<objects.length;id++)pdf+=String(offsets[id]).padStart(10,"0")+" 00000 n \n";
+  pdf+="trailer\n<< /Size "+objects.length+" /Root 1 0 R /Info 4 0 R >>\nstartxref\n"+xrefOffset+"\n%%EOF";
+  return btoa(pdf);
+}
+
+
+async function ensureProviderRegistrationSchema(env){
+  const providerRows=await env.DB.prepare("PRAGMA table_info(providers)").all();
+  const providerColumns=new Set((providerRows.results||[]).map(row=>String(row.name||"")));
+  const offerRows=await env.DB.prepare("PRAGMA table_info(offers)").all();
+  const offerColumns=new Set((offerRows.results||[]).map(row=>String(row.name||"")));
+  const logTable=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vendor_contract_logs' LIMIT 1").first();
+  const missing=["company_name","cui","representative_name"].filter(name=>!providerColumns.has(name));
+  for(const name of ["pay_on_site_cash","pay_on_site_card"])if(!offerColumns.has(name))missing.push("offers."+name);
+  if(!logTable)missing.push("vendor_contract_logs");
+  if(missing.length)throw new Error("Provider registration schema is incomplete. Apply migration 018_provider_self_registration_contracts.sql. Missing: "+missing.join(", "));
+}
+
 async function handleProviderLogin(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured"},500);
@@ -2892,7 +3065,7 @@ async function providerRefFromSession(request,env){
 
 async function ensureOffersTable(env){
   const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
-  const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active"];
+  const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
@@ -2902,6 +3075,7 @@ async function handleProviderExperiences(request,env){
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
   try{
+    await ensureProviderRegistrationSchema(env);
     await ensureOffersTable(env);
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
@@ -2911,20 +3085,25 @@ async function handleProviderExperiences(request,env){
     }
     if(request.method==="POST"){
       const body=await request.json().catch(()=>({}));
-      const experienceId=String(body.experienceId||"").trim();
       const title=String(body.title||"").trim();
       const priceCents=Number(body.priceCents);
-      if(!experienceId||!title)return json({error:"Experience-ID und Titel sind erforderlich."},400);
-      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 eingeben."},400);
+      const currency=String(body.currency||"ron").toLowerCase();
+      if(!title)return json({error:"Der Titel ist erforderlich."},400);
+      if(currency!=="ron")return json({error:"Neue Anbieterangebote müssen in RON ausgezeichnet werden."},400);
+      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 RON eingeben."},400);
+      const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
+      const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
+      if(!payCash&&!payCard)return json({error:"Bitte mindestens eine Zahlungsart vor Ort auswählen."},400);
       const existing=await env.DB.prepare("SELECT id FROM offers WHERE provider_ref=? AND lower(title)=lower(?) LIMIT 1").bind(providerRef,title).first();
       if(existing)return json({error:"Ein Erlebnis mit diesem Titel existiert bereits."},409);
       const active=body.publish===true?1:0;
-      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
-        providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),
+      const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
+      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
+        providerRef,title,String(body.description||"").trim()||null,priceCents,currency,
         String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
-        String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,
-        Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",
-        String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active
+        String(body.meetingCity||"București").trim()||"București",String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
+        Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"wellness").trim().toLowerCase()||"wellness",
+        String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active,payCash?1:0,payCard?1:0,String(body.duration||"").trim()||null
       ).run();
       const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
       return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?experienceId:null}},201);
@@ -3006,6 +3185,7 @@ async function handleProviderOverview(request,env){
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
   try{
     await ensureProvidersTable(env);
+    await ensureProviderRegistrationSchema(env);
     await ensureBookingColumns(env);
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
@@ -3014,11 +3194,13 @@ async function handleProviderOverview(request,env){
     // amounts. This keeps provider revenue/payout figures consistent with Stripe.
     const rows=await env.DB.prepare(`
       SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
-             b.experience_name,b.customer_name,b.guests,b.amount_cents,b.total_amount_cents,b.fiiviu_fee_cents,b.provider_due_cents,b.payment_model,
+             b.experience_name,b.customer_name,b.customer_email,b.guests,b.amount_cents,b.total_amount_cents,b.fiiviu_fee_cents,b.provider_due_cents,b.payment_model,
+             o.pay_on_site_cash,o.pay_on_site_card,
              s.payment_intent_id,s.total_amount_cents AS settlement_total_amount_cents,s.provider_amount_cents,
              s.provider_transfer_amount_cents,s.settlement_status,s.provider_transfer_id,
              s.release_at,s.settlement_error,s.settlement_test_transfer_id
       FROM bookings b
+      LEFT JOIN offers o ON o.id=b.offer_id
       LEFT JOIN booking_settlements s ON s.booking_id=b.booking_id
       WHERE b.provider_ref=? OR b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
       ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
@@ -3035,13 +3217,14 @@ async function handleProviderOverview(request,env){
       all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
         .reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0));
     const today=new Date().toISOString().slice(0,10);
-    const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed").slice(0,10);
+    const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed");
+    const past=all.filter(r=>String(r.booking_date||"")<today||["cancelled","completed","refunded"].includes(String(r.status||"").toLowerCase()));
     return json({
       provider,
       stripeConnectConfigured:Boolean(String(provider.connect_account_id||"").trim()),
       stats:{bookings:all.length,grossRevenueCents,providerRevenueCents:grossRevenueCents,availableCents,pendingCents,paidOutCents},
       upcomingBookings:upcoming,
-      recentBookings:all.slice(0,20)
+      pastBookings:past
     });
   }catch(error){
     console.error("FiiViu provider overview failed",error);

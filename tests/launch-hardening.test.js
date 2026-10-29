@@ -102,6 +102,35 @@ test("launch paths do not mutate D1 schema at request time", () => {
   assert.match(read("marketplace-entry.js"), /Experiences schema is incomplete/);
 });
 
+
+test("provider self-registration requires explicit contract acceptance and stores evidence", () => {
+  const worker = read("worker-entry.js");
+  const page = read("anbieter-register.html");
+  const migration = read("migrations/018_provider_self_registration_contracts.sql");
+  assert.match(worker, /url\.pathname === "\/api\/provider-register"/);
+  assert.match(worker, /body\.accept_contract!==true/);
+  assert.match(worker, /INSERT INTO vendor_contract_logs/);
+  assert.match(worker, /contract_sha256/);
+  assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.0\.pdf",content:pdf\}\]/);
+  assert.match(page, /name="accept_contract" type="checkbox" required/);
+  assert.match(page, /20% Anzahlung per Online-Buchung/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
+  assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
+  assert.match(migration, /pay_on_site_cash/);
+  assert.match(migration, /pay_on_site_card/);
+});
+
+test("provider registration routes are reachable while the public catalog is gated", () => {
+  const secure = read("secure-entry.js");
+  assert.match(secure, /url\.pathname === "\/api\/provider-register"/);
+  assert.match(secure, /"\/anbieter\/register"/);
+  assert.match(secure, /"\/anbieter\/login"/);
+  assert.match(secure, /"\/anbieter\/dashboard"/);
+  const deploy = read(".github/workflows/deploy-production.yml");
+  assert.match(deploy, /vendor_contract_logs/);
+  assert.match(deploy, /pay_on_site_cash/);
+});
+
 test("server-side files are excluded from Cloudflare Static Assets", () => {
   const ignore = read(".assetsignore");
   for (const path of [
@@ -806,7 +835,7 @@ test("personal booking view is backed by a token-bound read endpoint", () => {
   const source = read("worker-entry.js");
   const page = read("booking.html");
   assert.match(source, /url\.pathname === "\/api\/booking"/);
-  assert.match(source, /WHERE booking_id=\? AND booking_access_token=\?/);
+  assert.match(source, /WHERE\s+(?:b\.)?booking_id=\?\s+AND\s+(?:b\.)?booking_access_token=\?/);
   assert.match(source, /Invalid booking access/);
   assert.match(source, /Booking not found/);
   assert.match(page, /fetch\('\/api\/booking\?id=/);
