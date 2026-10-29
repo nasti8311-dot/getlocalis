@@ -3246,9 +3246,23 @@ async function handleProviderExperiences(request,env){
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
       if(!payCash&&!payCard)return json({error:"Selectați cel puțin o metodă de plată la fața locului."},400);
+      const active=body.publish===true?1:0;
+      const offerId=Number(body.offerId||0);
+      if(offerId){
+        const owned=await env.DB.prepare("SELECT id FROM offers WHERE id=? AND provider_ref=? LIMIT 1").bind(offerId,providerRef).first();
+        if(!owned)return json({error:"Experiența nu a fost găsită pentru acest furnizor."},404);
+        await env.DB.prepare("UPDATE offers SET title=?,description=?,price_cents=?,currency=?,available_times=?,availability_rules=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,pay_on_site_cash=?,pay_on_site_card=?,duration=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND provider_ref=?").bind(
+          title,String(body.description||"").trim()||null,priceCents,currency,String(body.availableTimes||"").trim()||null,availabilityRules?JSON.stringify(availabilityRules):null,
+          String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"București").trim()||"București",
+          String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
+          Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"wellness").trim().toLowerCase()||"wellness",
+          String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active,payCash?1:0,payCard?1:0,String(body.duration||"").trim()||null,offerId,providerRef
+        ).run();
+        const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? AND provider_ref=? LIMIT 1").bind(offerId,providerRef).first();
+        return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?String(experience.id):null}});
+      }
       const existing=await env.DB.prepare("SELECT id FROM offers WHERE provider_ref=? AND lower(title)=lower(?) LIMIT 1").bind(providerRef,title).first();
       if(existing)return json({error:"Există deja o experiență cu acest titlu."},409);
-      const active=body.publish===true?1:0;
       const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
       const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,availability_rules,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
         providerRef,title,String(body.description||"").trim()||null,priceCents,currency,
