@@ -2811,8 +2811,8 @@ async function handleProviderRegistration(request,env){
     const email=String(body.email||"").trim().toLowerCase();
     const password=String(body.password||"");
     if(!companyName||!representativeName||!email||!cui)return json({error:"Completează toate câmpurile obligatorii."},400);
-    if(!/^\d{2,10}$/.test(cui))return json({error:"Bitte geben Sie eine gültige rumänische CUI/Steuernummer mit 2 bis 10 Ziffern ein."},400);
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return json({error:"Bitte geben Sie eine gültige E-Mail-Adresse ein."},400);
+    if(!/^\d{2,10}$/.test(cui))return json({error:"Introdu un cod fiscal românesc (CUI) valid, format din 2 până la 10 cifre."},400);
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return json({error:"Introdu o adresă de e-mail validă."},400);
     if(password.length<12||password.length>128)return json({error:"Parola trebuie să aibă între 12 și 128 de caractere."},400);
     if(body.accept_contract!==true)return json({error:"Trebuie să accepți în mod explicit contractul pentru organizatori și condițiile comisionului."},400);
     const existingEmail=await env.DB.prepare("SELECT provider_ref FROM provider_accounts WHERE lower(email)=? LIMIT 1").bind(email).first();
@@ -2884,7 +2884,7 @@ async function handleProviderRegistration(request,env){
           to:[email],
           subject:"Contractul FiiViu acceptat (v1.1)",
           text:"Îți mulțumim pentru înregistrarea pe FiiViu. Atașat găsești contractul pentru organizatori, versiunea v1.1, acceptat la "+acceptedAt+" UTC. Autentificare: https://fiiviu.ro/anbieter/login",
-          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.1</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
+          html:"<p>Îți mulțumim pentru înregistrarea pe FiiViu.</p><p>În atașament găsești contractul pentru organizatori, versiunea <strong>v1.1</strong>, acceptat la "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Autentificare organizator</a></p>",
           attachments:[{filename:"FiiViu-Partnervertrag-v1.1.pdf",content:pdf}]
         })
       });
