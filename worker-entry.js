@@ -862,7 +862,7 @@ function buildCancellationView(booking) {
     payment_model: String(booking.payment_model || "legacy_connect"),
     status: booking.status,
     allowed: cancellation.allowed,
-    can_cancel: cancellation.canCancel,
+    can_cancel: directPaymentModel ? cancellation.canCancel : cancellation.allowed,
     cancellation_deadline: cancellation.deadline,
     cancellation_hours: CANCELLATION_HOURS,
     policy_text: policyText
