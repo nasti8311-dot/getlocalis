@@ -98,6 +98,30 @@ td,th{border-bottom:1px solid #eee9e1}
 const API='/api/provider/experiences';
 const OVERVIEW_API='/api/provider/overview';
 const headers=()=>({'Content-Type':'application/json'});
+function providerError(message){
+ const raw=String(message||'A apărut o eroare.');
+ const known={
+  'E-Mail und Passwort sind erforderlich.':'E-mailul și parola sunt obligatorii.',
+  'E-Mail oder Passwort ist falsch.':'E-mailul sau parola sunt incorecte.',
+  'Veranstalter und Titel sind erforderlich.':'Organizatorul și titlul sunt obligatorii.',
+  'Ungültiger Preis.':'Preț nevalid.',
+  'Angebot nicht gefunden.':'Experiența nu a fost găsită.',
+  'Veranstalter fehlt.':'Lipsește organizatorul.',
+  'Titel fehlt.':'Lipsește titlul.',
+  'Buchung nicht gefunden.':'Rezervarea nu a fost găsită.',
+  'Diese Buchung gehört nicht zu deinem Anbieter-Konto.':'Această rezervare nu aparține contului tău de furnizor.',
+  'Diese Buchung kann nicht mehr storniert werden.':'Această rezervare nu mai poate fi anulată.',
+  'Die Stornierung wird bereits bearbeitet.':'Anularea este deja în curs de procesare.',
+  'Unauthorized provider credentials':'Autentificarea furnizorului a expirat. Conectează-te din nou.',
+  'Unauthorized':'Sesiunea a expirat. Conectează-te din nou.',
+  'Method Not Allowed':'Operațiune nepermisă.',
+  'Invalid JSON payload':'Datele trimise nu sunt valide.',
+  'bookingId is required.':'ID-ul rezervării este obligatoriu.'
+ };
+ if(known[raw]) return known[raw];
+ if(/E-Mail|Passwort|Veranstalter|Angebot|Buchung|storniert|Stornierung|Preis|Anbieter/i.test(raw)) return 'Operațiunea nu a putut fi finalizată. Verifică datele și încearcă din nou.';
+ return raw;
+}
 const money=(c,currency='RON')=>{const n=Number(c||0)/100;try{return n.toLocaleString('ro-RO',{style:'currency',currency:String(currency||'EUR').toUpperCase()});}catch{return n.toFixed(2)+' '+currency;}};
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const providerStatus=s=>({confirmed:'Confirmată',paid:'Plătită',pending:'În așteptare',cancelled:'Anulată',refunded:'Rambursată',completed:'Finalizată'}[String(s||'').toLowerCase()]||String(s||'–'));
@@ -157,7 +181,7 @@ loginForm?.addEventListener('submit',async event=>{
     await loadProviderOverview();
     await load();
   }catch(error){
-    loginError.textContent=error.message;
+    loginError.textContent=providerError(error.message);
     loginError.style.display='block';
   }
 });
@@ -179,7 +203,7 @@ accountCancelButton?.addEventListener('click',async()=>{
     if(!response.ok)throw Error(data.error||'Dezactivarea contului a eșuat.');
     alert('Contul a fost dezactivat. Istoricul a fost păstrat.');
     setAuthenticatedUI(false,null);
-  }catch(error){alert(error.message||'Dezactivarea contului a eșuat.');}
+  }catch(error){alert(providerError(error.message||'Dezactivarea contului a eșuat.'));}
   finally{accountCancelButton.disabled=false;}
 });
 
@@ -191,7 +215,7 @@ async function cancelProviderBooking(bookingId){
     if(!response.ok||!data.success) throw new Error(data.error||'Anularea a eșuat.');
     alert('Rezervarea a fost anulată. Cei 20% vor fi rambursați integral.');
     await loadProviderOverview();
-  }catch(error){alert(error.message||'Anularea a eșuat.');}
+  }catch(error){alert(providerError(error.message||'Anularea a eșuat.'));}
 }
 async function loadProviderOverview(){
   try{
@@ -215,8 +239,8 @@ async function loadProviderOverview(){
       ? past.map(b=>'<tr style="border-top:1px solid #eee"><td style="padding:8px">'+esc(b.booking_id)+'</td><td style="padding:8px">'+esc(b.experience_name||'–')+'</td><td style="padding:8px">'+esc((b.booking_date||'')+' '+(b.booking_time||''))+'</td><td style="padding:8px">'+esc(b.customer_name||'')+'</td><td style="padding:8px">'+esc(b.customer_email||'')+'</td><td style="padding:8px;text-align:right">'+money(b.total_amount_cents||b.amount_cents,b.currency)+'</td><td style="padding:8px;text-align:right">'+money(b.fiiviu_fee_cents||b.amount_cents,b.currency)+'</td><td style="padding:8px;text-align:right">'+money(b.provider_due_cents||0,b.currency)+'</td><td style="padding:8px">'+esc(paymentMethods(b))+'</td><td style="padding:8px">'+esc(providerStatus(b.status))+'</td></tr>').join('')
       : '<tr><td colspan="10" class="muted" style="padding:10px">Nu există rezervări anterioare.</td></tr>';
   }catch(e){
-    document.getElementById('providerUpcoming').textContent=e.message;
-    document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="10" class="error" style="padding:10px">'+esc(e.message)+'</td></tr>';
+    document.getElementById('providerUpcoming').textContent=providerError(e.message);
+    document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="10" class="error" style="padding:10px">'+esc(providerError(e.message))+'</td></tr>';
   }
 }
 
@@ -232,7 +256,7 @@ async function load(){
     if(!rows.length){box.textContent='Nu există încă experiențe.';return;}
     box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(({published:'Publicată',draft:'Ciornă',active:'Activă',inactive:'Inactivă'}[String(x.status||'').toLowerCase()]||x.status||'Necunoscută'))+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
   }catch(e){
-    box.textContent=e.message;
+    box.textContent=providerError(e.message);
   }
 }
 
@@ -275,7 +299,7 @@ experienceForm?.addEventListener('submit',async event=>{
   if(!r.ok)throw Error(d.error||'Experiența nu a putut fi salvată.');
   result.className='result ok';result.style.display='block';result.textContent='Experiența a fost salvată. Avans online: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; de plătit la fața locului: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
   experienceForm.reset();document.getElementById('expCity').value='București';document.getElementById('expCash').checked=true;document.getElementById('expCard').checked=true;updateExperiencePreview();await load();
- }catch(error){result.className='result error';result.style.display='block';result.textContent=error.message;}
+ }catch(error){result.className='result error';result.style.display='block';result.textContent=providerError(error.message);}
  finally{submit.disabled=false;}
 });
 updateExperiencePreview();
@@ -298,7 +322,7 @@ document.getElementById('providerTestBooking')?.addEventListener('click',async()
     await loadProviderOverview();
   }catch(err){
     result.className='result error';
-    result.textContent=err.message;
+    result.textContent=providerError(err.message);
     result.style.display='block';
   }
 });
