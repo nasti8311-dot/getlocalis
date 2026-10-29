@@ -103,6 +103,17 @@ test("launch paths do not mutate D1 schema at request time", () => {
 });
 
 
+test("direct 20/80 checkout uses the server-side RON offer price", () => {
+  const worker = read("worker-entry.js");
+  assert.match(worker, /SELECT o\.id,o\.provider_ref,o\.title,o\.price_cents,o\.currency/);
+  assert.match(worker, /data\.totalAmountCents=total/);
+  assert.match(worker, /data\.fiiviuFeeCents=fee/);
+  assert.match(worker, /data\.providerDueCents=due/);
+  assert.match(worker, /data\.bookingId="FV-"\+crypto\.randomUUID/);
+  assert.match(worker, /directPaymentModel \|\|/);
+  assert.match(worker, /A valid booking date and time are required/);
+});
+
 test("provider self-registration requires explicit contract acceptance and stores evidence", () => {
   const worker = read("worker-entry.js");
   const page = read("anbieter-register.html");
