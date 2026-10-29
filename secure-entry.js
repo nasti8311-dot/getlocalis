@@ -358,6 +358,10 @@ export default {
       return new Response(assetResponse.body, { status: assetResponse.status, statusText: assetResponse.statusText, headers });
     }
 
+    if (url.pathname === "/api/booking" || url.pathname === "/api/cancel-booking") {
+      return applyApiSecurityHeaders(await adminWorker.fetch(request, env, ctx), request, env);
+    }
+
     if (url.pathname === "/api/stripe/webhook") {
       return handleStripeWebhook(request, env);
     }
