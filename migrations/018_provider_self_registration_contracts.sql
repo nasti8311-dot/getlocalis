@@ -4,6 +4,9 @@ ALTER TABLE providers ADD COLUMN company_name TEXT;
 ALTER TABLE providers ADD COLUMN cui TEXT;
 ALTER TABLE providers ADD COLUMN representative_name TEXT;
 
+ALTER TABLE offers ADD COLUMN pay_on_site_cash INTEGER NOT NULL DEFAULT 1 CHECK (pay_on_site_cash IN (0,1));
+ALTER TABLE offers ADD COLUMN pay_on_site_card INTEGER NOT NULL DEFAULT 1 CHECK (pay_on_site_card IN (0,1));
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_providers_cui ON providers(cui) WHERE cui IS NOT NULL AND trim(cui) <> '';
 
 CREATE TABLE IF NOT EXISTS vendor_contract_logs (
