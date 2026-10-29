@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="de">
+<html lang="ro">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>FiiViu – Anbieterregistrierung</title>
+<meta name="robots" content="noindex,nofollow"><title>FiiViu – Înregistrare furnizor</title>
 <style>
 :root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#211a16;background:#f8f5ef;--orange:#e86f2d;--line:#e3d9cf}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:36px 16px;background:radial-gradient(circle at 5% 0,rgba(232,111,45,.14),transparent 32%),#f8f5ef}
@@ -17,34 +17,34 @@ small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a
 </style></head>
 <body><main>
 <div class="brand">Fii<span>Viu</span></div>
-<h1>Als Anbieter registrieren</h1>
-<p class="intro">Erstellen Sie Ihr Anbieter-Konto für Erlebnisse in Bukarest. Nach der Registrierung können Sie sich anmelden und Ihre Angebote sowie Buchungen verwalten.</p>
+<h1>Înregistrează-te ca furnizor</h1>
+<p class="intro">Creează-ți contul de furnizor FiiViu pentru experiențe în București. După înregistrare, te poți autentifica și îți poți gestiona ofertele și rezervările.</p>
 <form id="registerForm">
 <div class="grid">
-<div class="field wide"><label for="companyName">Unternehmensname (S.R.L. / PFA) *</label><input id="companyName" name="company_name" autocomplete="organization" required maxlength="180"></div>
-<div class="field"><label for="cui">Rumänische Steuernummer / CUI *</label><input id="cui" name="cui" required maxlength="24" autocomplete="off" placeholder="z. B. RO12345678"></div>
-<div class="field"><label for="representative">Gesetzlicher Vertreter *</label><input id="representative" name="representative_name" autocomplete="name" required maxlength="160"></div>
-<div class="field wide"><label for="email">Geschäftliche E-Mail-Adresse *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
-<div class="field wide"><label for="password">Passwort *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Mindestens 12 Zeichen. Verwenden Sie ein einzigartiges Passwort.</small></div>
+<div class="field wide"><label for="companyName">Denumirea firmei (S.R.L. / PFA) *</label><input id="companyName" name="company_name" autocomplete="organization" required maxlength="180"></div>
+<div class="field"><label for="cui">Cod unic de identificare / CUI *</label><input id="cui" name="cui" required maxlength="24" autocomplete="off" placeholder="de ex. RO12345678"></div>
+<div class="field"><label for="representative">Reprezentant legal *</label><input id="representative" name="representative_name" autocomplete="name" required maxlength="160"></div>
+<div class="field wide"><label for="email">Adresă de e-mail profesională *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
+<div class="field wide"><label for="password">Parolă *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimum 12 caractere. Folosește o parolă unică.</small></div>
 </div>
-<div class="check"><input id="accept" name="accept_contract" type="checkbox" required><label for="accept">Ich bestätige, dass ich gesetzlicher Vertreter des angegebenen Unternehmens bin. Ich habe den <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">Partnervertrag</a> sowie die Provisionsbedingungen (20% Anzahlung per Online-Buchung) gelesen und stimme diesen verbindlich zu.</label></div>
-<button id="submitButton" type="submit">Registrierung & Vertrag akzeptieren</button>
+<div class="check"><input id="accept" name="accept_contract" type="checkbox" required><label for="accept">Confirm că sunt reprezentantul legal al companiei indicate. Am citit <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">contractul de parteneriat</a> și condițiile privind comisionul (avans de 20% la rezervarea online) și sunt de acord cu acestea.</label></div>
+<button id="submitButton" type="submit">Înregistrare și acceptarea contractului</button>
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form>
-<footer>Bereits registriert? <a href="/anbieter/login">Zum Anbieter-Login</a></footer>
+<footer>Ai deja un cont? <a href="/anbieter/login">Autentificare furnizor</a></footer>
 </main>
 <script>
 const form=document.getElementById('registerForm'),button=document.getElementById('submitButton'),message=document.getElementById('message');
 form.addEventListener('submit',async event=>{
  event.preventDefault(); if(!form.reportValidity())return;
- button.disabled=true;button.textContent='Registrierung wird verarbeitet…';message.className='message';message.style.display='none';
+ button.disabled=true;button.textContent='Se procesează înregistrarea…';message.className='message';message.style.display='none';
  const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:form.accept_contract.checked};
  try{
   const response=await fetch('/api/provider-register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'Registrierung fehlgeschlagen.');
+  if(!response.ok)throw new Error(data.error||'Înregistrarea a eșuat.');
   message.className='message '+(data.emailSent?'ok':'error');message.style.display='block';
-  message.textContent=data.emailSent?'Registrierung erfolgreich. Der akzeptierte Partnervertrag wurde als PDF per E-Mail versendet. Sie können sich jetzt anmelden.':('Das Konto wurde angelegt und die Vertragsannahme protokolliert, aber der E-Mail-Versand des PDF-Vertrags ist fehlgeschlagen. Bitte wenden Sie sich an info@fiiviu.ro. Referenz: '+(data.providerRef||'registriert'));
+  message.textContent=data.emailSent?'Înregistrare reușită. Contractul de parteneriat acceptat a fost trimis în format PDF prin e-mail. Te poți autentifica acum.':('Contul a fost creat și acceptarea contractului a fost înregistrată, însă trimiterea contractului PDF prin e-mail a eșuat. Contactează info@fiiviu.ro. Referință: '+(data.providerRef||'registriert'));
   if(data.emailSent){form.reset();setTimeout(()=>location.href='/anbieter/login',1600);}
  }catch(error){message.className='message error';message.style.display='block';message.textContent=error.message;}
  finally{button.disabled=false;button.textContent='Registrierung & Vertrag akzeptieren';}
