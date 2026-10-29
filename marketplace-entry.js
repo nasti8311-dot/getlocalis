@@ -172,6 +172,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 
   try{
     await ensureExperiencesTable(env);
+    await ensureOffersTable(env);
 
     // Current public catalog uses the legacy D1 "offers" table. Accept its
     // offer id here so checkout cannot fail with "Missing experienceId".
@@ -180,7 +181,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
       const offer=await env.DB.prepare(`
         SELECT id,provider_ref,title,price_cents,currency,capacity,meeting_point_name,
                meeting_address,meeting_city,meeting_country,meeting_instructions,
-               arrival_minutes_before,available_times,active
+               arrival_minutes_before,available_times,availability_rules,active
         FROM offers WHERE id=? LIMIT 1
       `).bind(Number(numericOfferId)).first();
 
@@ -206,6 +207,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
           meeting_instructions:String(offer.meeting_instructions||""),
           arrival_minutes_before:offer.arrival_minutes_before,
           available_times:String(offer.available_times||""),
+          availability_rules:String(offer.availability_rules||""),
           meeting_latitude:"",
           meeting_longitude:"",
           status:Number(offer.active)!==0 ? "published" : "draft"
@@ -299,6 +301,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     }
     const bookingStart=toBucharestDate(bookingDate,bookingTime);
     if(!bookingStart||bookingStart.getTime()<=Date.now())return json({error:"Das Erlebnisdatum muss in der Zukunft liegen."},409);
+    if(experience.offer_id&&!offerDateAllowed(experience.availability_rules,bookingDate))return json({error:"Dieses Erlebnis ist an dem gewählten Tag nicht verfügbar."},409);
 
     const configuredTimes=normalizeAvailableTimes(experience.available_times);
     if(configuredTimes.length && !configuredTimes.includes(bookingTime)){
@@ -449,14 +452,16 @@ async function countPaidOfferGuests(env,offerId,date,time){
 }
 async function handleOfferAvailability(request,env){
   if(!env.DB)return json({error:"D1 database not configured"},500);
+  await ensureOffersTable(env);
   const params=new URL(request.url).searchParams;
   const offerId=Number(params.get("offerId")||0);
   const date=String(params.get("date")||"").trim();
   const time=String(params.get("time")||"").trim();
   if(!Number.isInteger(offerId)||offerId<1)return json({error:"Ungültige Angebots-ID."},400);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
-  const offer=await env.DB.prepare("SELECT id,capacity,available_times,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
+  const offer=await env.DB.prepare("SELECT id,capacity,available_times,availability_rules,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
   if(!offer||Number(offer.active)!==1)return json({error:"Inserat nicht gefunden."},404);
+  if(!offerDateAllowed(offer.availability_rules,date))return json({offerId,date,available:false,slots:{}});
   const times=normalizeAvailableTimes(offer.available_times);
   const normalizedRequestedTime=normalizeAvailabilityTime(time);
   if(time&&!times.some(value=>normalizeAvailabilityTime(value)===normalizedRequestedTime))return json({error:"Diese Uhrzeit ist für das Inserat nicht verfügbar."},409);
@@ -475,7 +480,20 @@ async function handleOfferAvailability(request,env){
     const remaining=Math.max(capacity-booked,0);
     slots[normalized]={capacity,booked,remaining,soldOut:remaining<=0};
   }
-  return json({offerId,date,slots});
+  return json({offerId,date,available:true,slots});
+}
+function offerDateAllowed(rulesValue,date){
+  const raw=String(rulesValue||"").trim();if(!raw)return true;
+  let rules;try{rules=JSON.parse(raw);}catch(_){return false;}
+  if(!rules||typeof rules!=="object"||!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;
+  if(rules.startDate&&date<String(rules.startDate))return false;
+  if(rules.endDate&&date>String(rules.endDate))return false;
+  const blocked=Array.isArray(rules.blockedDates)?rules.blockedDates.map(String):[];
+  if(blocked.includes(date))return false;
+  const extras=Array.isArray(rules.extraDates)?rules.extraDates.map(String):[];
+  if(extras.includes(date))return true;
+  const weekdays=Array.isArray(rules.weekdays)?rules.weekdays.map(Number):[];
+  return weekdays.includes(new Date(date+"T12:00:00Z").getUTCDay());
 }
 function normalizeAvailableTimes(value){
   if(Array.isArray(value))return value.map(String).map(v=>v.trim()).filter(Boolean);
