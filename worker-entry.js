@@ -263,6 +263,7 @@ export default {
         params.set("metadata[total_amount_cents]",String(Number.isSafeInteger(Number(data.totalAmountCents))?Number(data.totalAmountCents):amount));
         params.set("metadata[fiiviu_fee_cents]",String(Number.isSafeInteger(Number(data.fiiviuFeeCents))?Number(data.fiiviuFeeCents):amount));
         params.set("metadata[provider_due_cents]",String(Number.isSafeInteger(Number(data.providerDueCents))?Number(data.providerDueCents):0));
+        params.set("metadata[provider_ref]",String(data.providerRef||""));
         params.set("metadata[booking_id]",String(data.bookingId||""));
         params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
         params.set("metadata[experience_id]",String(data.experienceId||""));
@@ -1413,12 +1414,13 @@ async function finalizePaidBooking(
           meeting_latitude,
           meeting_longitude,
           partner_ref,
+          provider_ref,
           provider_name,
           provider_connect_account_id,
           cancellation_token,
           created_at,
           updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
           status='confirmed',
@@ -1447,6 +1449,7 @@ async function finalizePaidBooking(
           meeting_latitude=excluded.meeting_latitude,
           meeting_longitude=excluded.meeting_longitude,
           partner_ref=excluded.partner_ref,
+          provider_ref=excluded.provider_ref,
           provider_name=excluded.provider_name,
           provider_connect_account_id=excluded.provider_connect_account_id,
           cancellation_token=COALESCE(
@@ -1484,6 +1487,7 @@ async function finalizePaidBooking(
         meeting.latitude,
         meeting.longitude,
         clean(metadata.partner_ref),
+        clean(metadata.provider_ref),
         clean(metadata.provider_name) ||
           fallback.providerName,
         clean(metadata.provider_connect_account_id),
@@ -3383,7 +3387,7 @@ async function recordBookingSettlement(env, booking) {
 
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","currency","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","currency","provider_ref","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
