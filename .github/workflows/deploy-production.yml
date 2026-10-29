@@ -114,13 +114,12 @@ jobs:
             main_module: mainModule,
             compatibility_date: "2026-09-14",
             keep_assets: true,
-            keep_bindings: ["secret_text"],
+            keep_bindings: ["plain_text", "secret_text"],
             annotations: { "workers/message": "GitHub Actions " + sha },
             bindings: [
               { type: "assets", name: "ASSETS" },
               { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
               { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
-              { type: "plain_text", name: "UNDER_CONSTRUCTION", text: "true" }
             ]
           };
           fs.writeFileSync("/tmp/worker-metadata.json", JSON.stringify(metadata));
