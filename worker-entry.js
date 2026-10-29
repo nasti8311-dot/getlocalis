@@ -2743,9 +2743,7 @@ async function handleAdminProviderPassword(request,env){
   }
 }
 
-async 
-
-async async function handleProviderRegistration(request,env){
+async function handleProviderRegistration(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured."},500);
   if(!String(env.RESEND_API_KEY||"").trim())return json({error:"Der PDF-Vertragsversand ist nicht konfiguriert. Bitte RESEND_API_KEY einrichten und erneut versuchen."},503);
