@@ -126,8 +126,8 @@ jobs:
         run: |
           set -euo pipefail
           status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{}'             --output /tmp/webhook.json             --write-out '%{http_code}'             https://fiiviu.ro/api/stripe/webhook)"
-          if [ "$status" != "400" ]; then
-            echo "Expected unsigned Stripe webhook to return HTTP 400, got $status."
+          if [ "$status" != "400" ] && [ "$status" != "401" ]; then
+            echo "Expected unsigned Stripe webhook to fail closed with HTTP 400 or 401, got $status."
             cat /tmp/webhook.json
             exit 1
           fi
