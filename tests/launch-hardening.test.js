@@ -993,3 +993,15 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
   assert.doesNotMatch(workflow, /command:\s*deploy\b/);
 });
+
+test("provider self-cancellation revokes access but preserves audit history", () => {
+  const worker = read("worker-entry.js");
+  assert.match(worker, /\/api\/provider-account-cancel/);
+  assert.match(worker, /body\.confirm_cancellation !== true/);
+  assert.match(worker, /UPDATE providers SET active=0/);
+  assert.match(worker, /UPDATE provider_accounts SET active=0/);
+  assert.match(worker, /DELETE FROM provider_sessions WHERE provider_ref=\?/);
+  assert.match(worker, /Keep contract acceptance and booking\/settlement history/);
+  assert.doesNotMatch(worker, /DELETE FROM vendor_contract_logs/);
+  assert.doesNotMatch(worker, /DELETE FROM bookings/);
+});
