@@ -890,6 +890,14 @@ test("admin provider password provisioning requires the admin bearer key", () =>
 });
 
 
+test("production deploy refuses to upload without Stripe webhook secret", () => {
+  const deploy = read(".github/workflows/deploy-production.yml");
+  assert.match(deploy, /Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload/);
+  assert.match(deploy, /if \(!stripeWebhookSecret\)/);
+  assert.match(deploy, /\{ type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret \}/);
+  assert.doesNotMatch(deploy, /preserving any existing Worker secret binding/);
+});
+
 test("production smoke runs after a successful production deploy", () => {
   const workflow = read(".github/workflows/launch-production-smoke.yml");
   assert.match(workflow, /workflow_run:/);

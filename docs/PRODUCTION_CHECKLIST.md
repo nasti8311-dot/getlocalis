@@ -24,6 +24,8 @@ Keep these server-side only:
 
 Do not place secret values in HTML, browser JavaScript, Git, or customer-visible D1 data.
 
+The production deploy must fail closed if the GitHub Actions secret `STRIPE_WEBHOOK_SECRET` is missing. Configure it in the repository's Actions secrets before deploying; do not weaken the production smoke check to treat a missing webhook secret as healthy.
+
 The public Stripe.js key belongs in the customer frontend and must match the same Stripe account and mode as `STRIPE_SECRET_KEY`.
 
 ## 3. Stripe mode boundary
