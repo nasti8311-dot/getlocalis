@@ -102,13 +102,20 @@ jobs:
 
       - name: Set production rollback target
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # Last confirmed production version before this repair attempt. Keep a
-          # deterministic rollback target because the versions API returned no
-          # usable version records for this Worker.
-          known_good="8eeff138-173d-4c20-9246-52f575e72513"
-          echo "Using the previously confirmed production version as rollback target."
+          versions_response="$(curl --silent --show-error --fail-with-body \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions?per_page=1")"
+          known_good="$(printf '%s' "$versions_response" | jq -r '.result[0].id // empty')"
+          if [ -n "$known_good" ]; then
+            echo "Captured current production version $known_good for rollback."
+          else
+            echo "No prior production version returned; automatic rollback will be skipped if needed."
+          fi
           printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
 
       - name: Upload and deploy Worker with secrets while reusing existing assets
