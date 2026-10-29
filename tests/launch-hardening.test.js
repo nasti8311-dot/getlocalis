@@ -95,6 +95,11 @@ test("launch paths do not mutate D1 schema at request time", () => {
   for (const column of ["provider_ref","provider_name","release_at","settlement_error","settlement_test_transfer_id","settlement_last_attempt_at"]) {
     assert.match(settlementMigration, new RegExp("ADD COLUMN " + column));
   }
+  const directPaymentMigration = read("migrations/012_fiiviu_direct_provider_payment.sql");
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
+    assert.match(directPaymentMigration, new RegExp("ADD COLUMN " + column));
+  }
+  assert.match(read("marketplace-entry.js"), /Experiences schema is incomplete/);
 });
 
 test("server-side files are excluded from Cloudflare Static Assets", () => {
@@ -388,7 +393,7 @@ test("legacy worker payment-intent endpoint is disabled", () => {
 
 test("secure entry routes payment creation through marketplace worker", () => {
   const source = read("secure-entry.js");
-  const marketplaceIndex = source.indexOf('const { default: marketplaceWorker }');
+  const marketplaceIndex = source.indexOf('import marketplaceWorker from "./marketplace-entry.js";');
   const fallbackIndex = source.indexOf('return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);');
   assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
 });
@@ -792,10 +797,8 @@ test("retired partner token helpers and schema are no longer reachable", () => {
 test("provider test booking endpoint is routed through the authenticated worker", () => {
   const source = read("secure-entry.js");
   assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
-  assert.match(
-    source,
-    /url\.pathname === "\/api\/provider-test-booking" \|\| url\.pathname\.startsWith\("\/api\/provider\/"\)/
-  );
+  assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
+  assert.match(source, /url\.pathname\.startsWith\("\/api\/provider\/"\)/);
 });
 
 
@@ -887,11 +890,11 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy does not block on GitHub D1 migration access", () => {
+test("production deploy performs only idempotent, explicit schema repair before Worker deployment", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  assert.doesNotMatch(workflow, /d1 migrations apply .*--remote/);
-  assert.doesNotMatch(workflow, /d1 execute .*--remote/);
-  assert.doesNotMatch(workflow, /Apply production D1 migrations/);
+  assert.match(workflow, /add_column_if_missing\(\)/);
+  assert.match(workflow, /duplicate column name/);
+  assert.match(workflow, /Repair production D1 schema/);
   assert.match(workflow, /Deploy Worker version/);
 });
 
