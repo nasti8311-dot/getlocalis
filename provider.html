@@ -171,7 +171,7 @@ async function loadProviderOverview(){
     document.getElementById('providerStatPaid').textContent=money(s.paidOutCents);
     const upcoming=d.upcomingBookings||[];
     document.getElementById('providerUpcoming').innerHTML=upcoming.length
-      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' Pers. · Gesamt '+money(b.total_amount_cents||b.amount_cents||0)+'</div><div class="muted">'+esc(b.customer_name||'')+'</div>'+(b.payment_model==='fiiviu_fee_20_direct_80'&&b.status==='confirmed'?'<div class="muted">Vor Ort zu zahlen: '+money(b.provider_due_cents||0)+'</div><button class="secondary" style="margin-top:8px" onclick="cancelProviderBooking(\''+esc(b.booking_id)+'\')">Buchung absagen &amp; 20 % erstatten</button>':'')+'</div>').join('')
+      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' Pers. · Gesamt '+money(b.total_amount_cents||b.amount_cents||0)+'</div><div class="muted">'+esc(b.customer_name||'')+'</div>'+(b.payment_model==='fiiviu_fee_20_direct_80'&&b.status==='confirmed'?'<div class="muted">Vor Ort zu zahlen: '+money(b.provider_due_cents||0)+'</div><button class="secondary" style="margin-top:8px" onclick="cancelProviderBooking(&quot;'+esc(b.booking_id)+'&quot;)">Buchung absagen &amp; 20 % erstatten</button>':'')+'</div>').join('')
       : 'Keine kommenden Reservări.';
     const recent=d.recentBookings||[];
     document.getElementById('providerRecentRows').innerHTML=recent.length
