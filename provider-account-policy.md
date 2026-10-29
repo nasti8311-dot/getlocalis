@@ -61,3 +61,14 @@ Provider login additionally requires the provider authentication tables from mig
 10. Stripe remains in sandbox/test mode until an explicit live-readiness decision is made.
 
 The current provider authentication/onboarding model is persisted in D1 and is the source of truth for provider identity.
+## Self-registration and accepted contract
+
+Self-registration is available at `/anbieter/register` and uses the existing `providers`, `provider_accounts`, and provider-session model. It does not create a parallel vendor identity system.
+
+- Company name, normalized Romanian CUI, legal representative, email, password and explicit contract acceptance are required.
+- Passwords are stored as PBKDF2-HMAC-SHA-256 hashes with a per-account random salt.
+- The accepted contract is versioned (`v1.0`) and logged in `vendor_contract_logs` with UTC acceptance time, Cloudflare-observed client IP, user agent and a SHA-256 hash of the accepted contract snapshot.
+- The contract PDF is sent using Resend attachments. Configure the Worker secret `RESEND_API_KEY` before enabling self-registration; the API fails closed before creating an account if this secret is absent.
+- The current contract and its 20/80 payment terms are published at `/legal/anbieter-bedingungen.html`. Have Romanian counsel review the terms before treating them as legally conclusive.
+
+New provider-created offers store on-site cash/card acceptance flags. Booking views read customer email, total, online deposit and remaining on-site amount from the booking record, and show the offer's declared on-site payment methods.
