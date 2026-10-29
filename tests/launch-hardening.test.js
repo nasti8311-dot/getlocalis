@@ -1005,3 +1005,9 @@ test("provider self-cancellation revokes access but preserves audit history", ()
   assert.doesNotMatch(worker, /DELETE FROM vendor_contract_logs/);
   assert.doesNotMatch(worker, /DELETE FROM bookings/);
 });
+
+test("provider account cancellation endpoint is routed before the maintenance gate", () => {
+  const worker = read("secure-entry.js");
+  assert.match(worker, /url\.pathname === "\/api\/provider-account-cancel"/);
+  assert.match(worker, /url\.pathname === "\/api\/provider-account-cancel"[\s\S]*?adminWorker\.fetch\(request, env, ctx\)/);
+});
