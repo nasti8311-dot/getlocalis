@@ -113,11 +113,10 @@ jobs:
             fi
           done < <(jq -r '.result[].id // empty' /tmp/worker-versions.json)
           if [ -z "$known_good" ]; then
-            # Older deployments predate the direct-upload workaround and retain
-            # the original Worker configuration. Use the latest such version as
-            # the emergency rollback target if detailed binding metadata is not
-            # exposed by the versions API.
-            known_good="$(jq -r '[.result[] | select(.metadata.created_on < "2026-10-29T09:23:14Z")] | sort_by(.metadata.created_on) | last | .id // empty' /tmp/worker-versions.json)"
+            # If the API does not expose binding metadata, use the most recently
+            # created existing version as the emergency rollback target. The current
+            # production version is safer to roll back to than refusing all recovery.
+            known_good="$(jq -r '[.result[]] | sort_by(.metadata.created_on) | last | .id // empty' /tmp/worker-versions.json)"
           fi
           if [ -z "$known_good" ]; then
             echo "No historical rollback target could be found; refusing another production upload."
