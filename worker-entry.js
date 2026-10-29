@@ -2963,8 +2963,8 @@ async function handleProviderOverview(request,env){
     // amounts. This keeps provider revenue/payout figures consistent with Stripe.
     const rows=await env.DB.prepare(`
       SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
-             b.experience_name,b.customer_name,b.guests,b.amount_cents,
-             s.payment_intent_id,s.total_amount_cents,s.provider_amount_cents,
+             b.experience_name,b.customer_name,b.guests,b.amount_cents,b.total_amount_cents,b.fiiviu_fee_cents,b.provider_due_cents,b.payment_model,
+             s.payment_intent_id,s.total_amount_cents AS settlement_total_amount_cents,s.provider_amount_cents,
              s.provider_transfer_amount_cents,s.settlement_status,s.provider_transfer_id,
              s.release_at,s.settlement_error,s.settlement_test_transfer_id
       FROM bookings b
@@ -2974,12 +2974,12 @@ async function handleProviderOverview(request,env){
     `).bind(provider.name,providerRef).all();
     const all=rows.results||[];
 
-    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0);
+    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.payment_model==="fiiviu_fee_20_direct_80" ? r.provider_due_cents || 0 : r.provider_amount_cents || 0),0);
     const paidOutCents=all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
       .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||0),0);
     const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&
-      (r.settlement_status==="pending"||r.settlement_test_transfer_id))
-      .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||r.provider_amount_cents||0),0);
+      (r.payment_model==="fiiviu_fee_20_direct_80" || r.settlement_status==="pending"||r.settlement_test_transfer_id))
+      .reduce((sum,r)=>sum+Number(r.payment_model==="fiiviu_fee_20_direct_80" ? r.provider_due_cents || 0 : r.provider_transfer_amount_cents||r.provider_amount_cents||0),0);
     const pendingCents=Math.max(0,grossRevenueCents-availableCents-
       all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
         .reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0));
