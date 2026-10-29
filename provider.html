@@ -208,7 +208,7 @@ async function loadProviderOverview(){
     const upcoming=d.upcomingBookings||[];
     const paymentMethods=b=>[Number(b.pay_on_site_cash)===1?'Numerar':null,Number(b.pay_on_site_card)===1?'Card':null].filter(Boolean).join(' / ')||'Nespecificat';
     document.getElementById('providerUpcoming').innerHTML=upcoming.length
-      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' pers. · Total '+money(b.total_amount_cents||b.amount_cents||0,b.currency)+'</div><div>'+esc(b.customer_name||'')+' · '+esc(b.customer_email||'')+'</div>'+(b.payment_model==='fiiviu_fee_20_direct_80'?'<div>Online-Anzahlung (20 %): <strong>'+money(b.fiiviu_fee_cents||b.amount_cents||0,b.currency)+'</strong></div><div>La fața locului (80%): <strong>'+money(b.provider_due_cents||0,b.currency)+'</strong> · Metode de plată: '+esc(paymentMethods(b))+'</div>':'<div>Online bezahlt: '+money(b.amount_cents||0,b.currency)+'</div>')+(b.payment_model==='fiiviu_fee_20_direct_80'&&b.status==='confirmed'?'<button class="secondary" style="margin-top:8px" onclick="cancelProviderBooking(&quot;'+esc(b.booking_id)+'&quot;)">Anulează rezervarea și rambursează 20%</button>':'')+'</div>').join('')
+      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' pers. · Total '+money(b.total_amount_cents||b.amount_cents||0,b.currency)+'</div><div>'+esc(b.customer_name||'')+' · '+esc(b.customer_email||'')+'</div>'+(b.payment_model==='fiiviu_fee_20_direct_80'?'<div>Avans online (20%): <strong>'+money(b.fiiviu_fee_cents||b.amount_cents||0,b.currency)+'</strong></div><div>La fața locului (80%): <strong>'+money(b.provider_due_cents||0,b.currency)+'</strong> · Metode de plată: '+esc(paymentMethods(b))+'</div>':'<div>Plătit online: '+money(b.amount_cents||0,b.currency)+'</div>')+(b.payment_model==='fiiviu_fee_20_direct_80'&&b.status==='confirmed'?'<button class="secondary" style="margin-top:8px" onclick="cancelProviderBooking(&quot;'+esc(b.booking_id)+'&quot;)">Anulează rezervarea și rambursează 20%</button>':'')+'</div>').join('')
       : 'Nu există rezervări viitoare.';
     const past=d.pastBookings||[];
     document.getElementById('providerRecentRows').innerHTML=past.length
@@ -230,7 +230,7 @@ async function load(){
     if(!r.ok) throw Error(d.error||'Încărcarea a eșuat.');
     const rows=d.experiences||[];
     if(!rows.length){box.textContent='Nu există încă experiențe.';return;}
-    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(x.status)+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
+    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(({published:'Publicată',draft:'Ciornă',active:'Activă',inactive:'Inactivă'}[String(x.status||'').toLowerCase()]||x.status||'Necunoscută'))+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
   }catch(e){
     box.textContent=e.message;
   }
@@ -304,4 +304,4 @@ document.getElementById('providerTestBooking')?.addEventListener('click',async()
 });
 
 loadProviderSession().then(ok=>{if(ok){loadProviderOverview();load();}});
-</script><div style="max-width:1100px;margin:24px auto 40px;padding:0 20px;text-align:center;font-size:12px"><a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">Condiții pentru furnizori</a> · <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener noreferrer">Datenschutz</a></div></body></html>
+</script><div style="max-width:1100px;margin:24px auto 40px;padding:0 20px;text-align:center;font-size:12px"><a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">Condiții pentru furnizori</a> · <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener noreferrer">Politica de confidențialitate</a></div></body></html>
