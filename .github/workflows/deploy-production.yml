@@ -66,6 +66,26 @@ jobs:
           add_column_if_missing "bookings" "offer_id" "INTEGER"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_bookings_offer_slot ON bookings(offer_id,booking_date,booking_time,status,payment_status)"
 
+          # Backward-compatible fields for the FiiViu 20/80 payment model.
+          # Existing rows keep their old amount_cents semantics and default to legacy_connect.
+          add_column_if_missing "bookings" "total_amount_cents" "INTEGER"
+          add_column_if_missing "bookings" "fiiviu_fee_cents" "INTEGER"
+          add_column_if_missing "bookings" "provider_due_cents" "INTEGER"
+          add_column_if_missing "bookings" "payment_model" "TEXT NOT NULL DEFAULT 'legacy_connect'"
+          add_column_if_missing "bookings" "cancellation_reason" "TEXT"
+          add_column_if_missing "bookings" "provider_ref" "TEXT"
+
+          # These localized experience fields were historically added by request-time schema evolution.
+          # Ensure them before deploying the strict migration-owned schema check.
+          add_column_if_missing "experiences" "title_en" "TEXT"
+          add_column_if_missing "experiences" "title_ro" "TEXT"
+          add_column_if_missing "experiences" "description_en" "TEXT"
+          add_column_if_missing "experiences" "description_ro" "TEXT"
+          add_column_if_missing "experiences" "meeting_point_name_en" "TEXT"
+          add_column_if_missing "experiences" "meeting_point_name_ro" "TEXT"
+          add_column_if_missing "experiences" "meeting_instructions_en" "TEXT"
+          add_column_if_missing "experiences" "meeting_instructions_ro" "TEXT"
+
           echo "Production D1 schema repair completed."
 
       - name: Upload Worker version
