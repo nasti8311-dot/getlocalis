@@ -41,12 +41,16 @@ export async function handleStripeWebhook(request, env) {
     if (event.type === "payment_intent.succeeded") {
       await recordPaymentIntentEvent(env,event);
       const paymentIntent = event.data?.object;
+      const metadata = paymentIntent?.metadata || {};
+      const directProviderPayment = String(metadata.payment_model || "") === "fiiviu_fee_20_direct_80";
       const isFiiViuCheckout =
-        String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
-        String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
-        /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || ""));
-      if (isFiiViuCheckout) {
+        String(metadata.fiiviu_checkout || "") === "1" &&
+        String(metadata.booking_id || "").startsWith("FV-") &&
+        (directProviderPayment || /^acct_[A-Za-z0-9]+$/.test(String(metadata.provider_connect_account_id || "")));
+      if (isFiiViuCheckout && !directProviderPayment) {
         await createBookingSettlement(env,event);
+      } else if (directProviderPayment) {
+        console.info("FiiViu 20/80 booking: provider is paid directly by customer; Stripe Connect settlement skipped.");
       } else {
         console.warn("FiiViu Stripe payment intent is not a recognized checkout; settlement skipped");
       }

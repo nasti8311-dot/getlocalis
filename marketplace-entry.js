@@ -100,7 +100,7 @@ async function handlePublicOffers(request,env){
     await ensureExperiencesTable(env);
     await ensureOffersTable(env);
     const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.capacity,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
-    const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.connect_account_id=e.provider_connect_account_id AND p.active=1 WHERE e.status='published'").all();
+    const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.active=1 AND ((e.provider_connect_account_id IS NOT NULL AND e.provider_connect_account_id<>'' AND p.connect_account_id=e.provider_connect_account_id) OR ((e.provider_connect_account_id IS NULL OR e.provider_connect_account_id='') AND lower(p.name)=lower(e.provider_name))) WHERE e.status='published'").all();
     const legacyOffers=(legacy.results||[]).map(x=>({...x,source:"offer"}));
     for (const offer of legacyOffers) {
       if (!translationFieldsNeedRefresh(offer)) continue;
@@ -249,15 +249,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(String(experience.status)!=="published")return json({error:"Experience is not currently bookable"},409);
 
     const providerAccount=String(experience.provider_connect_account_id||"").trim();
-    const stripeTestMode=String(env.STRIPE_SECRET_KEY||"").startsWith("sk_test_");
-    if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount) && !stripeTestMode){
-      return json({error:"Experience is missing a valid provider Connect account"},409);
-    }
 
-    // In Stripe test mode, Connect is intentionally optional for test providers.
-    // Payments are processed on the platform account and settlement stays pending
-    // until a real provider Connect account is configured. Live mode keeps the
-    // strict Connect requirement.
+    // The 20/80 checkout collects only FiiViu's fee. The provider receives the
+    // remaining amount directly from the customer, so a Stripe Connect account
+    // is not a prerequisite for taking a booking.
     let activeProvider=null;
     if(/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
       activeProvider=await env.DB.prepare(
@@ -320,7 +315,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
 
     const totalAmount=unitPrice*guests;
-    if(!Number.isSafeInteger(totalAmount)||totalAmount<50)return json({error:"Invalid calculated amount"},409);
+    if(!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der Gesamtpreis muss mindestens 2,50 betragen, damit die 20-%-Onlinegebühr über Stripe bezahlt werden kann."},409);
+    const fiiviuFeeAmount=Math.round(totalAmount*0.20);
+    const providerDueAmount=totalAmount-fiiviuFeeAmount;
+    if(!Number.isSafeInteger(fiiviuFeeAmount)||fiiviuFeeAmount<50||!Number.isSafeInteger(providerDueAmount)||providerDueAmount<0)return json({error:"Invalid calculated payment split"},409);
 
     // Never trust a client-supplied booking ID: it is persisted as a unique
     // booking identifier after payment succeeds. Generate it server-side so a
@@ -329,9 +327,15 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.experienceId=experienceId;
     body.offerId=offerIdRaw || (experienceId.startsWith("offer-") ? experienceId.slice(6) : "");
     body.providerConnectAccountId=validProviderAccount;
+    body.providerRef=String(activeProvider.provider_ref||"");
     body.providerName=String(bodyProviderName||experience.provider_name||"");
     body.experienceName=experience.title||body.tourName||"";
-    body.amount=totalAmount;
+    // Collect only FiiViu's 20% fee online; the remaining 80% is paid directly to the provider.
+    body.amount=fiiviuFeeAmount;
+    body.totalAmountCents=totalAmount;
+    body.fiiviuFeeCents=fiiviuFeeAmount;
+    body.providerDueCents=providerDueAmount;
+    body.paymentModel="fiiviu_fee_20_direct_80";
     body.currency=String(experience.currency||"eur").toLowerCase();
     body.guests=guests;
     body.meetingPointName=String(experience.meeting_point_name||"");
@@ -522,9 +526,6 @@ async function ensureExperiencesTable(env){
   const required=["experience_id","provider_connect_account_id","provider_name","title","description","category","image_url","gallery_urls","available_times","price_cents","currency","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","updated_at"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
-  for(const name of missing){
-    const type=name==="updated_at"?"TEXT":"TEXT";
-    await env.DB.prepare("ALTER TABLE experiences ADD COLUMN "+name+" "+type).run();
-  }
+  if(missing.length) throw new Error("Experiences schema is incomplete. Apply the required D1 migrations before enabling marketplace routes: "+missing.join(", "));
 }
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json","Cache-Control":"no-store"}})}

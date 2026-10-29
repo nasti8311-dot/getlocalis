@@ -95,6 +95,11 @@ test("launch paths do not mutate D1 schema at request time", () => {
   for (const column of ["provider_ref","provider_name","release_at","settlement_error","settlement_test_transfer_id","settlement_last_attempt_at"]) {
     assert.match(settlementMigration, new RegExp("ADD COLUMN " + column));
   }
+  const directPaymentMigration = read("migrations/012_fiiviu_direct_provider_payment.sql");
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
+    assert.match(directPaymentMigration, new RegExp("ADD COLUMN " + column));
+  }
+  assert.match(read("marketplace-entry.js"), /Experiences schema is incomplete/);
 });
 
 test("server-side files are excluded from Cloudflare Static Assets", () => {
@@ -190,7 +195,7 @@ test("Stripe mode mismatch is guarded", () => {
 test("Stripe booking webhooks require the FiiViu checkout marker", () => {
   const webhook = read("stripe-webhook.js");
   const entry = read("worker-entry.js");
-  assert.match(webhook, /metadata\?\.fiiviu_checkout/);
+  assert.match(webhook, /metadata(?:\?\.|\.)fiiviu_checkout/);
   assert.match(webhook, /settlement skipped/);
   assert.match(entry, /metadata\?\.fiiviu_checkout/);
   assert.match(entry, /booking finalization skipped/);
@@ -232,12 +237,34 @@ test("marketplace entrypoint stays wired to the current worker implementation", 
 test("marketplace checkout recalculates price and owns booking identity", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /const totalAmount=unitPrice\*guests/);
-  assert.match(source, /body\.amount=totalAmount/);
+  assert.match(source, /body\.amount=fiiviuFeeAmount/);
   assert.match(source, /body\.bookingId\s*=\s*"FV-"/);
   assert.match(source, /crypto\.randomUUID\(\)/);
   assert.match(source, /provider_connect_account_id/);
 });
 
+
+test("20/80 marketplace checkout collects only the FiiViu fee and avoids Connect settlements", () => {
+  const marketplace = read("marketplace-entry.js");
+  const worker = read("worker-entry.js");
+  const webhook = read("stripe-webhook.js");
+  assert.match(marketplace, /Math\.round\(totalAmount\*0\.20\)/);
+  assert.match(marketplace, /body\.providerDueCents=providerDueAmount/);
+  assert.match(marketplace, /body\.paymentModel="fiiviu_fee_20_direct_80"/);
+  assert.match(worker, /metadata\[payment_model\]/);
+  assert.match(worker, /total_amount_cents/);
+  assert.match(worker, /booking\.payment_model.*fiiviu_fee_20_direct_80/);
+  assert.match(webhook, /directProviderPayment/);
+  assert.match(webhook, /Stripe Connect settlement skipped/);
+});
+
+test("direct provider payment migration preserves legacy amount semantics", () => {
+  const migration = read("migrations/012_fiiviu_direct_provider_payment.sql");
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
+    assert.match(migration, new RegExp("ADD COLUMN " + column));
+  }
+  assert.match(migration, /payment_model='legacy_connect'/);
+});
 
 test("paid booking finalization is idempotent and email-send guarded", () => {
   const source = read("worker-entry.js");
@@ -262,7 +289,8 @@ test("PaymentIntent carries complete FiiViu metadata at creation time", () => {
     "customer_language","booking_date","booking_time","experience_name","provider_name",
     "meeting_point_name","meeting_address","meeting_city","meeting_country",
     "meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude",
-    "provider_connect_account_id"
+    "provider_connect_account_id","provider_ref","payment_model","total_amount_cents",
+    "fiiviu_fee_cents","provider_due_cents"
   ]) {
     assert.match(createBlock, new RegExp('metadata\\[' + field + '\\]'));
   }
@@ -365,7 +393,7 @@ test("legacy worker payment-intent endpoint is disabled", () => {
 
 test("secure entry routes payment creation through marketplace worker", () => {
   const source = read("secure-entry.js");
-  const marketplaceIndex = source.indexOf('const { default: marketplaceWorker }');
+  const marketplaceIndex = source.indexOf('import marketplaceWorker from "./marketplace-entry.js";');
   const fallbackIndex = source.indexOf('return applyApiSecurityHeaders(await marketplaceWorker.fetch(request, env, ctx), request, env);');
   assert.ok(marketplaceIndex >= 0 && fallbackIndex > marketplaceIndex);
 });
@@ -457,7 +485,7 @@ test("marketplace catalog and checkout require an active provider", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
   assert.match(source, /INNER JOIN providers p ON p\.provider_ref=o\.provider_ref AND p\.active=1 WHERE o\.active=1/);
-  assert.match(source, /INNER JOIN providers p ON p\.connect_account_id=e\.provider_connect_account_id AND p\.active=1 WHERE e\.status='published'/);
+  assert.match(source, /INNER JOIN providers p ON p\.active=1 AND/);
 });
 
 
@@ -611,7 +639,7 @@ test("marketplace checkout derives the payable amount from the server catalog", 
   const source = read("marketplace-entry.js");
   assert.match(source, /const unitPrice=Number\(experience\.price_cents\)/);
   assert.match(source, /const totalAmount=unitPrice\*guests/);
-  assert.match(source, /body\.amount=totalAmount/);
+  assert.match(source, /body\.amount=fiiviuFeeAmount/);
   assert.doesNotMatch(source, /body\.amount=Number\(body\.amount/);
 });
 
@@ -769,10 +797,8 @@ test("retired partner token helpers and schema are no longer reachable", () => {
 test("provider test booking endpoint is routed through the authenticated worker", () => {
   const source = read("secure-entry.js");
   assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
-  assert.match(
-    source,
-    /url\.pathname === "\/api\/provider-test-booking" \|\| url\.pathname\.startsWith\("\/api\/provider\/"\)/
-  );
+  assert.match(source, /url\.pathname === "\/api\/provider-test-booking"/);
+  assert.match(source, /url\.pathname\.startsWith\("\/api\/provider\/"\)/);
 });
 
 
@@ -864,11 +890,14 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy does not block on GitHub D1 migration access", () => {
+test("production deploy performs only idempotent, explicit schema repair before Worker deployment", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  assert.doesNotMatch(workflow, /d1 migrations apply .*--remote/);
-  assert.doesNotMatch(workflow, /d1 execute .*--remote/);
-  assert.doesNotMatch(workflow, /Apply production D1 migrations/);
+  assert.match(workflow, /add_column_if_missing\(\)/);
+  assert.match(workflow, /duplicate column name/);
+  assert.match(workflow, /Repair production D1 schema/);
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
+    assert.match(workflow, new RegExp('add_column_if_missing "bookings" "' + column + '"'));
+  }
   assert.match(workflow, /Deploy Worker version/);
 });
 
