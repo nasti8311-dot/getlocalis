@@ -253,6 +253,14 @@ test("20/80 marketplace checkout collects only the FiiViu fee and avoids Connect
   assert.match(webhook, /Stripe Connect settlement skipped/);
 });
 
+test("direct provider payment migration preserves legacy amount semantics", () => {
+  const migration = read("migrations/012_fiiviu_direct_provider_payment.sql");
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason"]) {
+    assert.match(migration, new RegExp("ADD COLUMN " + column));
+  }
+  assert.match(migration, /payment_model='legacy_connect'/);
+});
+
 test("paid booking finalization is idempotent and email-send guarded", () => {
   const source = read("worker-entry.js");
   const start = source.indexOf("async function finalizePaidBooking");
