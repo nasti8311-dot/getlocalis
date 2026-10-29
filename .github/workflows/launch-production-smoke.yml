@@ -156,12 +156,16 @@ jobs:
           test "$status" = "401"
           node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/settlement-run.json","utf8")); '
 
-      - name: Check checkout rejects malformed input before Stripe
+      - name: Check checkout endpoint respects maintenance mode
         run: |
           set -euo pipefail
           status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{"guests":0}'             --output /tmp/payment-intent.json             --write-out '%{http_code}'             https://fiiviu.ro/api/create-payment-intent)"
-          test "$status" = "400"
-          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/payment-intent.json","utf8")); '
+          if [ "$status" = "503" ] && grep -qi 'Coming Soon' /tmp/payment-intent.json; then
+            echo "Checkout is intentionally gated while UNDER_CONSTRUCTION is enabled."
+          else
+            test "$status" = "400"
+            node -e 'const fs=require("fs"); JSON.parse(fs.readFileSync("/tmp/payment-intent.json","utf8"));'
+          fi
 
       - name: Check provider test booking rejects missing session
         run: |
