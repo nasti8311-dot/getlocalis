@@ -268,10 +268,10 @@ export default {
           }
           const bookingDate=String(data.bookingDate||"").trim();
           const bookingTime=String(data.bookingTime||"").trim();
-          if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(bookingDate)||!/^\\d{1,2}:\\d{2}$/.test(bookingTime)){
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^\d{1,2}:\d{2}$/.test(bookingTime)){
             return json({error:"A valid booking date and time are required"},400);
           }
-          const availableTimes=String(offer.available_times||"").split(/[,;\\n]/).map(value=>value.trim()).filter(Boolean);
+          const availableTimes=String(offer.available_times||"").split(/[,;\n]/).map(value=>value.trim()).filter(Boolean);
           if(availableTimes.length&&!availableTimes.includes(bookingTime)){
             return json({error:"The selected time is not available for this experience"},409);
           }
@@ -2246,9 +2246,9 @@ async function sendResendConfirmation(env, booking) {
     labels.policy,
     "",
     "FiiViu"
-  ].filter(Boolean).join("\\n");
+  ].filter(Boolean).join("\n");
 
-  const html = text.split("\\n").map(line => line ? '<p style="margin:0 0 8px">' + String(line).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch])) + "</p>" : "<br>").join("");
+  const html = text.split("\n").map(line => line ? '<p style="margin:0 0 8px">' + String(line).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch])) + "</p>" : "<br>").join("");
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
