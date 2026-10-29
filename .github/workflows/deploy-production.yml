@@ -185,9 +185,17 @@ jobs:
                 exit 1
               fi
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
-              test "$admin_api_status" = "401"
+              echo "ADMIN /api/admin/partners HTTP $admin_api_status"
+              if [ "$admin_api_status" != "401" ]; then
+                cat /tmp/admin.json
+                exit 1
+              fi
               stats_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/stats.json -w '%{http_code}' 'https://fiiviu.ro/api/partner-stats?ref=TEST')"
-              test "$stats_status" = "401"
+              echo "PARTNER STATS HTTP $stats_status"
+              if [ "$stats_status" != "401" ]; then
+                cat /tmp/stats.json
+                exit 1
+              fi
               exit 0
             fi
 
