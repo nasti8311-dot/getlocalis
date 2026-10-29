@@ -2816,7 +2816,7 @@ async function handleProviderRegistration(request,env){
           to:[email],
           subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.0)",
           text:"Vielen Dank fuer Ihre Registrierung bei FiiViu. Im Anhang finden Sie den Partnervertrag der Version v1.0, den Sie am "+acceptedAt+" UTC akzeptiert haben. Anmeldung: https://fiiviu.ro/anbieter/login",
-          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.0</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\\"https://fiiviu.ro/anbieter/login\\">Zum Anbieter-Login</a></p>",
+          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.0</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
           attachments:[{filename:"FiiViu-Partnervertrag-v1.0.pdf",content:pdf}]
         })
       });
