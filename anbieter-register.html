@@ -22,12 +22,12 @@ small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a
 <form id="registerForm">
 <div class="grid">
 <div class="field wide"><label for="companyName">Denumirea firmei (S.R.L. / PFA) *</label><input id="companyName" name="company_name" autocomplete="organization" required maxlength="180"></div>
-<div class="field"><label for="cui">Cod unic de identificare (CUI) *</label><input id="cui" name="cui" required maxlength="24" autocomplete="off" placeholder="z. B. RO12345678"></div>
+<div class="field"><label for="cui">Cod unic de identificare (CUI) *</label><input id="cui" name="cui" required maxlength="24" autocomplete="off" placeholder="de ex. RO12345678"></div>
 <div class="field"><label for="representative">Reprezentant legal *</label><input id="representative" name="representative_name" autocomplete="name" required maxlength="160"></div>
 <div class="field wide"><label for="email">Adresă de e-mail profesională *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
 <div class="field wide"><label for="password">Parolă *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimum 12 caractere. Folosește o parolă unică.</small></div>
 </div>
-<div class="check"><input id="accept" name="accept_contract" type="checkbox" required><label for="accept">Ich bestätige, dass ich gesetzlicher Vertreter des angegebenen Unternehmens bin. Ich habe die <a href="/legal/anbieter-bedingungen.html?lang=de" target="_blank" rel="noopener noreferrer">Anbieterbedingungen (Vertragsfassung v1.1)</a> einschließlich der Provisions- und Zahlungsbedingungen (20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter) gelesen und stimme ihnen verbindlich zu.</label></div>
+<div class="check"><input id="accept" name="accept_contract" type="checkbox" required><label for="accept">Confirm că sunt reprezentantul legal al firmei indicate. Am citit și accept în mod obligatoriu <a href="/legal/anbieter-bedingungen.html?lang=ro" target="_blank" rel="noopener noreferrer">contractul pentru organizatori (versiunea v1.1)</a>, inclusiv condițiile privind comisionul și plata: 20% online către FiiViu, iar 80% direct către mine, ca organizator, la locație.</label></div>
 <button id="submitButton" type="submit">Înregistrează-te și acceptă contractul</button>
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form>
@@ -35,6 +35,7 @@ small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a
 </main>
 <script>
 const form=document.getElementById('registerForm'),button=document.getElementById('submitButton'),message=document.getElementById('message');
+function localizeError(value){const translations={"Bitte füllen Sie alle Pflichtfelder aus.":"Completează toate câmpurile obligatorii.","Bitte geben Sie eine gültige rumänische CUI/Steuernummer mit 2 bis 10 Ziffern ein.":"Introdu un CUI românesc valid, format din 2 până la 10 cifre.","Bitte geben Sie eine gültige E-Mail-Adresse ein.":"Introdu o adresă de e-mail validă.","Das Passwort muss zwischen 12 und 128 Zeichen lang sein.":"Parola trebuie să aibă între 12 și 128 de caractere.","Sie müssen den Partnervertrag und die Provisionsbedingungen ausdrücklich akzeptieren.":"Trebuie să accepți în mod explicit contractul și condițiile comisionului.","Für diese E-Mail-Adresse besteht bereits ein Anbieterzugang. Bitte melden Sie sich an.":"Există deja un cont pentru această adresă de e-mail. Autentifică-te.","Diese CUI ist bereits registriert. Bitte kontaktieren Sie info@fiiviu.ro, falls Sie Hilfe benötigen.":"Acest CUI este deja înregistrat. Pentru ajutor, contactează info@fiiviu.ro.","Der PDF-Vertragsversand ist nicht konfiguriert. Bitte RESEND_API_KEY einrichten und erneut versuchen.":"Trimiterea contractului PDF nu este configurată. Contactează info@fiiviu.ro.","D1 database not configured.":"Baza de date nu este configurată."};return translations[value]||value||"Înregistrarea a eșuat. Încearcă din nou.";}
 form.addEventListener('submit',async event=>{
  event.preventDefault(); if(!form.reportValidity())return;
  button.disabled=true;button.textContent='Se procesează înregistrarea…';message.className='message';message.style.display='none';
@@ -42,9 +43,9 @@ form.addEventListener('submit',async event=>{
  try{
   const response=await fetch('/api/provider-register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'Înregistrarea a eșuat.');
+  if(!response.ok)throw new Error(localizeError(data.error||'Înregistrarea a eșuat.'));
   message.className='message '+(data.emailSent?'ok':'error');message.style.display='block';
-  message.textContent=data.emailSent?'Registrierung erfolgreich. Der akzeptierte contractul pentru organizatori wurde als PDF per E-Mail versendet. Sie können sich jetzt anmelden.':('Contul a fost creat, iar acceptarea contractului a fost înregistrată, însă trimiterea contractului PDF prin e-mail a eșuat. Contactează info@fiiviu.ro. Referință: '+(data.providerRef||'registriert'));
+  message.textContent=data.emailSent?'Înregistrarea a fost finalizată. Contractul acceptat a fost trimis în format PDF prin e-mail. Te poți autentifica acum.':('Contul a fost creat, iar acceptarea contractului a fost înregistrată, însă trimiterea contractului PDF prin e-mail a eșuat. Contactează info@fiiviu.ro. Referință: '+(data.providerRef||'registriert'));
   if(data.emailSent){form.reset();setTimeout(()=>location.href='/anbieter/login',1600);}
  }catch(error){message.className='message error';message.style.display='block';message.textContent=error.message;}
  finally{button.disabled=false;button.textContent='Înregistrează-te și acceptă contractul';}
