@@ -3186,7 +3186,6 @@ async function providerRefFromSession(request,env){
 async function ensureOffersTable(env){
   const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
-  if(!existing.has("availability_rules")){await env.DB.prepare("ALTER TABLE offers ADD COLUMN availability_rules TEXT").run();existing.add("availability_rules");}
   const required=["provider_ref","title","description","price_cents","currency","available_times","availability_rules","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration"];
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
