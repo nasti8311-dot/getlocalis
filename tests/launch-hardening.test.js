@@ -255,7 +255,7 @@ test("20/80 marketplace checkout collects only the FiiViu fee and avoids Connect
 
 test("direct provider payment migration preserves legacy amount semantics", () => {
   const migration = read("migrations/012_fiiviu_direct_provider_payment.sql");
-  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason"]) {
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
     assert.match(migration, new RegExp("ADD COLUMN " + column));
   }
   assert.match(migration, /payment_model='legacy_connect'/);
