@@ -197,10 +197,11 @@ export default {
             // Safety guard: never finalize a live event while the Worker is
             // configured with test credentials, or vice versa.
             const paymentIntent = event.data?.object;
+            const directPaymentModel = String(paymentIntent?.metadata?.payment_model || "") === "fiiviu_fee_20_direct_80";
             const isFiiViuCheckout =
               String(paymentIntent?.metadata?.fiiviu_checkout || "") === "1" &&
               String(paymentIntent?.metadata?.booking_id || "").startsWith("FV-") &&
-              (configuredTestMode ||
+              (configuredTestMode || directPaymentModel ||
                 /^acct_[A-Za-z0-9]+$/.test(String(paymentIntent?.metadata?.provider_connect_account_id || "")));
 
             if (configuredTestMode !== eventIsTestMode) {
@@ -250,8 +251,60 @@ export default {
           return json({error:"Stripe secret not configured"},500);
         }
 
-        const amount=Number(data.amount);
-        const currency=String(data.currency||"eur").toLowerCase();
+        let amount=Number(data.amount);
+        let currency=String(data.currency||"eur").toLowerCase();
+        if(String(data.paymentModel||"") === "fiiviu_fee_20_direct_80"){
+          if(!env.DB)return json({error:"Marketplace database is not configured"},500);
+          const offerId=Number(data.offerId);
+          const guests=Number(data.guests||1);
+          if(!Number.isSafeInteger(offerId)||offerId<=0||!Number.isSafeInteger(guests)||guests<1||guests>50){
+            return json({error:"Invalid offer or guest count"},400);
+          }
+          const offer=await env.DB.prepare(
+            "SELECT o.id,o.provider_ref,o.title,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.arrival_minutes_before,o.active,o.capacity,o.pay_on_site_cash,o.pay_on_site_card,p.name AS provider_name,p.active AS provider_active,p.connect_account_id FROM offers o JOIN providers p ON p.provider_ref=o.provider_ref WHERE o.id=? LIMIT 1"
+          ).bind(offerId).first();
+          if(!offer||Number(offer.active)!==1||Number(offer.provider_active)!==1){
+            return json({error:"This experience is not available for booking"},409);
+          }
+          const bookingDate=String(data.bookingDate||"").trim();
+          const bookingTime=String(data.bookingTime||"").trim();
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^\d{1,2}:\d{2}$/.test(bookingTime)){
+            return json({error:"A valid booking date and time are required"},400);
+          }
+          const availableTimes=String(offer.available_times||"").split(/[,;\n]/).map(value=>value.trim()).filter(Boolean);
+          if(availableTimes.length&&!availableTimes.includes(bookingTime)){
+            return json({error:"The selected time is not available for this experience"},409);
+          }
+          const unitPrice=Number(offer.price_cents);
+          const total=unitPrice*guests;
+          if(!Number.isSafeInteger(unitPrice)||unitPrice<250||!Number.isSafeInteger(total)){
+            return json({error:"Invalid server-side offer price"},409);
+          }
+          const fee=Math.round(total*0.20);
+          const due=total-fee;
+          if(fee<50||due<0)return json({error:"Invalid calculated payment split"},409);
+          const offeredCurrency=String(offer.currency||"ron").toLowerCase();
+          if(offeredCurrency!=="ron")return json({error:"New marketplace bookings must be priced in RON"},409);
+          amount=fee;
+          currency=offeredCurrency;
+          data.totalAmountCents=total;
+          data.fiiviuFeeCents=fee;
+          data.providerDueCents=due;
+          data.bookingId="FV-"+crypto.randomUUID().replace(/-/g,"").slice(0,12).toUpperCase();
+          data.providerRef=String(offer.provider_ref||"");
+          data.providerName=String(offer.provider_name||"");
+          data.experienceName=String(offer.title||"");
+          data.tourName=String(offer.title||"");
+          data.experienceId=String(offer.id);
+          data.offerId=String(offer.id);
+          data.providerConnectAccountId=String(offer.connect_account_id||"");
+          data.meetingPointName=String(offer.meeting_point_name||"");
+          data.meetingAddress=String(offer.meeting_address||"");
+          data.meetingCity=String(offer.meeting_city||"București");
+          data.meetingCountry=String(offer.meeting_country||"Romania");
+          data.meetingInstructions=String(offer.meeting_instructions||"");
+          data.arrivalMinutesBefore=offer.arrival_minutes_before==null?"":String(offer.arrival_minutes_before);
+        }
         if (!Number.isInteger(amount) || amount < 50) {
           return json({error:"Invalid amount"},400);
         }
@@ -3090,7 +3143,7 @@ async function handleProviderExperiences(request,env){
       const currency=String(body.currency||"ron").toLowerCase();
       if(!title)return json({error:"Der Titel ist erforderlich."},400);
       if(currency!=="ron")return json({error:"Neue Anbieterangebote müssen in RON ausgezeichnet werden."},400);
-      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 RON eingeben."},400);
+      if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Bitte einen Preis von mindestens 2,50 RON eingeben, damit die Online-Anzahlung mindestens 0,50 RON beträgt."},400);
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
       if(!payCash&&!payCard)return json({error:"Bitte mindestens eine Zahlungsart vor Ort auswählen."},400);
