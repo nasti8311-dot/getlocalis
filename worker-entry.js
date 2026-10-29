@@ -802,13 +802,15 @@ async function handleProviderCancellation(request, env) {
     if (!provider) return json({ error: "Veranstalter nicht gefunden." }, 404);
     const booking = await env.DB.prepare("SELECT * FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
     if (!booking) return json({ error: "Buchung nicht gefunden." }, 404);
+    const bookingProviderRef = String(booking.provider_ref || "").trim();
+    const sameProviderRef = Boolean(bookingProviderRef && bookingProviderRef === String(provider.provider_ref || "").trim());
     const bookingProviderName = String(booking.provider_name || "").trim().toLowerCase();
     const authenticatedProviderName = String(provider.name || "").trim().toLowerCase();
     const bookingConnectAccount = String(booking.provider_connect_account_id || "").trim();
     const authenticatedConnectAccount = String(provider.connect_account_id || "").trim();
     const sameProviderName = Boolean(bookingProviderName && authenticatedProviderName && bookingProviderName === authenticatedProviderName);
     const sameConnectAccount = Boolean(bookingConnectAccount && authenticatedConnectAccount && bookingConnectAccount === authenticatedConnectAccount);
-    if (!sameProviderName && !sameConnectAccount) {
+    if (bookingProviderRef ? !sameProviderRef : (!sameProviderName && !sameConnectAccount)) {
       return json({ error: "Diese Buchung gehört nicht zu deinem Anbieter-Konto." }, 403);
     }
     if (String(booking.status || "") === "cancelled" && String(booking.cancellation_reason || "") === "provider") {
