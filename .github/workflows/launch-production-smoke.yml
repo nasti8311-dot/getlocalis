@@ -174,13 +174,13 @@ jobs:
           test "$status" = "401"
           node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/provider-test-booking.json","utf8")); '
 
-      - name: Check provider Connect endpoints reject missing session
+      - name: Check legacy Stripe Connect endpoints are disabled
         run: |
           set -euo pipefail
           for path in connect-status connect-onboarding; do
-            status="$(curl --silent --show-error --location --max-time 20               --request GET               --output "/tmp/provider-${path}.json"               --write-out '%{http_code}'               "https://fiiviu.ro/api/provider/${path}")"
-            test "$status" = "401"
-            node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); ' "/tmp/provider-${path}.json"
+            status="$(curl --silent --show-error --location --max-time 20 --request GET --output "/tmp/provider-${path}.json" --write-out '%{http_code}' "https://fiiviu.ro/api/provider/${path}")"
+            test "$status" = "410"
+            grep -q 'Stripe Connect is not used' "/tmp/provider-${path}.json"
           done
 
       - name: Check admin provider-password rejects missing key
