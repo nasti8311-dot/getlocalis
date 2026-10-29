@@ -126,8 +126,12 @@ jobs:
         run: |
           set -euo pipefail
           status="$(curl --silent --show-error --location --max-time 20             --request POST             --header 'Content-Type: application/json'             --data '{}'             --output /tmp/webhook.json             --write-out '%{http_code}'             https://fiiviu.ro/api/stripe/webhook)"
-          test "$status" = "400"
-          node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync("/tmp/webhook.json","utf8")); '
+          if [ "$status" != "400" ]; then
+            echo "Expected unsigned Stripe webhook to return HTTP 400, got $status."
+            cat /tmp/webhook.json
+            exit 1
+          fi
+          node -e 'const fs=require("fs"); JSON.parse(fs.readFileSync("/tmp/webhook.json","utf8"));'
 
       - name: Check admin preflight is first-party restricted
         run: |
