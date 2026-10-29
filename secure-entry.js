@@ -347,7 +347,7 @@ export default {
       return new Response("Admin UI asset is not configured.", { status: 503 });
     }
 
-    if (request.method === "GET" && ["/anbieter/register","/anbieter/register/","/anbieter/login","/anbieter/login/","/anbieter/dashboard","/anbieter/dashboard/","/legal/anbieter-bedingungen.html"].includes(url.pathname)) {
+    if (request.method === "GET" && ["/anbieter/register","/anbieter/register/","/anbieter/login","/anbieter/login/","/anbieter/dashboard","/anbieter/dashboard/","/anbieter/dashboard/buchungen","/anbieter/dashboard/buchungen/","/anbieter/angebote/neu","/anbieter/angebote/neu/","/legal/anbieter-bedingungen.html"].includes(url.pathname)) {
       if (!env.ASSETS || typeof env.ASSETS.fetch !== "function") return new Response("Anbieterportal ist nicht konfiguriert.", { status: 503 });
       const assetUrl = new URL(request.url);
       assetUrl.pathname = url.pathname === "/legal/anbieter-bedingungen.html" ? "/legal/anbieter-bedingungen.html" : (url.pathname.startsWith("/anbieter/register") ? "/anbieter-register.html" : "/provider.html");
