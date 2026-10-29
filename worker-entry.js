@@ -699,7 +699,8 @@ async function handleCancellation(request, env) {
 
     const cancellation = getCancellationState(booking);
 
-    if (!cancellation.canCancel) {
+    const directPaymentModel = String(booking.payment_model || "legacy_connect") === "fiiviu_fee_20_direct_80";
+    if (!cancellation.canCancel || (!cancellation.allowed && !directPaymentModel)) {
       return json(
         {
           error: "Das Erlebnis hat bereits begonnen; die Buchung kann nicht mehr online storniert werden.",
@@ -800,8 +801,13 @@ async function handleProviderCancellation(request, env) {
     if (!provider) return json({ error: "Veranstalter nicht gefunden." }, 404);
     const booking = await env.DB.prepare("SELECT * FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
     if (!booking) return json({ error: "Buchung nicht gefunden." }, 404);
-    if (String(booking.provider_name || "") !== String(provider.name || "") &&
-        String(booking.provider_connect_account_id || "") !== String(provider.connect_account_id || "")) {
+    const bookingProviderName = String(booking.provider_name || "").trim().toLowerCase();
+    const authenticatedProviderName = String(provider.name || "").trim().toLowerCase();
+    const bookingConnectAccount = String(booking.provider_connect_account_id || "").trim();
+    const authenticatedConnectAccount = String(provider.connect_account_id || "").trim();
+    const sameProviderName = Boolean(bookingProviderName && authenticatedProviderName && bookingProviderName === authenticatedProviderName);
+    const sameConnectAccount = Boolean(bookingConnectAccount && authenticatedConnectAccount && bookingConnectAccount === authenticatedConnectAccount);
+    if (!sameProviderName && !sameConnectAccount) {
       return json({ error: "Diese Buchung gehört nicht zu deinem Anbieter-Konto." }, 403);
     }
     if (String(booking.status || "") === "cancelled" && String(booking.cancellation_reason || "") === "provider") {
@@ -1717,7 +1723,11 @@ async function sendCancellationNotifications(env, booking) {
         "Betrag: " + amount,
         refundId ? "Rückerstattung: " + refundId : "",
         "",
-        "Die Rückerstattung wurde bei Stripe angestoßen. Die tatsächliche Gutschrift auf deinem Konto kann je nach Zahlungsanbieter etwas Zeit benötigen.",
+        (refundId
+          ? "Die Rückerstattung wurde bei Stripe angestoßen. Die tatsächliche Gutschrift auf deinem Konto kann je nach Zahlungsanbieter etwas Zeit benötigen."
+          : booking.cancellation_reason === "customer" && booking.payment_model === "fiiviu_fee_20_direct_80"
+            ? "Da die Stornierung weniger als 24 Stunden vor Beginn erfolgte, bleibt die Onlinegebühr bei FiiViu."
+            : "Es wurde keine Rückerstattung ausgelöst."),
         "",
         "FiiViu"
       ]
@@ -1735,7 +1745,11 @@ async function sendCancellationNotifications(env, booking) {
           "Valoare: " + amount,
           refundId ? "Rambursare: " + refundId : "",
           "",
-          "Rambursarea a fost inițiată prin Stripe. Creditarea efectivă în cont poate dura puțin, în funcție de furnizorul de plată.",
+          (refundId
+            ? "Rambursarea a fost inițiată prin Stripe. Creditarea efectivă în cont poate dura puțin, în funcție de furnizorul de plată."
+            : booking.cancellation_reason === "customer" && booking.payment_model === "fiiviu_fee_20_direct_80"
+              ? "Deoarece anularea a avut loc cu mai puțin de 24 de ore înainte, taxa online rămâne la FiiViu."
+              : "Nu a fost inițiată nicio rambursare."),
           "",
           "FiiViu"
         ]
@@ -1752,7 +1766,11 @@ async function sendCancellationNotifications(env, booking) {
           "Amount: " + amount,
           refundId ? "Refund: " + refundId : "",
           "",
-          "The refund has been initiated through Stripe. The actual credit to your account may take some time depending on your payment provider.",
+          (refundId
+            ? "The refund has been initiated through Stripe. The actual credit to your account may take some time depending on your payment provider."
+            : booking.cancellation_reason === "customer" && booking.payment_model === "fiiviu_fee_20_direct_80"
+              ? "Because the cancellation was made less than 24 hours before the experience, the online fee remains with FiiViu."
+              : "No refund was initiated."),
           "",
           "FiiViu"
         ];
