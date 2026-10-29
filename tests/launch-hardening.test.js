@@ -895,6 +895,9 @@ test("production deploy performs only idempotent, explicit schema repair before 
   assert.match(workflow, /add_column_if_missing\(\)/);
   assert.match(workflow, /duplicate column name/);
   assert.match(workflow, /Repair production D1 schema/);
+  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
+    assert.match(workflow, new RegExp('add_column_if_missing "bookings" "' + column + '"'));
+  }
   assert.match(workflow, /Deploy Worker version/);
 });
 
