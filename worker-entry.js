@@ -3181,6 +3181,7 @@ async function handleProviderOverview(request,env){
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
   try{
     await ensureProvidersTable(env);
+    await ensureProviderRegistrationSchema(env);
     await ensureBookingColumns(env);
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
