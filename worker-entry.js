@@ -2112,7 +2112,11 @@ async function sendResendConfirmation(env, booking) {
   const bookingDate = String(booking.booking_date || "");
   const bookingTime = clean(booking.booking_time) || extractTime(experience) || "";
   const guests = String(booking.guests || 1);
-  const total = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const currency = String(booking.currency || "eur").toUpperCase();
+  const total = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
+  const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
+  const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + currency;
+  const isDirectPayment = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
   const bookingId = String(booking.booking_id || "");
   const provider = String(booking.provider_name || "FiiViu");
   const meetingPoint = String(booking.meeting_point_name || "");
@@ -2131,10 +2135,10 @@ async function sendResendConfirmation(env, booking) {
 
   const greeting = language === "de" ? "Hallo" : language === "ro" ? "Bună" : "Hello";
   const labels = language === "de"
-    ? {confirmed:"Buchung bestätigt",date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",id:"Buchungs-ID",meeting:"Treffpunkt",address:"Adresse",provider:"Angeboten von",cancel:"Buchung stornieren",policy:"Kostenlose Stornierung bis " + cancellationHours + " Stunden vor Beginn."}
+    ? {confirmed:"Buchung bestätigt",date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",onlineFee:"Online an FiiViu (20 %)",providerDue:"Vor Ort an Anbieter (80 %)",id:"Buchungs-ID",meeting:"Treffpunkt",address:"Adresse",provider:"Angeboten von",cancel:"Buchung stornieren",policy:"Erstattung der Onlinegebühr bei Stornierung mindestens " + cancellationHours + " Stunden vorher; Anbieter-Stornierung wird vollständig erstattet."}
     : language === "ro"
-      ? {confirmed:"Rezervare confirmată",date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",id:"ID rezervare",meeting:"Punct de întâlnire",address:"Adresă",provider:"Oferit de",cancel:"Anulează rezervarea",policy:"Anulare gratuită până la " + cancellationHours + " ore înainte de începere."}
-      : {confirmed:"Booking confirmed",date:"Date",time:"Start time",guests:"Guests",total:"Total price",id:"Booking ID",meeting:"Meeting point",address:"Address",provider:"Provided by",cancel:"Cancel booking",policy:"Free cancellation up to " + cancellationHours + " hours before the start."};
+      ? {confirmed:"Rezervare confirmată",date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",onlineFee:"Plătit online către FiiViu (20%)",providerDue:"De plătit la operator (80%)",id:"ID rezervare",meeting:"Punct de întâlnire",address:"Adresă",provider:"Oferit de",cancel:"Anulează rezervarea",policy:"Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte; anularea operatorului este rambursată integral."}
+      : {confirmed:"Booking confirmed",date:"Date",time:"Start time",guests:"Guests",total:"Total price",onlineFee:"Paid online to FiiViu (20%)",providerDue:"Due to provider in person (80%)",id:"Booking ID",meeting:"Meeting point",address:"Address",provider:"Provided by",cancel:"Cancel booking",policy:"The online fee is refunded for cancellations at least " + cancellationHours + " hours ahead; provider cancellations are fully refunded."};
 
   const text = [
     greeting + " " + String(booking.customer_name || "") + ",",
@@ -2146,6 +2150,7 @@ async function sendResendConfirmation(env, booking) {
     labels.time + ": " + bookingTime,
     labels.guests + ": " + guests,
     labels.total + ": " + total,
+    ...(isDirectPayment ? [labels.onlineFee + ": " + onlineFee, labels.providerDue + ": " + providerDue] : []),
     labels.id + ": " + bookingId,
     "",
     labels.provider + ": " + provider,
@@ -2274,10 +2279,13 @@ async function sendEmailJsConfirmation(
     booking_time: bookingTime,
     guests: String(booking.guests || 1),
     total_price: `${(
-      Number(booking.amount_cents || 0) / 100
-    ).toFixed(2)} ${String(
-      booking.currency || "eur"
-    ).toUpperCase()}`,
+      Number(booking.total_amount_cents || booking.amount_cents || 0) / 100
+    ).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
+    online_fee_price: `${(Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
+    provider_due_price: `${(Number(booking.provider_due_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
+    mail_online_fee_label: language === "de" ? "Online an FiiViu (20 %)" : language === "ro" ? "Plătit online către FiiViu (20%)" : "Paid online to FiiViu (20%)",
+    mail_provider_due_label: language === "de" ? "Vor Ort an Anbieter (80 %)" : language === "ro" ? "De plătit la operator (80%)" : "Due to provider in person (80%)",
+    mail_payment_note: language === "de" ? "Die restlichen 80 % werden direkt vor Ort an den Anbieter bezahlt." : language === "ro" ? "Restul de 80% se plătește direct operatorului, la fața locului." : "The remaining 80% is paid directly to the provider in person.",
     booking_id: booking.booking_id,
     booking_url: booking.booking_access_token
       ? appUrl + "/booking.html?id=" + encodeURIComponent(String(booking.booking_id || "")) + "&token=" + encodeURIComponent(String(booking.booking_access_token))
@@ -2299,7 +2307,7 @@ async function sendEmailJsConfirmation(
     mail_address_label: language === "de" ? "Adresse" : language === "ro" ? "Adresă" : "Address",
     mail_arrival_label: language === "de" ? "Bitte " + arrival + " Minuten vorher treffen" : language === "ro" ? "Te rugăm să ajungi cu " + arrival + " minute înainte" : "Please arrive " + arrival + " minutes before the start",
     mail_cancel_label: language === "de" ? "Buchung stornieren" : language === "ro" ? "Anulează rezervarea" : "Cancel booking",
-    mail_cancel_policy: language === "de" ? "Kostenlose Stornierung bis " + cancellationHours + " Stunden vor Beginn." : language === "ro" ? "Anulare gratuită până la " + cancellationHours + " ore înainte de începere." : "Free cancellation up to " + cancellationHours + " hours before the start.",
+    mail_cancel_policy: language === "de" ? "Erstattung der Onlinegebühr bei Stornierung mindestens " + cancellationHours + " Stunden vorher; Anbieter-Stornierung wird vollständig erstattet." : language === "ro" ? "Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte; anularea operatorului este rambursată integral." : "The online fee is refunded for cancellations at least " + cancellationHours + " hours ahead; provider cancellations are fully refunded.",
     mail_provider_label: language === "de" ? "Angeboten von" : language === "ro" ? "Oferit de" : "Provided by",
     provider_label: language === "de" ? "Angeboten von" : language === "ro" ? "Oferit de" : "Provided by",
     mail_provider_text: language === "de" ? "Dieses Erlebnis wird von " + provider + " durchgeführt." : language === "ro" ? "Această experiență este organizată de " + provider + "." : "This experience is operated by " + provider + ".",
