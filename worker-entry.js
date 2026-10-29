@@ -82,8 +82,8 @@ export default {
     if (url.pathname === "/api/provider-test-booking") return handleProviderTestBooking(request, env);
     if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
     if (url.pathname === "/api/provider/overview") return handleProviderOverview(request, env);
-    if (url.pathname === "/api/provider/connect-status") return handleProviderConnectStatus(request, env);
-    if (url.pathname === "/api/provider/connect-onboarding") return handleProviderConnectOnboarding(request, env);
+    if (url.pathname === "/api/provider/connect-status" || url.pathname === "/api/provider/connect-onboarding") return json({ error: "Stripe Connect is not used for the FiiViu 20/80 payment model." }, 410);
+
 
     if (url.pathname === "/api/admin/provider-payout") {
       return handleAdminProviderPayout(request, env);
