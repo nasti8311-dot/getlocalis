@@ -283,7 +283,7 @@ function selectedWeekdays(){return Array.from(document.querySelectorAll('input[n
 function renderScheduleCalendar(){
  const year=scheduleMonth.getFullYear(),month=scheduleMonth.getMonth();
  document.getElementById('scheduleCalendarTitle').textContent=new Intl.DateTimeFormat('ro-RO',{month:'long',year:'numeric'}).format(scheduleMonth);
- const labels=['Du','Lu','Ma','Mi','Jo','Vi','Sâ'];
+ const labels=['Lu','Ma','Mi','Jo','Vi','Sâ','Du'];
  const offset=(new Date(year,month,1).getDay()+6)%7,daysInMonth=new Date(year,month+1,0).getDate();
  let html=labels.map(x=>'<div class="weekday">'+x+'</div>').join('');
  for(let i=0;i<offset;i++)html+='<div></div>';
