@@ -3169,9 +3169,10 @@ async function handleProviderExperiences(request,env){
 
 async function handleProviderConnectOnboarding(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
-  if(!env.DB||!env.STRIPE_SECRET_KEY)return json({error:"Stripe Connect ist nicht konfiguriert."},500);
+  if(!env.DB)return json({error:"D1 database not configured"},500);
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+  if(!env.STRIPE_SECRET_KEY)return json({error:"Stripe Connect ist nicht konfiguriert."},500);
   try{
     const provider=await env.DB.prepare("SELECT provider_ref,name,contact_email,connect_account_id,active FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
     if(!provider||Number(provider.active)!==1)return json({error:"Veranstalter nicht gefunden oder deaktiviert."},404);
@@ -3205,9 +3206,10 @@ async function handleProviderConnectOnboarding(request,env){
 
 async function handleProviderConnectStatus(request,env){
   if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
-  if(!env.DB||!env.STRIPE_SECRET_KEY)return json({error:"Stripe Connect ist nicht konfiguriert."},500);
+  if(!env.DB)return json({error:"D1 database not configured"},500);
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+  if(!env.STRIPE_SECRET_KEY)return json({error:"Stripe Connect ist nicht konfiguriert."},500);
   try{
     const provider=await env.DB.prepare("SELECT connect_account_id FROM providers WHERE provider_ref=? LIMIT 1").bind(providerRef).first();
     const accountId=String(provider?.connect_account_id||"").trim();
