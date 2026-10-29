@@ -25,14 +25,6 @@ jobs:
         with:
           node-version: 22
 
-      # Work around Workers Assets manifest deduplication/stale-session failures:
-      # always give the upload manifest one new content hash per deployment.
-      - name: Add unique asset manifest marker
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf 'commit=%s\nrun=%s\nattempt=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > deployment-marker.txt
-
       - name: Validate JavaScript syntax
         shell: bash
         run: |
@@ -96,20 +88,63 @@ jobs:
 
           echo "Production D1 schema repair completed."
 
-      - name: Upload Worker version
+      - name: Upload Worker version while reusing existing assets
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          output="$(npx --yes wrangler@4 versions upload --message "GitHub Actions $GITHUB_SHA")"
-          printf '%s\\n' "$output"
-          version_id="$(printf '%s\\n' "$output" | sed -nE 's/.*Version ID[^0-9a-f]*([0-9a-f-]{36}).*/\\1/p' | tail -n 1)"
-          if [ -z "$version_id" ]; then
-            echo "Could not determine uploaded Worker version ID."
+
+          # Build output already exists from the dry-run validation step. Use the
+          # documented Version Upload API keep_assets option to bypass the broken
+          # assets-upload-session endpoint and retain the currently deployed assets.
+          bundle_file="$(find .wrangler-dry-run -maxdepth 1 -type f -name '*.js' ! -name '*.map' -print -quit)"
+          if [ -z "$bundle_file" ]; then
+            echo "Could not find the bundled Worker JavaScript in .wrangler-dry-run."
+            find .wrangler-dry-run -maxdepth 2 -type f -print || true
             exit 1
           fi
-          printf 'WORKER_VERSION_ID=%s\\n' "$version_id" >> "$GITHUB_ENV"
+          main_module="$(basename "$bundle_file")"
+
+          node - "$main_module" "$GITHUB_SHA" > /tmp/worker-metadata.json <<'NODE'
+          const fs = require("node:fs");
+          const [mainModule, sha] = process.argv.slice(2);
+          const metadata = {
+            main_module: mainModule,
+            compatibility_date: "2026-09-14",
+            keep_assets: true,
+            annotations: { "workers/message": "GitHub Actions " + sha },
+            bindings: [
+              { type: "assets", name: "ASSETS" },
+              { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
+              { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
+              { type: "plain_text", name: "UNDER_CONSTRUCTION", text: "true" }
+            ]
+          };
+          fs.writeFileSync("/tmp/worker-metadata.json", JSON.stringify(metadata));
+          NODE
+
+          response_file=/tmp/worker-upload-response.json
+          if ! curl --silent --show-error --fail-with-body \
+            --request POST \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            --form "metadata=@/tmp/worker-metadata.json;type=application/json" \
+            --form "$main_module=@$bundle_file;type=application/javascript+module" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/versions" \
+            --output "$response_file"; then
+            echo "Direct Worker version upload failed:"
+            cat "$response_file" || true
+            exit 1
+          fi
+
+          cat "$response_file" | jq .
+          version_id="$(jq -r '.result.id // .result.version_id // empty' "$response_file")"
+          if [ -z "$version_id" ]; then
+            echo "Cloudflare accepted the request but returned no version ID."
+            exit 1
+          fi
+          printf 'WORKER_VERSION_ID=%s\n' "$version_id" >> "$GITHUB_ENV"
 
       - name: Deploy Worker version
         shell: bash
