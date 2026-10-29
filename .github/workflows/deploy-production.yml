@@ -114,6 +114,7 @@ jobs:
             main_module: mainModule,
             compatibility_date: "2026-09-14",
             keep_assets: true,
+            keep_bindings: ["secret_text"],
             annotations: { "workers/message": "GitHub Actions " + sha },
             bindings: [
               { type: "assets", name: "ASSETS" },
