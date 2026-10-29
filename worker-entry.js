@@ -2782,20 +2782,22 @@ async function handleProviderRegistration(request,env){
       "E-Mail: "+email,
       "Akzeptiert am (UTC): "+acceptedAt,
       "",
-      "1. Vermittlung: FiiViu vermittelt Kunden an Anbieter. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande.",
-      "2. Verantwortung: Der Anbieter ist fuer Rechtmaessigkeit, Sicherheit, Qualitaet und ordnungsgemaesse Erbringung der angebotenen Leistung verantwortlich.",
-      "3. Richtigkeit: Unternehmensdaten, Preise, Verfuegbarkeit, Treffpunkt, Sicherheits- und Teilnahmebedingungen muessen vollstaendig und aktuell sein.",
-      "4. Preis und Zahlung: Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu. Die verbleibenden 80 Prozent zahlt der Kunde direkt vor Ort an den Anbieter.",
-      "5. Vor-Ort-Zahlung: Der Anbieter muss die im Angebot angegebene Bar- und/oder Kartenzahlung akzeptieren und den Restbetrag selbst einziehen.",
-      "6. Stornierung: Es gelten die zum Buchungszeitpunkt veroeffentlichten Stornierungsbedingungen. Gesetzliche Rechte bleiben unberuehrt.",
-      "7. Inhalte: Der Anbieter darf nur Inhalte und Bilder verwenden, deren Nutzungsrechte vorliegen.",
-      "8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze und verwenden Kundendaten nur fuer zulaessige Zwecke.",
-      "9. Sperrung und Beendigung: FiiViu kann Angebote bei Sicherheitsrisiken, fehlenden Nachweisen, Rechtsverstoessen oder erheblichen Vertragsverletzungen sperren.",
-      "10. Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.",
+      "1. Gegenstand und Vermittlung: FiiViu vermittelt Kunden an Anbieter und stellt Buchungs-, Zahlungs- und Kommunikationsfunktionen bereit. Der Dienstleistungsvertrag kommt direkt zwischen Kunde und Anbieter zustande. Im 20/80-Modell zahlt der Kunde 20 Prozent des Gesamtpreises online an FiiViu; die verbleibenden 80 Prozent zahlt er direkt vor Ort an den Anbieter.",
+      "2. Anbieterangaben: Der Anbieter stellt vollstaendige und richtige Unternehmens-, Kontakt-, Register- und Zahlungsdaten sowie gesetzlich erforderliche Nachweise bereit.",
+      "3. Qualitaet und Rechtmaessigkeit: Der Anbieter bietet nur rechtmaessige Leistungen an, fuer die erforderliche Genehmigungen, Versicherungen und Qualifikationen vorliegen. Preise, Verfuegbarkeit, Treffpunkt, Teilnahme-, Sicherheits- und Stornierungsangaben muessen aktuell sein.",
+      "4. Provision und Zahlungen: Die 20-Prozent-Online-Anzahlung wird ueber Stripe direkt an FiiViu gezahlt und deckt die vereinbarte Vermittlungsprovision vollstaendig ab. Der Anbieter zieht die verbleibenden 80 Prozent direkt vor Ort ein, bar und/oder per Kartenterminal entsprechend den im Angebot angegebenen Zahlungsarten.",
+      "5. Ranking und Sichtbarkeit: Die Platzierung kann von Kategorie, Verfuegbarkeit, Relevanz, Aktualitaet, Preis, Nachfrage, Qualitaet und Vollstaendigkeit abhaengen. Eine bestimmte Platzierung wird nicht garantiert.",
+      "6. Sperrung und Beendigung: FiiViu kann Angebote bei gesetzlichen Pflichten, Sicherheitsrisiken, fehlenden Nachweisen, erheblichen Vertragsverletzungen oder unrichtigen Angaben sperren oder entfernen. Gesetzliche Rechte bleiben unberuehrt.",
+      "7. Anbieterbeschwerden: Beschwerden zu technischen Problemen, Massnahmen oder diesen Bedingungen koennen kostenlos an info@fiiviu.ro gerichtet werden.",
+      "8. Datenschutz: Beide Parteien beachten die anwendbaren Datenschutzgesetze. Der Anbieter verwendet Kundendaten nur im rechtlich zulaessigen Umfang.",
+      "9. Geistiges Eigentum: Der Anbieter gewaehrleistet die rechtmaessige Nutzung seiner Bilder, Texte, Marken und sonstigen Inhalte und raeumt FiiViu ein einfaches Nutzungsrecht fuer die Plattformdarstellung ein.",
+      "10. Haftung: Der Anbieter haftet nach den gesetzlichen Vorschriften fuer seine Leistung und fuer rechtswidrige oder unrichtige von ihm bereitgestellte Inhalte.",
+      "11. Aenderungen: Bedingungen werden mit angemessener Vorankuendigung geaendert, soweit gesetzlich erforderlich. Wesentliche Aenderungen wirken nicht unzulaessig auf bereits geschlossene Buchungen zurueck.",
+      "12. Anwendbares Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.",
+      "13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.",
       "",
-      "Der vollstaendige Bedingungstext ist Bestandteil dieser Vereinbarung und wird in der jeweils akzeptierten Fassung unter der oben genannten URL bereitgestellt.",
-      "Die elektronische Bestaetigung dokumentiert die Annahme der Vertragsversion v1.0 durch den angegebenen gesetzlichen Vertreter."
-    ].join("\n");
+      "Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."
+    ].join("\\n");
     const contractHash=await hashProviderSession(contractSnapshot);
     const contractLogId=crypto.randomUUID();
     await env.DB.batch([
