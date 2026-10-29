@@ -249,15 +249,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(String(experience.status)!=="published")return json({error:"Experience is not currently bookable"},409);
 
     const providerAccount=String(experience.provider_connect_account_id||"").trim();
-    const stripeTestMode=String(env.STRIPE_SECRET_KEY||"").startsWith("sk_test_");
-    if(!/^acct_[A-Za-z0-9]+$/.test(providerAccount) && !stripeTestMode){
-      return json({error:"Experience is missing a valid provider Connect account"},409);
-    }
 
-    // In Stripe test mode, Connect is intentionally optional for test providers.
-    // Payments are processed on the platform account and settlement stays pending
-    // until a real provider Connect account is configured. Live mode keeps the
-    // strict Connect requirement.
+    // The 20/80 checkout collects only FiiViu's fee. The provider receives the
+    // remaining amount directly from the customer, so a Stripe Connect account
+    // is not a prerequisite for taking a booking.
     let activeProvider=null;
     if(/^acct_[A-Za-z0-9]+$/.test(providerAccount)){
       activeProvider=await env.DB.prepare(
