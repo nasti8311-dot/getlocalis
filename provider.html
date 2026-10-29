@@ -119,8 +119,8 @@ function providerError(message){
   'bookingId is required.':'ID-ul rezervării este obligatoriu.'
  };
  if(known[raw]) return known[raw];
- if(/E-Mail|Passwort|Veranstalter|Angebot|Buchung|storniert|Stornierung|Preis|Anbieter/i.test(raw)) return 'Operațiunea nu a putut fi finalizată. Verifică datele și încearcă din nou.';
- return raw;
+ if(/[ăâîșț]/i.test(raw)) return raw;
+ return 'Operațiunea nu a putut fi finalizată. Verifică datele și încearcă din nou.';
 }
 const money=(c,currency='RON')=>{const n=Number(c||0)/100;try{return n.toLocaleString('ro-RO',{style:'currency',currency:String(currency||'EUR').toUpperCase()});}catch{return n.toFixed(2)+' '+currency;}};
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
