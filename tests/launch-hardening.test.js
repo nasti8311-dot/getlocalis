@@ -122,7 +122,7 @@ test("provider self-registration records automatic contract acceptance and store
   assert.match(worker, /body\.accept_contract!==true/);
   assert.match(worker, /INSERT INTO vendor_contract_logs/);
   assert.match(worker, /contract_sha256/);
-  assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.0\.pdf",content:pdf\}\]/);
+  assert.match(worker, /attachments:\[\{filename:"FiiViu-Contract-Parteneriat-v1\.1\.pdf",content:pdf\}\]/);
   assert.match(page, /accept_contract:true/);
   assert.match(page, /Acceptarea este înregistrată automat la finalizarea înregistrării/);
   assert.doesNotMatch(page, /name="accept_contract" type="checkbox" required/);
