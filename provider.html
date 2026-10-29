@@ -72,35 +72,36 @@ td,th{border-bottom:1px solid #eee9e1}
 @media(max-width:700px){body{padding:0 14px 50px}body>h1{padding-top:36px}section{padding:22px;border-radius:24px}.grid,#providerStatsCards{grid-template-columns:1fr}button.secondary{margin-left:0}table{font-size:13px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 </style></head><body>
-<h1>FiiViu Provider</h1><p class="hint">Gestionează rezervările, veniturile și plățile pentru organizatorul tău.</p>
-<section><h2>Organizator și oferte</h2><p class="muted">Creează organizatori, asociază oferte și gestionează fotografiile.</p><p><a href="/anbieter/register" style="color:#d95d1f;font-weight:700;text-decoration:underline">Înregistrează-te ca organizator →</a></p><p style="margin-top:8px"><a href="/organizer-admin.html" style="color:#d95d1f;font-weight:700;text-decoration:underline">Creează organizatori și gestionează ofertele →</a></p></section><section><h2>Autentificare organizator</h2><p class="muted">Autentifică-te cu accesul tău personal FiiViu. Datele tale sunt vizibile doar pentru organizatorul tău.</p><form id="providerLoginForm"><label for="providerEmail">E-mail</label><input id="providerEmail" type="email" autocomplete="username" placeholder="name@beispiel.de" required><label for="providerPassword">Parolă</label><input id="providerPassword" type="password" autocomplete="current-password" placeholder="Parolă" required><button type="submit">Autentificare</button><button type="button" id="providerLogout" class="secondary" style="display:none">Deconectare</button><div id="providerLoginError" class="result error" style="display:none"></div></form><div id="providerIdentity" class="muted" style="margin-top:12px"></div></section>
-<section><h2>Panoul organizatorului</h2><p class="muted">Rezervări, venituri și plăți pentru organizatorul tău.</p><div class="grid" id="providerStatsCards" style="margin-top:14px"><div class="card"><strong>Rezervări</strong><div id="providerStatBookings">–</div></div><div class="card"><strong>Venit total</strong><div id="providerStatRevenue">–</div></div><div class="card"><strong>Câștigul organizatorului</strong><div id="providerStatProviderRevenue">–</div></div><div class="card"><strong>Disponibil / de încasat</strong><div id="providerStatAvailable">–</div></div><div class="card"><strong>În procesare</strong><div id="providerStatPending">–</div></div><div class="card"><strong>Plătit deda</strong><div id="providerStatPaid">–</div></div></div><div class="card" style="margin-top:18px"><h3>Kommende Rezervări</h3><div id="providerUpcoming" class="muted" style="margin-top:10px">Nu a fost încă încărcat.</div></div><div class="card" style="margin-top:18px"><h3>Vergangene Buchungen</h3><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Buchung</th><th style="text-align:left;padding:8px">Erlebnis</th><th style="text-align:left;padding:8px">Termin</th><th style="text-align:left;padding:8px">Kunde</th><th style="text-align:left;padding:8px">E-Mail</th><th style="text-align:right;padding:8px">Gesamt</th><th style="text-align:right;padding:8px">Online 20 %</th><th style="text-align:right;padding:8px">Vor Ort 80 %</th><th style="text-align:left;padding:8px">Bar/Karte</th><th style="text-align:left;padding:8px">Status</th></tr></thead><tbody id="providerRecentRows"></tbody></table></div></div></section><section><h2>Testbuchung</h2><p class="muted">Erstellt eine interne Testbuchung und versendet Kunden- und Veranstalter-E-Mail. Es wird kein echtes Geld bewegt.</p><label for="providerTestEmail">Test-E-Mail des Gastes</label><input id="providerTestEmail" type="email" placeholder="deine-testadresse@beispiel.de" autocomplete="email"><button type="button" id="providerTestBooking">Testbuchung erstellen &amp; E-Mails senden</button><div id="providerTestResult" class="result" style="display:none"></div></section>
-<section><h2>Neues Erlebnis erstellen</h2><p class="muted">Lege ein Erlebnis für Bukarest an. Preise werden in RON gespeichert. Bilder können über öffentlich erreichbare Bild-URLs hinterlegt werden.</p>
+<h1>Panoul FiiViu pentru organizatori</h1><p class="hint">Gestionează rezervările, veniturile și plățile pentru organizatorul tău.</p>
+<section><h2>Organizator și oferte</h2><p class="muted">Creează organizatori, asociază oferte și gestionează fotografiile.</p><p><a href="/anbieter/register" style="color:#d95d1f;font-weight:700;text-decoration:underline">Înregistrează-te ca organizator →</a></p><p style="margin-top:8px"><a href="/organizer-admin.html" style="color:#d95d1f;font-weight:700;text-decoration:underline">Creează organizatori și gestionează ofertele →</a></p></section><section><h2>Autentificare organizator</h2><p class="muted">Autentifică-te cu accesul tău personal FiiViu. Datele tale sunt vizibile doar pentru organizatorul tău.</p><form id="providerLoginForm"><label for="providerEmail">E-mail</label><input id="providerEmail" type="email" autocomplete="username" placeholder="nume@exemplu.ro" required><label for="providerPassword">Parolă</label><input id="providerPassword" type="password" autocomplete="current-password" placeholder="Parolă" required><button type="submit">Autentificare</button><button type="button" id="providerLogout" class="secondary" style="display:none">Deconectare</button><div id="providerLoginError" class="result error" style="display:none"></div></form><div id="providerIdentity" class="muted" style="margin-top:12px"></div></section>
+<section><h2>Panoul organizatorului</h2><p class="muted">Rezervări, venituri și plăți pentru organizatorul tău.</p><div class="grid" id="providerStatsCards" style="margin-top:14px"><div class="card"><strong>Rezervări</strong><div id="providerStatBookings">–</div></div><div class="card"><strong>Venit total</strong><div id="providerStatRevenue">–</div></div><div class="card"><strong>Câștigul organizatorului</strong><div id="providerStatProviderRevenue">–</div></div><div class="card"><strong>Disponibil / de încasat</strong><div id="providerStatAvailable">–</div></div><div class="card"><strong>În procesare</strong><div id="providerStatPending">–</div></div><div class="card"><strong>Plătit</strong><div id="providerStatPaid">–</div></div></div><div class="card" style="margin-top:18px"><h3>Rezervări viitoare</h3><div id="providerUpcoming" class="muted" style="margin-top:10px">Nu a fost încă încărcat.</div></div><div class="card" style="margin-top:18px"><h3>Rezervări anterioare</h3><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Rezervare</th><th style="text-align:left;padding:8px">Experiență</th><th style="text-align:left;padding:8px">Data și ora</th><th style="text-align:left;padding:8px">Client</th><th style="text-align:left;padding:8px">E-mail</th><th style="text-align:right;padding:8px">Total</th><th style="text-align:right;padding:8px">Plătit online (20%)</th><th style="text-align:right;padding:8px">De plătit la locație (80%)</th><th style="text-align:left;padding:8px">Numerar/card</th><th style="text-align:left;padding:8px">Status</th></tr></thead><tbody id="providerRecentRows"></tbody></table></div></div></section><section><h2>Rezervare de test</h2><p class="muted">Creează o rezervare internă de test și trimite e-mailuri clientului și organizatorului. Nu se transferă bani reali.</p><label for="providerTestEmail">E-mailul clientului de test</label><input id="providerTestEmail" type="email" placeholder="adresa-ta-de-test@exemplu.ro" autocomplete="email"><button type="button" id="providerTestBooking">Creează rezervarea de test și trimite e-mailurile</button><div id="providerTestResult" class="result" style="display:none"></div></section>
+<section><h2>Creează o experiență nouă</h2><p class="muted">Adaugă o experiență în București. Prețurile sunt salvate în RON. Poți adăuga imagini folosind adrese URL publice.</p>
 <form id="experienceForm" class="card" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
-<div><label for="expTitle">Titel *</label><input id="expTitle" required maxlength="180" placeholder="z. B. Spa & Massage"></div>
-<div><label for="expCategory">Kategorie *</label><select id="expCategory" required><option value="wellness">Wellness</option><option value="beauty">Kosmetik</option><option value="escape-room">Escape Rooms</option><option value="go-kart">Go-Kart</option><option value="food">Food & Drinks</option><option value="adventure">Abenteuer</option><option value="explore">Sonstiges</option></select></div>
-<div style="grid-column:1/-1"><label for="expDescription">Beschreibung *</label><textarea id="expDescription" required maxlength="5000" placeholder="Beschreibe das Erlebnis, was enthalten ist und wichtige Hinweise."></textarea></div>
-<div><label for="expPrice">Gesamtpreis (RON) *</label><input id="expPrice" type="number" min="2.50" step="0.01" required placeholder="250.00"></div>
-<div><label for="expDuration">Dauer</label><input id="expDuration" placeholder="z. B. 90 Minuten"></div>
-<div><label for="expTimes">Verfügbare Zeiten</label><input id="expTimes" placeholder="z. B. 10:00, 13:00, 16:00"></div>
-<div><label for="expMeeting">Treffpunkt</label><input id="expMeeting" placeholder="Name des Ortes"></div>
-<div><label for="expAddress">Adresse in Bukarest *</label><input id="expAddress" required placeholder="Straße und Hausnummer"></div>
-<div><label for="expCity">Stadt</label><input id="expCity" value="București" required></div>
-<div><label for="expImage">Titelbild-URL</label><input id="expImage" type="url" placeholder="https://..."></div>
-<div style="grid-column:1/-1"><label for="expGallery">Weitere Foto-URLs (durch Komma getrennt)</label><input id="expGallery" placeholder="https://..., https://..."></div>
-<div style="grid-column:1/-1"><label for="expInstructions">Teilnahme- / Treffpunkt-Hinweise</label><textarea id="expInstructions" placeholder="Was sollten Gäste vor der Ankunft wissen?"></textarea></div>
-<div style="grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap"><label style="display:flex;align-items:center;gap:8px"><input id="expCash" type="checkbox" checked style="width:auto"> Restbetrag bar vor Ort</label><label style="display:flex;align-items:center;gap:8px"><input id="expCard" type="checkbox" checked style="width:auto"> Restbetrag per Karte vor Ort</label></div>
-<div style="grid-column:1/-1;padding:14px;background:#f8f5ef;border-radius:14px;line-height:1.8"><strong>Zahlungsübersicht</strong><div>Gesamtpreis: <strong id="expTotalPreview">0,00 RON</strong></div><div>Jetzt online (20 %): <strong id="expDepositPreview">0,00 RON</strong></div><div>Vor Ort (80 %): <strong id="expRestPreview">0,00 RON</strong></div></div>
-<div style="grid-column:1/-1"><button type="submit">Erlebnis speichern und veröffentlichen</button><div id="expResult" class="result" style="display:none"></div></div>
+<div><label for="expTitle">Titlu *</label><input id="expTitle" required maxlength="180" placeholder="de ex. Spa și masaj"></div>
+<div><label for="expCategory">Categorie *</label><select id="expCategory" required><option value="wellness">Wellness</option><option value="beauty">Cosmetică</option><option value="escape-room">Escape Rooms</option><option value="go-kart">Go-Kart</option><option value="food">Food & Drinks</option><option value="adventure">Abenteuer</option><option value="explore">Altele</option></select></div>
+<div style="grid-column:1/-1"><label for="expDescription">Descriere *</label><textarea id="expDescription" required maxlength="5000" placeholder="Descrie experiența, ce este inclus și informațiile importante."></textarea></div>
+<div><label for="expPrice">Preț total (RON) *</label><input id="expPrice" type="number" min="2.50" step="0.01" required placeholder="250.00"></div>
+<div><label for="expDuration">Durată</label><input id="expDuration" placeholder="de ex. 90 de minute"></div>
+<div><label for="expTimes">Ore disponibile</label><input id="expTimes" placeholder="de ex. 10:00, 13:00, 16:00"></div>
+<div><label for="expMeeting">Punct de întâlnire</label><input id="expMeeting" placeholder="Numele locației"></div>
+<div><label for="expAddress">Adresa din București *</label><input id="expAddress" required placeholder="Strada și numărul"></div>
+<div><label for="expCity">Oraș</label><input id="expCity" value="București" required></div>
+<div><label for="expImage">URL-ul imaginii principale</label><input id="expImage" type="url" placeholder="https://..."></div>
+<div style="grid-column:1/-1"><label for="expGallery">Alte URL-uri pentru fotografii (separate prin virgulă)</label><input id="expGallery" placeholder="https://..., https://..."></div>
+<div style="grid-column:1/-1"><label for="expInstructions">Teilnahme- / Punct de întâlnire-Hinweise</label><textarea id="expInstructions" placeholder="Ce ar trebui să știe participanții înainte de sosire?"></textarea></div>
+<div style="grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap"><label style="display:flex;align-items:center;gap:8px"><input id="expCash" type="checkbox" checked style="width:auto"> Restul de plată în numerar, la locație</label><label style="display:flex;align-items:center;gap:8px"><input id="expCard" type="checkbox" checked style="width:auto"> Restul de plată cu cardul, la locație</label></div>
+<div style="grid-column:1/-1;padding:14px;background:#f8f5ef;border-radius:14px;line-height:1.8"><strong>Rezumatul plății</strong><div>Preț total: <strong id="expTotalPreview">0,00 RON</strong></div><div>De plătit online acum (20%): <strong id="expDepositPreview">0,00 RON</strong></div><div>De plătit la locație (80%): <strong id="expRestPreview">0,00 RON</strong></div></div>
+<div style="grid-column:1/-1"><button type="submit">Salvează și publică experiența</button><div id="expResult" class="result" style="display:none"></div></div>
 </form>
-<h2 style="margin-top:28px">Meine Erlebnisse</h2><button id="reload" class="secondary">Aktualisieren</button><div id="list" class="muted" style="margin-top:14px">Noch nicht geladen.</div></section>
+<h2 style="margin-top:28px">Experiențele mele</h2><button id="reload" class="secondary">Reîncarcă</button><div id="list" class="muted" style="margin-top:14px">Încă nu s-a încărcat.</div></section>
 <script>
+function localizeProviderError(message){const translations={"E-Mail oder Passwort ist falsch.":"Adresa de e-mail sau parola este incorectă.","E-Mail und Passwort sind erforderlich.":"Introdu adresa de e-mail și parola.","Login fehlgeschlagen.":"Autentificarea a eșuat.","Bitte geben Sie eine gültige E-Mail-Adresse ein.":"Introdu o adresă de e-mail validă.","Das Passwort muss zwischen 12 und 128 Zeichen lang sein.":"Parola trebuie să aibă între 12 și 128 de caractere.","Für diese E-Mail-Adresse besteht bereits ein Anbieterzugang. Bitte melden Sie sich an.":"Există deja un cont pentru această adresă de e-mail. Autentifică-te.","Diese CUI ist bereits registriert. Bitte kontaktieren Sie info@fiiviu.ro, falls Sie Hilfe benötigen.":"Acest CUI este deja înregistrat. Pentru ajutor, contactează info@fiiviu.ro.","Bitte füllen Sie alle Pflichtfelder aus.":"Completează toate câmpurile obligatorii.","Sie müssen den Partnervertrag und die Provisionsbedingungen ausdrücklich akzeptieren.":"Trebuie să accepți în mod explicit contractul și condițiile comisionului.","D1 database not configured":"Baza de date nu este configurată.","Unauthorized provider credentials":"Sesiunea a expirat. Autentifică-te din nou.","Veranstalter nicht gefunden.":"Organizatorul nu a fost găsit.","Veranstalter nicht gefunden oder deaktiviert.":"Organizatorul nu a fost găsit sau este dezactivat.","Method Not Allowed":"Metodă nepermisă.","Dashboard konnte nicht geladen werden.":"Panoul nu a putut fi încărcat.","Erlebnis konnte nicht geladen werden.":"Experiența nu a putut fi încărcată.","Der Titel ist erforderlich.":"Titlul este obligatoriu.","Neue Anbieterangebote müssen in RON ausgezeichnet werden.":"Ofertele noi trebuie să aibă prețurile afișate în RON.","Ein Erlebnis mit diesem Titel existiert bereits.":"Există deja o experiență cu acest titlu.","Bitte eine gültige Test-E-Mail-Adresse eingeben.":"Introdu o adresă de e-mail validă pentru test.","Die Stornierung wird bereits bearbeitet.":"Anularea este deja în curs de procesare.","Diese Buchung kann nicht mehr storniert werden.":"Această rezervare nu mai poate fi anulată.","Diese Buchung gehört nicht zu deinem Anbieter-Konto.":"Această rezervare nu aparține contului tău de organizator.","Stornierung durch Anbieter fehlgeschlagen.":"Anularea de către organizator a eșuat.","bookingId is required.":"ID-ul rezervării este obligatoriu.","Invalid JSON payload":"Datele trimise nu sunt valide.","Cancellation service is not configured.":"Serviciul de anulare nu este configurat."};return translations[message]||((message&&/(?:\b(?:nicht|Bitte|fehlgeschlagen|erforderlich|Ungültig|Veranstalter|Buchung|Stornierung|Passwort|E-Mail|Anbieter|Erlebnis|Database|Internal Server Error|temporarily unavailable|not configured|Unauthorized)\b|[ÄÖÜäöüß])/i.test(message))?"A apărut o eroare. Încearcă din nou.":message)||"A apărut o eroare. Încearcă din nou.";}
 const API='/api/provider/experiences';
 const OVERVIEW_API='/api/provider/overview';
 const headers=()=>({'Content-Type':'application/json'});
-const money=(c,currency='EUR')=>{const n=Number(c||0)/100;try{return n.toLocaleString('de-DE',{style:'currency',currency:String(currency||'EUR').toUpperCase()});}catch{return n.toFixed(2)+' '+currency;}};
+const money=(c,currency='EUR')=>{const n=Number(c||0)/100;try{return n.toLocaleString('ro-RO',{style:'currency',currency:String(currency||'RON').toUpperCase()});}catch{return n.toFixed(2)+' '+currency;}};
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const providerStatus=s=>({confirmed:'Bestätigt',paid:'Bezahlt',pending:'Offen',cancelled:'Storniert',refunded:'Erstattet',completed:'Abgeschlossen'}[String(s||'').toLowerCase()]||String(s||'–'));
+const providerStatus=s=>({confirmed:'Confirmată',paid:'Plătită',pending:'În așteptare',cancelled:'Anulată',refunded:'Rambursată',completed:'Finalizată'}[String(s||'').toLowerCase()]||String(s||'–'));
 
 const loginForm=document.getElementById('providerLoginForm');
 const loginError=document.getElementById('providerLoginError');
@@ -115,7 +116,7 @@ function setAuthenticatedUI(authenticated,provider){
   if(logoutButton) logoutButton.style.display=authenticated?'':'none';
   if(identity){
     identity.textContent=authenticated&&provider
-      ? 'Angemeldet als: '+String(provider.name||provider.provider_ref||'')
+      ? 'Autentificat ca: '+String(provider.name||provider.provider_ref||'')
       : '';
   }
 }
@@ -149,7 +150,7 @@ loginForm?.addEventListener('submit',async event=>{
       body:JSON.stringify({email,password})
     });
     const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw Error(d.error||'Login fehlgeschlagen.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Autentificarea a eșuat.'));
     if(document.getElementById('providerPassword')) document.getElementById('providerPassword').value='';
     setAuthenticatedUI(true,d.provider||null);
     await loadProviderOverview();
@@ -166,20 +167,20 @@ logoutButton?.addEventListener('click',async()=>{
 });
 
 async function cancelProviderBooking(bookingId){
-  if(!confirm('Diese Buchung wirklich absagen? Die online bezahlten 20 % werden dem Kunden vollständig zurückerstattet.')) return;
+  if(!confirm('Sigur doriți să anulați această rezervare? Cei 20% plătiți online vor fi rambursați integral clientului.')) return;
   try{
     const response=await fetch('/api/provider/cancel-booking',{method:'POST',headers:headers(),credentials:'same-origin',body:JSON.stringify({bookingId})});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||!data.success) throw new Error(data.error||'Stornierung fehlgeschlagen.');
-    alert('Buchung storniert. Die 20 % werden vollständig zurückerstattet.');
+    if(!response.ok||!data.success) throw new Error(data.error||'Anularea rezervării a eșuat.'));
+    alert('Rezervarea a fost anulată. Cei 20% vor fi rambursați integral.');
     await loadProviderOverview();
-  }catch(error){alert(error.message||'Stornierung fehlgeschlagen.');}
+  }catch(error){alert(error.message||'Anularea rezervării a eșuat.'));}
 }
 async function loadProviderOverview(){
   try{
     const r=await fetch(OVERVIEW_API,{headers:headers(),credentials:'same-origin'});
     const d=await r.json();
-    if(!r.ok) throw Error(d.error||'Panoul nu a putut fi încărcat.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Panoul nu a putut fi încărcat.'));
     const s=d.stats||{};
     document.getElementById('providerStatBookings').textContent=String(s.bookings??0);
     document.getElementById('providerStatRevenue').textContent=money(s.grossRevenueCents);
@@ -188,14 +189,14 @@ async function loadProviderOverview(){
     document.getElementById('providerStatPending').textContent=money(s.pendingCents);
     document.getElementById('providerStatPaid').textContent=money(s.paidOutCents);
     const upcoming=d.upcomingBookings||[];
-    const paymentMethods=b=>[Number(b.pay_on_site_cash)===1?'Bar':null,Number(b.pay_on_site_card)===1?'Karte':null].filter(Boolean).join(' / ')||'Nicht hinterlegt';
+    const paymentMethods=b=>[Number(b.pay_on_site_cash)===1?'Numerar':null,Number(b.pay_on_site_card)===1?'Card':null].filter(Boolean).join(' / ')||'Nespecificat';
     document.getElementById('providerUpcoming').innerHTML=upcoming.length
-      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Buchung')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' Pers. · Gesamt '+money(b.total_amount_cents||b.amount_cents||0,b.currency)+'</div><div>'+esc(b.customer_name||'')+' · '+esc(b.customer_email||'')+'</div>'+(b.payment_model==='fiiviu_fee_20_direct_80'?'<div>Online-Anzahlung (20 %): <strong>'+money(b.fiiviu_fee_cents||b.amount_cents||0,b.currency)+'</strong></div><div>Vor Ort (80 %): <strong>'+money(b.provider_due_cents||0,b.currency)+'</strong> · Zahlungsarten: '+esc(paymentMethods(b))+'</div>':'<div>Online bezahlt: '+money(b.amount_cents||0,b.currency)+'</div>')+(b.payment_model==='fiiviu_fee_20_direct_80'&&b.status==='confirmed'?'<button class="secondary" style="margin-top:8px" onclick="cancelProviderBooking(&quot;'+esc(b.booking_id)+'&quot;)">Buchung absagen &amp; 20 % erstatten</button>':'')+'</div>').join('')
-      : 'Keine kommenden Buchungen.';
+      ? upcoming.map(b=>'<div class="card" style="margin:8px 0"><strong>'+esc(b.experience_name||'Rezervare')+'</strong><div>'+esc((b.booking_date||'')+' '+(b.booking_time||''))+' · '+esc(String(b.guests||1))+' pers. · Total '+money(b.total_amount_cents||b.amount_cents||0,b.currency)+'</div><div>'+esc(b.customer_name||'')+' · '+esc(b.customer_email||'')+'</div>'+(b.payment_model==='fiiviu_fee_20_direct_80'?'<div>Online-Anzahlung (20 %): <strong>'+money(b.fiiviu_fee_cents||b.amount_cents||0,b.currency)+'</strong></div><div>De plătit la locație (80%): <strong>'+money(b.provider_due_cents||0,b.currency)+'</strong> · Zahlungsarten: '+esc(paymentMethods(b))+'</div>':'<div>Plătit online: '+money(b.amount_cents||0,b.currency)+'</div>')+(b.payment_model==='fiiviu_fee_20_direct_80'&&b.status==='confirmed'?'<button class="secondary" style="margin-top:8px" onclick="cancelProviderBooking(&quot;'+esc(b.booking_id)+'&quot;)">Anulează rezervarea și rambursează 20%</button>':'')+'</div>').join('')
+      : 'Nu există rezervări viitoare.';
     const past=d.pastBookings||[];
     document.getElementById('providerRecentRows').innerHTML=past.length
       ? past.map(b=>'<tr style="border-top:1px solid #eee"><td style="padding:8px">'+esc(b.booking_id)+'</td><td style="padding:8px">'+esc(b.experience_name||'–')+'</td><td style="padding:8px">'+esc((b.booking_date||'')+' '+(b.booking_time||''))+'</td><td style="padding:8px">'+esc(b.customer_name||'')+'</td><td style="padding:8px">'+esc(b.customer_email||'')+'</td><td style="padding:8px;text-align:right">'+money(b.total_amount_cents||b.amount_cents,b.currency)+'</td><td style="padding:8px;text-align:right">'+money(b.fiiviu_fee_cents||b.amount_cents,b.currency)+'</td><td style="padding:8px;text-align:right">'+money(b.provider_due_cents||0,b.currency)+'</td><td style="padding:8px">'+esc(paymentMethods(b))+'</td><td style="padding:8px">'+esc(providerStatus(b.status))+'</td></tr>').join('')
-      : '<tr><td colspan="10" class="muted" style="padding:10px">Keine vergangenen Buchungen.</td></tr>';
+      : '<tr><td colspan="10" class="muted" style="padding:10px">Nu există rezervări anterioare.</td></tr>';
   }catch(e){
     document.getElementById('providerUpcoming').textContent=e.message;
     document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="10" class="error" style="padding:10px">'+esc(e.message)+'</td></tr>';
@@ -209,7 +210,7 @@ async function load(){
   try{
     const r=await fetch(API,{headers:headers(),credentials:'same-origin'});
     const d=await r.json();
-    if(!r.ok) throw Error(d.error||'Încărcarea a eșuat.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Încărcarea a eșuat.'));
     const rows=d.experiences||[];
     if(!rows.length){box.textContent='Noch keine Experiențăse.';return;}
     box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(x.status)+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
@@ -223,7 +224,7 @@ const experienceForm=document.getElementById('experienceForm');
 const expPrice=document.getElementById('expPrice');
 function updateExperiencePreview(){
   const total=Math.max(0,Math.round(Number(expPrice?.value||0)*100));
-  const fmt=n=>(n/100).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' RON';
+  const fmt=n=>(n/100).toLocaleString('ro-RO',{minimumFractionDigits:2,maximumFractionDigits:2})+' RON';
   document.getElementById('expTotalPreview').textContent=fmt(total);
   document.getElementById('expDepositPreview').textContent=fmt(Math.round(total*0.20));
   document.getElementById('expRestPreview').textContent=fmt(total-Math.round(total*0.20));
@@ -233,7 +234,7 @@ experienceForm?.addEventListener('submit',async event=>{
  event.preventDefault();if(!experienceForm.reportValidity())return;
  const result=document.getElementById('expResult');
  const cash=document.getElementById('expCash').checked,card=document.getElementById('expCard').checked;
- if(!cash&&!card){result.className='result error';result.style.display='block';result.textContent='Bitte mindestens eine Zahlungsart vor Ort auswählen.';return;}
+ if(!cash&&!card){result.className='result error';result.style.display='block';result.textContent='Selectează cel puțin o metodă de plată la locație.';return;}
  const payload={
   title:document.getElementById('expTitle').value.trim(),
   description:document.getElementById('expDescription').value.trim(),
@@ -254,8 +255,8 @@ experienceForm?.addEventListener('submit',async event=>{
  try{
   const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify(payload)});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(d.error||'Erlebnis konnte nicht gespeichert werden.');
-  result.className='result ok';result.style.display='block';result.textContent='Erlebnis wurde gespeichert. Online-Anzahlung: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; vor Ort: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
+  if(!r.ok)throw Error(localizeProviderError(d.error||'Experiența nu a putut fi salvată.'));
+  result.className='result ok';result.style.display='block';result.textContent='Experiența a fost salvată. Plătit online: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; de plătit la locație: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
   experienceForm.reset();document.getElementById('expCity').value='București';document.getElementById('expCash').checked=true;document.getElementById('expCard').checked=true;updateExperiencePreview();await load();
  }catch(error){result.className='result error';result.style.display='block';result.textContent=error.message;}
  finally{submit.disabled=false;}
@@ -268,14 +269,14 @@ document.getElementById('providerTestBooking')?.addEventListener('click',async()
   const result=document.getElementById('providerTestResult');
   const email=document.getElementById('providerTestEmail')?.value.trim();
   if(!result) return;
-  if(!email){result.className='result error';result.textContent='Bitte eine Test-E-Mail-Adresse eingeben.';result.style.display='block';return;}
+  if(!email){result.className='result error';result.textContent='Introdu o adresă de e-mail pentru test.';result.style.display='block';return;}
   result.style.display='none';
   try{
     const r=await fetch('/api/provider-test-booking',{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify({customerEmail:email})});
     const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw Error(d.error||'Testbuchung fehlgeschlagen.');
+    if(!r.ok) throw Error(localizeProviderError(d.error||'Crearea rezervării de test a eșuat.'));
     result.className='result '+(d.email_errors?.length?'error':'ok');
-    result.textContent=(d.message||'Testbuchung erstellt.')+'\nBuchungs-ID: '+d.booking_id+(d.provider_email?'\nVeranstalter-Mail: '+d.provider_email:'')+(d.email_errors?.length?'\n\n'+d.email_errors.join('\n'):'');
+    result.textContent=(d.message||'Rezervarea de test a fost creată.')+'\nID rezervare: '+d.booking_id+(d.provider_email?'\nE-mail organizator: '+d.provider_email:'')+(d.email_errors?.length?'\n\n'+d.email_errors.join('\n'):'');
     result.style.display='block';
     await loadProviderOverview();
   }catch(err){
@@ -286,4 +287,4 @@ document.getElementById('providerTestBooking')?.addEventListener('click',async()
 });
 
 loadProviderSession().then(ok=>{if(ok){loadProviderOverview();load();}});
-</script><div style="max-width:1100px;margin:24px auto 40px;padding:0 20px;text-align:center;font-size:12px"><a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">Bedingungen für Anbieter</a> · <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener noreferrer">Datenschutz</a></div></body></html>
+</script><div style="max-width:1100px;margin:24px auto 40px;padding:0 20px;text-align:center;font-size:12px"><a href="/legal/anbieter-bedingungen.html?lang=ro" target="_blank" rel="noopener noreferrer">Condiții pentru organizatori</a> · <a href="/legal/politica-de-confidentialitate.html" target="_blank" rel="noopener noreferrer">Politica de confidențialitate</a></div></body></html>
