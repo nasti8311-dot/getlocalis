@@ -932,6 +932,7 @@ test("production deploy avoids route-write permission dependency", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.match(workflow, /workers\/scripts\/getlocalis\/versions/);
   assert.match(workflow, /keep_assets:\s*true/);
+  assert.match(workflow, /keep_bindings:\s*\["secret_text"\]/);
   assert.match(workflow, /wrangler@4 versions deploy/);
   assert.match(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
