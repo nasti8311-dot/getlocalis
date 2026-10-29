@@ -3143,7 +3143,7 @@ async function handleProviderExperiences(request,env){
       const currency=String(body.currency||"ron").toLowerCase();
       if(!title)return json({error:"Der Titel ist erforderlich."},400);
       if(currency!=="ron")return json({error:"Neue Anbieterangebote müssen in RON ausgezeichnet werden."},400);
-      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 RON eingeben."},400);
+      if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Bitte einen Preis von mindestens 2,50 RON eingeben, damit die Online-Anzahlung mindestens 0,50 RON beträgt."},400);
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
       if(!payCash&&!payCard)return json({error:"Bitte mindestens eine Zahlungsart vor Ort auswählen."},400);
