@@ -266,6 +266,15 @@ export default {
           if(!offer||Number(offer.active)!==1||Number(offer.provider_active)!==1){
             return json({error:"This experience is not available for booking"},409);
           }
+          const bookingDate=String(data.bookingDate||"").trim();
+          const bookingTime=String(data.bookingTime||"").trim();
+          if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(bookingDate)||!/^\\d{1,2}:\\d{2}$/.test(bookingTime)){
+            return json({error:"A valid booking date and time are required"},400);
+          }
+          const availableTimes=String(offer.available_times||"").split(/[,;\\n]/).map(value=>value.trim()).filter(Boolean);
+          if(availableTimes.length&&!availableTimes.includes(bookingTime)){
+            return json({error:"The selected time is not available for this experience"},409);
+          }
           const unitPrice=Number(offer.price_cents);
           const total=unitPrice*guests;
           if(!Number.isSafeInteger(unitPrice)||unitPrice<250||!Number.isSafeInteger(total)){
