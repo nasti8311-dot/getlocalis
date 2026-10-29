@@ -111,7 +111,7 @@ jobs:
               known_good="$version_id"
               break
             fi
-          done < <(jq -r '.[].id // empty' /tmp/worker-versions.json)
+          done < <(jq -r '.result[].id // empty' /tmp/worker-versions.json)
           if [ -z "$known_good" ]; then
             echo "No historical Worker version with both ADMIN_PAYOUT_KEY and STRIPE_SECRET_KEY bindings was found; refusing another production upload."
             exit 1
@@ -255,12 +255,16 @@ jobs:
           echo "Production catalog did not become healthy after deployment."
           exit 1
       - name: Roll back if production verification fails
-        if: failure() && env.KNOWN_GOOD_VERSION_ID != ''
+        if: failure()
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${KNOWN_GOOD_VERSION_ID:-}" ]; then
+            echo "No known-good rollback version was recorded; leaving deployment unchanged."
+            exit 0
+          fi
           echo "Verification failed; restoring last known-good version $KNOWN_GOOD_VERSION_ID."
           npx --yes wrangler@4 versions deploy "${KNOWN_GOOD_VERSION_ID}@100%" --yes
 
