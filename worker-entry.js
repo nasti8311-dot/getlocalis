@@ -2832,7 +2832,7 @@ async function handleProviderRegistration(request,env){
     const acceptedAt=new Date().toISOString();
     const ipAddress=String(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,128);
     const userAgent=String(request.headers.get("User-Agent")||"unknown").slice(0,1000);
-    const contractVersion="v1.0";
+    const contractVersion="v1.1";
     const contractSnapshot=[
       "FiiViu Partnervertrag / Bedingungen fuer Erlebnisanbieter",
       "Vertragsversion: "+contractVersion,
@@ -2856,6 +2856,13 @@ async function handleProviderRegistration(request,env){
       "11. Aenderungen: Bedingungen werden mit angemessener Vorankuendigung geaendert, soweit gesetzlich erforderlich. Wesentliche Aenderungen wirken nicht unzulaessig auf bereits geschlossene Buchungen zurueck.",
       "12. Anwendbares Recht: Es gilt rumaenisches Recht unter Beachtung zwingender EU- und Verbraucherschutzvorschriften.",
       "13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.",
+      "14. Buchungen und Ausfaelle: Der Anbieter haelt bestaetigte Buchungen, angezeigte Preise und Leistungsbeschreibungen ein und informiert FiiViu unverzueglich ueber Absagen, wesentliche Aenderungen und Sicherheitsrisiken. Bei Anbieterabsage kooperiert er bei der Rueckabwicklung; online an FiiViu gezahlte Betraege werden nach Kundenbedingungen und zwingendem Recht behandelt.",
+      "15. Zahlung vor Ort: Der Anbieter muss die je Angebot ausgewaehlten Zahlungsarten Bar und/oder Karte tatsaechlich akzeptieren. Er stellt bei Kartenzahlung selbst Terminal/Zahlungsdienst bereit und ist fuer Belege, Kassenfuehrung, Steuern und gesetzliche Pflichten verantwortlich. FiiViu zieht die verbleibenden 80 Prozent nicht ein.",
+      "16. Provision und Rueckerstattungen: Die 20-Prozent-Onlinezahlung ist, sofern nicht schriftlich anders vereinbart, die vollstaendige Vermittlungsprovision fuer die Buchung; auf die vor Ort gezahlten 80 Prozent faellt keine weitere FiiViu-Provision an. Stornierungen und Rueckerstattungen richten sich nach den Kundenbedingungen bei Buchung und zwingendem Recht. Der Anbieter darf keine widersprechenden Erstattungsversprechen im Namen von FiiViu abgeben und meldet Zahlungsbeschwerden unverzueglich.",
+      "17. Sicherheit und Versicherung: Der Anbieter erfuellt erforderliche Genehmigungs-, Qualifikations-, Sicherheits- und Versicherungspflichten, informiert ueber wesentliche Risiken und meldet sicherheitsrelevante Vorfaelle unverzueglich, ohne Notfall- oder gesetzliche Pflichten zu verzoegern.",
+      "18. Laufzeit und Beendigung: Der Vertrag gilt ab Registrierung und Annahme. Eine Beendigung laesst bestaetigte Buchungen, offene Erstattungen, gesetzliche Aufbewahrungspflichten und Ansprueche aus frueheren Vorgangen unberuehrt. Einschraenkungen zum Schutz von Kunden oder zur Erfuellung gesetzlicher Pflichten bleiben vorbehalten.",
+      "19. Aenderungen und Mitteilungen: Wesentliche Aenderungen werden mit angemessener Vorankuendigung mitgeteilt, soweit gesetzlich erforderlich, und wirken nicht unzulaessig auf bestaetigte Buchungen zurueck. Der Anbieter haelt seine Geschaeftskontaktdaten aktuell.",
+      "20. Vertragsfassung: Die akzeptierte Fassung wird mit Versionsnummer, Zeitstempel und SHA-256-Pruefsumme dokumentiert und per E-Mail als PDF versendet. Spaetere Aenderungen koennen eine erneute ausdrueckliche Zustimmung erfordern.",
       "",
       "Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."
     ].join("\n");
@@ -2875,10 +2882,10 @@ async function handleProviderRegistration(request,env){
         body:JSON.stringify({
           from:"FiiViu <noreply@fiiviu.ro>",
           to:[email],
-          subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.0)",
-          text:"Vielen Dank fuer Ihre Registrierung bei FiiViu. Im Anhang finden Sie den Partnervertrag der Version v1.0, den Sie am "+acceptedAt+" UTC akzeptiert haben. Anmeldung: https://fiiviu.ro/anbieter/login",
-          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.0</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
-          attachments:[{filename:"FiiViu-Partnervertrag-v1.0.pdf",content:pdf}]
+          subject:"Ihr akzeptierter FiiViu-Partnervertrag (v1.1)",
+          text:"Vielen Dank fuer Ihre Registrierung bei FiiViu. Im Anhang finden Sie den Partnervertrag der Version v1.1, den Sie am "+acceptedAt+" UTC akzeptiert haben. Anmeldung: https://fiiviu.ro/anbieter/login",
+          html:"<p>Vielen Dank fuer Ihre Registrierung bei FiiViu.</p><p>Im Anhang finden Sie den Partnervertrag der Version <strong>v1.1</strong>, den Sie am "+acceptedAt+" UTC akzeptiert haben.</p><p><a href=\"https://fiiviu.ro/anbieter/login\">Zum Anbieter-Login</a></p>",
+          attachments:[{filename:"FiiViu-Partnervertrag-v1.1.pdf",content:pdf}]
         })
       });
       const result=await response.json().catch(()=>({}));
