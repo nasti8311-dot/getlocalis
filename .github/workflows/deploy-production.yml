@@ -117,6 +117,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ADMIN_PAYOUT_KEY: ${{ secrets.ADMIN_PAYOUT_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         run: |
           set -euo pipefail
           if [ -z "${ADMIN_PAYOUT_KEY:-}" ]; then
@@ -139,9 +140,22 @@ jobs:
           const fs = require("node:fs");
           const [mainModule, sha] = process.argv.slice(2);
           const adminPayoutKey = process.env.ADMIN_PAYOUT_KEY;
+          const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
           if (!adminPayoutKey) {
             console.error("Required GitHub Actions secret ADMIN_PAYOUT_KEY is missing; refusing Worker upload.");
             process.exit(1);
+          }
+          const bindings = [
+            { type: "assets", name: "ASSETS" },
+            { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
+            { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
+            { type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey },
+          ];
+          if (stripeWebhookSecret) {
+            bindings.push({ type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret });
+            console.log("STRIPE_WEBHOOK_SECRET supplied to Worker version.");
+          } else {
+            console.log("GitHub Actions STRIPE_WEBHOOK_SECRET is not set; preserving any existing Worker secret binding.");
           }
           const metadata = {
             main_module: mainModule,
@@ -149,12 +163,7 @@ jobs:
             keep_assets: true,
             keep_bindings: ["plain_text", "secret_text"],
             annotations: { "workers/message": "GitHub Actions " + sha },
-            bindings: [
-              { type: "assets", name: "ASSETS" },
-              { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
-              { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
-              { type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey },
-            ]
+            bindings
           };
           fs.writeFileSync("/tmp/worker-metadata.json", JSON.stringify(metadata));
           NODE
