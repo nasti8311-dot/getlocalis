@@ -126,6 +126,8 @@ test("provider registration routes are reachable while the public catalog is gat
   assert.match(secure, /"\/anbieter\/register"/);
   assert.match(secure, /"\/anbieter\/login"/);
   assert.match(secure, /"\/anbieter\/dashboard"/);
+  assert.match(secure, /"\/anbieter\/dashboard\/buchungen"/);
+  assert.match(secure, /"\/anbieter\/angebote\/neu"/);
   const deploy = read(".github/workflows/deploy-production.yml");
   assert.match(deploy, /vendor_contract_logs/);
   assert.match(deploy, /pay_on_site_cash/);
