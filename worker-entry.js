@@ -2889,6 +2889,13 @@ async function ensureProviderRegistrationSchema(env){
     try{await env.DB.prepare("ALTER TABLE providers ADD COLUMN "+entry[0]+" "+entry[1]).run();}
     catch(error){if(!String(error?.message||"").toLowerCase().includes("duplicate column"))throw error;}
   }
+  const offerRows=await env.DB.prepare("PRAGMA table_info(offers)").all();
+  const offerColumns=new Set((offerRows.results||[]).map(row=>String(row.name||"")));
+  for(const entry of [["pay_on_site_cash","INTEGER NOT NULL DEFAULT 1"],["pay_on_site_card","INTEGER NOT NULL DEFAULT 1"]]){
+    if(offerColumns.has(entry[0]))continue;
+    try{await env.DB.prepare("ALTER TABLE offers ADD COLUMN "+entry[0]+" "+entry[1]).run();}
+    catch(error){if(!String(error?.message||"").toLowerCase().includes("duplicate column"))throw error;}
+  }
   await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_providers_cui ON providers(cui) WHERE cui IS NOT NULL AND trim(cui) <> ''").run();
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS vendor_contract_logs (id TEXT PRIMARY KEY,provider_ref TEXT NOT NULL REFERENCES providers(provider_ref),accepted_at TEXT NOT NULL,ip_address TEXT NOT NULL,user_agent TEXT NOT NULL,contract_version TEXT NOT NULL,contract_sha256 TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
   await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_provider_ref ON vendor_contract_logs(provider_ref)").run();
@@ -3066,6 +3073,7 @@ async function handleProviderExperiences(request,env){
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
   try{
+    await ensureProviderRegistrationSchema(env);
     await ensureOffersTable(env);
     const provider=await env.DB.prepare("SELECT provider_ref,name,connect_account_id,active FROM providers WHERE provider_ref=? AND active=1 LIMIT 1").bind(providerRef).first();
     if(!provider)return json({error:"Veranstalter nicht gefunden."},404);
@@ -3075,20 +3083,23 @@ async function handleProviderExperiences(request,env){
     }
     if(request.method==="POST"){
       const body=await request.json().catch(()=>({}));
-      const experienceId=String(body.experienceId||"").trim();
       const title=String(body.title||"").trim();
       const priceCents=Number(body.priceCents);
-      if(!experienceId||!title)return json({error:"Experience-ID und Titel sind erforderlich."},400);
-      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 eingeben."},400);
+      if(!title)return json({error:"Der Titel ist erforderlich."},400);
+      if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Bitte einen Preis von mindestens 0,50 RON eingeben."},400);
+      const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
+      const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
+      if(!payCash&&!payCard)return json({error:"Bitte mindestens eine Zahlungsart vor Ort auswählen."},400);
       const existing=await env.DB.prepare("SELECT id FROM offers WHERE provider_ref=? AND lower(title)=lower(?) LIMIT 1").bind(providerRef,title).first();
       if(existing)return json({error:"Ein Erlebnis mit diesem Titel existiert bereits."},409);
       const active=body.publish===true?1:0;
-      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
-        providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"eur").toLowerCase(),
+      const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
+      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
+        providerRef,title,String(body.description||"").trim()||null,priceCents,String(body.currency||"ron").toLowerCase(),
         String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
-        String(body.meetingCity||"").trim()||null,String(body.meetingCountry||"").trim()||null,String(body.meetingInstructions||"").trim()||null,
-        Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"explore").trim().toLowerCase()||"explore",
-        String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active
+        String(body.meetingCity||"București").trim()||"București",String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
+        Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"wellness").trim().toLowerCase()||"wellness",
+        String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active,payCash?1:0,payCard?1:0,String(body.duration||"").trim()||null
       ).run();
       const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
       return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?experienceId:null}},201);
@@ -3178,11 +3189,13 @@ async function handleProviderOverview(request,env){
     // amounts. This keeps provider revenue/payout figures consistent with Stripe.
     const rows=await env.DB.prepare(`
       SELECT b.booking_id,b.booking_date,b.booking_time,b.status,b.payment_status,b.currency,
-             b.experience_name,b.customer_name,b.guests,b.amount_cents,b.total_amount_cents,b.fiiviu_fee_cents,b.provider_due_cents,b.payment_model,
+             b.experience_name,b.customer_name,b.customer_email,b.guests,b.amount_cents,b.total_amount_cents,b.fiiviu_fee_cents,b.provider_due_cents,b.payment_model,
+             o.pay_on_site_cash,o.pay_on_site_card,
              s.payment_intent_id,s.total_amount_cents AS settlement_total_amount_cents,s.provider_amount_cents,
              s.provider_transfer_amount_cents,s.settlement_status,s.provider_transfer_id,
              s.release_at,s.settlement_error,s.settlement_test_transfer_id
       FROM bookings b
+      LEFT JOIN offers o ON o.id=b.offer_id
       LEFT JOIN booking_settlements s ON s.booking_id=b.booking_id
       WHERE b.provider_ref=? OR b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
       ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
@@ -3199,13 +3212,14 @@ async function handleProviderOverview(request,env){
       all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
         .reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0));
     const today=new Date().toISOString().slice(0,10);
-    const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed").slice(0,10);
+    const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed");
+    const past=all.filter(r=>String(r.booking_date||"")<today||["cancelled","completed","refunded"].includes(String(r.status||"").toLowerCase()));
     return json({
       provider,
       stripeConnectConfigured:Boolean(String(provider.connect_account_id||"").trim()),
       stats:{bookings:all.length,grossRevenueCents,providerRevenueCents:grossRevenueCents,availableCents,pendingCents,paidOutCents},
       upcomingBookings:upcoming,
-      recentBookings:all.slice(0,20)
+      pastBookings:past
     });
   }catch(error){
     console.error("FiiViu provider overview failed",error);
