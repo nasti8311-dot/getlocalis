@@ -45,7 +45,7 @@ form.addEventListener('submit',async event=>{
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(localizeError(data.error||'Înregistrarea a eșuat.'));
   message.className='message '+(data.emailSent?'ok':'error');message.style.display='block';
-  message.textContent=data.emailSent?'Înregistrarea a fost finalizată. Contractul acceptat a fost trimis în format PDF prin e-mail. Te poți autentifica acum.':('Contul a fost creat, iar acceptarea contractului a fost înregistrată, însă trimiterea contractului PDF prin e-mail a eșuat. Contactează info@fiiviu.ro. Referință: '+(data.providerRef||'registriert'));
+  message.textContent=data.emailSent?'Înregistrarea a fost finalizată. Contractul acceptat a fost trimis în format PDF prin e-mail. Te poți autentifica acum.':('Contul a fost creat, iar acceptarea contractului a fost înregistrată, însă trimiterea contractului PDF prin e-mail a eșuat. Contactează info@fiiviu.ro. Referință: '+(data.providerRef||'înregistrare'));
   if(data.emailSent){form.reset();setTimeout(()=>location.href='/anbieter/login',1600);}
  }catch(error){message.className='message error';message.style.display='block';message.textContent=error.message;}
  finally{button.disabled=false;button.textContent='Înregistrează-te și acceptă contractul';}
