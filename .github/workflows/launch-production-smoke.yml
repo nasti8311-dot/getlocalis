@@ -86,7 +86,7 @@ jobs:
           register_status="$(curl --silent --show-error --location --max-time 20 --output /tmp/provider-register.html --write-out '%{http_code}' https://fiiviu.ro/anbieter/register)"
           test "$register_status" = "200"
           grep -q 'accept_contract' /tmp/provider-register.html
-          grep -q 'Partnervertrag' /tmp/provider-register.html
+          grep -q 'contractul de parteneriat' /tmp/provider-register.html
           login_status="$(curl --silent --show-error --location --max-time 20 --output /tmp/provider-login.html --write-out '%{http_code}' https://fiiviu.ro/anbieter/login)"
           test "$login_status" = "200"
           grep -q 'providerLoginForm' /tmp/provider-login.html
