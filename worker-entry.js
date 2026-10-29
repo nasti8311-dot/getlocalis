@@ -1596,7 +1596,10 @@ async function sendProviderBookingNotification(env, booking) {
   const safe = value => String(value ?? "").replace(/[&<>"]/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
   }[c]));
-  const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const currency = String(booking.currency || "eur").toUpperCase();
+  const amount = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
+  const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
+  const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + currency;
   const romanianOffer = await getLocalizedEmailOffer(env, booking, "ro");
   const romanianExperienceName = String(
     romanianOffer?.title || booking.experience_name || "Experiență FiiViu"
@@ -1619,7 +1622,8 @@ async function sendProviderBookingNotification(env, booking) {
     "Client: " + (booking.customer_name || ""),
     "E-mail client: " + (booking.customer_email || ""),
     "Telefon: " + (booking.customer_phone || ""),
-    "Valoarea rezervării: " + amount,
+    "Valoarea totală a rezervării: " + amount,
+    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Taxă FiiViu plătită online (20%): " + onlineFee, "De încasat direct de la client (80%): " + providerDue] : []),
     "",
     "Punct de întâlnire: " + romanianMeetingPoint,
     "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
@@ -1633,7 +1637,8 @@ async function sendProviderBookingNotification(env, booking) {
     "<strong>Data:</strong> " + safe(booking.booking_date) + "<br>" +
     "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
     "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
-    "<strong>Valoarea rezervării:</strong> " + safe(amount) + "</p>" +
+    "<strong>Valoarea totală a rezervării:</strong> " + safe(amount) + "<br>" +
+    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Taxă FiiViu plătită online (20%):</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) : "") + "</p>" +
     "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
     "<strong>E-mail client:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
