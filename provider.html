@@ -175,7 +175,7 @@ async function loadProviderOverview(){
       : 'Keine kommenden Reservări.';
     const recent=d.recentBookings||[];
     document.getElementById('providerRecentRows').innerHTML=recent.length
-      ? recent.map(b=>'<tr style="border-top:1px solid #eee"><td style="padding:8px">'+esc(b.booking_id)+'</td><td style="padding:8px">'+esc(b.experience_name||'–')+'</td><td style="padding:8px">'+esc((b.booking_date||'')+' '+(b.booking_time||''))+'</td><td style="padding:8px;text-align:right">'+esc(String(b.guests||1))+'</td><td style="padding:8px;text-align:right">'+money(b.amount_cents)+'</td><td style="padding:8px">'+esc(providerStatus(b.status))+'</td></tr>').join('')
+      ? recent.map(b=>'<tr style="border-top:1px solid #eee"><td style="padding:8px">'+esc(b.booking_id)+'</td><td style="padding:8px">'+esc(b.experience_name||'–')+'</td><td style="padding:8px">'+esc((b.booking_date||'')+' '+(b.booking_time||''))+'</td><td style="padding:8px;text-align:right">'+esc(String(b.guests||1))+'</td><td style="padding:8px;text-align:right">'+money(b.total_amount_cents||b.amount_cents)+'</td><td style="padding:8px">'+esc(providerStatus(b.status))+'</td></tr>').join('')
       : '<tr><td colspan="6" class="muted" style="padding:10px">Keine Reservări.</td></tr>';
   }catch(e){
     document.getElementById('providerUpcoming').textContent=e.message;
