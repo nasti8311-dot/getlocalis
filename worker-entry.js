@@ -3098,7 +3098,7 @@ async function handleProviderTestBooking(request, env) {
       ).bind(booking.booking_id).run();
     } catch (error) {
       const message = String(error?.message || error).slice(0, 1000);
-      emailErrors.push("Kunden-Mail: " + message);
+      emailErrors.push("E-mailul clientului: trimiterea nu a reușit.");
       await env.DB.prepare(
         "UPDATE bookings SET confirmation_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=?"
       ).bind(message, booking.booking_id).run();
@@ -3122,15 +3122,15 @@ async function handleProviderTestBooking(request, env) {
 
 async function handleProviderAccountCancellation(request, env) {
   if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
-  if (!env.DB) return json({ error: "D1 database not configured." }, 500);
+  if (!env.DB) return json({ error: "Baza de date nu este configurată." }, 500);
 
   const providerRef = await providerRefFromSession(request, env);
-  if (!providerRef) return json({ error: "Bitte melden Sie sich an, um die Anbieter-Kündigung zu bestätigen." }, 401);
+  if (!providerRef) return json({ error: "Autentificați-vă pentru a confirma închiderea contului de furnizor." }, 401);
 
   try {
     const body = await request.json().catch(() => ({}));
     if (body.confirm_cancellation !== true) {
-      return json({ error: "Bitte bestätigen Sie die Kündigung ausdrücklich." }, 400);
+      return json({ error: "Confirmați în mod explicit închiderea contului." }, 400);
     }
 
     await ensureProvidersTable(env);
@@ -3138,7 +3138,7 @@ async function handleProviderAccountCancellation(request, env) {
     const provider = await env.DB.prepare(
       "SELECT provider_ref, name, active FROM providers WHERE provider_ref=? LIMIT 1"
     ).bind(providerRef).first();
-    if (!provider) return json({ error: "Anbieter nicht gefunden." }, 404);
+    if (!provider) return json({ error: "Furnizorul nu a fost găsit." }, 404);
 
     // Keep contract acceptance and booking/settlement history for audit and legal retention.
     // Disable access instead of deleting historical or financial records.
@@ -3152,13 +3152,13 @@ async function handleProviderAccountCancellation(request, env) {
       success: true,
       cancelled: true,
       provider_ref: providerRef,
-      message: "Der Anbieterzugang wurde deaktiviert. Vertrags- und Buchungsnachweise bleiben entsprechend den Aufbewahrungspflichten erhalten."
+      message: "Accesul furnizorului a fost dezactivat. Documentele contractuale și istoricul rezervărilor vor fi păstrate conform obligațiilor legale."
     });
     response.headers.set("Set-Cookie", providerSessionCookie("", 0));
     return response;
   } catch (error) {
     console.error("FiiViu provider account cancellation failed", error);
-    return json({ error: error?.message || "Kündigung konnte nicht verarbeitet werden." }, 500);
+    return json({ error: error?.message || "Închiderea contului nu a putut fi procesată." }, 500);
   }
 }
 
