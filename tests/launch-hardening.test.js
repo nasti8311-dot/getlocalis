@@ -232,7 +232,7 @@ test("marketplace entrypoint stays wired to the current worker implementation", 
 test("marketplace checkout recalculates price and owns booking identity", () => {
   const source = read("marketplace-entry.js");
   assert.match(source, /const totalAmount=unitPrice\*guests/);
-  assert.match(source, /body\\.amount=fiiviuFeeAmount/);
+  assert.match(source, /body\.amount=fiiviuFeeAmount/);
   assert.match(source, /body\.bookingId\s*=\s*"FV-"/);
   assert.match(source, /crypto\.randomUUID\(\)/);
   assert.match(source, /provider_connect_account_id/);
@@ -243,12 +243,12 @@ test("20/80 marketplace checkout collects only the FiiViu fee and avoids Connect
   const marketplace = read("marketplace-entry.js");
   const worker = read("worker-entry.js");
   const webhook = read("stripe-webhook.js");
-  assert.match(marketplace, /Math\\.round\\(totalAmount\\*0\\.20\\)/);
-  assert.match(marketplace, /body\\.providerDueCents=providerDueAmount/);
-  assert.match(marketplace, /body\\.paymentModel="fiiviu_fee_20_direct_80"/);
-  assert.match(worker, /metadata\\[payment_model\\]/);
+  assert.match(marketplace, /Math\.round\(totalAmount\*0\.20\)/);
+  assert.match(marketplace, /body\.providerDueCents=providerDueAmount/);
+  assert.match(marketplace, /body\.paymentModel="fiiviu_fee_20_direct_80"/);
+  assert.match(worker, /metadata\[payment_model\]/);
   assert.match(worker, /total_amount_cents/);
-  assert.match(worker, /booking\\.payment_model.*fiiviu_fee_20_direct_80/);
+  assert.match(worker, /booking\.payment_model.*fiiviu_fee_20_direct_80/);
   assert.match(webhook, /directProviderPayment/);
   assert.match(webhook, /Stripe Connect settlement skipped/);
 });
@@ -625,7 +625,7 @@ test("marketplace checkout derives the payable amount from the server catalog", 
   const source = read("marketplace-entry.js");
   assert.match(source, /const unitPrice=Number\(experience\.price_cents\)/);
   assert.match(source, /const totalAmount=unitPrice\*guests/);
-  assert.match(source, /body\\.amount=fiiviuFeeAmount/);
+  assert.match(source, /body\.amount=fiiviuFeeAmount/);
   assert.doesNotMatch(source, /body\.amount=Number\(body\.amount/);
 });
 
