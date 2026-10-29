@@ -114,7 +114,7 @@ test("direct 20/80 checkout uses the server-side RON offer price", () => {
   assert.match(worker, /A valid booking date and time are required/);
 });
 
-test("provider self-registration requires explicit contract acceptance and stores evidence", () => {
+test("provider self-registration records automatic contract acceptance and stores evidence", () => {
   const worker = read("worker-entry.js");
   const page = read("anbieter-register.html");
   const migration = read("migrations/018_provider_self_registration_contracts.sql");
@@ -123,7 +123,9 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(worker, /INSERT INTO vendor_contract_logs/);
   assert.match(worker, /contract_sha256/);
   assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.0\.pdf",content:pdf\}\]/);
-  assert.match(page, /name="accept_contract" type="checkbox" required/);
+  assert.match(page, /accept_contract:true/);
+  assert.match(page, /Acceptarea este înregistrată automat la finalizarea înregistrării/);
+  assert.doesNotMatch(page, /name="accept_contract" type="checkbox" required/);
   assert.match(page, /20% Anzahlung per Online-Buchung/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
