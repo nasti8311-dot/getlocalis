@@ -526,9 +526,6 @@ async function ensureExperiencesTable(env){
   const required=["experience_id","provider_connect_account_id","provider_name","title","description","category","image_url","gallery_urls","available_times","price_cents","currency","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","meeting_latitude","meeting_longitude","status","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","updated_at"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
-  for(const name of missing){
-    const type=name==="updated_at"?"TEXT":"TEXT";
-    await env.DB.prepare("ALTER TABLE experiences ADD COLUMN "+name+" "+type).run();
-  }
+  if(missing.length) throw new Error("Experiences schema is incomplete. Apply the required D1 migrations before enabling marketplace routes: "+missing.join(", "));
 }
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json","Cache-Control":"no-store"}})}
