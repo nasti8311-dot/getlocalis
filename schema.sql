@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   meeting_latitude TEXT,
   meeting_longitude TEXT,
   partner_ref TEXT,
+  provider_ref TEXT,
   provider_connect_account_id TEXT,
   booking_access_token TEXT,
   confirmation_email_sent_at TEXT,
