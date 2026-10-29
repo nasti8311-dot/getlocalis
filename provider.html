@@ -198,7 +198,7 @@ async function loadProviderOverview(){
       : '<tr><td colspan="10" class="muted" style="padding:10px">Keine vergangenen Buchungen.</td></tr>';
   }catch(e){
     document.getElementById('providerUpcoming').textContent=e.message;
-    document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="6" class="error" style="padding:10px">'+esc(e.message)+'</td></tr>';
+    document.getElementById('providerRecentRows').innerHTML='<tr><td colspan="10" class="error" style="padding:10px">'+esc(e.message)+'</td></tr>';
   }
 }
 
@@ -255,7 +255,7 @@ experienceForm?.addEventListener('submit',async event=>{
   const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify(payload)});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||'Erlebnis konnte nicht gespeichert werden.');
-  result.className='result ok';result.style.display='block';result.textContent='Erlebnis wurde gespeichert. Online-Anzahlung: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; vor Ort: '+(Math.round(payload.priceCents*0.80)/100).toFixed(2)+' RON.';
+  result.className='result ok';result.style.display='block';result.textContent='Erlebnis wurde gespeichert. Online-Anzahlung: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; vor Ort: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
   experienceForm.reset();document.getElementById('expCity').value='București';document.getElementById('expCash').checked=true;document.getElementById('expCard').checked=true;updateExperiencePreview();await load();
  }catch(error){result.className='result error';result.style.display='block';result.textContent=error.message;}
  finally{submit.disabled=false;}
