@@ -35,6 +35,6 @@
     "zone_name": "fiiviu.ro"
   },
   "vars": {
-    "UNDER_CONSTRUCTION": "false"
+    "UNDER_CONSTRUCTION": "true"
   }
 }
