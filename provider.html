@@ -74,7 +74,7 @@ td,th{border-bottom:1px solid #eee9e1}
 </style></head><body>
 <h1>FiiViu Provider</h1><p class="hint">Gestionează rezervările, veniturile și plățile pentru organizatorul tău.</p>
 <section><h2>Organizator și oferte</h2><p class="muted">Creează organizatori, asociază oferte și gestionează fotografiile.</p><p><a href="/organizer-admin.html" style="color:#d95d1f;font-weight:700;text-decoration:underline">Creează organizatori și gestionează ofertele →</a></p></section><section><h2>Autentificare organizator</h2><p class="muted">Autentifică-te cu accesul tău personal FiiViu. Datele tale sunt vizibile doar pentru organizatorul tău.</p><form id="providerLoginForm"><label for="providerEmail">E-mail</label><input id="providerEmail" type="email" autocomplete="username" placeholder="name@beispiel.de" required><label for="providerPassword">Parolă</label><input id="providerPassword" type="password" autocomplete="current-password" placeholder="Parolă" required><button type="submit">Autentificare</button><button type="button" id="providerLogout" class="secondary" style="display:none">Deconectare</button><div id="providerLoginError" class="result error" style="display:none"></div></form><div id="providerIdentity" class="muted" style="margin-top:12px"></div></section>
-<section><h2>Panoul organizatorului</h2><p class="muted">Rezervări, venituri și plăți pentru organizatorul tău.</p><div class="grid" id="providerStatsCards" style="margin-top:14px"><div class="card"><strong>Rezervări</strong><div id="providerStatBookings">–</div></div><div class="card"><strong>Venit total</strong><div id="providerStatRevenue">–</div></div><div class="card"><strong>Câștigul organizatorului</strong><div id="providerStatProviderRevenue">–</div></div><div class="card"><strong>Disponibil / de încasat</strong><div id="providerStatAvailable">–</div></div><div class="card"><strong>În procesare</strong><div id="providerStatPending">–</div></div><div class="card"><strong>Plătit deda</strong><div id="providerStatPaid">–</div></div></div><div class="card" style="margin-top:18px"><h3>Kommende Rezervări</h3><div id="providerUpcoming" class="muted" style="margin-top:10px">Nu a fost încă încărcat.</div></div><div class="card" style="margin-top:18px"><h3>Vergangene Buchungen</h3><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Buchung</th><th style="text-align:left;padding:8px">Erlebnis</th><th style="text-align:left;padding:8px">Termin</th><th style="text-align:left;padding:8px">Kunde</th><th style="text-align:left;padding:8px">E-Mail</th><th style="text-align:right;padding:8px">Gesamt</th><th style="text-align:right;padding:8px">Online 20 %</th><th style="text-align:right;padding:8px">Vor Ort 80 %</th><th style="text-align:left;padding:8px">Bar/Karte</th><th style="text-align:left;padding:8px">Status</th></tr></thead><tbody id="providerRecentRows"></tbody></table></div></div></section><section><h2>Testbuchung</h2><p class="muted">Erstellt eine interne Testbuchung und versendet Kunden- und Veranstalter-E-Mail. Es wird kein echtes Geld bewegt.</p><label for="providerTestEmail">Test-E-Mail des Gastes</label><input id="providerTestEmail" type="email" placeholder="deine-testadresse@beispiel.de" autocomplete="email"><button type="button" id="providerTestBooking">Testbuchung erstellen &amp; E-Mails senden</button><div id="providerTestResult" class="result" style="display:none"></div></section><section><h2>Stripe Connect</h2><p class="muted">Pentru rezervările noi 20/80, Stripe Connect nu este necesar: FiiViu încasează online 20%, iar restul de 80% îl încasezi direct de la client. Connect poate fi necesar doar pentru decontări legacy.</p><button id="connectOnboarding">Stripe Connect einrichten</button><button id="connectStatus" class="secondary">Verifică statusul</button><div id="connectResult" class="result" style="display:none"></div></section>
+<section><h2>Panoul organizatorului</h2><p class="muted">Rezervări, venituri și plăți pentru organizatorul tău.</p><div class="grid" id="providerStatsCards" style="margin-top:14px"><div class="card"><strong>Rezervări</strong><div id="providerStatBookings">–</div></div><div class="card"><strong>Venit total</strong><div id="providerStatRevenue">–</div></div><div class="card"><strong>Câștigul organizatorului</strong><div id="providerStatProviderRevenue">–</div></div><div class="card"><strong>Disponibil / de încasat</strong><div id="providerStatAvailable">–</div></div><div class="card"><strong>În procesare</strong><div id="providerStatPending">–</div></div><div class="card"><strong>Plătit deda</strong><div id="providerStatPaid">–</div></div></div><div class="card" style="margin-top:18px"><h3>Kommende Rezervări</h3><div id="providerUpcoming" class="muted" style="margin-top:10px">Nu a fost încă încărcat.</div></div><div class="card" style="margin-top:18px"><h3>Vergangene Buchungen</h3><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Buchung</th><th style="text-align:left;padding:8px">Erlebnis</th><th style="text-align:left;padding:8px">Termin</th><th style="text-align:left;padding:8px">Kunde</th><th style="text-align:left;padding:8px">E-Mail</th><th style="text-align:right;padding:8px">Gesamt</th><th style="text-align:right;padding:8px">Online 20 %</th><th style="text-align:right;padding:8px">Vor Ort 80 %</th><th style="text-align:left;padding:8px">Bar/Karte</th><th style="text-align:left;padding:8px">Status</th></tr></thead><tbody id="providerRecentRows"></tbody></table></div></div></section><section><h2>Testbuchung</h2><p class="muted">Erstellt eine interne Testbuchung und versendet Kunden- und Veranstalter-E-Mail. Es wird kein echtes Geld bewegt.</p><label for="providerTestEmail">Test-E-Mail des Gastes</label><input id="providerTestEmail" type="email" placeholder="deine-testadresse@beispiel.de" autocomplete="email"><button type="button" id="providerTestBooking">Testbuchung erstellen &amp; E-Mails senden</button><div id="providerTestResult" class="result" style="display:none"></div></section>
 <section><h2>Neues Erlebnis erstellen</h2><p class="muted">Lege ein Erlebnis für Bukarest an. Preise werden in RON gespeichert. Bilder können über öffentlich erreichbare Bild-URLs hinterlegt werden.</p>
 <form id="experienceForm" class="card" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
 <div><label for="expTitle">Titel *</label><input id="expTitle" required maxlength="180" placeholder="z. B. Spa & Massage"></div>
@@ -263,33 +263,6 @@ experienceForm?.addEventListener('submit',async event=>{
 updateExperiencePreview();
 
 document.getElementById('reload')?.addEventListener('click',()=>{load();loadProviderOverview();});
-
-const connectResult=document.getElementById('connectResult');
-function connectShow(t,ok=false){
-  connectResult.style.display='block';
-  connectResult.className='result '+(ok?'ok':'error');
-  connectResult.textContent=t;
-}
-async function connectStatus(){
-  try{
-    const r=await fetch('/api/provider/connect-status',{headers:headers(),credentials:'same-origin'});
-    const d=await r.json();
-    if(!r.ok) throw Error(d.error||'Statusul nu a putut fi încărcat.');
-    const a=d.account;
-    connectShow('Cont: '+a.id+'\\nDate trimise: '+(a.detailsSubmitted?'da':'nu')+'\\nPlăți: '+(a.payoutsEnabled?'activ':'noch nicht activ')+'\\nTransfers: '+(a.transfersEnabled?'activ':'noch nicht activ')+'\\nInformații lipsă: '+(a.currentlyDue.length+a.pastDue.length),true);
-  }catch(e){connectShow(e.message);}
-}
-async function connectOnboarding(){
-  try{
-    const r=await fetch('/api/provider/connect-onboarding',{method:'POST',credentials:'same-origin',headers:headers()});
-    const d=await r.json();
-    if(!r.ok) throw Error(d.error||'Configurarea nu a putut fi pornită.');
-    window.location.href=d.onboarding.url;
-  }catch(e){connectShow(e.message);}
-}
-document.getElementById('connectOnboarding')?.addEventListener('click',connectOnboarding);
-document.getElementById('connectStatus')?.addEventListener('click',connectStatus);
-if(new URLSearchParams(location.search).get('connect')==='return') connectStatus();
 
 document.getElementById('providerTestBooking')?.addEventListener('click',async()=>{
   const result=document.getElementById('providerTestResult');
