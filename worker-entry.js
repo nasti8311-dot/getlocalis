@@ -593,7 +593,7 @@ async function handleBookingAccess(request, env) {
         o.pay_on_site_card
       FROM bookings b
       LEFT JOIN offers o ON o.id=b.offer_id
-      WHERE b.booking_id=? AND b.booking_access_token=?
+      WHERE booking_id=? AND booking_access_token=?
       LIMIT 1
     `).bind(bookingId, token).first();
 
