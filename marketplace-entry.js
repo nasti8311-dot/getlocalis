@@ -320,7 +320,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
 
     const totalAmount=unitPrice*guests;
-    if(!Number.isSafeInteger(totalAmount)||totalAmount<50)return json({error:"Invalid calculated amount"},409);
+    if(!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der Gesamtpreis muss mindestens 2,50 betragen, damit die 20-%-Onlinegebühr über Stripe bezahlt werden kann."},409);
+    const fiiviuFeeAmount=Math.round(totalAmount*0.20);
+    const providerDueAmount=totalAmount-fiiviuFeeAmount;
+    if(!Number.isSafeInteger(fiiviuFeeAmount)||fiiviuFeeAmount<50||!Number.isSafeInteger(providerDueAmount)||providerDueAmount<0)return json({error:"Invalid calculated payment split"},409);
 
     // Never trust a client-supplied booking ID: it is persisted as a unique
     // booking identifier after payment succeeds. Generate it server-side so a
@@ -331,7 +334,12 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.providerConnectAccountId=validProviderAccount;
     body.providerName=String(bodyProviderName||experience.provider_name||"");
     body.experienceName=experience.title||body.tourName||"";
-    body.amount=totalAmount;
+    // Collect only FiiViu's 20% fee online; the remaining 80% is paid directly to the provider.
+    body.amount=fiiviuFeeAmount;
+    body.totalAmountCents=totalAmount;
+    body.fiiviuFeeCents=fiiviuFeeAmount;
+    body.providerDueCents=providerDueAmount;
+    body.paymentModel="fiiviu_fee_20_direct_80";
     body.currency=String(experience.currency||"eur").toLowerCase();
     body.guests=guests;
     body.meetingPointName=String(experience.meeting_point_name||"");
