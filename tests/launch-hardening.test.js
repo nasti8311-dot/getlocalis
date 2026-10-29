@@ -1010,6 +1010,11 @@ test("provider contract v1.1 contains the 20/80 clauses in all languages and acc
   assert.match(worker, /const contractVersion="v1\.1"/);
   assert.match(worker, /20\. Vertragsfassung:/);
   assert.match(registration, /20% online către FiiViu, iar 80% direct către mine, ca organizator, la locație/);
+  assert.match(worker, /subject:"Contractul FiiViu acceptat \(v1\.1\)"/);
+  assert.match(worker, /Îți mulțumim pentru înregistrarea pe FiiViu/);
+  assert.match(worker, /Autentificare organizator/);
+  assert.match(worker, /Title \(Contract FiiViu pentru organizatori v1\.1\)/);
+  assert.doesNotMatch(worker, /FiiViu Partnervertrag v1\.0/);
 });
 
 test("provider portal and registration are Romanian-first", () => {
