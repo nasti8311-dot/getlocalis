@@ -85,6 +85,8 @@ export default {
     if (url.pathname === "/api/provider-logout") return handleProviderLogout(request, env);
     if (url.pathname === "/api/provider-account-cancel") return handleProviderAccountCancellation(request, env);
     if (url.pathname === "/api/provider-test-booking") return handleProviderTestBooking(request, env);
+    if (url.pathname === "/api/provider/upload-image") return handleProviderImageUpload(request, env);
+    if (url.pathname.startsWith("/media/provider/") && request.method === "GET") return handleProviderImageRead(request, env);
     if (url.pathname === "/api/provider/experiences") return handleProviderExperiences(request, env);
     if (url.pathname === "/api/provider/overview") return handleProviderOverview(request, env);
     if (url.pathname === "/api/provider/connect-status" || url.pathname === "/api/provider/connect-onboarding") return json({ error: "Stripe Connect is not used for the FiiViu 20/80 payment model." }, 410);
@@ -3183,11 +3185,37 @@ async function providerRefFromSession(request,env){
 
 async function ensureOffersTable(env){
   const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
-  const required=["provider_ref","title","description","price_cents","currency","available_times","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
+  if(!existing.has("availability_rules")){await env.DB.prepare("ALTER TABLE offers ADD COLUMN availability_rules TEXT").run();existing.add("availability_rules");}
+  const required=["provider_ref","title","description","price_cents","currency","available_times","availability_rules","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration"];
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
+async function handleProviderImageUpload(request,env){
+  if(request.method!=="POST")return json({error:"Metoda nu este permisă."},405);
+  if(!env.PROVIDER_IMAGES)return json({error:"Stocarea fotografiilor nu este configurată. Bucket-ul Cloudflare R2 trebuie creat și conectat."},503);
+  const providerRef=await providerRefFromSession(request,env);
+  if(!providerRef)return json({error:"Autentificare necesară."},401);
+  try{
+    const form=await request.formData(),file=form.get("image");
+    if(!file||typeof file.arrayBuffer!=="function")return json({error:"Selectați o fotografie."},400);
+    const allowed={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"},ext=allowed[String(file.type||"").toLowerCase()];
+    if(!ext)return json({error:"Folosiți o fotografie JPG, PNG, WebP sau AVIF."},415);
+    if(file.size<1||file.size>8*1024*1024)return json({error:"Fiecare fotografie trebuie să aibă maximum 8 MB."},413);
+    const key="provider-images/"+providerRef+"/"+providerRandomHex(16)+"."+ext;
+    await env.PROVIDER_IMAGES.put(key,file.stream(),{httpMetadata:{contentType:file.type,cacheControl:"public, max-age=31536000, immutable"}});
+    return json({success:true,url:"https://fiiviu.ro/media/provider/"+key});
+  }catch(error){console.error("FiiViu provider image upload failed",error);return json({error:"Fotografia nu a putut fi încărcată."},500);}
+}
+async function handleProviderImageRead(request,env){
+  if(!env.PROVIDER_IMAGES)return new Response("Image storage unavailable",{status:503});
+  const key=new URL(request.url).pathname.slice("/media/provider/".length);
+  if(!/^provider-images\/[A-Za-z0-9_-]+\/[a-f0-9]+\.(jpg|png|webp|avif)$/.test(key))return new Response("Not found",{status:404});
+  const object=await env.PROVIDER_IMAGES.get(key);if(!object)return new Response("Not found",{status:404});
+  const headers=new Headers();object.writeHttpMetadata(headers);headers.set("Cache-Control","public, max-age=31536000, immutable");headers.set("X-Content-Type-Options","nosniff");
+  return new Response(object.body,{headers});
+}
+
 async function handleProviderExperiences(request,env){
   if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
   const providerRef=await providerRefFromSession(request,env);
@@ -3209,6 +3237,12 @@ async function handleProviderExperiences(request,env){
       if(!title)return json({error:"Titlul este obligatoriu."},400);
       if(currency!=="ron")return json({error:"Noile oferte trebuie să aibă prețurile afișate în RON."},400);
       if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Introduceți un preț de cel puțin 2,50 RON, astfel încât avansul online să fie de minimum 0,50 RON."},400);
+      const availabilityRules=body.availabilityRules&&typeof body.availabilityRules==="object"?body.availabilityRules:null;
+      if(body.publish===true){
+        if(!availabilityRules||!/^\d{4}-\d{2}-\d{2}$/.test(String(availabilityRules.startDate||""))||(availabilityRules.endDate&&!/^\d{4}-\d{2}-\d{2}$/.test(String(availabilityRules.endDate)))||!Array.isArray(availabilityRules.weekdays)||!Array.isArray(availabilityRules.extraDates)||!Array.isArray(availabilityRules.blockedDates)||(!availabilityRules.weekdays.length&&!availabilityRules.extraDates.length))return json({error:"Selectați cel puțin o zi sau dată disponibilă în calendar."},400);
+        if(availabilityRules.weekdays.some(day=>!Number.isInteger(day)||day<0||day>6)||[...availabilityRules.extraDates,...availabilityRules.blockedDates].some(date=>!/^\d{4}-\d{2}-\d{2}$/.test(String(date))))return json({error:"Programul din calendar nu este valid."},400);
+        if(availabilityRules.endDate&&availabilityRules.endDate<availabilityRules.startDate)return json({error:"Data de sfârșit trebuie să fie după data de început."},400);
+      }
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
       if(!payCash&&!payCard)return json({error:"Selectați cel puțin o metodă de plată la fața locului."},400);
@@ -3216,9 +3250,9 @@ async function handleProviderExperiences(request,env){
       if(existing)return json({error:"Există deja o experiență cu acest titlu."},409);
       const active=body.publish===true?1:0;
       const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
-      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
+      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,availability_rules,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
         providerRef,title,String(body.description||"").trim()||null,priceCents,currency,
-        String(body.availableTimes||"").trim()||null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
+        String(body.availableTimes||"").trim()||null,availabilityRules?JSON.stringify(availabilityRules):null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
         String(body.meetingCity||"București").trim()||"București",String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
         Number.isInteger(Number(body.arrivalMinutesBefore))?Number(body.arrivalMinutesBefore):null,String(body.category||"wellness").trim().toLowerCase()||"wellness",
         String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active,payCash?1:0,payCard?1:0,String(body.duration||"").trim()||null
