@@ -124,7 +124,7 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(worker, /contract_sha256/);
   assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.1\.pdf",content:pdf\}\]/);
   assert.match(page, /name="accept_contract" type="checkbox" required/);
-  assert.match(page, /20 % online către FiiViu, 80 % la fața locului direct către mine ca organizator/);
+  assert.match(page, /20% online către FiiViu, iar 80% direct către mine, ca organizator, la locație/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
   assert.match(migration, /pay_on_site_cash/);
@@ -1009,7 +1009,7 @@ test("provider contract v1.1 contains the 20/80 clauses in all languages and acc
   }
   assert.match(worker, /const contractVersion="v1\.1"/);
   assert.match(worker, /20\. Vertragsfassung:/);
-  assert.match(registration, /20 % online către FiiViu, 80 % la fața locului direct către mine ca organizator/);
+  assert.match(registration, /20% online către FiiViu, iar 80% direct către mine, ca organizator, la locație/);
 });
 
 test("provider portal and registration are Romanian-first", () => {
