@@ -125,6 +125,11 @@ jobs:
             exit 1
           fi
 
+          if [ -z "${STRIPE_WEBHOOK_SECRET:-}" ]; then
+            echo "Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload."
+            exit 1
+          fi
+
           # Build output already exists from the dry-run validation step. Use the
           # documented Script Upload API keep_assets option to bypass the broken
           # assets-upload-session endpoint and retain the currently deployed assets.
@@ -145,18 +150,18 @@ jobs:
             console.error("Required GitHub Actions secret ADMIN_PAYOUT_KEY is missing; refusing Worker upload.");
             process.exit(1);
           }
+          if (!stripeWebhookSecret) {
+            console.error("Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload.");
+            process.exit(1);
+          }
           const bindings = [
             { type: "assets", name: "ASSETS" },
             { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
             { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
             { type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey },
+            { type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret },
           ];
-          if (stripeWebhookSecret) {
-            bindings.push({ type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret });
-            console.log("STRIPE_WEBHOOK_SECRET supplied to Worker version.");
-          } else {
-            console.log("GitHub Actions STRIPE_WEBHOOK_SECRET is not set; preserving any existing Worker secret binding.");
-          }
+          console.log("STRIPE_WEBHOOK_SECRET supplied to Worker version.");
           const metadata = {
             main_module: mainModule,
             compatibility_date: "2026-09-14",
