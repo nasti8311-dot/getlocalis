@@ -124,7 +124,7 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(worker, /contract_sha256/);
   assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.1\.pdf",content:pdf\}\]/);
   assert.match(page, /name="accept_contract" type="checkbox" required/);
-  assert.match(page, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
+  assert.match(page, /20 % online către FiiViu, 80 % la fața locului direct către mine ca organizator/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
   assert.match(migration, /pay_on_site_cash/);
@@ -1009,7 +1009,7 @@ test("provider contract v1.1 contains the 20/80 clauses in all languages and acc
   }
   assert.match(worker, /const contractVersion="v1\.1"/);
   assert.match(worker, /20\. Vertragsfassung:/);
-  assert.match(registration, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
+  assert.match(registration, /20 % online către FiiViu, 80 % la fața locului direct către mine ca organizator/);
 });
 
 test("provider portal and registration are Romanian-first", () => {
@@ -1020,7 +1020,6 @@ test("provider portal and registration are Romanian-first", () => {
   assert.match(dashboard, /Autentificare organizator/);
   assert.match(dashboard, /Rezervări viitoare/);
   assert.match(dashboard, /toLocaleString\('ro-RO'/);
-  assert.match(dashboard, /anbieternbedingungen/);
   assert.match(dashboard, /Condiții pentru organizatori/);
   assert.match(registration, /Înregistrare ca organizator/);
   assert.match(registration, /contractul pentru organizatori \(versiunea v1\.1\)/);
