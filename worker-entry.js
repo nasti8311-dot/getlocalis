@@ -2279,9 +2279,16 @@ async function sendEmailJsConfirmation(
     CANCELLATION_HOURS
   );
 
-  const mapLink = makeMeetingMapLink(
-    booking
-  );
+  const mapLink = makeMeetingMapLink(booking);
+  const directPaymentModel = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
+  const bookingTotal = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
+  const totalPriceDisplay = !directPaymentModel ? bookingTotal : language === "de"
+    ? bookingTotal + " (davon " + onlineFee + " online an FiiViu; " + providerDue + " vor Ort an den Anbieter)"
+    : language === "ro"
+      ? bookingTotal + " (din care " + onlineFee + " online către FiiViu; " + providerDue + " direct operatorului)"
+      : bookingTotal + " (including " + onlineFee + " paid online to FiiViu; " + providerDue + " due to the provider in person)";
 
   const params = {
     user_name: booking.customer_name,
@@ -2292,9 +2299,7 @@ async function sendEmailJsConfirmation(
     booking_date: booking.booking_date || "",
     booking_time: bookingTime,
     guests: String(booking.guests || 1),
-    total_price: `${(
-      Number(booking.total_amount_cents || booking.amount_cents || 0) / 100
-    ).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
+    total_price: totalPriceDisplay,
     online_fee_price: `${(Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
     provider_due_price: `${(Number(booking.provider_due_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
     mail_online_fee_label: language === "de" ? "Online an FiiViu (20 %)" : language === "ro" ? "Plătit online către FiiViu (20%)" : "Paid online to FiiViu (20%)",
