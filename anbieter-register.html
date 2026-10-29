@@ -27,7 +27,7 @@ small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a
 <div class="field wide"><label for="email">Adresă de e-mail profesională *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
 <div class="field wide"><label for="password">Parolă *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimum 12 caractere. Folosește o parolă unică.</small></div>
 </div>
-<div class="check"><input id="accept" name="accept_contract" type="checkbox" required><label for="accept">Confirm că sunt reprezentantul legal al companiei indicate. Am citit <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">contractul de parteneriat</a> și condițiile privind comisionul (avans de 20% la rezervarea online) și sunt de acord cu acestea.</label></div>
+<div class="check"><span aria-hidden="true">✓</span><div>Prin crearea contului, confirmi că ești reprezentantul legal al companiei și accepți <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">contractul de parteneriat</a> și condițiile privind comisionul (avans de 20% la rezervarea online). Acceptarea este înregistrată automat la finalizarea înregistrării.</div></div>
 <button id="submitButton" type="submit">Înregistrare și acceptarea contractului</button>
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form>
@@ -38,7 +38,7 @@ const form=document.getElementById('registerForm'),button=document.getElementByI
 form.addEventListener('submit',async event=>{
  event.preventDefault(); if(!form.reportValidity())return;
  button.disabled=true;button.textContent='Se procesează înregistrarea…';message.className='message';message.style.display='none';
- const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:form.accept_contract.checked};
+ const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:true};
  try{
   const response=await fetch('/api/provider-register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
   const data=await response.json().catch(()=>({}));
