@@ -2806,7 +2806,7 @@ async function handleProviderRegistration(request,env){
       "13. Unternehmensangaben: Die vollstaendigen Unternehmensdaten von FiiViu S.R.L. werden vor dem oeffentlichen Launch im Impressum veroeffentlicht.",
       "",
       "Diese Vertragsfassung wird durch die ausdrueckliche elektronische Zustimmung des angegebenen gesetzlichen Vertreters angenommen. Die Zustimmung wird mit Zeitstempel, IP-Adresse, User-Agent, Vertragsversion und SHA-256-Pruefsumme protokolliert."
-    ].join("\\n");
+    ].join("\n");
     const contractHash=await hashProviderSession(contractSnapshot);
     const contractLogId=crypto.randomUUID();
     await env.DB.batch([
