@@ -122,7 +122,7 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(worker, /body\.accept_contract!==true/);
   assert.match(worker, /INSERT INTO vendor_contract_logs/);
   assert.match(worker, /contract_sha256/);
-  assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.0\.pdf",content:pdf\}\]/);
+  assert.match(worker, /attachments:\[\{filename:"FiiViu-Partnervertrag-v1\.1\.pdf",content:pdf\}\]/);
   assert.match(page, /name="accept_contract" type="checkbox" required/);
   assert.match(page, /20 % online an FiiViu, 80 % vor Ort direkt an mich als Anbieter/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
