@@ -3020,9 +3020,9 @@ async function handleProviderOverview(request,env){
              s.release_at,s.settlement_error,s.settlement_test_transfer_id
       FROM bookings b
       LEFT JOIN booking_settlements s ON s.booking_id=b.booking_id
-      WHERE b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
+      WHERE b.provider_ref=? OR b.provider_name=? OR b.provider_name=(SELECT name FROM providers WHERE provider_ref=? LIMIT 1)
       ORDER BY b.booking_date DESC,b.booking_time DESC,b.id DESC
-    `).bind(provider.name,providerRef).all();
+    `).bind(providerRef,provider.name,providerRef).all();
     const all=rows.results||[];
 
     const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.payment_model==="fiiviu_fee_20_direct_80" ? r.provider_due_cents || 0 : r.provider_amount_cents || 0),0);
