@@ -98,7 +98,7 @@ td,th{border-bottom:1px solid #eee9e1}
 <div style="grid-column:1/-1"><label for="expInstructions">Instrucțiuni pentru participare și întâlnire</label><textarea id="expInstructions" placeholder="Ce ar trebui să știe participanții înainte de sosire?"></textarea></div>
 <div style="grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap"><label style="display:flex;align-items:center;gap:8px"><input id="expCash" type="checkbox" checked style="width:auto"> Rest de plată în numerar la fața locului</label><label style="display:flex;align-items:center;gap:8px"><input id="expCard" type="checkbox" checked style="width:auto"> Rest de plată cu cardul la fața locului</label></div>
 <div style="grid-column:1/-1;padding:14px;background:#f8f5ef;border-radius:14px;line-height:1.8"><strong>Sumarul plății</strong><div>Preț total: <strong id="expTotalPreview">0,00 RON</strong></div><div>Plată online (20 %): <strong id="expDepositPreview">0,00 RON</strong></div><div>La fața locului (80%): <strong id="expRestPreview">0,00 RON</strong></div></div>
-<div style="grid-column:1/-1"><button type="submit">Salvează și publică experiența</button><div id="expResult" class="result" style="display:none"></div></div>
+<div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap"><button type="submit" id="saveExperienceButton">Salvează și publică experiența</button><button type="button" id="cancelEdit" class="secondary" style="display:none">Anulează editarea</button></div><div id="expResult" class="result" style="display:none"></div>
 </form>
 <h2 style="margin-top:28px">Experiențele mele</h2><button id="reload" class="secondary">Reîmprospătează</button><div id="list" class="muted" style="margin-top:14px">Nu au fost încărcate.</div></section>
 <script>
@@ -261,7 +261,8 @@ async function load(){
     if(!r.ok) throw Error(d.error||'Încărcarea a eșuat.');
     const rows=d.experiences||[];
     if(!rows.length){box.textContent='Nu există încă experiențe.';return;}
-    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(({published:'Publicată',draft:'Ciornă',active:'Activă',inactive:'Inactivă'}[String(x.status||'').toLowerCase()]||x.status||'Necunoscută'))+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div></div>').join('');
+    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(({published:'Publicată',draft:'Ciornă',active:'Activă',inactive:'Inactivă'}[String(x.status||'').toLowerCase()]||x.status||'Necunoscută'))+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div><button type="button" class="secondary" data-edit-offer="'+esc(x.id)+'" style="margin-top:10px">Editează programul</button></div>').join('');
+    box.querySelectorAll('[data-edit-offer]').forEach(button=>button.addEventListener('click',()=>editOffer(Number(button.dataset.editOffer),rows)));
   }catch(e){
     box.textContent=providerError(e.message);
   }
@@ -271,6 +272,7 @@ async function load(){
 const experienceForm=document.getElementById('experienceForm');
 const expPrice=document.getElementById('expPrice');
 const scheduleCalendar=document.getElementById('scheduleCalendar');
+let editingOffer=null;
 const scheduleStart=document.getElementById('scheduleStartDate');
 const scheduleEnd=document.getElementById('scheduleEndDate');
 let scheduleMonth=new Date();scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth(),1);
@@ -308,6 +310,39 @@ function renderScheduleCalendar(){
  updateScheduleSummary();
 }
 function updateScheduleSummary(){document.getElementById('scheduleSummary').textContent=selectedWeekdays().length+' zile recurente · '+extraScheduleDates.length+' date speciale · '+blockedScheduleDates.length+' zile blocate';}
+function resetOfferEditor(){
+ editingOffer=null;experienceForm.reset();document.getElementById('expCity').value='București';
+ document.getElementById('expCash').checked=true;document.getElementById('expCard').checked=true;
+ document.querySelectorAll('input[name="scheduleWeekday"]').forEach(el=>el.checked=false);
+ extraScheduleDates=[];blockedScheduleDates=[];scheduleStart.value=localDateString(new Date());scheduleEnd.value='';
+ scheduleMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+ document.getElementById('expImagePreview').textContent='';document.getElementById('saveExperienceButton').textContent='Salvează și publică experiența';
+ document.getElementById('cancelEdit').style.display='none';renderScheduleCalendar();updateExperiencePreview();
+}
+function editOffer(id,rows){
+ const offer=rows.find(row=>Number(row.id)===Number(id));if(!offer)return;
+ editingOffer=offer;
+ document.getElementById('expTitle').value=offer.title||'';
+ document.getElementById('expDescription').value=offer.description||'';
+ document.getElementById('expCategory').value=offer.category||'wellness';
+ document.getElementById('expPrice').value=(Number(offer.price_cents||0)/100).toFixed(2);
+ document.getElementById('expDuration').value=offer.duration||'';
+ document.getElementById('expTimes').value=Array.isArray(offer.available_times)?offer.available_times.join(', '):String(offer.available_times||'');
+ document.getElementById('expMeeting').value=offer.meeting_point_name||'';
+ document.getElementById('expAddress').value=offer.meeting_address||'';
+ document.getElementById('expCity').value=offer.meeting_city||'București';
+ document.getElementById('expInstructions').value=offer.meeting_instructions||'';
+ document.getElementById('expCash').checked=Number(offer.pay_on_site_cash)!==0;
+ document.getElementById('expCard').checked=Number(offer.pay_on_site_card)!==0;
+ document.querySelectorAll('input[name="scheduleWeekday"]').forEach(el=>el.checked=false);
+ extraScheduleDates=[];blockedScheduleDates=[];
+ try{const rules=JSON.parse(offer.availability_rules||'null');if(rules){scheduleStart.value=rules.startDate||localDateString(new Date());scheduleEnd.value=rules.endDate||'';const days=Array.isArray(rules.weekdays)?rules.weekdays.map(Number):[];document.querySelectorAll('input[name="scheduleWeekday"]').forEach(el=>el.checked=days.includes(Number(el.value)));extraScheduleDates=Array.isArray(rules.extraDates)?rules.extraDates.map(String):[];blockedScheduleDates=Array.isArray(rules.blockedDates)?rules.blockedDates.map(String):[];}else{scheduleStart.value=localDateString(new Date());scheduleEnd.value='';}}catch(_){scheduleStart.value=localDateString(new Date());scheduleEnd.value='';}
+ scheduleMonth=new Date((scheduleStart.value||localDateString(new Date())).slice(0,7)+'-01T12:00:00');
+ document.getElementById('expImageFiles').value='';document.getElementById('expImagePreview').textContent='Fotografiile existente sunt păstrate dacă nu alegi altele.';
+ document.getElementById('saveExperienceButton').textContent='Salvează modificările';document.getElementById('cancelEdit').style.display='inline-flex';
+ renderScheduleCalendar();updateExperiencePreview();experienceForm.scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.getElementById('cancelEdit').addEventListener('click',resetOfferEditor);
 document.getElementById('prevScheduleMonth').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);renderScheduleCalendar();});
 document.getElementById('nextScheduleMonth').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);renderScheduleCalendar();});
 document.querySelectorAll('input[name="scheduleWeekday"]').forEach(el=>el.addEventListener('change',renderScheduleCalendar));
@@ -355,8 +390,9 @@ experienceForm?.addEventListener('submit',async event=>{
   meetingCity:document.getElementById('expCity').value.trim(),
   meetingCountry:'Romania',
   meetingInstructions:document.getElementById('expInstructions').value.trim(),
-  imageUrl:uploadedImages[0]||'',
-  galleryUrls:uploadedImages.slice(1).join(','),
+  offerId:editingOffer?editingOffer.id:null,
+  imageUrl:uploadedImages[0]||(editingOffer?.image_url||''),
+  galleryUrls:uploadedImages.length>1?uploadedImages.slice(1).join(','):(uploadedImages.length?'':(editingOffer?.gallery_urls||'')),
   availabilityRules,
   payOnSiteCash:cash,payOnSiteCard:card,publish:true
  };
@@ -364,7 +400,7 @@ experienceForm?.addEventListener('submit',async event=>{
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||'Experiența nu a putut fi salvată.');
   result.className='result ok';result.style.display='block';result.textContent='Experiența a fost salvată. Avans online: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; de plătit la fața locului: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
-  experienceForm.reset();document.getElementById('expCity').value='București';document.getElementById('expCash').checked=true;document.getElementById('expCard').checked=true;extraScheduleDates=[];blockedScheduleDates=[];scheduleStart.value=localDateString(new Date());scheduleMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);renderScheduleCalendar();document.getElementById('expImagePreview').textContent='';updateExperiencePreview();await load();
+  resetOfferEditor();await load();
  }catch(error){result.className='result error';result.style.display='block';result.textContent=providerError(error.message);}
  finally{submit.disabled=false;}
 });
