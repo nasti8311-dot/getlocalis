@@ -836,6 +836,16 @@ async function handleProviderCancellation(request, env) {
 
 function buildCancellationView(booking) {
   const cancellation = getCancellationState(booking);
+  const directPaymentModel = String(booking.payment_model || "legacy_connect") === "fiiviu_fee_20_direct_80";
+  const policyText = directPaymentModel
+    ? cancellation.allowed
+      ? "Wenn du mindestens 24 Stunden vor Beginn stornierst, wird die online bezahlte Gebühr von 20 % vollständig erstattet. Bei späterer Stornierung bleibt sie bei FiiViu."
+      : cancellation.canCancel
+        ? "Du kannst noch stornieren, aber bei weniger als 24 Stunden vor Beginn wird die online bezahlte Gebühr von 20 % nicht erstattet."
+        : "Das Erlebnis hat bereits begonnen; eine Online-Stornierung ist nicht mehr möglich."
+    : cancellation.allowed
+      ? "Kostenlose Stornierung bis " + CANCELLATION_HOURS + " Stunden vor Beginn."
+      : "Die kostenlose Stornierungsfrist ist abgelaufen.";
 
   return {
     booking_id: booking.booking_id,
@@ -849,11 +859,10 @@ function buildCancellationView(booking) {
     payment_model: String(booking.payment_model || "legacy_connect"),
     status: booking.status,
     allowed: cancellation.allowed,
+    can_cancel: cancellation.canCancel,
     cancellation_deadline: cancellation.deadline,
     cancellation_hours: CANCELLATION_HOURS,
-    policy_text: cancellation.allowed
-      ? "Kostenlose Stornierung bis " + CANCELLATION_HOURS + " Stunden vor Beginn."
-      : "Die kostenlose Stornierungsfrist ist abgelaufen."
+    policy_text: policyText
   };
 }
 
