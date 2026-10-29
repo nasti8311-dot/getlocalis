@@ -2734,7 +2734,7 @@ async function handleAdminProviderPassword(request,env){
 
 async 
 
-async function handleProviderRegistration(request,env){
+async async function handleProviderRegistration(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured."},500);
   if(!String(env.RESEND_API_KEY||"").trim())return json({error:"Der PDF-Vertragsversand ist nicht konfiguriert. Bitte RESEND_API_KEY einrichten und erneut versuchen."},503);
@@ -2895,7 +2895,7 @@ async function ensureProviderRegistrationSchema(env){
   if(missing.length)throw new Error("Provider registration schema is incomplete. Apply migration 018_provider_self_registration_contracts.sql. Missing: "+missing.join(", "));
 }
 
-function handleProviderLogin(request,env){
+async function handleProviderLogin(request,env){
   if(request.method!=="POST")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({error:"D1 database not configured"},500);
   try{
