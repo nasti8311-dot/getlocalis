@@ -45,7 +45,6 @@ test("runtime schema evolution is not used by launch paths", () => {
   for (const path of [
     "stripe-webhook.js",
     "worker-entry.js",
-    "worker.js",
     "marketplace-entry.js",
     "secure-entry.js"
   ]) {
@@ -56,6 +55,14 @@ test("runtime schema evolution is not used by launch paths", () => {
       path + " still contains runtime ALTER TABLE"
     );
   }
+});
+
+test("legacy worker.js is not part of the production request path", () => {
+  const secure = read("secure-entry.js");
+  const marketplace = read("marketplace-entry.js");
+  assert.match(secure, /import adminWorker from ["']\.\/worker-entry\.js["']/);
+  assert.match(secure, /import marketplaceWorker from ["']\.\/marketplace-entry\.js["']/);
+  assert.match(marketplace, /import baseWorker from ["']\.\/worker-entry\.js["']/);
 });
 
 test("system event audit does not create runtime D1 schema", () => {
@@ -77,7 +84,6 @@ test("launch paths do not mutate D1 schema at request time", () => {
   for (const path of [
     "stripe-webhook.js",
     "worker-entry.js",
-    "worker.js",
     "marketplace-entry.js",
     "secure-entry.js",
     "provider-auth.js"
