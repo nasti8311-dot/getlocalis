@@ -77,6 +77,8 @@ jobs:
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_accepted_at ON vendor_contract_logs(accepted_at)"
 
           add_column_if_missing "bookings" "offer_id" "INTEGER"
+          add_column_if_missing "bookings" "proof_token" "TEXT"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_proof_token ON bookings(proof_token) WHERE proof_token IS NOT NULL"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_bookings_offer_slot ON bookings(offer_id,booking_date,booking_time,status,payment_status)"
 
           # Backward-compatible fields for the FiiViu 20/80 payment model.
