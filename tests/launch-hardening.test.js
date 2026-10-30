@@ -1086,13 +1086,13 @@ test("admin control center health checks are read-only and independent", () => {
   const end = source.indexOf("async function handleAdminResendConfirmation", start);
   const handler = source.slice(start, end);
   assert.ok(start >= 0 && end > start, "admin control center handler exists");
-  assert.doesNotMatch(handler, /DELETE FROM booking_settlements/i);
-  assert.doesNotMatch(handler, /const payout = settlements/);
-  assert.match(handler, /result\\.system\\.email = Boolean/);
-  assert.match(handler, /stripeGet\\(env, "\/v1\/balance"\\)/);
+  assert.ok(!handler.includes("DELETE FROM booking_settlements"), "health check must not delete settlement rows");
+  assert.ok(!handler.includes("const payout = settlements"), "health check must not read an undefined settlements variable");
+  assert.ok(handler.includes("result.system.email = Boolean"));
+  assert.ok(handler.includes('stripeGet(env, "/v1/balance")'));
   assert.ok(
-    handler.indexOf('stripeGet(env, "/v1/balance")') < handler.indexOf("try {\\n    await ensureBookingColumns"),
+    handler.indexOf('stripeGet(env, "/v1/balance")') < handler.indexOf("await ensureBookingColumns"),
     "Stripe health check runs independently of D1 queries"
   );
-  assert.match(handler, /result\\.system\\.d1 = true/);
+  assert.ok(handler.includes("result.system.d1 = true"));
 });
