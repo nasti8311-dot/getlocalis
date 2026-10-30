@@ -115,3 +115,10 @@ Erlaubt sind ausschließlich visuelle Änderungen und notwendige, nicht-funktion
 4. **Phase 5 — Prüfung:** Regressionen, responsive Sichtprüfung (360/768/1280 px), Tastaturbedienung, reduzierte Bewegung und mobile Überläufe prüfen.
 
 Jede Phase erhält einen eigenen Commit, eine Aktualisierung dieser Datei und eine erneute Prüfung, bevor die nächste Phase beginnt.
+
+
+### Nachbesserung nach Sichtprüfung
+
+- Die CI-Screenshots wurden zusätzlich manuell angesehen. Dabei fiel auf, dass der Hero auf sehr schmalen Geräten die Location-/CTA-Reihenfolge nicht klar genug vermittelte und die Inhaltsfläche durch die vererbte Mindesthöhe unnötig hoch wurde.
+- Die mobile Hero-Komposition wurde daher explizit geordnet (Standort, Headline, Beschreibung, CTA, Kategorie-Chips), die Mindesthöhe und Innenabstände wurden neu ausbalanciert. Die Desktop- und Tablet-Regeln bleiben unberührt.
+- Die Responsive-Screenshots und Overflow-Prüfungen laufen nach dieser Korrektur erneut.
