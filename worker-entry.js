@@ -644,6 +644,7 @@ async function handleBookingAccess(request, env) {
         b.meeting_latitude,
         b.meeting_longitude,
         b.status,
+        b.payment_status,
         b.payment_model,
         b.currency,
         b.amount_cents,
@@ -699,7 +700,7 @@ async function handleBookingProof(request, env) {
     const refundedAmount = Number(charge?.amount_refunded || 0);
     const expectedAmount = Number(booking.amount_cents || 0);
     if (pi?.status !== "succeeded" || !Number.isSafeInteger(expectedAmount) || expectedAmount <= 0 ||
-        paidAmount !== expectedAmount || refundedAmount > 0 || charge?.refunded === true ||
+        paidAmount !== expectedAmount || !charge || refundedAmount > 0 || charge.refunded === true ||
         String(pi?.currency || "").toLowerCase() !== String(booking.currency || "").toLowerCase()) {
       return json({ valid: false, error: "Die Online-Anzahlung konnte nicht als gültig bestätigt werden." }, 200, { "Cache-Control": "no-store" });
     }
