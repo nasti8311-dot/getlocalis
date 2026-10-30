@@ -299,6 +299,14 @@ test("marketplace checkout recalculates price and owns booking identity", () => 
 });
 
 
+test("marketplace webhook accepts valid direct 20/80 payments without Connect", () => {
+  const source = read("marketplace-entry.js");
+  assert.match(source, /directPaymentModel=String\(metadata\.payment_model\|\|""\)==="fiiviu_fee_20_direct_80"/);
+  assert.match(source, /directPaymentModel\|\|validProviderConnectAccount/);
+  assert.match(source, /Payment succeeded without a valid FiiViu marketplace checkout/);
+  assert.match(source, /if\(\^acct_/);
+});
+
 test("20/80 marketplace checkout collects only the FiiViu fee and avoids Connect settlements", () => {
   const marketplace = read("marketplace-entry.js");
   const worker = read("worker-entry.js");
