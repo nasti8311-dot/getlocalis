@@ -36,7 +36,7 @@ async function verify(){
  try{
   const response=await fetch('/api/booking-proof?token='+encodeURIComponent(token),{credentials:'omit',cache:'no-store'});
   const data=await response.json();
-  if(!response.ok||!data.valid||!data.booking){root.innerHTML='<div class="status invalid">✕ '+esc(t.invalid)+'</div><p>'+esc(data.error||t.error)+'</p>';return}
+  if(!response.ok||!data.valid||!data.booking){root.innerHTML='<div class="status invalid">✕ '+esc(t.invalid)+'</div><p>'+esc(t.error)+'</p>';return}
   const b=data.booking;
   root.innerHTML='<div class="status valid">✓ '+esc(t.valid)+'</div>'+
    '<div class="label">'+esc(t.booking)+'</div><div class="value">'+esc(b.booking_id)+'</div>'+
