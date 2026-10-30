@@ -93,6 +93,20 @@ Erlaubt sind ausschließlich visuelle Änderungen und notwendige, nicht-funktion
 - Die E-Mail-Bestätigungsvorlage `emailjs-booking-confirmation.html` bleibt bewusst separat, weil sie als E-Mail-Markup und nicht als normale Website-Seite gerendert wird.
 - Bestehende Bilder bleiben unverändert; ihre vorhandenen Unsplash-/Pexels-Quellen und Lizenzhinweise sind in `CREDITS.md` dokumentiert. Es wurden keine neuen Anbieterbilder oder fingierten Inhalte hinzugefügt.
 
+### Phase 4 — übrige Seiten
+
+- Das gemeinsame Designsystem und die zusätzlichen Seitenregeln sind auf Anbieterregistrierung, Provider-/Organizer-Bereiche, Partner- und Affiliate-Seiten, Buchungs-/Bestätigungs-/Stornoseiten, Admin-Oberflächen und Rechtsseiten eingebunden.
+- Die Regeln vereinheitlichen Typografie, Formulare, Buttons, Fokuszustände, Karten, Tabellen, Abstände und mobile Lesbarkeit, ohne Form-IDs, Feldnamen, Event-Handler, API-Pfade oder Geschäftslogik zu verändern.
+- Die E-Mail-Bestätigungsvorlage `emailjs-booking-confirmation.html` bleibt bewusst separat, weil sie als E-Mail-Markup und nicht als normale Website-Seite gerendert wird.
+- Bestehende Bilder bleiben unverändert; vorhandene Unsplash-/Pexels-Quellen und Lizenzhinweise sind in `CREDITS.md` dokumentiert. Es wurden keine neuen Anbieterbilder oder fingierten Inhalte hinzugefügt.
+
+### Phase 5 — Prüfung
+
+- Die Test-Suite erhält Regressionstests für zentrale Design-Assets, Font-Hosting, alle relevanten HTML-Seiten, drei Sprachvarianten und die vorhandenen Kategorieaktionen.
+- Ein bereits auf `main` vorhandener Testfehler wurde als falscher Prüfbereich identifiziert: `worker.js` ist ein Legacy-Modul und kein aktiver Request-Einstiegspunkt. Der Test prüft nun nur die aktiven Produktionspfade und sichert separat ab, dass diese `worker-entry.js` verwenden. Es wurde keine Worker- oder Zahlungslogik geändert.
+- Kontrastwerte der zentralen Farbpaare: dunkles Orange `#A94717` auf Creme `#FBFAF7` = 5,59:1; dunkler Text `#241A16` auf Orange `#E86F2D` = 5,46:1; beide erfüllen WCAG AA für normalen Text.
+- Eine echte Browser-Screenshotprüfung auf 360/768/1280 px bleibt als automatisierter Visual-Review-Schritt offen; das Repository hatte zuvor keine Browser-Testabhängigkeit oder Screenshot-Pipeline.
+
 ### 7. Nächste Phasen
 
 1. **Phase 2 — Designsystem:** zentrale Tokens und wiederverwendbare visuelle Basiskomponenten; Kontrast- und Fokusregeln dokumentieren.
