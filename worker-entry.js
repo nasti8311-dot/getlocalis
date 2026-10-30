@@ -60,6 +60,8 @@ export default {
     // Legacy partner admin endpoints are still the authoritative implementation.
     // Keep them behind the same secure admin Worker routing as the provider admin.
     if (
+      url.pathname === "/api/partner-application" ||
+      url.pathname === "/api/admin/partner-applications" ||
       url.pathname === "/api/admin/partners" ||
       url.pathname === "/api/admin/partner-password" ||
       url.pathname === "/api/admin/partner-payout" ||
