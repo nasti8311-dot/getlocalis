@@ -28,6 +28,7 @@ export default {
         url.pathname === "/api/admin/resend-confirmation" ||
         url.pathname === "/api/admin/resend-provider-contract" ||
         url.pathname === "/api/admin/offers" ||
+        url.pathname === "/api/admin/experience-approvals" ||
         url.pathname === "/api/admin/translate-offers" ||
         url.pathname === "/api/admin/control-center")
     ) {
@@ -74,6 +75,7 @@ export default {
       return handleAdminProviders(request, env);
     }
 
+    if (url.pathname === "/api/admin/experience-approvals") return handleAdminExperienceApprovals(request, env);
     if (url.pathname === "/api/admin/control-center") {
       return handleAdminControlCenter(request, env);
     }
@@ -413,6 +415,19 @@ function sanitizeSettlementError(value) {
   return message.slice(0, 1000);
 }
 
+async function handleAdminExperienceApprovals(request,env){
+  if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key is not configured."},500);
+  if(!isAdminRequest(request,env))return json({error:"Unauthorized"},401);
+  if(!env.DB)return json({error:"D1 database not configured."},500);
+  try{await ensureProviderRegistrationSchema(env);await ensureOffersTable(env);
+    if(request.method==="GET"){const rows=await env.DB.prepare("SELECT o.id,o.provider_ref,o.title,o.description,o.price_cents,o.currency,o.image_url,o.gallery_urls,o.category ,o.duration,p.name AS provider_name FROM offers o LEFT JOIN providers p ON p.provider_ref=o.provider_ref WHERE o.approval_status='pending' ORDER BY o.id ASC").all();return json({experiences:rows.results||[]});}
+    if(request.method==="POST"){const body=await request.json().catch(()=>({})),id=Number(body.id),action=String(body.action||"");if(!Number.isInteger(id)||id<1)return json({error:"Ungültige Erlebnis-ID."},400);
+      if(action==="approve"){const result=await env.DB.prepare("UPDATE offers SET approval_status='approved',active=1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND approval_status='pending'").bind(id).run();if(!Number(result.meta?.changes||0))return json({error:"Erlebnis nicht gefunden oder bereits bearbeitet."},404);return json({success:true,approved:true});}
+      if(action==="reject"){const result=await env.DB.prepare("UPDATE offers SET approval_status='rejected',active=0,updated_at=CURRENT_TIMESTAMP WHERE id=? AND approval_status='pending'").bind(id).run();if(!Number(result.meta?.changes||0))return json({error:"Erlebnis nicht gefunden oder bereits bearbeitet."},404);return json({success:true,rejected:true});}
+      return json({error:"Unbekannte Aktion."},400);}
+    return json({error:"Method Not Allowed"},405);
+  }catch(error){console.error("FiiViu admin experience approvals failed",error);return json({error:error?.message||"Freigabeliste konnte nicht geladen werden."},500);}
+}
 async function handleAdminControlCenter(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
@@ -3234,7 +3249,7 @@ async function providerRefFromSession(request,env){
 async function ensureOffersTable(env){
   const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
-  const required=["provider_ref","title","description","price_cents","currency","available_times","availability_rules","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration"];
+  const required=["provider_ref","title","description","price_cents","currency","available_times","availability_rules","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration","approval_status"];
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
@@ -3263,7 +3278,41 @@ async function handleProviderImageRead(request,env){
   return new Response(object.body,{headers});
 }
 
+async function notifyAdminExperienceSubmission(env, provider, experience, isUpdate) {
+  try {
+    const recipient = String(env.ADMIN_EXPERIENCE_EMAIL || env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) throw new Error("Admin notification recipient is invalid.");
+    if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured.");
+    const title = String(experience?.title || "Erlebnis").trim();
+    const subject = (isUpdate ? "Erlebnis zur erneuten Prüfung" : "Neues Erlebnis zur Freigabe") + " – " + title;
+    const text = [
+      isUpdate ? "Ein Anbieter hat ein Erlebnis geändert. Es wartet erneut auf Freigabe." : "Ein neues Erlebnis wartet auf Freigabe.",
+      "",
+      "Erlebnis: " + title,
+      "Anbieter: " + String(provider?.name || provider?.provider_ref || ""),
+      "Preis: " + (Number(experience?.price_cents || 0) / 100).toFixed(2) + " " + String(experience?.currency || "RON").toUpperCase(),
+      "Status: pending",
+      "",
+      "Bitte im FiiViu-Adminbereich prüfen und freigeben oder ablehnen.",
+      "https://fiiviu.ro/admin/"
+    ].join("\\n");
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + String(env.RESEND_API_KEY), "Content-Type": "application/json" },
+      body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, text })
+    });
+    if (!response.ok) throw new Error("Admin experience notification could not be sent.");
+  } catch (error) {
+    console.error("FiiViu admin experience notification failed", error);
+  }
+}
 async function handleProviderExperiences(request,env){
+  if(request.method==="DELETE"){
+    if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
+    const providerRef=await providerRefFromSession(request,env);
+    if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
+    try{await ensureProviderRegistrationSchema(env);await ensureOffersTable(env);const id=Number(new URL(request.url).searchParams.get("id")||0);if(!Number.isInteger(id)||id<1)return json({error:"Experiență invalidă."},400);const result=await env.DB.prepare("DELETE FROM offers WHERE id=? AND provider_ref=?").bind(id,providerRef).run();if(!Number(result.meta?.changes||0))return json({error:"Experiența nu a fost găsită."},404);return json({success:true});}catch(error){return json({error:error?.message||"Ștergerea a eșuat."},500);}
+  }
   if(!env.DB)return json({error:"Baza de date nu este configurată."},500);
   const providerRef=await providerRefFromSession(request,env);
   if(!providerRef)return json({error:"Unauthorized provider credentials"},401);
@@ -3274,7 +3323,7 @@ async function handleProviderExperiences(request,env){
     if(!provider)return json({error:"Furnizorul nu a fost găsit."},404);
     if(request.method==="GET"){
       const rows=await env.DB.prepare("SELECT * FROM offers WHERE provider_ref=? ORDER BY active DESC,title ASC,id ASC").bind(providerRef).all();
-      return json({provider,experiences:(rows.results||[]).map(x=>({...x,status:Number(x.active)===1?"published":"draft"}))});
+      return json({provider,experiences:(rows.results||[]).map(x=>({...x,status:String(x.approval_status||"approved")==="pending"?"pending":Number(x.active)===1?"published":"draft"}))});
     }
     if(request.method==="POST"){
       const body=await request.json().catch(()=>({}));
@@ -3293,12 +3342,12 @@ async function handleProviderExperiences(request,env){
       const payCash=body.payOnSiteCash===undefined?true:(body.payOnSiteCash===true||body.payOnSiteCash===1);
       const payCard=body.payOnSiteCard===undefined?true:(body.payOnSiteCard===true||body.payOnSiteCard===1);
       if(!payCash&&!payCard)return json({error:"Selectați cel puțin o metodă de plată la fața locului."},400);
-      const active=body.publish===true?1:0;
+      const active=0;
       const offerId=Number(body.offerId||0);
       if(offerId){
         const owned=await env.DB.prepare("SELECT id FROM offers WHERE id=? AND provider_ref=? LIMIT 1").bind(offerId,providerRef).first();
         if(!owned)return json({error:"Experiența nu a fost găsită pentru acest furnizor."},404);
-        await env.DB.prepare("UPDATE offers SET title=?,description=?,price_cents=?,currency=?,available_times=?,availability_rules=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,pay_on_site_cash=?,pay_on_site_card=?,duration=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND provider_ref=?").bind(
+        await env.DB.prepare("UPDATE offers SET title=?,description=?,price_cents=?,currency=?,available_times=?,availability_rules=?,meeting_point_name=?,meeting_address=?,meeting_city=?,meeting_country=?,meeting_instructions=?,arrival_minutes_before=?,category=?,image_url=?,gallery_urls=?,active=?,approval_status='pending',pay_on_site_cash=?,pay_on_site_card=?,duration=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND provider_ref=?").bind(
           title,String(body.description||"").trim()||null,priceCents,currency,String(body.availableTimes||"").trim()||null,availabilityRules?JSON.stringify(availabilityRules):null,
           String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,String(body.meetingCity||"București").trim()||"București",
           String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
@@ -3306,12 +3355,13 @@ async function handleProviderExperiences(request,env){
           String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active,payCash?1:0,payCard?1:0,String(body.duration||"").trim()||null,offerId,providerRef
         ).run();
         const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? AND provider_ref=? LIMIT 1").bind(offerId,providerRef).first();
-        return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?String(experience.id):null}});
+        await notifyAdminExperienceSubmission(env, provider, experience, true);
+        return json({success:true,experience:{...experience,status:"pending",experience_id:experience?.id?String(experience.id):null}});
       }
       const existing=await env.DB.prepare("SELECT id FROM offers WHERE provider_ref=? AND lower(title)=lower(?) LIMIT 1").bind(providerRef,title).first();
       if(existing)return json({error:"Există deja o experiență cu acest titlu."},409);
       const experienceId=String(body.experienceId||("EXP-"+providerRandomHex(6).toUpperCase())).trim();
-      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,availability_rules,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(
+      const result=await env.DB.prepare("INSERT INTO offers (provider_ref,title,description,price_cents,currency,available_times,availability_rules,meeting_point_name,meeting_address,meeting_city,meeting_country,meeting_instructions,arrival_minutes_before,category,image_url,gallery_urls,active,approval_status,pay_on_site_cash,pay_on_site_card,duration) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',?,?,?)").bind(
         providerRef,title,String(body.description||"").trim()||null,priceCents,currency,
         String(body.availableTimes||"").trim()||null,availabilityRules?JSON.stringify(availabilityRules):null,String(body.meetingPointName||"").trim()||null,String(body.meetingAddress||"").trim()||null,
         String(body.meetingCity||"București").trim()||"București",String(body.meetingCountry||"Romania").trim()||"Romania",String(body.meetingInstructions||"").trim()||null,
@@ -3319,7 +3369,8 @@ async function handleProviderExperiences(request,env){
         String(body.imageUrl||"").trim()||null,String(body.galleryUrls||"").trim()||null,active,payCash?1:0,payCard?1:0,String(body.duration||"").trim()||null
       ).run();
       const experience=await env.DB.prepare("SELECT * FROM offers WHERE id=? LIMIT 1").bind(result.meta?.last_row_id).first();
-      return json({success:true,experience:{...experience,status:active?"published":"draft",experience_id:experience?.id?experienceId:null}},201);
+      await notifyAdminExperienceSubmission(env, provider, experience, false);
+      return json({success:true,experience:{...experience,status:"pending",experience_id:experience?.id?experienceId:null}},201);
     }
     return json({error:"Metodă nepermisă."},405);
   }catch(error){
