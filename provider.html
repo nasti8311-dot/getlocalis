@@ -96,7 +96,7 @@ td,th{border-bottom:1px solid #eee9e1}
 <div><label for="expMeeting">Loc de întâlnire</label><input id="expMeeting" placeholder="Numele locului"></div>
 <div><label for="expAddress">Adresă în București *</label><input id="expAddress" required placeholder="Strada și numărul"></div>
 <div><label for="expCity">Oraș</label><input id="expCity" value="București" required></div>
-<div style="grid-column:1/-1"><label for="expImageFiles">Fotografii (alege fișiere de pe telefon sau calculator)</label><input id="expImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple><small class="muted">Prima fotografie va fi imaginea principală. Maximum 8 imagini, fiecare de până la 8 MB.</small><div id="expImagePreview" class="muted" style="margin-top:8px"></div></div>
+<div style="grid-column:1/-1"><label for="expImageFiles">Fotografii (alege fișiere de pe telefon sau calculator)</label><input id="expImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple><small class="muted">Prima fotografie va fi imaginea principală. Maximum 5 fotografii, fiecare de până la 8 MB.</small><div id="expImagePreview" class="muted" style="margin-top:8px"></div></div>
 <div style="grid-column:1/-1"><label for="expInstructions">Instrucțiuni pentru participare și întâlnire</label><textarea id="expInstructions" placeholder="Ce ar trebui să știe participanții înainte de sosire?"></textarea></div>
 <div style="grid-column:1/-1;padding:16px;border:1px solid #d9d1c7;border-radius:14px;background:#fffdf9">
 <strong style="display:block;font-size:17px;margin-bottom:12px">Metode de plată la fața locului</strong>
@@ -111,7 +111,7 @@ td,th{border-bottom:1px solid #eee9e1}
 <small class="muted" style="display:block;margin-top:10px">Bifează una sau ambele opțiuni. Avansul de 20% se achită online.</small>
 </div>
 <div style="grid-column:1/-1;padding:14px;background:#f8f5ef;border-radius:14px;line-height:1.8"><strong>Sumarul plății</strong><div>Preț total: <strong id="expTotalPreview">0,00 RON</strong></div><div>Plată online (20 %): <strong id="expDepositPreview">0,00 RON</strong></div><div>Rest de plată la fața locului (80%): <strong id="expRestPreview">0,00 RON</strong></div></div>
-<div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap"><button type="submit" id="saveExperienceButton">Salvează și publică experiența</button><button type="button" id="cancelEdit" class="secondary" style="display:none">Anulează editarea</button></div><div id="expResult" class="result" style="display:none"></div>
+<div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap"><button type="submit" id="saveExperienceButton">Trimite experiența spre verificare</button><button type="button" id="cancelEdit" class="secondary" style="display:none">Anulează editarea</button></div><div id="expResult" class="result" style="display:none"></div>
 </form>
 <h2 style="margin-top:28px">Experiențele mele</h2><button id="reload" class="secondary">Reîmprospătează</button><div id="list" class="muted" style="margin-top:14px">Nu au fost încărcate.</div></section>
 <script>
@@ -274,8 +274,9 @@ async function load(){
     if(!r.ok) throw Error(d.error||'Încărcarea a eșuat.');
     const rows=d.experiences||[];
     if(!rows.length){box.textContent='Nu există încă experiențe.';return;}
-    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' '+String(x.currency||'eur').toUpperCase():'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(({published:'Publicată',draft:'Ciornă',active:'Activă',inactive:'Inactivă'}[String(x.status||'').toLowerCase()]||x.status||'Necunoscută'))+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div><button type="button" class="secondary" data-edit-offer="'+esc(x.id)+'" style="margin-top:10px">Editează programul</button></div>').join('');
+    box.innerHTML=rows.map(x=>'<div class="card"><strong>'+esc(x.title)+'</strong><div>'+esc(x.experience_id||x.id)+'</div><div>'+esc(x.price_cents!=null?(Number(x.price_cents)/100).toFixed(2)+' RON':'Preț lipsă')+'</div><div class="status '+(x.status==='published'?'published':'draft')+'">'+esc(({published:'Publicată',pending:'În așteptarea aprobării',draft:'Ciornă',active:'Activă',inactive:'Inactivă'}[String(x.status||'').toLowerCase()]||x.status||'Necunoscută'))+'</div><div class="muted">'+esc(x.meeting_point_name||'Fără punct de întâlnire')+' · '+esc(x.meeting_address||'Fără adresă')+'</div><button type="button" class="secondary" data-edit-offer="'+esc(x.id)+'" style="margin-top:10px">Editează</button><button type="button" class="secondary" data-delete-offer="'+esc(x.id)+'" style="margin-top:10px">Șterge oferta</button></div>').join('');
     box.querySelectorAll('[data-edit-offer]').forEach(button=>button.addEventListener('click',()=>editOffer(Number(button.dataset.editOffer),rows)));
+    box.querySelectorAll('[data-delete-offer]').forEach(button=>button.addEventListener('click',async()=>{const id=Number(button.dataset.deleteOffer);if(!confirm('Ștergi definitiv această experiență?'))return;button.disabled=true;try{const response=await fetch(API+'?id='+encodeURIComponent(id),{method:'DELETE',credentials:'same-origin',headers:headers()});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Ștergerea a eșuat.');await load();}catch(error){alert(providerError(error.message));button.disabled=false;}}));
   }catch(e){
     box.textContent=providerError(e.message);
   }
@@ -387,7 +388,7 @@ experienceForm?.addEventListener('submit',async event=>{
  if(scheduleEnd.value&&scheduleEnd.value<scheduleStart.value){result.className='result error';result.style.display='block';result.textContent='Data de sfârșit trebuie să fie după data de început.';return;}
  if(!weekdays.length&&!extraScheduleDates.length){result.className='result error';result.style.display='block';result.textContent='Selectează cel puțin o zi recurentă sau o dată din calendar.';return;}
  const files=Array.from(document.getElementById('expImageFiles').files||[]);
- if(files.length>8||files.some(f=>f.size>8*1024*1024)){result.className='result error';result.style.display='block';result.textContent='Alege maximum 8 fotografii, fiecare de cel mult 8 MB.';return;}
+ if(files.length>5||files.some(f=>f.size>8*1024*1024)){result.className='result error';result.style.display='block';result.textContent='Alege maximum 5 fotografii, fiecare de cel mult 8 MB.';return;}
  if(!cash&&!card){result.className='result error';result.style.display='block';result.textContent='Selectează cel puțin o metodă de plată la fața locului.';return;}
  const submit=experienceForm.querySelector('button[type=submit]');submit.disabled=true;
  try{
@@ -409,12 +410,12 @@ experienceForm?.addEventListener('submit',async event=>{
   imageUrl:uploadedImages[0]||(editingOffer?.image_url||''),
   galleryUrls:uploadedImages.length>1?uploadedImages.slice(1).join(','):(uploadedImages.length?'':(editingOffer?.gallery_urls||'')),
   availabilityRules,
-  payOnSiteCash:cash,payOnSiteCard:card,publish:true
+  payOnSiteCash:cash,payOnSiteCard:card,publish:false
  };
   const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:headers(),body:JSON.stringify(payload)});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||'Experiența nu a putut fi salvată.');
-  result.className='result ok';result.style.display='block';result.textContent='Experiența a fost salvată. Avans online: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; de plătit la fața locului: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
+  result.className='result ok';result.style.display='block';result.textContent='Experiența a fost trimisă spre verificare. Va apărea pe site numai după aprobarea administratorului. Avans online: '+(Math.round(payload.priceCents*0.20)/100).toFixed(2)+' RON; de plătit la fața locului: '+((payload.priceCents-Math.round(payload.priceCents*0.20))/100).toFixed(2)+' RON.';
   resetOfferEditor();await load();
  }catch(error){result.className='result error';result.style.display='block';result.textContent=providerError(error.message);}
  finally{submit.disabled=false;}
