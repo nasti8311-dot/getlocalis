@@ -22,8 +22,8 @@ export default {
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
     if (url.pathname === "/api/partner-application") {
-      if (request.method !== "POST") return json({error:"Method Not Allowed"},405,corsHeaders);
-      if (!env.DB) return json({error:"Anfrageformular ist momentan nicht verfügbar."},503,corsHeaders);
+      if (request.method !== "POST") return json({error:"Metodă nepermisă"},405,corsHeaders);
+      if (!env.DB) return json({error:"Formularul de solicitare nu este disponibil momentan."},503,corsHeaders);
       try {
         const body=await request.json();
         if (String(body.website||"").trim()) return json({success:true},200,corsHeaders);
@@ -35,9 +35,9 @@ export default {
         const standCount=Number(body.standCount);
         const shippingAddress=String(body.shippingAddress||"").trim().slice(0,600);
         if(name.length<2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-          return json({error:"Bitte Name und eine gültige E-Mail-Adresse angeben."},400,corsHeaders);
+          return json({error:"Te rugăm să introduci numele și o adresă de e-mail validă."},400,corsHeaders);
         if(!Number.isInteger(standCount)||standCount<1||standCount>500||shippingAddress.length<5)
-          return json({error:"Bitte Anzahl der QR-Aufsteller (1–500) und eine vollständige Lieferadresse angeben."},400,corsHeaders);
+          return json({error:"Te rugăm să indici numărul de suporturi QR (1–500) și o adresă completă de livrare."},400,corsHeaders);
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
           company TEXT, partner_type TEXT, message TEXT, stand_count INTEGER NOT NULL DEFAULT 1, shipping_address TEXT,
@@ -48,10 +48,10 @@ export default {
         if(!columnNames.has("stand_count")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN stand_count INTEGER NOT NULL DEFAULT 1").run();
         if(!columnNames.has("shipping_address")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN shipping_address TEXT").run();
         const recent=await env.DB.prepare("SELECT COUNT(*) AS total FROM partner_applications WHERE email=? AND created_at >= datetime('now','-1 hour')").bind(email).first();
-        if(Number(recent?.total||0)>=3) return json({error:"Für diese E-Mail wurden bereits mehrere Anfragen gesendet. Bitte später erneut versuchen."},429,corsHeaders);
+        if(Number(recent?.total||0)>=3) return json({error:"Au fost trimise deja mai multe solicitări de la această adresă de e-mail. Te rugăm să încerci din nou mai târziu."},429,corsHeaders);
         const saved=await env.DB.prepare("INSERT INTO partner_applications (name,email,company,partner_type,message,stand_count,shipping_address) VALUES (?,?,?,?,?,?,?)").bind(name,email,company||null,type||null,message||null,standCount,shippingAddress).run();
         return json({success:true,id:saved.meta?.last_row_id||null},201,corsHeaders);
-      } catch(error) { return json({error:error?.message||"Anfrage konnte nicht gespeichert werden."},500,corsHeaders); }
+      } catch(error) { return json({error:"Solicitarea nu a putut fi salvată momentan. Te rugăm să încerci din nou mai târziu."},500,corsHeaders); }
     }
 
     if (url.pathname === "/api/admin/partner-applications") {
