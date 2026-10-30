@@ -117,6 +117,14 @@ test("20/80 checkout prices the experience in the marketplace layer and validate
   assert.match(marketplace, /Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich/);
 });
 
+test("homepage formats supported provider currencies without mislabeling them", () => {
+  const html = read("index.html");
+  assert.match(html, /const locale = currentLang === "ro" \? "ro-RO" : currentLang === "en" \? "en-GB" : "de-DE"/);
+  assert.match(html, /if \(currency !== "EUR"\)/);
+  assert.match(html, /style: "currency", currency/);
+  assert.match(html, /currencyRates\.RON/);
+});
+
 test("homepage sends no client-priced amount and preserves the source offer ID", () => {
   const html = read("index.html");
   assert.match(html, /sourceOfferId: offer\.source === "experience" \? "" : String\(offer\.id \|\| ""\)/);
