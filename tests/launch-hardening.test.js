@@ -909,7 +909,7 @@ test("production smoke runs after a successful production deploy", () => {
   const deploy = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(deploy, /Wait for public Pages deployment/);
   assert.doesNotMatch(deploy, /sha256sum index\\.html/);
-  assert.match(deploy, /Upload and deploy Worker with secrets while reusing existing assets/);
+  assert.match(deploy, /Upload and deploy Worker with updated static assets/);
   assert.match(deploy, /Verify production endpoint/);
 });
 
