@@ -166,14 +166,20 @@ jobs:
                 payload[hash] = file.bytes.toString("base64");
               }
               const form = new FormData();
-              for (const [hash, encoded] of Object.entries(payload)) form.append(hash, encoded);
+              const mimeByExtension = { html: "text/html", htm: "text/html", js: "application/javascript", css: "text/css", svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", json: "application/json", txt: "text/plain", xml: "application/xml", ico: "image/x-icon", webmanifest: "application/manifest+json" };
+              for (const [hash, encoded] of Object.entries(payload)) {
+                const file = byHash.get(hash);
+                const ext = path.extname(file.rel).slice(1).toLowerCase();
+                form.append(hash, new Blob([encoded], { type: mimeByExtension[ext] || "application/octet-stream" }));
+              }
               const response = await fetch(base + "/workers/assets/upload?base64=true", {
                 method: "POST", headers: { Authorization: "Bearer " + session.jwt }, body: form
               });
               const data = await response.json();
-              if (!response.ok || data.success === false || !data.result?.jwt) throw new Error("Cloudflare asset batch " + (i + 1) + " failed: " + JSON.stringify(data.errors || data));
-              completionJwt = data.result.jwt;
+              if (!response.ok || data.success === false) throw new Error("Cloudflare asset batch " + (i + 1) + " failed (HTTP " + response.status + "): " + JSON.stringify(data));
+              if (data.result?.jwt) completionJwt = data.result.jwt;
             }
+            if (session.buckets.length && completionJwt === session.jwt) throw new Error("Cloudflare did not return the final asset completion token.");
             fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "\n");
             console.log("Static asset manifest prepared (" + files.length + " files); uploaded " + session.buckets.length + " changed batch(es).");
           })().catch(error => { console.error(error); process.exit(1); });
