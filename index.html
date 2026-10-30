@@ -2939,7 +2939,7 @@ function mapPublicOffer(offer) {
 
     return {
         id: offer.source === "experience" ? String(offer.experience_id || "experience-" + offer.id) : "offer-" + String(offer.id),
-        sourceOfferId: String(offer.id || ""),
+        sourceOfferId: offer.source === "experience" ? "" : String(offer.id || ""),
         experienceId: offer.source === "experience" ? String(offer.experience_id || "") : "",
         providerRef: String(offer.provider_ref || ""),
         providerName: String(offer.provider_name || "").trim(),
