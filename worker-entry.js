@@ -15,6 +15,34 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Short-lived admin session: the master key is only accepted by the login endpoint.
+    if (url.pathname === "/api/admin/session") {
+      const origin = String(request.headers.get("Origin") || "").replace(/\\/$/, "");
+      const allowed = new Set([String(env.PUBLIC_APP_URL || "https://fiiviu.ro").replace(/\\/$/, ""), "https://fiiviu.ro", "https://www.fiiviu.ro"]);
+      const cors = { "Cache-Control": "no-store", "Vary": "Origin" };
+      if (origin && allowed.has(origin)) cors["Access-Control-Allow-Origin"] = origin;
+      if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors, "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
+      if (origin && !allowed.has(origin)) return json({ error: "Origin not allowed." }, 403, cors);
+      if (request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const supplied = String(body.key || "");
+        const expected = String(env.ADMIN_PAYOUT_KEY || "");
+        if (!expected || !supplied || supplied !== expected) return json({ error: "Ungültiger Admin-Schlüssel." }, 401, cors);
+        const exp = Math.floor(Date.now() / 1000) + 8 * 60 * 60;
+        const payload = btoa(JSON.stringify({ exp })).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+        const signature = await signAdminSession(payload, expected);
+        return new Response(JSON.stringify({ success: true, expiresAt: exp }), { status: 200, headers: { "Content-Type": "application/json", ...cors, "Set-Cookie": "__Host-fiiviu_admin_session=" + payload + "." + signature + "; Path=/; Max-Age=28800; HttpOnly; Secure; SameSite=Strict" } });
+      }
+      if (request.method === "DELETE") return new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json", ...cors, "Set-Cookie": "__Host-fiiviu_admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict" } });
+      if (request.method === "GET") return json({ authenticated: await hasAdminSession(request, env) }, 200, cors);
+      return json({ error: "Method Not Allowed" }, 405, cors);
+    }
+    if (await hasAdminSession(request, env) && url.pathname.startsWith("/api/admin/") || await hasAdminSession(request, env) && url.pathname === "/api/partner-stats") {
+      const headers = new Headers(request.headers);
+      headers.set("Authorization", "Bearer " + String(env.ADMIN_PAYOUT_KEY || ""));
+      request = new Request(request, { headers });
+    }
+
     if (url.pathname === "/api/booking") return handleBookingAccess(request, env);
     if (url.pathname === "/api/booking-proof") return handleBookingProof(request, env);
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
@@ -3637,6 +3665,30 @@ async function handleAdminProviderPayout(request, env) {
     console.error("FiiViu admin provider payout failed", error);
     return json({ error: error?.message || "Organizer-Auszahlung fehlgeschlagen." }, 500);
   }
+}
+
+async function signAdminSession(payload, secret) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload)));
+  return btoa(String.fromCharCode(...sig)).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+}
+async function hasAdminSession(request, env) {
+  const secret = String(env.ADMIN_PAYOUT_KEY || "");
+  if (!secret) return false;
+  const cookie = String(request.headers.get("Cookie") || "");
+  const match = cookie.match(/(?:^|;\\s*)__Host-fiiviu_admin_session=([^;]+)/);
+  if (!match) return false;
+  const parts = match[1].split(".");
+  if (parts.length !== 2) return false;
+  try {
+    const payload = parts[0];
+    const data = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    if (!Number.isFinite(data.exp) || data.exp <= Math.floor(Date.now() / 1000)) return false;
+    const expected = await signAdminSession(payload, secret);
+    if (expected.length !== parts[1].length) return false;
+    let diff = 0; for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ parts[1].charCodeAt(i);
+    return diff === 0;
+  } catch { return false; }
 }
 
 function isAdminRequest(request, env) {
