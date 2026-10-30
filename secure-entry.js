@@ -358,7 +358,7 @@ export default {
       return new Response(assetResponse.body, { status: assetResponse.status, statusText: assetResponse.statusText, headers });
     }
 
-    if (url.pathname === "/api/booking" || url.pathname === "/api/cancel-booking") {
+    if (url.pathname === "/api/booking" || url.pathname === "/api/cancel-booking" || url.pathname === "/api/booking-proof") {
       return applyApiSecurityHeaders(await adminWorker.fetch(request, env, ctx), request, env);
     }
 
