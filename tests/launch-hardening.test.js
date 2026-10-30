@@ -121,7 +121,7 @@ test("homepage sends no client-priced amount and preserves the source offer ID",
   const html = read("index.html");
   assert.match(html, /sourceOfferId: offer\.source === "experience" \? "" : String\(offer\.id \|\| ""\)/);
   assert.match(html, /offerId: String\(item\.sourceOfferId/);
-  assert.match(html, /paymentModel: "fiiviu_fee_20_direct_80"/);
+  assert.doesNotMatch(html, /paymentModel: "fiiviu_fee_20_direct_80"/);
   assert.doesNotMatch(html, /amount: Math\.round\(amountEUR \* 100\)/);
   assert.doesNotMatch(html, /currency: "eur"/);
   assert.match(html, /<html lang="de">/);
