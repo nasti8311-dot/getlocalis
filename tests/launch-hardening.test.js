@@ -1010,7 +1010,7 @@ test("production deploy avoids route-write permission dependency", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.match(workflow, /workers\/scripts\/getlocalis"/);
   assert.match(workflow, /--request PUT/);
-  assert.match(workflow, /assets:\s*\{\s*jwt:\s*process\.env\.ASSET_COMPLETION_JWT\s*\}/);
+  assert.match(workflow, /assets:\s*\{\s*jwt:\s*process\.env\.ASSET_COMPLETION_JWT,\s*config:/);
   assert.doesNotMatch(workflow, /keep_assets:\s*true/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
   assert.match(workflow, /type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey/);
