@@ -948,7 +948,7 @@ test("production deploy performs only idempotent, explicit schema repair before 
   for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
     assert.match(workflow, new RegExp('add_column_if_missing "bookings" "' + column + '"'));
   }
-  assert.match(workflow, /Upload and deploy Worker with secrets while reusing existing assets/);
+  assert.match(workflow, /Upload and deploy Worker with updated static assets/);
   assert.match(workflow, /--request PUT/);
   assert.match(workflow, /workers\/scripts\/getlocalis"/);
   assert.match(workflow, /type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey/);
