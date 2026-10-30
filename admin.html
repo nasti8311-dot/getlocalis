@@ -35,13 +35,13 @@ body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 20p
 </section>
 
 <section><h2>Kontrollzentrum</h2>
-<div class="hint">Tageslage und technische Betriebsdaten. Nur lesend; keine bestehenden Buchungs-, Provider- oder Auszahlungsdaten werden verändert.</div>
+<div class="hint">Tageslage und technische Betriebsdaten. Provider erhalten die restlichen 80 % direkt vor Ort; FiiViu führt keine Stripe-Connect-Auszahlungen aus.</div>
 <button id="loadControlCenter">Kontrollzentrum aktualisieren</button>
 <div id="controlCenter" style="margin-top:18px">
   <div class="balance">
     <div>Neue Buchungen heute<strong id="ccBookings">–</strong></div>
     <div>Umsatz heute<strong id="ccRevenue">–</strong></div>
-    <div>Offene Auszahlungen<strong id="ccPayouts">–</strong></div>
+    <div>Provider-Auszahlungen über Stripe<strong id="ccPayouts">0,00 €</strong></div>
     <div>Stornos heute<strong id="ccCancellations">–</strong></div>
     <div>Fehlgeschlagene Zahlungen<strong id="ccFailedPayments">–</strong></div>
     <div>Fehlgeschlagene E-Mails<strong id="ccFailedEmails">–</strong></div>
@@ -59,7 +59,7 @@ body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 20p
     <div id="ccLastEvents" class="muted">Noch nicht geladen.</div>
   </div>
   <div class="history">
-    <h3>Provider mit Problemen</h3>
+    <h3>Provider mit administrativen Problemen</h3>
     <div id="ccProviderProblemsList" class="muted">Keine Daten.</div>
   </div>
   <div id="ccResult"></div>
