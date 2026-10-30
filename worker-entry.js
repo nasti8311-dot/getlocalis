@@ -1709,7 +1709,7 @@ async function sendProviderBookingNotification(env, booking) {
     "E-mail client: " + (booking.customer_email || ""),
     "Telefon: " + (booking.customer_phone || ""),
     "Valoarea totală a rezervării: " + amount,
-    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Taxă FiiViu plătită online (20%): " + onlineFee, "De încasat direct de la client (80%): " + providerDue, "Metode de plată acceptate la fața locului: " + onSiteMethods] : []),
+    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Avans online (20%) – achitat de client: " + onlineFee, "De încasat direct de la client (80%): " + providerDue, "Metode de plată acceptate la fața locului: " + onSiteMethods] : []),
     "",
     "Punct de întâlnire: " + romanianMeetingPoint,
     "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
@@ -1724,7 +1724,7 @@ async function sendProviderBookingNotification(env, booking) {
     "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
     "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
     "<strong>Valoarea totală a rezervării:</strong> " + safe(amount) + "<br>" +
-    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Taxă FiiViu plătită online (20%):</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) + "<br><strong>Metode acceptate la fața locului:</strong> " + safe(onSiteMethods) : "") + "</p>" +
+    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Avans online (20%) – achitat de client:</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) + "<br><strong>Metode acceptate la fața locului:</strong> " + safe(onSiteMethods) : "") + "</p>" +
     "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
     "<strong>E-mail client:</strong> " + safe(booking.customer_email) + "<br>" +
     "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
@@ -2226,10 +2226,10 @@ async function sendResendConfirmation(env, booking) {
 
   const greeting = language === "de" ? "Hallo" : language === "ro" ? "Bună" : "Hello";
   const labels = language === "de"
-    ? {confirmed:"Buchung bestätigt",date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",onlineFee:"Online an FiiViu (20 %)",providerDue:"Vor Ort an Anbieter (80 %)",id:"Buchungs-ID",meeting:"Treffpunkt",address:"Adresse",provider:"Angeboten von",cancel:"Buchung stornieren",policy:"Erstattung der Onlinegebühr bei Stornierung mindestens " + cancellationHours + " Stunden vorher; Anbieter-Stornierung wird vollständig erstattet."}
+    ? {confirmed:"Buchung bestätigt",date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",onlineFee:"Online geleistete Anzahlung (20 %)",providerDue:"Vor Ort an Anbieter (80 %)",id:"Buchungs-ID",meeting:"Treffpunkt",address:"Adresse",provider:"Angeboten von",cancel:"Buchung stornieren",policy:"Erstattung der Onlinegebühr bei Stornierung mindestens " + cancellationHours + " Stunden vorher; Anbieter-Stornierung wird vollständig erstattet."}
     : language === "ro"
-      ? {confirmed:"Rezervare confirmată",date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",onlineFee:"Plătit online către FiiViu (20%)",providerDue:"De plătit la operator (80%)",id:"ID rezervare",meeting:"Punct de întâlnire",address:"Adresă",provider:"Oferit de",cancel:"Anulează rezervarea",policy:"Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte; anularea operatorului este rambursată integral."}
-      : {confirmed:"Booking confirmed",date:"Date",time:"Start time",guests:"Guests",total:"Total price",onlineFee:"Paid online to FiiViu (20%)",providerDue:"Due to provider in person (80%)",id:"Booking ID",meeting:"Meeting point",address:"Address",provider:"Provided by",cancel:"Cancel booking",policy:"The online fee is refunded for cancellations at least " + cancellationHours + " hours ahead; provider cancellations are fully refunded."};
+      ? {confirmed:"Rezervare confirmată",date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",onlineFee:"Avans plătit online (20%)",providerDue:"De plătit la operator (80%)",id:"ID rezervare",meeting:"Punct de întâlnire",address:"Adresă",provider:"Oferit de",cancel:"Anulează rezervarea",policy:"Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte; anularea operatorului este rambursată integral."}
+      : {confirmed:"Booking confirmed",date:"Date",time:"Start time",guests:"Guests",total:"Total price",onlineFee:"Deposit paid online (20%)",providerDue:"Due to provider in person (80%)",id:"Booking ID",meeting:"Meeting point",address:"Address",provider:"Provided by",cancel:"Cancel booking",policy:"The online fee is refunded for cancellations at least " + cancellationHours + " hours ahead; provider cancellations are fully refunded."};
 
   const text = [
     greeting + " " + String(booking.customer_name || "") + ",",
@@ -2364,8 +2364,8 @@ async function sendEmailJsConfirmation(
   const totalPriceDisplay = !directPaymentModel ? bookingTotal : language === "de"
     ? bookingTotal + " (davon " + onlineFee + " online an FiiViu; " + providerDue + " vor Ort an den Anbieter)"
     : language === "ro"
-      ? bookingTotal + " (din care " + onlineFee + " online către FiiViu; " + providerDue + " direct operatorului)"
-      : bookingTotal + " (including " + onlineFee + " paid online to FiiViu; " + providerDue + " due to the provider in person)";
+      ? bookingTotal + " (din care " + onlineFee + " avans achitat online; " + providerDue + " rest de plată direct operatorului)"
+      : bookingTotal + " (including " + onlineFee + " deposit paid online; " + providerDue + " remaining balance due to the provider in person)";
 
   const params = {
     user_name: booking.customer_name,
@@ -2379,7 +2379,7 @@ async function sendEmailJsConfirmation(
     total_price: totalPriceDisplay,
     online_fee_price: `${(Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
     provider_due_price: `${(Number(booking.provider_due_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
-    mail_online_fee_label: language === "de" ? "Online an FiiViu (20 %)" : language === "ro" ? "Plătit online către FiiViu (20%)" : "Paid online to FiiViu (20%)",
+    mail_online_fee_label: language === "de" ? "Online geleistete Anzahlung (20 %)" : language === "ro" ? "Avans plătit online (20%)" : "Deposit paid online (20%)",
     mail_provider_due_label: language === "de" ? "Vor Ort an Anbieter (80 %)" : language === "ro" ? "De plătit la operator (80%)" : "Due to provider in person (80%)",
     mail_payment_note: language === "de" ? "Die restlichen 80 % werden direkt vor Ort an den Anbieter bezahlt." : language === "ro" ? "Restul de 80% se plătește direct operatorului, la fața locului." : "The remaining 80% is paid directly to the provider in person.",
     booking_id: booking.booking_id,
