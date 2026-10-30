@@ -44,7 +44,7 @@ form.addEventListener('submit',async e=>{
  const count=Number(values.standCount);
  let validation='';
  if(String(values.name||'').trim().length<2) validation='Te rugăm să introduci numele complet.';
- else if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) validation='Te rugăm să introduci o adresă de e-mail validă.';
+ else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) validation='Te rugăm să introduci o adresă de e-mail validă.';
  else if(!Number.isInteger(count)||count<1||count>500) validation='Numărul de suporturi QR trebuie să fie între 1 și 500.';
  else if(String(values.shippingAddress||'').trim().length<5) validation='Te rugăm să introduci o adresă completă de livrare.';
  else if(!form.querySelector('input[type="checkbox"]').checked) validation='Te rugăm să îți exprimi acordul pentru prelucrarea datelor.';
