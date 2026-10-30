@@ -15,7 +15,7 @@ try {
   for (const viewport of viewports) {
     const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
     const pageErrors = [];
-    page.on("pageerror", error => pageErrors.push(error.message));
+    page.on("pageerror", error => pageErrors.push(error.stack || error.message));
 
     await page.goto("http://127.0.0.1:4173/index.html", { waitUntil: "domcontentloaded" });
     await page.evaluate(() => document.fonts.ready);
@@ -35,12 +35,11 @@ try {
     );
     assert.equal(metrics.manropeReady, true, "Locally hosted Manrope font must load");
     assert.equal(metrics.categoryCards, 6, "All six existing discovery categories remain present");
-    assert.deepEqual(pageErrors, [], `Browser page errors at ${viewport.width}px`);
-
     await page.screenshot({
       path: `artifacts/fiiviu-visual-review/home-${viewport.width}.png`,
       fullPage: true,
     });
+    assert.deepEqual(pageErrors, [], `Browser page errors at ${viewport.width}px`);
     await page.close();
   }
 } finally {
