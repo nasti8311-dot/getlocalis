@@ -1031,9 +1031,10 @@ test("provider self-cancellation revokes access but preserves audit history", ()
 });
 
 
+
 test("production request entrypoints use the active worker modules, not legacy worker.js", () => {
-  assert.match(read("secure-entry.js"), /worker-entry\\.js/);
-  assert.match(read("marketplace-entry.js"), /worker-entry\\.js/);
+  assert.match(read("secure-entry.js"), /worker-entry\.js/);
+  assert.match(read("marketplace-entry.js"), /worker-entry\.js/);
 });
 
 test("shared redesign styles and local font are linked across customer and operations pages", () => {
@@ -1047,31 +1048,31 @@ test("shared redesign styles and local font are linked across customer and opera
   ];
   for (const page of pages) {
     const source = read(page);
-    assert.match(source, /href=["']\\/assets\\/css\\/fiiviu-design-system\\.css["']/i, page);
+    assert.match(source, /href=["']\/assets\/css\/fiiviu-design-system\.css["']/i, page);
   }
   const design = read("assets/css/fiiviu-design-system.css");
-  assert.match(design, /font-display:\\s*swap/i);
-  assert.match(design, /\\/assets\\/fonts\\/Manrope-Variable\\.ttf/);
-  assert.match(design, /--fii-color-orange-dark:\\s*#a94717/i);
-  assert.match(design, /--fii-color-orange-ink:\\s*#241a16/i);
+  assert.match(design, /font-display:\s*swap/i);
+  assert.match(design, /\/assets\/fonts\/Manrope-Variable\.ttf/);
+  assert.match(design, /--fii-color-orange-dark:\s*#a94717/i);
+  assert.match(design, /--fii-color-orange-ink:\s*#241a16/i);
   assert.match(design, /prefers-reduced-motion/);
-  assert.match(read("CREDITS.md"), /SIL Open Font License 1\\.1/);
+  assert.match(read("CREDITS.md"), /SIL Open Font License 1\.1/);
 });
 
 test("homepage redesign preserves translated copy and existing category actions", () => {
   const source = read("index.html");
   for (const lang of ["de", "en", "ro"]) {
     const start = source.indexOf("    " + lang + ": {");
-    const end = source.indexOf("\\n    },", start);
+    const end = source.indexOf("\n    },", start);
     assert.ok(start >= 0 && end > start, "translation block exists: " + lang);
     const block = source.slice(start, end);
     for (const key of ["hero_location_label", "hero_discovery_label", "category_open_label"]) {
       assert.match(block, new RegExp(key + ":"));
     }
   }
-  assert.match(source, /onclick=["']showCategory\\('explore'\\)/);
-  assert.match(source, /onclick=["']showCategory\\('relax'\\)/);
-  assert.match(source, /onclick=["']showCategory\\('nightlife'\\)/);
+  assert.match(source, /onclick=["']showCategory\('explore'\)/);
+  assert.match(source, /onclick=["']showCategory\('relax'\)/);
+  assert.match(source, /onclick=["']showCategory\('nightlife'\)/);
   assert.match(source, /BUCUREȘTI/);
   assert.ok(source.includes("ș") && source.includes("ț"), "Romanian comma-below diacritics are present");
 });
