@@ -51,7 +51,7 @@ export default {
         if(Number(recent?.total||0)>=3) return json({error:"Au fost trimise deja mai multe solicitări de la această adresă de e-mail. Te rugăm să încerci din nou mai târziu."},429,corsHeaders);
         const saved=await env.DB.prepare("INSERT INTO partner_applications (name,email,company,partner_type,message,stand_count,shipping_address) VALUES (?,?,?,?,?,?,?)").bind(name,email,company||null,type||null,message||null,standCount,shippingAddress).run();
         return json({success:true,id:saved.meta?.last_row_id||null},201,corsHeaders);
-      } catch(error) { return json({error:error?.message||"Solicitarea nu a putut fi salvată. Te rugăm să încerci din nou mai târziu."},500,corsHeaders); }
+      } catch(error) { return json({error:"Solicitarea nu a putut fi salvată momentan. Te rugăm să încerci din nou mai târziu."},500,corsHeaders); }
     }
 
     if (url.pathname === "/api/admin/partner-applications") {
