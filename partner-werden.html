@@ -1,30 +1,53 @@
 <!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Partner werden – FiiViu</title><script src="https://cdn.tailwindcss.com"></script><style>body{background:#f8f6f1;color:#171717}.panel{background:#fff;border:1px solid #eee;border-radius:22px;box-shadow:0 16px 45px #1717170b}</style></head>
-<body class="min-h-screen"><main class="max-w-3xl mx-auto px-5 py-10 md:py-16">
-<a href="/" class="font-bold text-orange-700">← FiiViu</a>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Devino partener afiliat FiiViu și câștigă comision pentru rezervările recomandate în București.">
+<title>Devino partener afiliat – FiiViu</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#f8f6f1;color:#171717}.panel{background:#fff;border:1px solid #eee;border-radius:22px;box-shadow:0 16px 45px #1717170b}input:focus,select:focus,textarea:focus{outline:2px solid #e86f2d;outline-offset:1px}</style>
+</head>
+<body class="min-h-screen">
+<main class="max-w-3xl mx-auto px-5 py-10 md:py-16">
+<a href="/" class="font-bold text-orange-700">← Înapoi la FiiViu</a>
 <div class="mt-8 panel p-6 md:p-10">
-<div class="text-xs font-bold tracking-[.2em] uppercase text-orange-700">FiiViu Partnerprogramm</div>
-<h1 class="text-3xl md:text-4xl font-black mt-3">Gemeinsam mehr entdecken lassen.</h1>
-<p class="text-gray-600 mt-4 leading-7">Du betreibst ein Hotel, Apartment, Hostel oder empfiehlst Reisenden besondere Erlebnisse in Bukarest? Werde FiiViu-Partner und verdiene 5 % Provision auf erfolgreich vermittelte Buchungen.</p>
+<div class="text-xs font-bold tracking-[.2em] uppercase text-orange-700">Programul de parteneriat FiiViu</div>
+<h1 class="text-3xl md:text-4xl font-black mt-3">Hai să le arătăm împreună călătorilor ce are Bucureștiul mai frumos de oferit.</h1>
+<p class="text-gray-600 mt-4 leading-7">Administrezi un hotel, un apartament, un hostel sau recomanzi călătorilor experiențe speciale în București? Devino partener afiliat FiiViu și primești un comision de 5% pentru fiecare rezervare finalizată prin recomandarea ta.</p>
 <div class="grid sm:grid-cols-2 gap-3 my-7">
-<div class="rounded-xl bg-orange-50 p-4"><b>5 % Provision</b><p class="text-sm text-gray-600 mt-1">Für jede erfolgreiche Buchung über deinen persönlichen Partnerlink oder QR-Code.</p></div>
-<div class="rounded-xl bg-gray-50 p-4"><b>Einfacher Start</b><p class="text-sm text-gray-600 mt-1">Wir prüfen deine Anfrage und richten deinen Partnerzugang persönlich ein.</p></div>
+<div class="rounded-xl bg-orange-50 p-4"><b>Comision de 5%</b><p class="text-sm text-gray-600 mt-1">Pentru fiecare rezervare finalizată prin linkul tău personal de partener sau prin codul QR.</p></div>
+<div class="rounded-xl bg-gray-50 p-4"><b>Început simplu</b><p class="text-sm text-gray-600 mt-1">Verificăm solicitarea ta și configurăm personal accesul la contul de partener.</p></div>
 </div>
 <form id="apply" class="space-y-4">
-<label class="block text-sm font-semibold">Dein Name *<input required name="name" maxlength="120" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Vor- und Nachname"></label>
-<label class="block text-sm font-semibold">E-Mail-Adresse *<input required type="email" name="email" maxlength="190" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="name@beispiel.de"></label>
-<label class="block text-sm font-semibold">Hotel / Unternehmen (optional)<input name="company" maxlength="160" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Name deines Unternehmens"></label>
-<label class="block text-sm font-semibold">Wie viele QR-Aufsteller benötigst du? *<input required type="number" name="standCount" min="1" max="500" step="1" value="1" class="mt-1 w-full rounded-xl border p-3 font-normal"><span class="block mt-1 text-xs font-normal text-gray-500">Wir stellen dir die gewünschte Anzahl kostenlos zur Verfügung.</span></label>
-<label class="block text-sm font-semibold">Lieferadresse für die QR-Aufsteller *<textarea required name="shippingAddress" rows="3" maxlength="600" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Straße, Hausnummer, PLZ, Ort, Land"></textarea></label>
-<label class="block text-sm font-semibold">Art der Partnerschaft<select name="type" class="mt-1 w-full rounded-xl border p-3 font-normal"><option value="Hotel">Hotel</option><option value="Apartment">Apartment / Ferienwohnung</option><option value="Hostel">Hostel</option><option value="Tourismus / Reisebüro">Tourismus / Reisebüro</option><option value="Creator / Influencer">Creator / Influencer</option><option value="Sonstiges">Sonstiges</option></select></label>
-<label class="block text-sm font-semibold">Erzähl uns kurz von dir (optional)<textarea name="message" rows="4" maxlength="2000" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Wie möchtest du FiiViu empfehlen?"></textarea></label>
+<label class="block text-sm font-semibold">Numele tău complet *<input required name="name" maxlength="120" autocomplete="name" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Prenume și nume"></label>
+<label class="block text-sm font-semibold">Adresa de e-mail *<input required type="email" name="email" maxlength="190" autocomplete="email" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="nume@exemplu.ro"></label>
+<label class="block text-sm font-semibold">Hotel / companie (opțional)<input name="company" maxlength="160" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Denumirea companiei"></label>
+<label class="block text-sm font-semibold">De câte suporturi pentru coduri QR ai nevoie? *<input required type="number" name="standCount" min="1" max="500" step="1" value="1" class="mt-1 w-full rounded-xl border p-3 font-normal"><span class="block mt-1 text-xs font-normal text-gray-500">Îți oferim gratuit numărul de suporturi solicitat.</span></label>
+<label class="block text-sm font-semibold">Adresa de livrare pentru suporturile QR *<textarea required name="shippingAddress" rows="3" maxlength="600" autocomplete="street-address" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Strada, numărul, codul poștal, localitatea, țara"></textarea></label>
+<label class="block text-sm font-semibold">Tipul parteneriatului<select name="type" class="mt-1 w-full rounded-xl border p-3 font-normal"><option value="Hotel">Hotel</option><option value="Apartment">Apartament / cazare în regim hotelier</option><option value="Hostel">Hostel</option><option value="Tourism / travel agency">Turism / agenție de turism</option><option value="Creator / Influencer">Creator de conținut / influencer</option><option value="Other">Alt tip de parteneriat</option></select></label>
+<label class="block text-sm font-semibold">Spune-ne câteva lucruri despre tine (opțional)<textarea name="message" rows="4" maxlength="2000" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Cum ai dori să recomanzi FiiViu?"></textarea></label>
 <div class="hidden" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-<label class="flex items-start gap-2 text-sm text-gray-600"><input required type="checkbox" class="mt-1"><span>Ich bin damit einverstanden, dass FiiViu meine Angaben zur Bearbeitung der Partneranfrage verwendet.</span></label>
-<button id="send" class="w-full rounded-xl bg-black text-white py-4 font-bold hover:bg-orange-700 disabled:opacity-50">Partneranfrage senden</button>
+<label class="flex items-start gap-2 text-sm text-gray-600"><input required type="checkbox" class="mt-1"><span>Sunt de acord ca FiiViu să utilizeze datele furnizate pentru a analiza și procesa solicitarea mea de parteneriat.</span></label>
+<button id="send" type="submit" class="w-full rounded-xl bg-black text-white py-4 font-bold hover:bg-orange-700 disabled:opacity-50">Trimite solicitarea de parteneriat</button>
 <div id="result" role="status" class="text-sm" aria-live="polite"></div>
-<p class="text-xs text-gray-500">Mit dem Absenden entsteht noch kein Partnerkonto. Wir melden uns nach Prüfung deiner Anfrage.</p>
-</form></div></main>
+<p class="text-xs text-gray-500">Trimiterea formularului nu creează automat un cont de partener. Te vom contacta după analizarea solicitării.</p>
+</form>
+</div>
+</main>
 <script>
 const form=document.getElementById('apply'),btn=document.getElementById('send'),out=document.getElementById('result');
-form.addEventListener('submit',async e=>{e.preventDefault();btn.disabled=true;btn.textContent='Wird gesendet …';out.textContent='';try{const values=Object.fromEntries(new FormData(form).entries());const r=await fetch('/api/partner-application',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Anfrage konnte nicht gesendet werden.');form.reset();out.className='text-sm text-green-700';out.textContent='Vielen Dank! Deine Partneranfrage ist bei FiiViu eingegangen. Wir melden uns zeitnah bei dir.';}catch(err){out.className='text-sm text-red-700';out.textContent=err.message;}finally{btn.disabled=false;btn.textContent='Partneranfrage senden';}});
-</script></body></html>
+form.addEventListener('submit',async e=>{
+ e.preventDefault();btn.disabled=true;btn.textContent='Se trimite…';out.textContent='';
+ try{
+  const values=Object.fromEntries(new FormData(form).entries());
+  const r=await fetch('/api/partner-application',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'Solicitarea nu a putut fi trimisă. Te rugăm să încerci din nou.');
+  form.reset();out.className='text-sm text-green-700';out.textContent='Îți mulțumim! Am primit solicitarea ta de parteneriat. Echipa FiiViu te va contacta în curând.';
+ }catch(err){out.className='text-sm text-red-700';out.textContent=err.message||'A apărut o eroare. Te rugăm să încerci din nou.';}
+ finally{btn.disabled=false;btn.textContent='Trimite solicitarea de parteneriat';}
+});
+</script>
+</body>
+</html>
