@@ -129,6 +129,7 @@ jobs:
               const full = path.join(dir, entry.name);
               const rel = path.relative(root, full).split(path.sep).join("/");
               if (skip(rel)) continue;
+              if (entry.isDirectory() && [".git", ".github", "node_modules", ".wrangler", "tests", "docs"].includes(entry.name)) continue;
               if (entry.isDirectory()) walk(full);
               else if (entry.isFile()) files.push({ rel, full, bytes: fs.readFileSync(full) });
             }
