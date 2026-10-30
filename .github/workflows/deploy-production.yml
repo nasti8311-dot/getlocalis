@@ -262,7 +262,7 @@ jobs:
           const metadata = {
             main_module: mainModule,
             compatibility_date: "2026-09-14",
-            assets: { jwt: process.env.ASSET_COMPLETION_JWT },
+            assets: { jwt: process.env.ASSET_COMPLETION_JWT, config: { run_worker_first: true, not_found_handling: "single-page-application" } },
             keep_bindings: ["plain_text", "secret_text"],
             annotations: { "workers/message": "GitHub Actions " + sha },
             bindings
@@ -353,6 +353,19 @@ jobs:
                 exit 1
               fi
               echo "Public deposit proof API is reachable and rejects missing proof tokens."
+              homepage_headers_status="$(curl --silent --show-error --max-time 20 -D /tmp/homepage.headers -o /dev/null -w '%{http_code}' https://fiiviu.ro/)"
+              if [ "$homepage_headers_status" != "200" ] && [ "$homepage_headers_status" != "503" ]; then
+                echo "Homepage returned unexpected status while checking Worker-first asset routing: $homepage_headers_status"
+                exit 1
+              fi
+              for header in "strict-transport-security: max-age=31536000; includeSubDomains" "x-frame-options: DENY" "x-content-type-options: nosniff" "referrer-policy: strict-origin-when-cross-origin" "permissions-policy: camera=(), microphone=(), geolocation=(), payment=(self)"; do
+                if ! grep -Fqi "$header" /tmp/homepage.headers; then
+                  echo "Missing security header after Worker-first static asset routing: $header"
+                  cat /tmp/homepage.headers
+                  exit 1
+                fi
+              done
+              echo "Static assets are routed through the Worker and receive all baseline security headers."
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
               echo "ADMIN /api/admin/partners HTTP $admin_api_status"
               if [ "$admin_api_status" != "401" ]; then
