@@ -1,0 +1,40 @@
+name: FiiViu Visual Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.html"
+      - "assets/css/**"
+      - "assets/fonts/**"
+      - "tests/visual-review.mjs"
+      - ".github/workflows/visual-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  responsive-homepage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install temporary browser test dependency
+        run: npm install --no-save --package-lock=false playwright@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Serve static project
+        run: |
+          python3 -m http.server 4173 > /tmp/fiiviu-http.log 2>&1 &
+          echo $! > /tmp/fiiviu-http.pid
+      - name: Capture responsive screenshots and verify overflow
+        run: node tests/visual-review.mjs
+      - name: Upload responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fiiviu-responsive-homepage
+          path: artifacts/fiiviu-visual-review/
+          if-no-files-found: warn
