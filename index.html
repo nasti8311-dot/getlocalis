@@ -3875,9 +3875,9 @@ function updateDetailPrice() {
     const total =
         currentPriceEUR * guests;
 
-    const item = categoriesData[currentCategoryKey]?.items?.find(product => product.id === currentTourKey);
+    const offerItem = categoriesData[currentCategoryKey]?.items?.find(product => product.id === currentTourKey);
     document.getElementById("detail-total-price").innerText =
-        formatPrice(total, item?.currency || "EUR");
+        formatPrice(total, offerItem?.currency || "EUR");
 
     // Capacity is per booking slot and must react immediately to the
     // selected guest count, not only when the date/time changes.
