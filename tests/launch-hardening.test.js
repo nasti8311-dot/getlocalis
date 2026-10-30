@@ -716,7 +716,7 @@ test("marketplace checkout requires a published experience and active provider",
   const source = read("marketplace-entry.js");
   assert.match(source, /String\(experience\.status\)!=="published"/);
   assert.match(source, /FROM providers WHERE provider_ref=\? AND active=1 LIMIT 1/);
-  assert.match(source, /valid provider Connect account/);
+  assert.match(source, /Experience provider is not currently active/);
 });
 
 
