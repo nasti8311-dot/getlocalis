@@ -690,7 +690,7 @@ async function handleBookingAccess(request, env) {
 
 async function handleBookingProof(request, env) {
   if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405, { "Cache-Control": "no-store" });
-  if (!env.DB || !env.STRIPE_SECRET_KEY) return json({ valid: false, error: "Prüfung derzeit nicht verfügbar." }, 503, { "Cache-Control": "no-store" });
+  if (!env.DB) return json({ valid: false, error: "Prüfung derzeit nicht verfügbar." }, 503, { "Cache-Control": "no-store" });
   const url = new URL(request.url);
   const token = String(url.searchParams.get("token") || "").trim();
   if (!/^[a-f0-9]{64}$/i.test(token)) return json({ valid: false, error: "Ungültiger Zahlungsnachweis." }, 400, { "Cache-Control": "no-store" });
@@ -704,14 +704,13 @@ async function handleBookingProof(request, env) {
         !booking.payment_intent_id) {
       return json({ valid: false, error: "Diese Buchung ist storniert oder die Anzahlung ist nicht mehr gültig." }, 200, { "Cache-Control": "no-store" });
     }
-    const pi = await stripeGet(env, "/v1/payment_intents/" + encodeURIComponent(booking.payment_intent_id) + "?expand[]=latest_charge");
-    const charge = pi?.latest_charge && typeof pi.latest_charge === "object" ? pi.latest_charge : null;
-    const paidAmount = Number(pi?.amount_received || 0);
-    const refundedAmount = Number(charge?.amount_refunded || 0);
+    // payment_status becomes "paid" only after finalizePaidBooking has verified
+    // a succeeded PaymentIntent. Signed Stripe refund webhooks revoke it below.
     const expectedAmount = Number(booking.amount_cents || 0);
-    if (pi?.status !== "succeeded" || !Number.isSafeInteger(expectedAmount) || expectedAmount <= 0 ||
-        paidAmount !== expectedAmount || !charge || refundedAmount > 0 || charge.refunded === true ||
-        String(pi?.currency || "").toLowerCase() !== String(booking.currency || "").toLowerCase()) {
+    if (!Number.isSafeInteger(expectedAmount) || expectedAmount <= 0 ||
+        Number(booking.fiiviu_fee_cents || expectedAmount) !== expectedAmount ||
+        Number(booking.total_amount_cents || 0) < expectedAmount ||
+        Number(booking.provider_due_cents || 0) !== Number(booking.total_amount_cents || 0) - expectedAmount) {
       return json({ valid: false, error: "Die Online-Anzahlung konnte nicht als gültig bestätigt werden." }, 200, { "Cache-Control": "no-store" });
     }
     return json({ valid: true, booking: {
