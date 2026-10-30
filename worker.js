@@ -32,16 +32,24 @@ export default {
         const company=String(body.company||"").trim().slice(0,160);
         const type=String(body.type||"").trim().slice(0,60);
         const message=String(body.message||"").trim().slice(0,2000);
+        const standCount=Number(body.standCount);
+        const shippingAddress=String(body.shippingAddress||"").trim().slice(0,600);
         if(name.length<2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
           return json({error:"Bitte Name und eine gültige E-Mail-Adresse angeben."},400,corsHeaders);
+        if(!Number.isInteger(standCount)||standCount<1||standCount>500||shippingAddress.length<5)
+          return json({error:"Bitte Anzahl der QR-Aufsteller (1–500) und eine vollständige Lieferadresse angeben."},400,corsHeaders);
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
-          company TEXT, partner_type TEXT, message TEXT,
+          company TEXT, partner_type TEXT, message TEXT, stand_count INTEGER NOT NULL DEFAULT 1, shipping_address TEXT,
           status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )`).run();
+        const applicationColumns=await env.DB.prepare("PRAGMA table_info(partner_applications)").all();
+        const columnNames=new Set((applicationColumns.results||[]).map(column=>column.name));
+        if(!columnNames.has("stand_count")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN stand_count INTEGER NOT NULL DEFAULT 1").run();
+        if(!columnNames.has("shipping_address")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN shipping_address TEXT").run();
         const recent=await env.DB.prepare("SELECT COUNT(*) AS total FROM partner_applications WHERE email=? AND created_at >= datetime('now','-1 hour')").bind(email).first();
         if(Number(recent?.total||0)>=3) return json({error:"Für diese E-Mail wurden bereits mehrere Anfragen gesendet. Bitte später erneut versuchen."},429,corsHeaders);
-        const saved=await env.DB.prepare("INSERT INTO partner_applications (name,email,company,partner_type,message) VALUES (?,?,?,?,?)").bind(name,email,company||null,type||null,message||null).run();
+        const saved=await env.DB.prepare("INSERT INTO partner_applications (name,email,company,partner_type,message,stand_count,shipping_address) VALUES (?,?,?,?,?,?,?)").bind(name,email,company||null,type||null,message||null,standCount,shippingAddress).run();
         return json({success:true,id:saved.meta?.last_row_id||null},201,corsHeaders);
       } catch(error) { return json({error:error?.message||"Anfrage konnte nicht gespeichert werden."},500,corsHeaders); }
     }
@@ -53,11 +61,15 @@ export default {
       try {
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
-          company TEXT, partner_type TEXT, message TEXT,
+          company TEXT, partner_type TEXT, message TEXT, stand_count INTEGER NOT NULL DEFAULT 1, shipping_address TEXT,
           status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )`).run();
+        const applicationColumns=await env.DB.prepare("PRAGMA table_info(partner_applications)").all();
+        const columnNames=new Set((applicationColumns.results||[]).map(column=>column.name));
+        if(!columnNames.has("stand_count")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN stand_count INTEGER NOT NULL DEFAULT 1").run();
+        if(!columnNames.has("shipping_address")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN shipping_address TEXT").run();
         if(request.method==="GET") {
-          const rows=await env.DB.prepare("SELECT id,name,email,company,partner_type,message,status,created_at FROM partner_applications ORDER BY created_at DESC,id DESC LIMIT 200").all();
+          const rows=await env.DB.prepare("SELECT id,name,email,company,partner_type,message,stand_count,shipping_address,status,created_at FROM partner_applications ORDER BY created_at DESC,id DESC LIMIT 200").all();
           return json({applications:rows.results||[]},200,corsHeaders);
         }
         if(request.method==="PATCH") {
