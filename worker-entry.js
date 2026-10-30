@@ -454,44 +454,26 @@ async function handleAdminControlCenter(request, env) {
       "DELETE FROM booking_settlements WHERE settlement_error LIKE '%escapeHtml(p.name)%' OR settlement_error LIKE '%settlementErrors.map(%' OR settlement_error LIKE '%**Konkrete Settlement-Fehler:**%'"
     ).run();
 
-    const settlementRows = await env.DB.prepare(
-      "SELECT booking_id,provider_ref,provider_name,provider_amount_cents,settlement_status,release_at,settlement_error,provider_transfer_id,updated_at FROM booking_settlements"
-    ).all();
-    const settlements = settlementRows.results || [];
-    result.today.openPayoutsCents = settlements
-      .filter(s => s.settlement_status === "pending")
-      .reduce((sum,s) => sum + Number(s.provider_amount_cents || 0), 0);
+    // FiiViu's active payment model has no provider settlements:
+    // customers pay the 20% online deposit to FiiViu and the remaining 80%
+    // directly to the provider at the venue. Legacy Connect settlement rows
+    // are intentionally retained for audit, but are not actionable payouts.
+    result.today.openPayoutsCents = 0;
 
     const problems = [];
     for (const p of providers) {
-      const providerSettlements = settlements.filter(s => s.provider_ref === p.provider_ref || s.provider_name === p.name);
-      const pending = providerSettlements.filter(s => s.settlement_status === "pending").length;
-      const errors = providerSettlements.filter(s => Boolean(s.settlement_error)).length;
-      const missingConnect = !String(p.connect_account_id || "").trim();
       const inactive = Number(p.active) !== 1;
       const missingEmail = !String(p.contact_email || "").trim();
-      if (errors || missingConnect || inactive || missingEmail) {
+      if (inactive || missingEmail) {
         problems.push({
           providerRef: p.provider_ref,
           name: p.name,
           issues: [
-            ...(missingConnect ? ["Stripe Connect fehlt"] : []),
             ...(missingEmail ? ["E-Mail fehlt"] : []),
-            ...(inactive ? ["inaktiv"] : []),
-            ...(errors ? [errors + " Settlement-Fehler"] : [])
+            ...(inactive ? ["inaktiv"] : [])
           ],
-          pendingSettlements: pending,
-          settlementErrors: providerSettlements
-            .filter(s => Boolean(s.settlement_error))
-            .sort((a,b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))
-            .slice(0, 10)
-            .map(s => ({
-              bookingId: s.booking_id,
-              amountCents: Number(s.provider_amount_cents || 0),
-              error: sanitizeSettlementError(s.settlement_error),
-              status: String(s.settlement_status || ""),
-              updatedAt: s.updated_at || null
-            }))
+          pendingSettlements: 0,
+          settlementErrors: []
         });
       }
     }
@@ -3441,22 +3423,22 @@ async function handleProviderOverview(request,env){
     `).bind(providerRef,provider.name,providerRef).all();
     const all=rows.results||[];
 
-    const grossRevenueCents=all.reduce((sum,r)=>sum+Number(r.payment_model==="fiiviu_fee_20_direct_80" ? r.provider_due_cents || 0 : r.provider_amount_cents || 0),0);
-    const paidOutCents=all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
-      .reduce((sum,r)=>sum+Number(r.provider_transfer_amount_cents||0),0);
-    const availableCents=all.filter(r=>r.status==="confirmed"&&r.payment_status==="paid"&&
-      (r.payment_model==="fiiviu_fee_20_direct_80" || r.settlement_status==="pending"||r.settlement_test_transfer_id))
-      .reduce((sum,r)=>sum+Number(r.payment_model==="fiiviu_fee_20_direct_80" ? r.provider_due_cents || 0 : r.provider_transfer_amount_cents||r.provider_amount_cents||0),0);
-    const pendingCents=Math.max(0,grossRevenueCents-availableCents-
-      all.filter(r=>r.settlement_status==="transferred"||r.provider_transfer_id)
-        .reduce((sum,r)=>sum+Number(r.provider_amount_cents||0),0));
+    const directBookings=all.filter(r=>r.payment_model==="fiiviu_fee_20_direct_80");
+    const grossRevenueCents=directBookings.reduce((sum,r)=>sum+Number(r.total_amount_cents||r.amount_cents||0),0);
+    const providerDueCents=directBookings.reduce((sum,r)=>sum+Number(r.provider_due_cents||0),0);
+    // This is money the provider collects from the customer at the venue,
+    // not a FiiViu balance and not a Stripe payout.
+    const paidOutCents=0;
+    const availableCents=directBookings.filter(r=>r.status==="confirmed"&&r.payment_status==="paid")
+      .reduce((sum,r)=>sum+Number(r.provider_due_cents||0),0);
+    const pendingCents=0;
     const today=new Date().toISOString().slice(0,10);
     const upcoming=all.filter(r=>String(r.booking_date||"")>=today&&r.status==="confirmed");
     const past=all.filter(r=>String(r.booking_date||"")<today||["cancelled","completed","refunded"].includes(String(r.status||"").toLowerCase()));
     return json({
       provider,
-      stripeConnectConfigured:Boolean(String(provider.connect_account_id||"").trim()),
-      stats:{bookings:all.length,grossRevenueCents,providerRevenueCents:grossRevenueCents,availableCents,pendingCents,paidOutCents},
+      stripeConnectConfigured:false,
+      stats:{bookings:all.length,grossRevenueCents,providerRevenueCents:providerDueCents,availableCents,pendingCents,paidOutCents},
       upcomingBookings:upcoming,
       pastBookings:past
     });
@@ -3716,8 +3698,10 @@ function calculateSettlementReleaseAt(dateValue, timeValue) {
 }
 
 async function recordBookingSettlement(env, booking) {
-  if (!env.DB || !booking?.booking_id) return;
-  if (String(booking.payment_model || "legacy_connect") === "fiiviu_fee_20_direct_80") return;
+  // Provider payouts through Stripe Connect are retired. The 80% balance is
+  // collected directly by the provider on site; never create a Stripe
+  // transfer/settlement record for new bookings.
+  return;
 
   await ensureProvidersTable(env);
   await ensureBookingSettlementsTable(env);
