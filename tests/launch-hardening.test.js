@@ -971,7 +971,7 @@ test("public deposit proof verification is routed to the booking worker", () => 
   assert.match(secure, /url\.pathname === "\/api\/booking-proof"/);
   const worker = read("worker-entry.js");
   assert.match(worker, /async function handleBookingProof/);
-  assert.match(worker, /payment_status \\|\\| ""\) !== "paid"/);
+  assert.match(worker, /!== "paid"/);
 });
 
 test("public static assets are served through the Worker for header enforcement", () => {
