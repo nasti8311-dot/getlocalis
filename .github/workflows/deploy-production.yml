@@ -203,7 +203,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ADMIN_PAYOUT_KEY: ${{ secrets.ADMIN_PAYOUT_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          ASSET_COMPLETION_JWT: ${{ env.ASSET_COMPLETION_JWT }}
         run: |
           set -euo pipefail
           if [ -z "${ASSET_COMPLETION_JWT:-}" ]; then
