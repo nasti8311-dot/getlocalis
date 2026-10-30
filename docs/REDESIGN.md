@@ -77,6 +77,15 @@ Erlaubt sind ausschließlich visuelle Änderungen und notwendige, nicht-funktion
 - Die wiedererkennbare Moment-Kachel verwendet eine asymmetrische, weich gerundete Form und einen orangefarbenen Moment-Marker.
 - Accessibility-Basics umfassen sichtbare Fokuszustände, Mindesthöhe für Buttons, System-Reduced-Motion und gut lesbare Formularfelder.
 
+### Phase 3 — Startseite
+
+- Die Startseite verwendet jetzt das gemeinsame Designsystem und ein eigenes, responsives Homepage-Stylesheet.
+- Der Hero-Bereich hat eine stärkere redaktionelle Hierarchie, klaren CTA und schnelle Kategorie-Einstiege, die ausschließlich bestehende `showCategory`-Funktionen verwenden.
+- Die Moment-Kategorien nutzen das wiedererkennbare Kachelmotiv und die vorhandenen Kategorie-IDs, Bildquellen und Datenattribute.
+- Der Kategorien-Introbereich zeigt jetzt die bereits vorhandenen, in Deutsch/Englisch/Rumänisch gepflegten Texte `intro_title` und `intro_text`.
+- Bestehende dynamische Angebotskarten, Checkout- und Buchungs-IDs sowie die SEO-Metadaten wurden nicht umgebaut.
+- Es wurde bewusst kein Suchfeld mit Scheinverhalten eingeführt: Die vorhandene Startseite besitzt keine echte Suchschnittstelle; Suchlogik ist laut Sperrzone tabu. Die Hero-Schnelleinstiege nutzen nur bestehende Kategorieaktionen.
+
 ### 7. Nächste Phasen
 
 1. **Phase 2 — Designsystem:** zentrale Tokens und wiederverwendbare visuelle Basiskomponenten; Kontrast- und Fokusregeln dokumentieren.

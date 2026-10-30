@@ -506,37 +506,20 @@
             </p>
         </div>
     </noscript>
+    <link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
+    <link rel="stylesheet" href="/assets/css/fiiviu-home.css">
 </head>
 
 <body class="text-fii-black font-sans min-h-screen flex flex-col">
 
 
-<style>
-/* Unified page background across every view */
-html, body, main,
-.view-section,
-#home-view,
-#category-view,
-#detail-view,
-#booking-view,
-#checkout-view,
-#success-view {
-    background: #E7D9C5 !important;
-    background-color: #E7D9C5 !important;
-    min-height: 100vh !important;
-}
 
-/* Light cream surface for all experience cards */
-.experience-card {
-    background-color: #F4EEE5 !important;
-}
-</style>
 
 <!-- ========================================================= -->
 <!-- HEADER -->
 <!-- ========================================================= -->
 
-<header class="sticky top-0 z-50 bg-[#F8F6F1]/90 backdrop-blur-xl border-b border-black/5">
+<header class="fii-site-header sticky top-0 z-50 bg-[#F8F6F1]/90 backdrop-blur-xl border-b border-black/5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="h-[76px] flex items-center justify-between">
 
@@ -709,71 +692,63 @@ html, body, main,
 
 <div id="home-view" class="view-section">
 
-    <section class="hero-bg min-h-[680px] md:min-h-[720px] flex items-end text-white" style="background-color:#E7D9C5 !important;">
-
-        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-32 md:pb-36">
-
-            <div class="max-w-3xl fade-up">
-
-                <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest mb-6">
-                    <span class="w-2 h-2 rounded-full bg-fii-orange"></span>
-                    Bucharest · Romania
+    <section class="hero-bg fii-home-hero" aria-labelledby="home-hero-title">
+        <div class="fii-container fii-home-hero__inner">
+            <div class="fii-home-hero__copy fade-up">
+                <div class="fii-home-hero__location">
+                    <span class="fii-moment-marker" aria-hidden="true"></span>
+                    <span data-i18n="hero_location_label">BUCUREȘTI · ROMÂNIA</span>
                 </div>
-
-                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[.92] mb-7"
-                    data-i18n="hero_title">
-                    Oprește timpul.<br>
-                    Trăiește momentul.
+                <h1 id="home-hero-title" data-i18n="hero_title">
+                    Oprește timpul.<br>Trăiește momentul.
                 </h1>
-
-                <p id="hero-subtitle" class="text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed mb-9"
-                   data-i18n="hero_subtitle">
-                    Manchmal liegt das Besondere direkt um die Ecke. FiiViu zeigt dir Orte und Erlebnisse, die deinen Tag besonders machen.
+                <p id="hero-subtitle" data-i18n="hero_subtitle">
+                    Uneori, lucrurile speciale sunt chiar după colț. FiiViu îți arată locuri și experiențe care îți fac ziua mai frumoasă.
                 </p>
-
-                <div class="flex flex-col sm:flex-row gap-3">
-
-                    <button
-                        onclick="scrollToMoments()"
-                        class="bg-fii-orange hover:bg-fii-orangeDark text-white font-bold px-7 py-4 rounded-2xl transition shadow-xl flex items-center justify-center gap-2">
-                        <span id="hero-cta-label" data-i18n="hero_cta">
-                            Erlebnisse entdecken
-                        </span>
-                        <i class="fa-solid fa-arrow-right"></i>
+                <div class="fii-home-hero__actions">
+                    <button type="button" onclick="scrollToMoments()" class="fii-button">
+                        <span id="hero-cta-label" data-i18n="hero_cta">Descoperă experiențele</span>
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                     </button>
-
                 </div>
+                <div class="fii-home-hero__discovery">
+                    <span class="fii-home-hero__discovery-label" data-i18n="hero_discovery_label">Descoperă după stare</span>
+                    <div class="fii-home-hero__chips" aria-label="Explore categories">
+                        <button type="button" onclick="showCategory('explore')" data-i18n="nav_explore">Explorează</button>
+                        <button type="button" onclick="showCategory('relax')" data-i18n="nav_relax">Relax</button>
+                        <button type="button" onclick="showCategory('nightlife')" data-i18n="nav_nightlife">Nightlife</button>
+                    </div>
+                </div>
+            </div>
+            <div class="fii-home-hero__note" aria-hidden="true">
+                <span>FiiViu</span>
+                <span>·</span>
+                <span>Moments worth remembering</span>
             </div>
         </div>
     </section>
 
 
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20" style="background-color:#E7D9C5 !important;">
-
-        <div class="max-w-2xl mb-12">
-
-            <span style="display:inline-block;transform:translateY(6px) !important;" class="text-fii-orange font-black text-xs uppercase tracking-[.2em]"
-                  data-i18n="intro_label">
-                FiiViu Moments
-            </span>
-
-
-        </div>
-
-
-        <div id="moments" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <section class="fii-section fii-discovery-section" id="discover-moments">
+        <div class="fii-container">
+            <div class="fii-section-heading">
+                <span class="fii-eyebrow" data-i18n="intro_label">FiiViu Moments</span>
+                <h2 data-i18n="intro_title">Nu doar face ceva. Trăiește ceva.</h2>
+                <p data-i18n="intro_text">De la mici descoperiri locale până la zile speciale: FiiViu selectează experiențe care se simt ca o adevărată vacanță.</p>
+            </div>
+            <div id="moments" class="fii-moment-grid">
 
             <div data-category="explore"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
                     src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
+                    class="fii-moment-card__image"
                     alt="Bucharest">
 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="fii-moment-card__overlay"></div>
 
-                <div class="absolute bottom-0 p-7 text-white">
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
                         data-i18n="cat_explore">
                         Explore
@@ -787,16 +762,16 @@ html, body, main,
 
 
             <div data-category="relax"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
                     src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
+                    class="fii-moment-card__image"
                     alt="Wellness">
 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="fii-moment-card__overlay"></div>
 
-                <div class="absolute bottom-0 p-7 text-white">
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
                         data-i18n="cat_relax">
                         Relax
@@ -810,16 +785,16 @@ html, body, main,
 
 
             <div data-category="nightlife"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
                     src="https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
+                    class="fii-moment-card__image"
                     alt="Nightlife">
 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="fii-moment-card__overlay"></div>
 
-                <div class="absolute bottom-0 p-7 text-white">
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
                         data-i18n="cat_nightlife">
                         Nightlife
@@ -833,16 +808,16 @@ html, body, main,
 
 
             <div data-category="adventure"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
                     src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
+                    class="fii-moment-card__image"
                     alt="Adventure">
 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="fii-moment-card__overlay"></div>
 
-                <div class="absolute bottom-0 p-7 text-white">
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
                         data-i18n="cat_adventure">
                         Adventure
@@ -856,26 +831,26 @@ html, body, main,
 
 
             <div data-category="secret-menus"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
-                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=900" class="absolute inset-0 w-full h-full object-cover" alt="Secret Menüs">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
-                <div class="absolute bottom-0 p-7 text-white">
+                 role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
+                <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=900" class="fii-moment-card__image" alt="Secret Menüs">
+                <div class="fii-moment-card__overlay"></div>
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
                     <h3 class="text-3xl font-black" data-i18n="cat_secret_menus">Secret Menüs</h3>
                     <p class="text-sm text-white/75 mt-2" data-i18n="cat_secret_menus_desc">Überraschungsmenüs in ausgewählten Restaurants.</p>
                 </div>
             </div>
 
             <div data-category="vip"
-                 role="button" tabindex="0" aria-label="Kategorie öffnen" class="category-card group relative z-10 h-[360px] rounded-3xl overflow-hidden cursor-pointer pointer-events-auto">
+                 role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
                     src="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=900"
-                    class="absolute inset-0 w-full h-full object-cover"
+                    class="fii-moment-card__image"
                     alt="VIP">
 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent"></div>
+                <div class="fii-moment-card__overlay"></div>
 
-                <div class="absolute bottom-0 p-7 text-white">
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
                         data-i18n="cat_vip">
                         VIP
@@ -1045,14 +1020,7 @@ html, body, main,
 <!-- CATEGORY VIEW -->
 <!-- ========================================================= -->
 
-<div id="category-view"
-     class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14" style="background-color:#E7D9C5 !important;">
-
-    <button
-        onclick="showView('home-view')"
-        class="mb-8 text-gray-500 hover:text-fii-orange font-semibold text-sm flex items-center gap-2">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span data-i18n="back_home">
+n data-i18n="back_home">
             Zurück zu FiiViu
         </span>
     </button>
@@ -1697,7 +1665,7 @@ html, body, main,
 <!-- FOOTER -->
 <!-- ========================================================= -->
 
-<footer class="bg-fii-black text-white py-12 mt-16">
+<footer class="fii-site-footer bg-fii-black text-white py-12 mt-16">
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -2453,6 +2421,9 @@ const translations = {
         hero_title: "Halte die Zeit an.<br>Erlebe den Moment.",
         hero_subtitle: "Manchmal liegt das Besondere direkt um die Ecke. FiiViu zeigt dir Orte und Erlebnisse, die deinen Tag besonders machen.",
         hero_cta: "Erlebnisse entdecken",
+        hero_location_label: "BUKAREST · RUMÄNIEN",
+        hero_discovery_label: "Entdecke nach Stimmung",
+        category_open_label: "Kategorie öffnen",
 
         intro_label: "FiiViu Moments",
         intro_title: "Nicht einfach etwas unternehmen. Etwas erleben.",
@@ -2567,6 +2538,9 @@ const translations = {
         hero_title: "Stop time.<br>Live the moment.",
         hero_subtitle: "Sometimes the best things are right around the corner. FiiViu shows you places and experiences that make your day special.",
         hero_cta: "Discover experiences",
+        hero_location_label: "BUCHAREST · ROMANIA",
+        hero_discovery_label: "Explore by mood",
+        category_open_label: "Open category",
 
         intro_label: "FiiViu Moments",
         intro_title: "Don't just do something. Experience something.",
@@ -2680,6 +2654,9 @@ const translations = {
         hero_title: "Oprește timpul.<br>Trăiește momentul.",
         hero_subtitle: "Uneori, lucrurile speciale sunt chiar după colț. FiiViu îți arată locuri și experiențe care îți fac ziua mai frumoasă.",
         hero_cta: "Descoperă experiențele",
+        hero_location_label: "BUCUREȘTI · ROMÂNIA",
+        hero_discovery_label: "Descoperă după stare",
+        category_open_label: "Deschide categoria",
 
         intro_label: "FiiViu Moments",
         intro_title: "Nu doar face ceva. Trăiește ceva.",
