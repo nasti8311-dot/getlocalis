@@ -2951,6 +2951,7 @@ function mapPublicOffer(offer) {
             ro: String(offer.title_ro || "").trim() || localizeOfferFallback(title, "ro")
         },
         price: Number(offer.price_cents || 0) / 100,
+        currency: String(offer.currency || "eur").toUpperCase(),
         duration: {
             de: getLocalizedOfferValue(offer.duration_de || offer.duration || offer.durationDe, "de"),
             en: String(offer.duration_en || "").trim() || localizeOfferFallback(getLocalizedOfferValue(offer.duration_de || offer.duration || offer.durationDe, "de"), "en"),
@@ -2978,10 +2979,7 @@ function mapPublicOffer(offer) {
             ro: String(offer.meeting_instructions_ro || "").trim() || localizeOfferFallback(String(offer.meeting_instructions || "").trim(), "ro")
         },
         arrivalMinutesBefore: Number.isFinite(Number(offer.arrival_minutes_before)) ? Number(offer.arrival_minutes_before) : null,
-        guideLanguage: getLocalizedOfferValue(offer.guide_language || offer.guideLanguage || offer.language),
-        languages: Array.isArray(offer.languages)
-            ? offer.languages.map(String).map(v => v.trim()).filter(Boolean)
-            : String(offer.languages || offer.language || "").split(",").map(v => v.trim()).filter(Boolean),
+        currency: String(offer.currency || "eur").toUpperCase(),
         minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
         maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
         capacity: Number.isFinite(Number(offer.capacity)) ? Number(offer.capacity) : null,
@@ -3381,7 +3379,7 @@ function createExperienceCard(item, categoryKey) {
                 </div>
 
                 <div class="bg-fii-orange text-white font-black px-3 py-1.5 rounded-xl">
-                    ${formatPrice(item.price)}
+                    ${formatPrice(item.price, item.currency)}
                 </div>
 
             </div>
@@ -3540,7 +3538,7 @@ function showDetail(categoryKey, itemId, { pushHistory = true } = {}) {
     }
 
     document.getElementById("detail-price").innerText =
-        formatPrice(item.price);
+        formatPrice(item.price, item.currency);
 
     document.getElementById("detail-description").innerText =
         item.desc[currentLang] || "";
@@ -3821,19 +3819,11 @@ function goBackToCategory() {
    PRICE
 ============================================================ */
 
-function formatPrice(eur) {
-
-    if (currentCurrency === "RON") {
-
-        const ron =
-            Math.round(eur * currencyRates.RON);
-
-        return `${ron} lei`;
-
-    }
-
-    return `${eur} €`;
-
+function formatPrice(amount, offerCurrency = "EUR") {
+    const currency = String(offerCurrency || "EUR").toUpperCase();
+    if (currency === "RON") return new Intl.NumberFormat(currentLang === "ro" ? "ro-RO" : "de-DE", { maximumFractionDigits: 2 }).format(amount) + " lei";
+    if (currentCurrency === "RON") return new Intl.NumberFormat(currentLang === "ro" ? "ro-RO" : "de-DE", { maximumFractionDigits: 0 }).format(Math.round(amount * currencyRates.RON)) + " lei";
+    return new Intl.NumberFormat(currentLang === "ro" ? "ro-RO" : "de-DE", { style: "currency", currency: "EUR" }).format(amount);
 }
 
 
@@ -3858,7 +3848,7 @@ function changeCurrency(currency) {
         if (item) {
 
             document.getElementById("detail-price").innerText =
-                formatPrice(item.price);
+                formatPrice(item.price, item.currency);
 
             updateDetailPrice();
 
