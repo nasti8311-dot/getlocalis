@@ -96,7 +96,18 @@ td,th{border-bottom:1px solid #eee9e1}
 <div><label for="expCity">Oraș</label><input id="expCity" value="București" required></div>
 <div style="grid-column:1/-1"><label for="expImageFiles">Fotografii (alege fișiere de pe telefon sau calculator)</label><input id="expImageFiles" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple><small class="muted">Prima fotografie va fi imaginea principală. Maximum 8 imagini, fiecare de până la 8 MB.</small><div id="expImagePreview" class="muted" style="margin-top:8px"></div></div>
 <div style="grid-column:1/-1"><label for="expInstructions">Instrucțiuni pentru participare și întâlnire</label><textarea id="expInstructions" placeholder="Ce ar trebui să știe participanții înainte de sosire?"></textarea></div>
-<div style="grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap"><label style="display:flex;align-items:center;gap:8px"><input id="expCash" type="checkbox" checked style="width:auto"> Rest de plată în numerar la fața locului</label><label style="display:flex;align-items:center;gap:8px"><input id="expCard" type="checkbox" checked style="width:auto"> Rest de plată cu cardul la fața locului</label></div>
+<div style="grid-column:1/-1;padding:16px;border:1px solid #d9d1c7;border-radius:14px;background:#fffdf9">
+<strong style="display:block;font-size:17px;margin-bottom:12px">Metode de plată la fața locului</strong>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px">
+<label for="expCash" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:14px 16px;border:2px solid #b8aa98;border-radius:12px;background:#fff;cursor:pointer;font-size:16px;font-weight:600;line-height:1.4">
+<input id="expCash" type="checkbox" checked style="width:24px;height:24px;min-width:24px;accent-color:#176b4d;cursor:pointer"> Numerar la fața locului
+</label>
+<label for="expCard" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:14px 16px;border:2px solid #b8aa98;border-radius:12px;background:#fff;cursor:pointer;font-size:16px;font-weight:600;line-height:1.4">
+<input id="expCard" type="checkbox" checked style="width:24px;height:24px;min-width:24px;accent-color:#176b4d;cursor:pointer"> Card la fața locului
+</label>
+</div>
+<small class="muted" style="display:block;margin-top:10px">Bifează una sau ambele opțiuni. Avansul de 20% se achită online.</small>
+</div>
 <div style="grid-column:1/-1;padding:14px;background:#f8f5ef;border-radius:14px;line-height:1.8"><strong>Sumarul plății</strong><div>Preț total: <strong id="expTotalPreview">0,00 RON</strong></div><div>Plată online (20 %): <strong id="expDepositPreview">0,00 RON</strong></div><div>La fața locului (80%): <strong id="expRestPreview">0,00 RON</strong></div></div>
 <div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap"><button type="submit" id="saveExperienceButton">Salvează și publică experiența</button><button type="button" id="cancelEdit" class="secondary" style="display:none">Anulează editarea</button></div><div id="expResult" class="result" style="display:none"></div>
 </form>
