@@ -101,15 +101,30 @@ test("launch paths do not mutate D1 schema at request time", () => {
 });
 
 
-test("direct 20/80 checkout uses the server-side RON offer price", () => {
+test("20/80 checkout prices the experience in the marketplace layer and validates the handoff", () => {
+  const marketplace = read("marketplace-entry.js");
   const worker = read("worker-entry.js");
-  assert.match(worker, /SELECT o\.id,o\.provider_ref,o\.title,o\.price_cents,o\.currency/);
-  assert.match(worker, /data\.totalAmountCents=total/);
-  assert.match(worker, /data\.fiiviuFeeCents=fee/);
-  assert.match(worker, /data\.providerDueCents=due/);
-  assert.match(worker, /data\.bookingId="FV-"\+crypto\.randomUUID/);
-  assert.match(worker, /directPaymentModel \|\|/);
-  assert.match(worker, /A valid booking date and time are required/);
+  assert.match(marketplace, /const totalAmount=unitPrice\*guests/);
+  assert.match(marketplace, /const fiiviuFeeAmount=Math\.round\(totalAmount\*0\.20\)/);
+  assert.match(marketplace, /body\.amount=fiiviuFeeAmount/);
+  assert.match(marketplace, /body\.totalAmountCents=totalAmount/);
+  assert.match(marketplace, /body\.paymentModel="fiiviu_fee_20_direct_80"/);
+  assert.match(worker, /Unsupported payment model/);
+  assert.match(worker, /amount !== fiiviuFeeCents/);
+  assert.match(worker, /totalAmountCents !== fiiviuFeeCents \+ providerDueCents/);
+  assert.match(worker, /\["eur","ron","usd","gbp"\]\.includes\(currency\)/);
+  assert.doesNotMatch(worker, /SELECT o\.id,o\.provider_ref,o\.title,o\.price_cents,o\.currency/);
+  assert.match(marketplace, /A valid booking date and time are required/);
+});
+
+test("homepage sends no client-priced amount and preserves the source offer ID", () => {
+  const html = read("index.html");
+  assert.match(html, /sourceOfferId: offer\.source === "experience" \? "" : String\(offer\.id \|\| ""\)/);
+  assert.match(html, /offerId: String\(item\.sourceOfferId/);
+  assert.match(html, /paymentModel: "fiiviu_fee_20_direct_80"/);
+  assert.doesNotMatch(html, /amount: Math\.round\(amountEUR \* 100\)/);
+  assert.doesNotMatch(html, /currency: "eur"/);
+  assert.match(html, /<html lang="de">/);
 });
 
 test("provider self-registration records automatic contract acceptance and stores evidence", () => {
