@@ -983,6 +983,12 @@ test("public deposit proof verification is routed to the booking worker", () => 
   assert.match(worker, /!== "paid"/);
 });
 
+test("production asset upload preserves Worker-first security routing", () => {
+  const workflow = read(".github/workflows/deploy-production.yml");
+  assert.match(workflow, /run_worker_first:\s*true/);
+  assert.match(workflow, /not_found_handling:\s*"single-page-application"/);
+});
+
 test("public static assets are served through the Worker for header enforcement", () => {
   const config = read("wrangler.jsonc");
   assert.match(config, /"pattern":\s*"fiiviu\.ro\/\*"/);
