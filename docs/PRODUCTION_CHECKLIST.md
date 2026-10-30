@@ -146,3 +146,32 @@ The following require an authorized operator in the external accounts:
 - final live payment test.
 
 Live Stripe activation is intentionally **not** part of the current launch-hardening changes.
+
+## 12. Legal identity and public-launch gate
+
+The repository's legal pages currently identify the operator as FiiViu S.R.L. in Bucharest, but explicitly state that mandatory company identifiers are still incomplete. This is a **public-launch blocker**, not editorial polish.
+
+Before removing the public construction gate, an authorized company representative must verify and publish the following from official company records in every applicable legal notice and contract:
+
+- Exact registered company name and legal form.
+- Full registered office address.
+- Romanian CUI / fiscal registration number.
+- Trade Register registration number.
+- VAT identification number, only if the company is VAT-registered.
+- Any additional operator/contact details required by the applicable Romanian and EU rules.
+
+Do not infer, search for, or fabricate these values from informal sources. The legal notice, privacy notice, customer terms, provider terms, cancellation/refund terms and actual checkout behavior must be reviewed together by qualified Romanian/EU counsel before public transactions are enabled.
+
+## 13. Current launch status and release controls
+
+The production deployment and smoke workflows can succeed while the public marketplace is intentionally unavailable. A successful deploy is not approval to launch.
+
+At the time of this checklist update:
+
+- The production Worker is deployed and the production smoke workflow passes.
+- The public catalog is intentionally gated by the Cloudflare Worker setting `UNDER_CONSTRUCTION=true`; verify the live Worker setting directly in Cloudflare before changing it.
+- Stripe is documented as remaining in test/sandbox mode. Do not switch to live mode without explicit approval and a separately completed live-account checklist.
+- Legal company identity fields remain incomplete in the checked-in legal pages and must be treated as a blocker.
+- GitHub Actions' `Validate` workflow was failing because its schema-regression test incorrectly included the retired `worker.js` file as an active request path. The production entrypoint is `secure-entry.js`, which imports `worker-entry.js` and `marketplace-entry.js`; the retired legacy worker is not part of that request path.
+
+Release only after the validation workflow is green, the production smoke test is green, legal identity details are verified, the real customer/provider journeys have been tested end-to-end, and the authorized operator explicitly approves the public launch.
