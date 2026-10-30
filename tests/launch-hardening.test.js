@@ -966,6 +966,14 @@ test("iOS app icon references an existing static asset", () => {
 });
 
 
+test("public deposit proof verification is routed to the booking worker", () => {
+  const secure = read("secure-entry.js");
+  assert.match(secure, /url\.pathname === "\/api\/booking-proof"/);
+  const worker = read("worker-entry.js");
+  assert.match(worker, /async function handleBookingProof/);
+  assert.match(worker, /payment_status \\|\\| ""\) !== "paid"/);
+});
+
 test("public static assets are served through the Worker for header enforcement", () => {
   const config = read("wrangler.jsonc");
   assert.match(config, /"pattern":\s*"fiiviu\.ro\/\*"/);
