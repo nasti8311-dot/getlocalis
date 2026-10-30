@@ -760,30 +760,36 @@ async function getPartnerStats(env,partnerRef){
   const holdDays=getPartnerHoldDays(env);
   const cutoff=Math.floor(Date.now()/1000)-(holdDays*86400);
   let revenueCents=0;
+  let commissionCents=0;
   let availableCommissionCents=0;
   let pendingCommissionCents=0;
   const bookingDetails=[];
   for(const payment of successful){
     const receivedCents=Number(payment.amount_received||payment.amount||0);
-    const refundedCents=await getSuccessfulRefundAmount(env,payment.id);
-    const netCents=Math.max(receivedCents-refundedCents,0);
-    const bookingCommissionCents=Math.round(netCents*0.05);
+    const refundedDepositCents=Math.min(receivedCents,await getSuccessfulRefundAmount(env,payment.id));
+    const grossBookingCents=Math.max(0,Number(payment.metadata?.total_amount_cents)||receivedCents);
+    // Stripe collects only FiiViu's 20% deposit. Convert a partial deposit refund
+    // proportionally to the corresponding share of the full booking value.
+    const refundedBookingCents=receivedCents>0
+      ? Math.min(grossBookingCents,Math.round(grossBookingCents*refundedDepositCents/receivedCents))
+      : grossBookingCents;
+    const netBookingCents=Math.max(grossBookingCents-refundedBookingCents,0);
+    const bookingCommissionCents=Math.round(netBookingCents*0.05);
     const bookingDate=String(payment.metadata?.booking_date||"").trim();
     const bookingTime=String(payment.metadata?.booking_time||"").trim();
     const eventTimestamp=getBookingEventTimestamp(bookingDate,bookingTime);
-    const commissionAvailable=eventTimestamp!==null
-      ? eventTimestamp<=cutoff
-      : false;
-    revenueCents+=netCents;
+    const commissionAvailable=eventTimestamp!==null&&eventTimestamp<=cutoff;
+    revenueCents+=netBookingCents;
+    commissionCents+=bookingCommissionCents;
     if(commissionAvailable)availableCommissionCents+=bookingCommissionCents;else pendingCommissionCents+=bookingCommissionCents;
     bookingDetails.push({
       paymentIntentId:payment.id,
       bookingId:payment.metadata?.booking_id||payment.id,
       tourName:payment.metadata?.tour_name||"Buchung",
       guests:Number(payment.metadata?.guests||1),
-      amount:receivedCents/100,
-      refunded:refundedCents/100,
-      netAmount:netCents/100,
+      amount:grossBookingCents/100,
+      refunded:refundedBookingCents/100,
+      netAmount:netBookingCents/100,
       commission:bookingCommissionCents/100,
       commissionStatus:commissionAvailable?"available":"pending",
       commissionAvailableAt:eventTimestamp===null?null:new Date((eventTimestamp+holdDays*86400)*1000).toISOString(),
@@ -794,7 +800,6 @@ async function getPartnerStats(env,partnerRef){
     });
   }
   bookingDetails.sort((a,b)=>b.created-a.created);
-  const commissionCents=Math.round(revenueCents*0.05);
   let paidCents=0;
   if(env.DB){
     await ensurePayoutsTable(env);
@@ -810,7 +815,8 @@ async function getPartnerStats(env,partnerRef){
     const visitorResult=await env.DB.prepare("SELECT COUNT(*) AS visitor_count FROM partner_visitors WHERE partner_ref=?").bind(partnerRef).first();
     uniqueVisitors=Number(visitorResult?.visitor_count||0);
   }
-  return{partnerRef,bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,scanCount,uniqueVisitors,currency:"eur",bookingDetails};
+  const link=buildPartnerLink(partnerRef);
+  return{partnerRef,partnerLink:link,qrUrl:buildQrUrl(partnerRef),bookings:successful.length,revenue:revenueCents/100,commission:commissionCents/100,openCommission:openCommissionCents/100,availableCommission:availableCommissionCents/100,pendingCommission:pendingCommissionCents/100,paidCommission:paidCents/100,holdDays,scanCount,uniqueVisitors,currency:"eur",bookingDetails};
 }
 async function searchPartnerPayments(env,partnerRef){const allPayments=[];let page="";for(let i=0;i<100;i++){const query="metadata['partner_ref']:"+"'"+partnerRef.replace(/'/g,"\\'")+"'";const stripeUrl="https://api.stripe.com/v1/payment_intents/search?query="+encodeURIComponent(query)+"&limit=100"+(page?"&page="+encodeURIComponent(page):"");const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe error");allPayments.push(...(data.data||[]));if(!data.next_page)break;page=data.next_page}return allPayments}
 async function getSuccessfulRefundAmount(env,paymentIntentId){let refundedCents=0;let startingAfter="";for(let i=0;i<100;i++){let stripeUrl="https://api.stripe.com/v1/refunds?payment_intent="+encodeURIComponent(paymentIntentId)+"&limit=100";if(startingAfter)stripeUrl+="&starting_after="+encodeURIComponent(startingAfter);const stripeResponse=await fetch(stripeUrl,{method:"GET",headers:{"Authorization":"Bearer "+env.STRIPE_SECRET_KEY}});const data=await stripeResponse.json();if(!stripeResponse.ok)throw new Error(data?.error?.message||"Stripe refund lookup error");for(const refund of data.data||[])if(refund.status==="succeeded")refundedCents+=Number(refund.amount||0);if(!data.has_more||!(data.data||[]).length)break;startingAfter=data.data[data.data.length-1].id}return refundedCents}
