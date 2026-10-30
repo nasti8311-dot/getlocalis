@@ -1,0 +1,35 @@
+/* Shared styling for FiiViu's secondary, account, booking and information pages */
+body { background: var(--fii-color-paper) !important; color: var(--fii-color-ink) !important; font-family: var(--fii-font-body) !important; line-height: 1.65; }
+body > .wrap, body > main, body > .container, body > .page, main, .wrap, .page-wrap { box-sizing: border-box; }
+h1 { color: var(--fii-color-ink); font-family: var(--fii-font-display); font-size: clamp(2rem,4.5vw,3.25rem); font-weight: 800; letter-spacing: -.055em; line-height: 1.08; }
+h2 { color: var(--fii-color-ink); font-size: clamp(1.35rem,2.5vw,1.9rem); font-weight: 800; letter-spacing: -.04em; }
+h3,h4 { color: var(--fii-color-ink); font-weight: 750; letter-spacing: -.025em; }
+a { color: var(--fii-color-orange-dark); text-underline-offset: .18em; }
+a:hover { color: #87370f; }
+:where(section,.card,.panel,.box,.content-card) { border-color: var(--fii-color-line); border-radius: var(--fii-radius-lg); }
+.card,.panel,.content-card { background: var(--fii-color-surface); border: 1px solid var(--fii-color-line); box-shadow: var(--fii-shadow-sm); }
+label { display:block; margin-bottom:.4rem; color:#514d46; font-size:.9rem; font-weight:750; }
+input,select,textarea { box-sizing:border-box; width:100%; min-height:46px; max-width:100%; padding:.7rem .85rem; border:1px solid var(--fii-color-line); border-radius:var(--fii-radius-sm); background:#fff; color:var(--fii-color-ink); font:inherit; }
+textarea { min-height:110px; }
+input:focus,select:focus,textarea:focus { border-color:var(--fii-color-orange-dark); outline:3px solid rgba(169,71,23,.15); outline-offset:1px; }
+button { min-height:44px; border-radius:var(--fii-radius-sm); font-family:var(--fii-font-body); font-weight:750; }
+button:not(:disabled) { cursor:pointer; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline:3px solid rgba(169,71,23,.42)!important; outline-offset:3px; }
+hr { border-color:var(--fii-color-line); }
+table { width:100%; border-collapse:collapse; }
+th { color:#514d46; font-size:.78rem; font-weight:800; text-align:left; }
+th,td { padding:.8rem .65rem; border-bottom:1px solid var(--fii-color-line); vertical-align:top; }
+pre,code { max-width:100%; overflow-wrap:anywhere; }
+.result,.status,.hint,.muted,.help,.description { line-height:1.65; }
+.result,.ok,.error { border-radius:var(--fii-radius-sm); }
+@media(max-width:700px) {
+ body { padding-inline:16px; }
+ .wrap,.page-wrap { width:100%; padding:20px 16px; border-radius:var(--fii-radius-md); }
+ .card,.panel,.content-card,section { border-radius:var(--fii-radius-md); }
+ h1 { font-size:clamp(1.9rem,9vw,2.6rem); }
+ table { display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+ th,td { padding:.65rem .5rem; }
+}
+@media(prefers-reduced-motion:reduce) {
+ *,*::before,*::after { transition-duration:.01ms!important; animation-duration:.01ms!important; scroll-behavior:auto!important; }
+}

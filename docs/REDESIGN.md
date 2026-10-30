@@ -86,6 +86,13 @@ Erlaubt sind ausschließlich visuelle Änderungen und notwendige, nicht-funktion
 - Bestehende dynamische Angebotskarten, Checkout- und Buchungs-IDs sowie die SEO-Metadaten wurden nicht umgebaut.
 - Es wurde bewusst kein Suchfeld mit Scheinverhalten eingeführt: Die vorhandene Startseite besitzt keine echte Suchschnittstelle; Suchlogik ist laut Sperrzone tabu. Die Hero-Schnelleinstiege nutzen nur bestehende Kategorieaktionen.
 
+### Phase 4 — übrige Seiten
+
+- Das gemeinsame Designsystem wird auf Anbieterregistrierung, Provider-/Organizer-Bereiche, Partner- und Affiliate-Seiten, Buchungs-/Bestätigungs-/Stornoseiten, Admin-Oberflächen und Rechtsseiten eingebunden.
+- Die neuen Regeln vereinheitlichen Typografie, Formulare, Buttons, Fokuszustände, Karten, Tabellen, Abstände und mobile Lesbarkeit, ohne Form-IDs, Feldnamen, Event-Handler, API-Pfade oder Geschäftslogik zu verändern.
+- Die E-Mail-Bestätigungsvorlage `emailjs-booking-confirmation.html` bleibt bewusst separat, weil sie als E-Mail-Markup und nicht als normale Website-Seite gerendert wird.
+- Bestehende Bilder bleiben unverändert; ihre vorhandenen Unsplash-/Pexels-Quellen und Lizenzhinweise sind in `CREDITS.md` dokumentiert. Es wurden keine neuen Anbieterbilder oder fingierten Inhalte hinzugefügt.
+
 ### 7. Nächste Phasen
 
 1. **Phase 2 — Designsystem:** zentrale Tokens und wiederverwendbare visuelle Basiskomponenten; Kontrast- und Fokusregeln dokumentieren.
