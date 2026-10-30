@@ -966,6 +966,15 @@ test("iOS app icon references an existing static asset", () => {
 });
 
 
+test("signed refund webhooks revoke paid booking deposit proofs", () => {
+  const webhook = read("stripe-webhook.js");
+  assert.match(webhook, /async function recordRefundEvent/);
+  assert.match(webhook, /refundSucceeded/);
+  assert.match(webhook, /UPDATE bookings SET payment_status='refunded'/);
+  const worker = read("worker-entry.js");
+  assert.match(worker, /payment_status \\|\\| ""\) !== "paid"/);
+});
+
 test("public deposit proof verification is routed to the booking worker", () => {
   const secure = read("secure-entry.js");
   assert.match(secure, /url\.pathname === "\/api\/booking-proof"/);
