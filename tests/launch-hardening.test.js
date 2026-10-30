@@ -57,6 +57,29 @@ test("runtime schema evolution is not used by launch paths", () => {
   }
 });
 
+test("homepage language and social metadata match the default English experience", () => {
+  const html = read("index.html");
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /<meta property="og:locale" content="en_GB">/);
+  assert.match(html, /<meta property="og:locale:alternate" content="de_DE">/);
+  assert.match(html, /<meta property="og:locale:alternate" content="ro_RO">/);
+  assert.match(html, /<meta property="og:description" content="Discover memorable local experiences in Bucharest/);
+  assert.match(html, /<meta name="twitter:description" content="Discover memorable local experiences in Bucharest/);
+});
+
+test("legal identity gaps remain explicit launch blockers until verified company data is supplied", () => {
+  const notice = read("legal/impressum.html");
+  const terms = read("legal/termeni-si-conditii.html");
+  const privacy = read("legal/politica-de-confidentialitate.html");
+  const checklist = read("docs/PRODUCTION_CHECKLIST.md");
+  for (const marker of ["CUI", "Trade Register", "Handelsregister", "Registrului Comerțului"]) {
+    assert.ok(notice.includes(marker) || terms.includes(marker) || privacy.includes(marker), marker + " must remain disclosed as missing");
+  }
+  assert.match(notice, /No such details may be guessed/);
+  assert.match(checklist, /public-launch blocker/);
+  assert.match(checklist, /Do not infer, search for, or fabricate these values/);
+});
+
 test("legacy worker.js is not part of the production request path", () => {
   const secure = read("secure-entry.js");
   const marketplace = read("marketplace-entry.js");
