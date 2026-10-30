@@ -28,6 +28,7 @@ export default {
         url.pathname === "/api/admin/resend-confirmation" ||
         url.pathname === "/api/admin/resend-provider-contract" ||
         url.pathname === "/api/admin/offers" ||
+        url.pathname === "/api/admin/experience-approvals" ||
         url.pathname === "/api/admin/translate-offers" ||
         url.pathname === "/api/admin/control-center")
     ) {
