@@ -3875,8 +3875,9 @@ function updateDetailPrice() {
     const total =
         currentPriceEUR * guests;
 
+    const item = categoriesData[currentCategoryKey]?.items?.find(product => product.id === currentTourKey);
     document.getElementById("detail-total-price").innerText =
-        formatPrice(total);
+        formatPrice(total, item?.currency || "EUR");
 
     // Capacity is per booking slot and must react immediately to the
     // selected guest count, not only when the date/time changes.
@@ -4112,19 +4113,22 @@ function updateTotal() {
     const total =
         currentPriceEUR * guests;
 
+    const item = categoriesData[currentCategoryKey]?.items?.find(product => product.id === currentTourKey);
+    const offerCurrency = item?.currency || "EUR";
+
     document.getElementById("summary-guests").innerText =
         guests;
 
     document.getElementById("total-price").innerText =
-        formatPrice(total);
+        formatPrice(total, offerCurrency);
 
     const totalCents = Math.round(total * 100);
     const onlineFeeCents = Math.round(totalCents * 0.20);
     const providerDueCents = totalCents - onlineFeeCents;
     const onlineFee = document.getElementById("online-fee-price");
     const providerDue = document.getElementById("provider-due-price");
-    if (onlineFee) onlineFee.innerText = formatPrice(onlineFeeCents / 100);
-    if (providerDue) providerDue.innerText = formatPrice(providerDueCents / 100);
+    if (onlineFee) onlineFee.innerText = formatPrice(onlineFeeCents / 100, offerCurrency);
+    if (providerDue) providerDue.innerText = formatPrice(providerDueCents / 100, offerCurrency);
 
 }
 
