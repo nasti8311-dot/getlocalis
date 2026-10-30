@@ -1078,3 +1078,21 @@ test("homepage redesign preserves translated copy and existing category actions"
   assert.match(source, /id="category-items-grid"/, "the category result grid must remain present");
   assert.ok(source.includes("ș") && source.includes("ț"), "Romanian comma-below diacritics are present");
 });
+
+
+test("admin control center health checks are read-only and independent", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function handleAdminControlCenter");
+  const end = source.indexOf("async function handleAdminResendConfirmation", start);
+  const handler = source.slice(start, end);
+  assert.ok(start >= 0 && end > start, "admin control center handler exists");
+  assert.ok(!handler.includes("DELETE FROM booking_settlements"), "health check must not delete settlement rows");
+  assert.ok(!handler.includes("const payout = settlements"), "health check must not read an undefined settlements variable");
+  assert.ok(handler.includes("result.system.email = Boolean"));
+  assert.ok(handler.includes('stripeGet(env, "/v1/balance")'));
+  assert.ok(
+    handler.indexOf('stripeGet(env, "/v1/balance")') < handler.indexOf("await ensureBookingColumns"),
+    "Stripe health check runs independently of D1 queries"
+  );
+  assert.ok(handler.includes("result.system.d1 = true"));
+});

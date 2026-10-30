@@ -427,6 +427,18 @@ async function handleAdminControlCenter(request, env) {
     providerProblems: []
   };
 
+  // These checks are independent: a D1 query failure must not hide Stripe or email configuration.
+  result.system.email = Boolean(env.RESEND_API_KEY || env.EMAIL || env.EMAILJS_PRIVATE_KEY);
+  if (env.STRIPE_SECRET_KEY) {
+    try {
+      const stripeHealth = await stripeGet(env, "/v1/balance");
+      result.system.stripe = Boolean(stripeHealth && stripeHealth.object === "balance");
+    } catch (error) {
+      console.error("FiiViu admin Stripe health check failed", error);
+      result.system.stripe = false;
+    }
+  }
+
   try {
     await ensureBookingColumns(env);
     await ensureProvidersTable(env);
@@ -450,11 +462,6 @@ async function handleAdminControlCenter(request, env) {
     ).all();
     const providers = providerRows.results || [];
     result.today.newProviders = providers.filter(p => String(p.created_at || "").slice(0,10) === today).length;
-
-    // Remove legacy admin-UI source fragments that were accidentally persisted as settlement errors.
-    await env.DB.prepare(
-      "DELETE FROM booking_settlements WHERE settlement_error LIKE '%escapeHtml(p.name)%' OR settlement_error LIKE '%settlementErrors.map(%' OR settlement_error LIKE '%**Konkrete Settlement-Fehler:**%'"
-    ).run();
 
     // FiiViu's active payment model has no provider settlements:
     // customers pay the 20% online deposit to FiiViu and the remaining 80%
@@ -489,35 +496,23 @@ async function handleAdminControlCenter(request, env) {
       id: lastBooking.booking_id, experience: lastBooking.experience_name, at: lastBooking.created_at
     };
 
-    const webhooks = await env.DB.prepare(
-      "SELECT event_type,created_at FROM stripe_webhook_events ORDER BY id DESC LIMIT 1"
-    ).all();
-    const webhook = webhooks.results?.[0];
-    if (webhook) result.system.lastWebhook = {
-      event: webhook.event_type, at: webhook.created_at, success: true
-    };
-
-    const payout = settlements
-      .filter(s => s.provider_transfer_id || s.settlement_status === "paid" || s.settlement_status === "transferred")
-      .sort((a,b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))[0];
-    if (payout) result.system.lastPayout = {
-      bookingId: payout.booking_id, provider: payout.provider_name, amountCents: Number(payout.provider_amount_cents || 0), at: payout.updated_at
-    };
+    try {
+      const webhooks = await env.DB.prepare(
+        "SELECT event_type,created_at FROM stripe_webhook_events ORDER BY id DESC LIMIT 1"
+      ).all();
+      const webhook = webhooks.results?.[0];
+      if (webhook) result.system.lastWebhook = {
+        event: webhook.event_type, at: webhook.created_at, success: true
+      };
+    } catch (error) {
+      // Webhook history is optional for the core D1 health check.
+      console.warn("FiiViu admin webhook history unavailable", error);
+    }
 
     result.system.d1 = true;
-    result.system.email = Boolean(env.RESEND_API_KEY || env.EMAIL || env.EMAILJS_PRIVATE_KEY);
-    if (env.STRIPE_SECRET_KEY) {
-      try {
-        const stripeHealth = await stripeGet(env, "/v1/balance");
-        result.system.stripe = Boolean(stripeHealth && stripeHealth.object === "balance");
-      } catch (error) {
-        console.error("FiiViu admin Stripe health check failed", error);
-        result.system.stripe = false;
-      }
-    }
     return json(result);
   } catch (error) {
-    console.error("FiiViu admin control center failed", error);
+    console.error("FiiViu admin control center D1 check failed", error);
     return json({ ...result, error: error?.message || "Kontrollzentrum konnte nicht geladen werden." }, 500);
   }
 }
