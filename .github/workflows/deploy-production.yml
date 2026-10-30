@@ -203,7 +203,7 @@ jobs:
           fi
           printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
 
-      - name: Upload and deploy Worker with secrets while reusing existing assets
+      - name: Upload and deploy Worker with updated static assets
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -346,6 +346,13 @@ jobs:
                 exit 1
               fi
               echo "Customer QR proof page, local QR library, and booking page are live."
+              proof_api_status="$(curl --silent --show-error --max-time 20 -D /tmp/proof-api.headers -o /tmp/proof-api.json -w '%{http_code}' https://fiiviu.ro/api/booking-proof)"
+              if [ "$proof_api_status" != "400" ] || ! grep -q "Ungültiger Zahlungsnachweis" /tmp/proof-api.json || ! grep -qi "no-store" /tmp/proof-api.headers; then
+                echo "Public deposit proof API is not routed or protected as expected (HTTP $proof_api_status)."
+                cat /tmp/proof-api.json
+                exit 1
+              fi
+              echo "Public deposit proof API is reachable and rejects missing proof tokens."
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
               echo "ADMIN /api/admin/partners HTTP $admin_api_status"
               if [ "$admin_api_status" != "401" ]; then
