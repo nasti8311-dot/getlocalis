@@ -1078,3 +1078,21 @@ test("homepage redesign preserves translated copy and existing category actions"
   assert.match(source, /id="category-items-grid"/, "the category result grid must remain present");
   assert.ok(source.includes("ș") && source.includes("ț"), "Romanian comma-below diacritics are present");
 });
+
+test("partner, provider and admin workspaces use the dedicated FiiViu V2 visual layer", () => {
+  const pages = [
+    "admin.html", "admin/index.html", "organizer-admin.html", "provider.html",
+    "partner.html", "partner-bulk.html", "partner-werden.html"
+  ];
+  for (const page of pages) {
+    const source = read(page);
+    assert.match(source, /href=["']\/assets\/css\/fiiviu-workspaces\.css["']/i, page);
+  }
+  const workspace = read("assets/css/fiiviu-workspaces.css");
+  for (const token of ["--fii-color-paper", "--fii-color-surface", "--fii-color-orange", "--fii-color-line"]) {
+    assert.match(workspace, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(workspace, /@media\s*\(max-width:\s*760px\)/);
+  assert.match(workspace, /prefers-reduced-motion/);
+  assert.match(workspace, /:focus/);
+});

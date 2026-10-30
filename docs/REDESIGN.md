@@ -122,3 +122,14 @@ Jede Phase erhält einen eigenen Commit, eine Aktualisierung dieser Datei und ei
 - Die CI-Screenshots wurden zusätzlich manuell angesehen. Dabei fiel auf, dass der Hero auf sehr schmalen Geräten die Location-/CTA-Reihenfolge nicht klar genug vermittelte und die Inhaltsfläche durch die vererbte Mindesthöhe unnötig hoch wurde.
 - Die mobile Hero-Komposition wurde daher explizit geordnet (Standort, Headline, Beschreibung, CTA, Kategorie-Chips), die Mindesthöhe und Innenabstände wurden neu ausbalanciert. Die Desktop- und Tablet-Regeln bleiben unberührt.
 - Die Responsive-Screenshots und Overflow-Prüfungen laufen nach dieser Korrektur erneut.
+
+
+## Erweiterung: Partner-, Anbieter- und Admin-Arbeitsbereiche (V2)
+
+- Separater Arbeitsbranch: `design/partner-provider-admin-v2`.
+- Gemeinsame Workspace-Ebene: `assets/css/fiiviu-workspaces.css`; sie baut auf den vorhandenen FiiViu-V2-Design-Tokens und dem lokalen Manrope-Font auf.
+- Eingebunden in `admin.html`, `admin/index.html`, `organizer-admin.html`, `provider.html`, `partner.html`, `partner-bulk.html` und `partner-werden.html`.
+- Vereinheitlicht werden Oberflächenhintergründe, Überschriften, Karten, Statusanzeigen, Kennzahlen, Tabellen, QR-Code-Karten, Formulare, Buttons, Fokuszustände und mobile Darstellung.
+- Es wurden keine IDs, Formularfelder, Event-Handler, API-Aufrufe, Berechtigungen, Login-/Session-Abläufe, Buchungs- oder Zahlungsfunktionen geändert.
+- Regressionstest prüft, dass alle sieben Seiten die neue Workspace-Ebene einbinden und Responsive-, Fokus- sowie Reduced-Motion-Regeln vorhanden sind.
+- Die Änderung ist eine visuelle Grundlage. Vor Merge erfolgt eine Browserprüfung der Vorschau; Produktionsfreigabe und Launch-Gates bleiben separat.
