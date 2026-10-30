@@ -31,7 +31,8 @@ button{transition:.2s!important}button:hover{transform:translateY(-2px)}
       <div id="login-error" class="text-sm text-red-600 mt-3"></div>
     </form>
     <section id="dashboard" class="hidden">
-      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6 flex items-center justify-between gap-4"><div><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div></div><button onclick="logout()" class="rounded-xl border border-gray-200 px-4 py-2 font-semibold">Deconectare</button></div>
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6 flex items-center justify-between gap-4"><div><div class="text-sm text-gray-500">Cod partener</div><div id="partner-ref" class="text-2xl font-bold mt-1"></div><div class="text-sm text-gray-500 mt-2">Linkul și codul QR sunt pregătite de echipa FiiViu pentru afișajul tău.</div></div><button onclick="logout()" class="rounded-xl border border-gray-200 px-4 py-2 font-semibold">Deconectare</button></div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm mb-6 grid md:grid-cols-[220px_1fr] gap-6 items-center"><div class="text-center"><img id="partner-qr" class="w-48 h-48 mx-auto object-contain" alt="Cod QR partener"><a id="qr-download" class="inline-block mt-3 text-sm font-semibold text-orange-700 underline" download="fiiviu-partner-qr.png">Descarcă QR</a></div><div><h2 class="font-bold text-lg">Linkul tău de recomandare</h2><p class="text-sm text-gray-600 mt-2">Folosește codul QR de pe afișajul oferit de FiiViu. Acest link este asociat contului tău.</p><a id="partner-link" class="text-sm text-orange-700 underline break-all mt-3 inline-block" target="_blank" rel="noopener"></a><p class="text-xs text-gray-500 mt-3">FiiViu pregătește și livrează suportul fizic cu acest cod QR.</p></div></div>
       <div class="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Accesări QR/link</div><div id="scan-count" class="text-3xl font-bold mt-2">0</div></div>
         <div class="bg-white rounded-2xl p-6 shadow-sm"><div class="text-sm text-gray-500">Vizitatori unici</div><div id="unique-visitors" class="text-3xl font-bold mt-2">0</div></div>
@@ -95,6 +96,11 @@ button{transition:.2s!important}button:hover{transform:translateY(-2px)}
         if(!response.ok)throw new Error(data.error||'Datele partenerului nu au putut fi încărcate.');
         if(ref&&data.partnerRef!==ref)throw new Error('Acces de partener nevalid.');
         document.getElementById('partner-ref').textContent=data.partnerRef;
+        const partnerLink=data.partnerLink||('https://fiiviu.ro/?ref='+encodeURIComponent(data.partnerRef));
+        const qrUrl=data.qrUrl||('https://api.qrserver.com/v1/create-qr-code/?size=500x500&data='+encodeURIComponent(partnerLink));
+        document.getElementById('partner-qr').src=qrUrl;
+        document.getElementById('qr-download').href=qrUrl;
+        const linkEl=document.getElementById('partner-link');linkEl.href=partnerLink;linkEl.textContent=partnerLink;
         document.getElementById('scan-count').textContent=Number(data.scanCount||0).toLocaleString('ro-RO');
         document.getElementById('unique-visitors').textContent=Number(data.uniqueVisitors||0).toLocaleString('ro-RO');
         document.getElementById('bookings').textContent=data.bookings;
