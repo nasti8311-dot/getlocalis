@@ -1074,5 +1074,7 @@ test("homepage redesign preserves translated copy and existing category actions"
   assert.match(source, /onclick=["']showCategory\('relax'\)/);
   assert.match(source, /onclick=["']showCategory\('nightlife'\)/);
   assert.match(source, /BUCUREȘTI/);
+  assert.match(source, /id="category-view"/, "the category route container must remain present");
+  assert.match(source, /id="category-items-grid"/, "the category result grid must remain present");
   assert.ok(source.includes("ș") && source.includes("ț"), "Romanian comma-below diacritics are present");
 });

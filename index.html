@@ -1020,7 +1020,14 @@
 <!-- CATEGORY VIEW -->
 <!-- ========================================================= -->
 
-n data-i18n="back_home">
+<div id="category-view"
+     class="view-section fii-category-view hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+
+    <button
+        onclick="showView('home-view')"
+        class="mb-8 text-gray-500 hover:text-fii-orange font-semibold text-sm flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span data-i18n="back_home">
             Zurück zu FiiViu
         </span>
     </button>
@@ -1053,7 +1060,7 @@ n data-i18n="back_home">
 <!-- ========================================================= -->
 
 <div id="detail-view"
-     class="view-section hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style="background-color:#F4EEE5 !important;">
+     class="view-section fii-detail-view hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
     <button
         onclick="goBackToCategory()"
@@ -1068,7 +1075,7 @@ n data-i18n="back_home">
     <div class="bg-white rounded-[2rem] overflow-hidden border border-black/5 shadow-sm">
 
         <div id="detail-image-container"
-             class="grid grid-cols-1 md:grid-cols-3 gap-2 p-2" style="background-color:#EEE4D5 !important;">
+             class="fii-detail-gallery grid grid-cols-1 md:grid-cols-3 gap-2 p-2">
         </div>
 
 
@@ -1268,7 +1275,7 @@ n data-i18n="back_home">
 <!-- ========================================================= -->
 
 <div id="checkout-view"
-     class="view-section hidden max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+     class="view-section fii-checkout-view hidden max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
     <button
         onclick="showView('detail-view')"
@@ -1577,7 +1584,7 @@ n data-i18n="back_home">
 <!-- ========================================================= -->
 
 <div id="success-view"
-     class="view-section hidden max-w-xl mx-auto px-4 py-24 text-center">
+     class="view-section fii-success-view hidden max-w-xl mx-auto px-4 py-24 text-center">
 
     <div class="bg-white rounded-[2rem] border border-black/5 shadow-xl p-8 md:p-12">
 
