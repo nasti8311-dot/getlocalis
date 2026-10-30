@@ -21,6 +21,56 @@ export default {
     }
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
 
+    if (url.pathname === "/api/partner-application") {
+      if (request.method !== "POST") return json({error:"Method Not Allowed"},405,corsHeaders);
+      if (!env.DB) return json({error:"Anfrageformular ist momentan nicht verfügbar."},503,corsHeaders);
+      try {
+        const body=await request.json();
+        if (String(body.website||"").trim()) return json({success:true},200,corsHeaders);
+        const name=String(body.name||"").trim().slice(0,120);
+        const email=String(body.email||"").trim().toLowerCase().slice(0,190);
+        const company=String(body.company||"").trim().slice(0,160);
+        const type=String(body.type||"").trim().slice(0,60);
+        const message=String(body.message||"").trim().slice(0,2000);
+        if(name.length<2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+          return json({error:"Bitte Name und eine gültige E-Mail-Adresse angeben."},400,corsHeaders);
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
+          company TEXT, partner_type TEXT, message TEXT,
+          status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`).run();
+        const recent=await env.DB.prepare("SELECT COUNT(*) AS total FROM partner_applications WHERE email=? AND created_at >= datetime('now','-1 hour')").bind(email).first();
+        if(Number(recent?.total||0)>=3) return json({error:"Für diese E-Mail wurden bereits mehrere Anfragen gesendet. Bitte später erneut versuchen."},429,corsHeaders);
+        const saved=await env.DB.prepare("INSERT INTO partner_applications (name,email,company,partner_type,message) VALUES (?,?,?,?,?)").bind(name,email,company||null,type||null,message||null).run();
+        return json({success:true,id:saved.meta?.last_row_id||null},201,corsHeaders);
+      } catch(error) { return json({error:error?.message||"Anfrage konnte nicht gespeichert werden."},500,corsHeaders); }
+    }
+
+    if (url.pathname === "/api/admin/partner-applications") {
+      if (!env.ADMIN_PAYOUT_KEY) return json({error:"Admin key not configured"},500,corsHeaders);
+      if (!isAdmin(request,env)) return json({error:"Unauthorized"},401,corsHeaders);
+      if (!env.DB) return json({error:"D1 database not configured"},500,corsHeaders);
+      try {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
+          company TEXT, partner_type TEXT, message TEXT,
+          status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`).run();
+        if(request.method==="GET") {
+          const rows=await env.DB.prepare("SELECT id,name,email,company,partner_type,message,status,created_at FROM partner_applications ORDER BY created_at DESC,id DESC LIMIT 200").all();
+          return json({applications:rows.results||[]},200,corsHeaders);
+        }
+        if(request.method==="PATCH") {
+          const body=await request.json(), id=Number(body.id), status=String(body.status||"").trim();
+          if(!Number.isInteger(id)||id<=0||!["new","contacted","approved","rejected"].includes(status)) return json({error:"Ungültige Anfrage oder Status."},400,corsHeaders);
+          const result=await env.DB.prepare("UPDATE partner_applications SET status=? WHERE id=?").bind(status,id).run();
+          if(!Number(result.meta?.changes||0)) return json({error:"Anfrage nicht gefunden."},404,corsHeaders);
+          return json({success:true},200,corsHeaders);
+        }
+        return json({error:"Method Not Allowed"},405,corsHeaders);
+      } catch(error) { return json({error:error?.message||"Anfragen konnten nicht geladen werden."},500,corsHeaders); }
+    }
+
     if (url.pathname === "/api/partner-visit") {
       if(request.method!=="POST")return json({error:"Method Not Allowed"},405,corsHeaders);
       if(!env.DB)return json({error:"D1 database not configured"},500,corsHeaders);
