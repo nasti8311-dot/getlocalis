@@ -298,12 +298,14 @@ function renderScheduleCalendar(){
  scheduleCalendar.innerHTML=html;
  scheduleCalendar.querySelectorAll('[data-schedule-date]').forEach(button=>button.addEventListener('click',()=>{
   const date=button.dataset.scheduleDate,weekday=new Date(date+'T12:00:00').getDay();
-  if(selectedWeekdays().includes(weekday)){
-   if(blockedScheduleDates.includes(date))blockedScheduleDates=blockedScheduleDates.filter(x=>x!==date);else blockedScheduleDates.push(date);
-   extraScheduleDates=extraScheduleDates.filter(x=>x!==date);
-  }else{
-   if(extraScheduleDates.includes(date))extraScheduleDates=extraScheduleDates.filter(x=>x!==date);else extraScheduleDates.push(date);
+  const isBlocked=blockedScheduleDates.includes(date);
+  const isAvailable=selectedWeekdays().includes(weekday)||extraScheduleDates.includes(date);
+  if(isBlocked){
    blockedScheduleDates=blockedScheduleDates.filter(x=>x!==date);
+  }else if(isAvailable){
+   blockedScheduleDates.push(date);
+  }else{
+   extraScheduleDates.push(date);
   }
   renderScheduleCalendar();
  }));
