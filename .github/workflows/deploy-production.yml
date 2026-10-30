@@ -103,6 +103,81 @@ jobs:
 
           echo "Production D1 schema repair completed."
 
+      - name: Upload changed static assets
+        id: assets
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const crypto = require("node:crypto");
+          const root = process.cwd();
+          const ignored = fs.readFileSync(".assetsignore", "utf8").split(/\\r?\\n/).map(x => x.trim()).filter(x => x && !x.startsWith("#"));
+          const skip = (rel) => ignored.some(pattern => {
+            if (pattern.endsWith("/")) return rel.startsWith(pattern);
+            if (pattern.startsWith("*.")) return rel.endsWith(pattern.slice(1));
+            if (pattern.includes("*")) return false;
+            return rel === pattern || rel.startsWith(pattern + "/");
+          });
+          const files = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              const rel = path.relative(root, full).split(path.sep).join("/");
+              if (skip(rel)) continue;
+              if (entry.isDirectory()) walk(full);
+              else if (entry.isFile()) files.push({ rel, full, bytes: fs.readFileSync(full) });
+            }
+          }
+          walk(root);
+          if (!files.length) throw new Error("No static assets were found.");
+          const manifest = {};
+          const byHash = new Map();
+          for (const file of files) {
+            const ext = path.extname(file.rel).slice(1);
+            const hash = crypto.createHash("sha256").update(file.bytes.toString("base64") + ext).digest("hex").slice(0, 32);
+            manifest["/" + file.rel] = { hash, size: file.bytes.length };
+            byHash.set(hash, file);
+          }
+          const base = "https://api.cloudflare.com/client/v4/accounts/" + process.env.CLOUDFLARE_ACCOUNT_ID;
+          const headers = { Authorization: "Bearer " + process.env.CLOUDFLARE_API_TOKEN };
+          async function api(url, options = {}) {
+            const response = await fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+            const data = await response.json();
+            if (!response.ok || data.success === false) throw new Error("Cloudflare asset API failed (" + response.status + "): " + JSON.stringify(data.errors || data));
+            return data.result || data;
+          }
+          (async () => {
+            const session = await api(base + "/workers/scripts/getlocalis/assets-upload-session", {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ manifest })
+            });
+            if (!session.jwt || !Array.isArray(session.buckets)) throw new Error("Cloudflare did not return an asset upload session.");
+            let completionJwt = session.jwt;
+            for (let i = 0; i < session.buckets.length; i++) {
+              const payload = {};
+              for (const hash of session.buckets[i]) {
+                const file = byHash.get(hash);
+                if (!file) throw new Error("Cloudflare requested unknown asset hash " + hash);
+                payload[hash] = file.bytes.toString("base64");
+              }
+              const form = new FormData();
+              for (const [hash, encoded] of Object.entries(payload)) form.append(hash, encoded);
+              const response = await fetch(base + "/workers/assets/upload?base64=true", {
+                method: "POST", headers: { Authorization: "Bearer " + session.jwt }, body: form
+              });
+              const data = await response.json();
+              if (!response.ok || data.success === false || !data.result?.jwt) throw new Error("Cloudflare asset batch " + (i + 1) + " failed: " + JSON.stringify(data.errors || data));
+              completionJwt = data.result.jwt;
+            }
+            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "\\n");
+            console.log("Static asset manifest prepared (" + files.length + " files); uploaded " + session.buckets.length + " changed batch(es).");
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
+
       - name: Set production rollback target
         shell: bash
         env:
@@ -128,8 +203,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ADMIN_PAYOUT_KEY: ${{ secrets.ADMIN_PAYOUT_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          ASSET_COMPLETION_JWT: ${{ env.ASSET_COMPLETION_JWT }}
         run: |
           set -euo pipefail
+          if [ -z "${ASSET_COMPLETION_JWT:-}" ]; then
+            echo "Static asset upload did not return a completion token."
+            exit 1
+          fi
           if [ -z "${ADMIN_PAYOUT_KEY:-}" ]; then
             echo "Required GitHub Actions secret ADMIN_PAYOUT_KEY is missing; refusing Worker upload."
             exit 1
@@ -176,7 +256,7 @@ jobs:
           const metadata = {
             main_module: mainModule,
             compatibility_date: "2026-09-14",
-            keep_assets: true,
+            assets: { jwt: process.env.ASSET_COMPLETION_JWT },
             keep_bindings: ["plain_text", "secret_text"],
             annotations: { "workers/message": "GitHub Actions " + sha },
             bindings
@@ -244,6 +324,22 @@ jobs:
                 exit 1
               fi
               echo "Provider registration, login, and contract terms pages are reachable."
+              proof_page_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/booking-verification.html -w '%{http_code}' https://fiiviu.ro/booking-verification.html)"
+              if [ "$proof_page_status" != "200" ] || ! grep -qi "payment proof\|Zahlungsnachweis" /tmp/booking-verification.html; then
+                echo "Booking deposit verification page is unavailable (HTTP $proof_page_status)."
+                exit 1
+              fi
+              qr_script_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/qrcode.min.js -w '%{http_code}' https://fiiviu.ro/qrcode.min.js)"
+              if [ "$qr_script_status" != "200" ] || ! grep -q "QRCode" /tmp/qrcode.min.js; then
+                echo "Locally hosted QR generator is unavailable (HTTP $qr_script_status)."
+                exit 1
+              fi
+              booking_page_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/booking.html -w '%{http_code}' https://fiiviu.ro/booking.html)"
+              if [ "$booking_page_status" != "200" ] || ! grep -q "depositQr" /tmp/booking.html; then
+                echo "Customer booking page is missing the deposit QR section (HTTP $booking_page_status)."
+                exit 1
+              fi
+              echo "Customer QR proof page, local QR library, and booking page are live."
               admin_api_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin.json -w '%{http_code}' https://fiiviu.ro/api/admin/partners)"
               echo "ADMIN /api/admin/partners HTTP $admin_api_status"
               if [ "$admin_api_status" != "401" ]; then
