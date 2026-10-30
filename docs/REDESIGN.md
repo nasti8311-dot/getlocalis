@@ -105,7 +105,7 @@ Erlaubt sind ausschließlich visuelle Änderungen und notwendige, nicht-funktion
 - Die Test-Suite erhält Regressionstests für zentrale Design-Assets, Font-Hosting, alle relevanten HTML-Seiten, drei Sprachvarianten und die vorhandenen Kategorieaktionen.
 - Ein bereits auf `main` vorhandener Testfehler wurde als falscher Prüfbereich identifiziert: `worker.js` ist ein Legacy-Modul und kein aktiver Request-Einstiegspunkt. Der Test prüft nun nur die aktiven Produktionspfade und sichert separat ab, dass diese `worker-entry.js` verwenden. Es wurde keine Worker- oder Zahlungslogik geändert.
 - Kontrastwerte der zentralen Farbpaare: dunkles Orange `#A94717` auf Creme `#FBFAF7` = 5,59:1; dunkler Text `#241A16` auf Orange `#E86F2D` = 5,46:1; beide erfüllen WCAG AA für normalen Text.
-- Eine echte Browser-Screenshotprüfung auf 360/768/1280 px bleibt als automatisierter Visual-Review-Schritt offen; das Repository hatte zuvor keine Browser-Testabhängigkeit oder Screenshot-Pipeline.
+- Eine Playwright-Visual-Review-Pipeline wird als reine CI-Dev-Abhängigkeit ergänzt. Sie erstellt Screenshots bei 360/768/1280 px und prüft horizontalen Overflow sowie die lokale Font-Bereitschaft; die Browserprüfung ist nach Ausführung des Workflows zu bewerten.
 
 ### 7. Nächste Phasen
 
