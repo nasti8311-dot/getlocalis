@@ -515,7 +515,42 @@ function toBucharestDate(dateValue,timeValue){
   const offset=Date.UTC(Number(v.year),Number(v.month)-1,Number(v.day),Number(v.hour),Number(v.minute),Number(v.second))-guess;
   return new Date(guess-offset);
 }
-async function handleMarketplaceWebhook(request,env,ctx){let body;try{body=await request.text();const event=JSON.parse(body);if(event?.type==="payment_intent.succeeded"){const provider=String(event?.data?.object?.metadata?.provider_connect_account_id||"").trim();if(!/^acct_[A-Za-z0-9]+$/.test(provider))return json({error:"Payment succeeded without a valid provider Connect account"},400)}}catch(_){return json({error:"Invalid webhook payload"},400)}const response=await baseWorker.fetch(new Request(request,{method:"POST",headers:request.headers,body}),env,ctx);if(response.ok){try{const event=JSON.parse(body);if(event?.type==="payment_intent.succeeded")ctx.waitUntil(persistMarketplaceBookingProvider(env,event))}catch(_){}}return response}
+async function handleMarketplaceWebhook(request,env,ctx){
+  let body,event;
+  try{
+    body=await request.text();
+    event=JSON.parse(body);
+  }catch(_){
+    return json({error:"Invalid webhook payload"},400);
+  }
+
+  if(event?.type==="payment_intent.succeeded"){
+    const paymentIntent=event?.data?.object||{};
+    const metadata=paymentIntent.metadata||{};
+    const directPaymentModel=String(metadata.payment_model||"")==="fiiviu_fee_20_direct_80";
+    const provider=String(metadata.provider_connect_account_id||"").trim();
+    const validProviderConnectAccount=/^acct_[A-Za-z0-9]+$/.test(provider);
+    const validFiiViuCheckout=String(metadata.fiiviu_checkout||"")==="1" &&
+      String(metadata.booking_id||"").startsWith("FV-") &&
+      (directPaymentModel||validProviderConnectAccount);
+    if(!validFiiViuCheckout){
+      return json({error:"Payment succeeded without a valid FiiViu marketplace checkout"},400);
+    }
+  }
+
+  const response=await baseWorker.fetch(
+    new Request(request,{method:"POST",headers:request.headers,body}),
+    env,
+    ctx
+  );
+  if(response.ok && event?.type==="payment_intent.succeeded"){
+    const provider=String(event?.data?.object?.metadata?.provider_connect_account_id||"").trim();
+    if(/^acct_[A-Za-z0-9]+$/.test(provider)){
+      ctx.waitUntil(persistMarketplaceBookingProvider(env,event));
+    }
+  }
+  return response;
+}
 async function persistMarketplaceBookingProvider(env,event){if(!env.DB)return;const paymentIntentId=String(event?.data?.object?.id||"").trim(),provider=String(event?.data?.object?.metadata?.provider_connect_account_id||"").trim();if(!paymentIntentId||!/^acct_[A-Za-z0-9]+$/.test(provider))return;try{for(let attempt=0;attempt<12;attempt++){try{const result=await env.DB.prepare("UPDATE bookings SET provider_connect_account_id=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(provider,paymentIntentId).run();if(Number(result?.meta?.changes||0)>0)return}catch(error){if(attempt===11)throw error}await new Promise(resolve=>setTimeout(resolve,250))}}catch(error){console.error("FiiViu marketplace provider booking sync failed",error)}}
 async function injectMarketplaceCheckoutBridge(response,url){
   const html=await response.text();
