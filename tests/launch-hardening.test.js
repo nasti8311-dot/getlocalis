@@ -114,7 +114,7 @@ test("20/80 checkout prices the experience in the marketplace layer and validate
   assert.match(worker, /totalAmountCents !== fiiviuFeeCents \+ providerDueCents/);
   assert.match(worker, /\["eur","ron","usd","gbp"\]\.includes\(currency\)/);
   assert.doesNotMatch(worker, /SELECT o\.id,o\.provider_ref,o\.title,o\.price_cents,o\.currency/);
-  assert.match(marketplace, /A valid booking date and time are required/);
+  assert.match(marketplace, /Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich/);
 });
 
 test("homepage sends no client-priced amount and preserves the source offer ID", () => {
