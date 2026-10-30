@@ -987,7 +987,7 @@ test("production deploy does not depend on GitHub Pages readiness", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.doesNotMatch(workflow, /Wait for public Pages deployment/);
   assert.doesNotMatch(workflow, /pages build and deployment/);
-  assert.match(workflow, /Upload and deploy Worker with secrets while reusing existing assets/);
+  assert.match(workflow, /Upload and deploy Worker with updated static assets/);
   assert.match(workflow, /Verify production endpoint/);
 });
 
