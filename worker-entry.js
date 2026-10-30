@@ -16,6 +16,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/booking") return handleBookingAccess(request, env);
+    if (url.pathname === "/api/booking-proof") return handleBookingProof(request, env);
     if (url.pathname === "/api/cancel-booking") return handleCancellation(request, env);
     if (url.pathname === "/api/provider/cancel-booking") return handleProviderCancellation(request, env);
 
@@ -649,6 +650,7 @@ async function handleBookingAccess(request, env) {
         b.total_amount_cents,
         b.fiiviu_fee_cents,
         b.provider_due_cents,
+        b.proof_token,
         o.pay_on_site_cash,
         o.pay_on_site_card
       FROM bookings b
@@ -661,10 +663,60 @@ async function handleBookingAccess(request, env) {
       return json({ error: "Booking not found." }, 404);
     }
 
-    return json({ success: true, booking }, 200, { "Cache-Control": "no-store" });
+    const proofEligible = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" &&
+      String(booking.payment_status || "") === "paid" && String(booking.status || "") === "confirmed" &&
+      String(booking.proof_token || "").length >= 48;
+    const proofUrl = proofEligible
+      ? new URL("/booking-verification.html?token=" + encodeURIComponent(booking.proof_token), request.url).toString()
+      : null;
+    delete booking.proof_token;
+    return json({ success: true, booking: { ...booking, proof_url: proofUrl } }, 200, { "Cache-Control": "no-store" });
   } catch (error) {
     console.error("FiiViu booking access failed", error);
     return json({ error: error?.message || "Booking could not be loaded." }, 500);
+  }
+}
+
+async function handleBookingProof(request, env) {
+  if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405, { "Cache-Control": "no-store" });
+  if (!env.DB || !env.STRIPE_SECRET_KEY) return json({ valid: false, error: "Prüfung derzeit nicht verfügbar." }, 503, { "Cache-Control": "no-store" });
+  const url = new URL(request.url);
+  const token = String(url.searchParams.get("token") || "").trim();
+  if (!/^[a-f0-9]{64}$/i.test(token)) return json({ valid: false, error: "Ungültiger Zahlungsnachweis." }, 400, { "Cache-Control": "no-store" });
+  try {
+    const booking = await env.DB.prepare(
+      "SELECT booking_id,experience_name,booking_date,booking_time,guests,status,payment_status,payment_model,currency,amount_cents,total_amount_cents,fiiviu_fee_cents,provider_due_cents,payment_intent_id FROM bookings WHERE proof_token=? LIMIT 1"
+    ).bind(token).first();
+    if (!booking) return json({ valid: false, error: "Zahlungsnachweis nicht gefunden." }, 404, { "Cache-Control": "no-store" });
+    if (String(booking.payment_model || "") !== "fiiviu_fee_20_direct_80" ||
+        String(booking.status || "") !== "confirmed" || String(booking.payment_status || "") !== "paid" ||
+        !booking.payment_intent_id) {
+      return json({ valid: false, error: "Diese Buchung ist storniert oder die Anzahlung ist nicht mehr gültig." }, 200, { "Cache-Control": "no-store" });
+    }
+    const pi = await stripeGet(env, "/v1/payment_intents/" + encodeURIComponent(booking.payment_intent_id) + "?expand[]=latest_charge");
+    const charge = pi?.latest_charge && typeof pi.latest_charge === "object" ? pi.latest_charge : null;
+    const paidAmount = Number(pi?.amount_received || 0);
+    const refundedAmount = Number(charge?.amount_refunded || 0);
+    const expectedAmount = Number(booking.amount_cents || 0);
+    if (pi?.status !== "succeeded" || !Number.isSafeInteger(expectedAmount) || expectedAmount <= 0 ||
+        paidAmount !== expectedAmount || refundedAmount > 0 || charge?.refunded === true ||
+        String(pi?.currency || "").toLowerCase() !== String(booking.currency || "").toLowerCase()) {
+      return json({ valid: false, error: "Die Online-Anzahlung konnte nicht als gültig bestätigt werden." }, 200, { "Cache-Control": "no-store" });
+    }
+    return json({ valid: true, booking: {
+      booking_id: booking.booking_id,
+      experience_name: booking.experience_name,
+      booking_date: booking.booking_date,
+      booking_time: booking.booking_time,
+      guests: booking.guests,
+      currency: booking.currency,
+      total_amount_cents: booking.total_amount_cents,
+      deposit_amount_cents: expectedAmount,
+      remaining_amount_cents: booking.provider_due_cents
+    } }, 200, { "Cache-Control": "no-store" });
+  } catch (error) {
+    console.error("FiiViu booking proof verification failed", error);
+    return json({ valid: false, error: "Zahlungsnachweis konnte nicht geprüft werden." }, 503, { "Cache-Control": "no-store" });
   }
 }
 
@@ -1584,6 +1636,13 @@ async function finalizePaidBooking(
         .bind(bookingAccessToken, paymentIntent.id)
         .run();
       booking.booking_access_token = bookingAccessToken;
+    }
+
+    if (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" && !String(booking.proof_token || "").trim()) {
+      const proofToken = providerRandomHex(32);
+      await env.DB.prepare("UPDATE bookings SET proof_token=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND (proof_token IS NULL OR proof_token='')")
+        .bind(proofToken, paymentIntent.id).run();
+      booking.proof_token = proofToken;
     }
 
     if (String(booking.payment_model || "legacy_connect") !== "fiiviu_fee_20_direct_80") {
@@ -3737,7 +3796,7 @@ async function recordBookingSettlement(env, booking) {
 
 async function ensureBookingColumns(env) {
   const columns=await env.DB.prepare("PRAGMA table_info(bookings)").all();
-  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","currency","provider_ref","provider_connect_account_id","booking_access_token","cancellation_token","offer_id"];
+  const required=["booking_id","payment_intent_id","status","payment_status","customer_name","customer_email","experience_name","booking_date","booking_time","guests","amount_cents","total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","currency","provider_ref","provider_connect_account_id","booking_access_token","cancellation_token","offer_id","proof_token"];
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
