@@ -664,6 +664,16 @@ async function handleBookingAccess(request, env) {
       return json({ error: "Booking not found." }, 404);
     }
 
+    if (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" &&
+        String(booking.payment_status || "") === "paid" && String(booking.status || "") === "confirmed" &&
+        !String(booking.proof_token || "").trim()) {
+      const proofToken = providerRandomHex(32);
+      await env.DB.prepare("UPDATE bookings SET proof_token=?,updated_at=CURRENT_TIMESTAMP WHERE booking_id=? AND (proof_token IS NULL OR proof_token='')")
+        .bind(proofToken, bookingId).run();
+      const refreshed = await env.DB.prepare("SELECT proof_token FROM bookings WHERE booking_id=? LIMIT 1").bind(bookingId).first();
+      booking.proof_token = refreshed?.proof_token || "";
+    }
+
     const proofEligible = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" &&
       String(booking.payment_status || "") === "paid" && String(booking.status || "") === "confirmed" &&
       String(booking.proof_token || "").length >= 48;
