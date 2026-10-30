@@ -116,7 +116,7 @@ jobs:
           const path = require("node:path");
           const crypto = require("node:crypto");
           const root = process.cwd();
-          const ignored = fs.readFileSync(".assetsignore", "utf8").split(/\\r?\\n/).map(x => x.trim()).filter(x => x && !x.startsWith("#"));
+          const ignored = fs.readFileSync(".assetsignore", "utf8").split(/\r?\n/).map(x => x.trim()).filter(x => x && !x.startsWith("#"));
           const skip = (rel) => ignored.some(pattern => {
             if (pattern.endsWith("/")) return rel.startsWith(pattern);
             if (pattern.startsWith("*.")) return rel.endsWith(pattern.slice(1));
@@ -174,7 +174,7 @@ jobs:
               if (!response.ok || data.success === false || !data.result?.jwt) throw new Error("Cloudflare asset batch " + (i + 1) + " failed: " + JSON.stringify(data.errors || data));
               completionJwt = data.result.jwt;
             }
-            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "\\n");
+            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "\n");
             console.log("Static asset manifest prepared (" + files.length + " files); uploaded " + session.buckets.length + " changed batch(es).");
           })().catch(error => { console.error(error); process.exit(1); });
           NODE
