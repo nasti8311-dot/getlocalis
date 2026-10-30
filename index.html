@@ -3819,9 +3819,20 @@ function goBackToCategory() {
 
 function formatPrice(amount, offerCurrency = "EUR") {
     const currency = String(offerCurrency || "EUR").toUpperCase();
-    if (currency === "RON") return new Intl.NumberFormat(currentLang === "ro" ? "ro-RO" : "de-DE", { maximumFractionDigits: 2 }).format(amount) + " lei";
-    if (currentCurrency === "RON") return new Intl.NumberFormat(currentLang === "ro" ? "ro-RO" : "de-DE", { maximumFractionDigits: 0 }).format(Math.round(amount * currencyRates.RON)) + " lei";
-    return new Intl.NumberFormat(currentLang === "ro" ? "ro-RO" : "de-DE", { style: "currency", currency: "EUR" }).format(amount);
+    const locale = currentLang === "ro" ? "ro-RO" : currentLang === "en" ? "en-GB" : "de-DE";
+    if (currency === "RON") {
+        return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(amount) + " lei";
+    }
+    // EUR can be displayed in the user's selected EUR/RON view. Other
+    // supported provider currencies stay in their original currency rather
+    // than being mislabeled as EUR or converted with an unrelated rate.
+    if (currency !== "EUR") {
+        return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+    }
+    if (currentCurrency === "RON") {
+        return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(amount * currencyRates.RON)) + " lei";
+    }
+    return new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(amount);
 }
 
 
