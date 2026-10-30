@@ -263,9 +263,14 @@ export default {
           return json({error:"Stripe secret not configured"},500);
         }
 
-        let amount=Number(data.amount);
-        let currency=String(data.currency||"eur").toLowerCase();
-        if(String(data.paymentModel||"") === "fiiviu_fee_20_direct_80"){
+        // New marketplace checkout is server-priced in RON. Never accept a
+        // client-supplied amount or silently fall back to legacy Connect pricing.
+        if (String(data.paymentModel || "") !== "fiiviu_fee_20_direct_80") {
+          return json({error:"Unsupported payment model"},400);
+        }
+        let amount=0;
+        let currency="ron";
+        {
           if(!env.DB)return json({error:"Marketplace database is not configured"},500);
           const offerId=Number(data.offerId);
           const guests=Number(data.guests||1);
@@ -325,7 +330,7 @@ export default {
         params.set("amount",String(amount));
         params.set("currency",currency);
         params.set("metadata[fiiviu_checkout]","1");
-        params.set("metadata[payment_model]",String(data.paymentModel||"legacy_connect"));
+        params.set("metadata[payment_model]","fiiviu_fee_20_direct_80");
         params.set("metadata[total_amount_cents]",String(Number.isSafeInteger(Number(data.totalAmountCents))?Number(data.totalAmountCents):amount));
         params.set("metadata[fiiviu_fee_cents]",String(Number.isSafeInteger(Number(data.fiiviuFeeCents))?Number(data.fiiviuFeeCents):amount));
         params.set("metadata[provider_due_cents]",String(Number.isSafeInteger(Number(data.providerDueCents))?Number(data.providerDueCents):0));
