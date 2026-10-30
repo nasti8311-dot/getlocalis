@@ -69,6 +69,14 @@ Es existiert kein package-/npm-Skript für Start oder Build.
 
 Erlaubt sind ausschließlich visuelle Änderungen und notwendige, nicht-funktionale Accessibility-Verbesserungen. Falls eine Designänderung einen Eingriff in die Sperrzone erfordert, wird sie ausgelassen und im Abschlussbericht als offener Punkt benannt.
 
+### Phase 2 — Designsystem
+
+- Zentrale Tokens und Basiskomponenten werden in `assets/css/fiiviu-design-system.css` gepflegt.
+- Ein lokal gehosteter variabler Manrope-Font aus dem Google-Fonts-Repository wird mit OFL-Lizenz eingebunden; Quelle und Lizenz sind in `CREDITS.md` dokumentiert.
+- Tokens definieren Farbpalette, kontraststarkes Orange für Links/Text, dunkle Textfarbe auf Orangeflächen, Typografie, Abstände, Radien, Schatten und Layoutbreiten.
+- Die wiedererkennbare Moment-Kachel verwendet eine asymmetrische, weich gerundete Form und einen orangefarbenen Moment-Marker.
+- Accessibility-Basics umfassen sichtbare Fokuszustände, Mindesthöhe für Buttons, System-Reduced-Motion und gut lesbare Formularfelder.
+
 ### 7. Nächste Phasen
 
 1. **Phase 2 — Designsystem:** zentrale Tokens und wiederverwendbare visuelle Basiskomponenten; Kontrast- und Fokusregeln dokumentieren.
