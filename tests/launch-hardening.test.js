@@ -304,7 +304,7 @@ test("marketplace webhook accepts valid direct 20/80 payments without Connect", 
   assert.match(source, /directPaymentModel=String\(metadata\.payment_model\|\|""\)==="fiiviu_fee_20_direct_80"/);
   assert.match(source, /directPaymentModel\|\|validProviderConnectAccount/);
   assert.match(source, /Payment succeeded without a valid FiiViu marketplace checkout/);
-  assert.match(source, /if\(\^acct_/);
+  assert.match(source, /if\(\/\^acct_/);
 });
 
 test("20/80 marketplace checkout collects only the FiiViu fee and avoids Connect settlements", () => {
