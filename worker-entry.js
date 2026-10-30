@@ -515,6 +515,7 @@ async function handleAdminControlCenter(request, env) {
     console.error("FiiViu admin control center D1 check failed", error);
     return json({ ...result, error: error?.message || "Kontrollzentrum konnte nicht geladen werden." }, 500);
   }
+}
 
 async function handleAdminResendConfirmation(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) {
