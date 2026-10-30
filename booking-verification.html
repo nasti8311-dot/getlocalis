@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>FiiViu – Zahlungsnachweis prüfen</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f7f7f7;color:#222;max-width:680px;margin:32px auto;padding:0 16px}
+.card{background:#fff;border:1px solid #ddd;border-radius:16px;padding:24px;margin:16px 0}
+.status{font-size:20px;font-weight:700;margin-bottom:18px}
+.valid{color:#187a43}.invalid{color:#b42318}.muted{color:#666}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:#777;margin-top:16px}
+.value{font-weight:700;margin-top:4px}
+.notice{background:#f4f4f4;border-radius:10px;padding:12px;margin-top:20px}
+</style>
+</head>
+<body>
+<main class="card" id="result" aria-live="polite">Zahlungsnachweis wird geprüft …</main>
+<script>
+const root=document.getElementById('result');
+const token=new URLSearchParams(location.search).get('token')||'';
+const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const lang=(navigator.language||'de').slice(0,2);
+const words={
+ de:{title:'FiiViu – Zahlungsnachweis',checking:'Zahlungsnachweis wird geprüft …',valid:'Anzahlung erfolgreich verifiziert',invalid:'Zahlungsnachweis ungültig',error:'Der Zahlungsnachweis konnte nicht bestätigt werden.',booking:'Buchungsnummer',experience:'Erlebnis',date:'Datum & Uhrzeit',guests:'Teilnehmer',total:'Gesamtpreis',deposit:'Online geleistete Anzahlung (20 %)',remaining:'Restzahlung beim Anbieter (80 %)',note:'Diese Prüfung bestätigt ausschließlich die online bezahlte Anzahlung. Die restlichen 80 % werden direkt beim Anbieter bezahlt.'},
+ en:{title:'FiiViu – Payment proof',checking:'Verifying payment proof …',valid:'Deposit successfully verified',invalid:'Payment proof is invalid',error:'The payment proof could not be confirmed.',booking:'Booking number',experience:'Experience',date:'Date & time',guests:'Guests',total:'Total price',deposit:'Deposit paid online (20%)',remaining:'Remaining amount due to provider (80%)',note:'This verification confirms only the deposit paid online. The remaining 80% is paid directly to the provider.'},
+ ro:{title:'FiiViu – Dovada plății',checking:'Se verifică dovada plății …',valid:'Avans verificat cu succes',invalid:'Dovada plății nu este validă',error:'Dovada plății nu a putut fi confirmată.',booking:'Numărul rezervării',experience:'Experiență',date:'Data și ora',guests:'Participanți',total:'Preț total',deposit:'Avans plătit online (20%)',remaining:'Rest de plată la furnizor (80%)',note:'Această verificare confirmă doar avansul plătit online. Restul de 80% se plătește direct furnizorului.'}
+};
+const t=words[lang]||words.de;
+function money(c,currency){return (Number(c||0)/100).toLocaleString(lang==='ro'?'ro-RO':'de-DE',{style:'currency',currency:String(currency||'RON').toUpperCase()})}
+async function verify(){
+ document.title=t.title;root.textContent=t.checking;
+ if(!/^[a-f0-9]{64}$/i.test(token)){root.innerHTML='<div class="status invalid">'+esc(t.invalid)+'</div><p>'+esc(t.error)+'</p>';return}
+ try{
+  const response=await fetch('/api/booking-proof?token='+encodeURIComponent(token),{credentials:'omit',cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok||!data.valid||!data.booking){root.innerHTML='<div class="status invalid">✕ '+esc(t.invalid)+'</div><p>'+esc(data.error||t.error)+'</p>';return}
+  const b=data.booking;
+  root.innerHTML='<div class="status valid">✓ '+esc(t.valid)+'</div>'+
+   '<div class="label">'+esc(t.booking)+'</div><div class="value">'+esc(b.booking_id)+'</div>'+
+   '<div class="label">'+esc(t.experience)+'</div><div class="value">'+esc(b.experience_name)+'</div>'+
+   '<div class="label">'+esc(t.date)+'</div><div class="value">'+esc((b.booking_date||'')+(b.booking_time?' · '+b.booking_time:''))+'</div>'+
+   '<div class="label">'+esc(t.guests)+'</div><div class="value">'+esc(b.guests)+'</div>'+
+   '<div class="label">'+esc(t.total)+'</div><div class="value">'+esc(money(b.total_amount_cents,b.currency))+'</div>'+
+   '<div class="label">'+esc(t.deposit)+'</div><div class="value">'+esc(money(b.deposit_amount_cents,b.currency))+'</div>'+
+   '<div class="label">'+esc(t.remaining)+'</div><div class="value">'+esc(money(b.remaining_amount_cents,b.currency))+'</div>'+
+   '<div class="notice muted">'+esc(t.note)+'</div>';
+ }catch(e){root.innerHTML='<div class="status invalid">✕ '+esc(t.invalid)+'</div><p>'+esc(t.error)+'</p>'}
+}
+verify();
+</script>
+</body>
+</html>
