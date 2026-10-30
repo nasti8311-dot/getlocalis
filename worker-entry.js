@@ -263,64 +263,29 @@ export default {
           return json({error:"Stripe secret not configured"},500);
         }
 
-        // New marketplace checkout is server-priced in RON. Never accept a
-        // client-supplied amount or silently fall back to legacy Connect pricing.
+        // This worker is called internally by marketplace-entry.js, which has
+        // already loaded the active experience/provider from D1 and calculated
+        // the exact total, 20% fee and 80% on-site balance. Validate that trusted
+        // server-to-server handoff; never accept a legacy/client-priced checkout.
         if (String(data.paymentModel || "") !== "fiiviu_fee_20_direct_80") {
           return json({error:"Unsupported payment model"},400);
         }
-        let amount=0;
-        let currency="ron";
-        {
-          if(!env.DB)return json({error:"Marketplace database is not configured"},500);
-          const offerId=Number(data.offerId);
-          const guests=Number(data.guests||1);
-          if(!Number.isSafeInteger(offerId)||offerId<=0||!Number.isSafeInteger(guests)||guests<1||guests>50){
-            return json({error:"Invalid offer or guest count"},400);
-          }
-          const offer=await env.DB.prepare(
-            "SELECT o.id,o.provider_ref,o.title,o.price_cents,o.currency,o.available_times,o.meeting_point_name,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.arrival_minutes_before,o.active,o.capacity,o.pay_on_site_cash,o.pay_on_site_card,p.name AS provider_name,p.active AS provider_active,p.connect_account_id FROM offers o JOIN providers p ON p.provider_ref=o.provider_ref WHERE o.id=? LIMIT 1"
-          ).bind(offerId).first();
-          if(!offer||Number(offer.active)!==1||Number(offer.provider_active)!==1){
-            return json({error:"This experience is not available for booking"},409);
-          }
-          const bookingDate=String(data.bookingDate||"").trim();
-          const bookingTime=String(data.bookingTime||"").trim();
-          if(!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)||!/^\d{1,2}:\d{2}$/.test(bookingTime)){
-            return json({error:"A valid booking date and time are required"},400);
-          }
-          const availableTimes=String(offer.available_times||"").split(/[,;\n]/).map(value=>value.trim()).filter(Boolean);
-          if(availableTimes.length&&!availableTimes.includes(bookingTime)){
-            return json({error:"The selected time is not available for this experience"},409);
-          }
-          const unitPrice=Number(offer.price_cents);
-          const total=unitPrice*guests;
-          if(!Number.isSafeInteger(unitPrice)||unitPrice<250||!Number.isSafeInteger(total)){
-            return json({error:"Invalid server-side offer price"},409);
-          }
-          const fee=Math.round(total*0.20);
-          const due=total-fee;
-          if(fee<50||due<0)return json({error:"Invalid calculated payment split"},409);
-          const offeredCurrency=String(offer.currency||"ron").toLowerCase();
-          if(offeredCurrency!=="ron")return json({error:"New marketplace bookings must be priced in RON"},409);
-          amount=fee;
-          currency=offeredCurrency;
-          data.totalAmountCents=total;
-          data.fiiviuFeeCents=fee;
-          data.providerDueCents=due;
-          data.bookingId="FV-"+crypto.randomUUID().replace(/-/g,"").slice(0,12).toUpperCase();
-          data.providerRef=String(offer.provider_ref||"");
-          data.providerName=String(offer.provider_name||"");
-          data.experienceName=String(offer.title||"");
-          data.tourName=String(offer.title||"");
-          data.experienceId=String(offer.id);
-          data.offerId=String(offer.id);
-          data.providerConnectAccountId=String(offer.connect_account_id||"");
-          data.meetingPointName=String(offer.meeting_point_name||"");
-          data.meetingAddress=String(offer.meeting_address||"");
-          data.meetingCity=String(offer.meeting_city||"București");
-          data.meetingCountry=String(offer.meeting_country||"Romania");
-          data.meetingInstructions=String(offer.meeting_instructions||"");
-          data.arrivalMinutesBefore=offer.arrival_minutes_before==null?"":String(offer.arrival_minutes_before);
+        const amount = Number(data.amount);
+        const currency = String(data.currency || "").toLowerCase();
+        const totalAmountCents = Number(data.totalAmountCents);
+        const fiiviuFeeCents = Number(data.fiiviuFeeCents);
+        const providerDueCents = Number(data.providerDueCents);
+        const guests = Number(data.guests || 1);
+        if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(totalAmountCents) ||
+            !Number.isSafeInteger(fiiviuFeeCents) || !Number.isSafeInteger(providerDueCents) ||
+            amount < 50 || totalAmountCents < 250 || amount !== fiiviuFeeCents ||
+            totalAmountCents !== fiiviuFeeCents + providerDueCents ||
+            !Number.isSafeInteger(guests) || guests < 1 || guests > 50 ||
+            !["eur","ron","usd","gbp"].includes(currency) ||
+            !/^FV-[A-F0-9]{12}$/.test(String(data.bookingId || "")) ||
+            !String(data.providerRef || "").trim() ||
+            !String(data.experienceId || "").trim()) {
+          return json({error:"Invalid server-calculated marketplace payment"},400);
         }
         if (!Number.isInteger(amount) || amount < 50) {
           return json({error:"Invalid amount"},400);
@@ -331,9 +296,9 @@ export default {
         params.set("currency",currency);
         params.set("metadata[fiiviu_checkout]","1");
         params.set("metadata[payment_model]","fiiviu_fee_20_direct_80");
-        params.set("metadata[total_amount_cents]",String(Number.isSafeInteger(Number(data.totalAmountCents))?Number(data.totalAmountCents):amount));
-        params.set("metadata[fiiviu_fee_cents]",String(Number.isSafeInteger(Number(data.fiiviuFeeCents))?Number(data.fiiviuFeeCents):amount));
-        params.set("metadata[provider_due_cents]",String(Number.isSafeInteger(Number(data.providerDueCents))?Number(data.providerDueCents):0));
+        params.set("metadata[total_amount_cents]",String(totalAmountCents));
+        params.set("metadata[fiiviu_fee_cents]",String(fiiviuFeeCents));
+        params.set("metadata[provider_due_cents]",String(providerDueCents));
         params.set("metadata[provider_ref]",String(data.providerRef||""));
         params.set("metadata[booking_id]",String(data.bookingId||""));
         params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
