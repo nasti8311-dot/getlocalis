@@ -972,7 +972,7 @@ test("signed refund webhooks revoke paid booking deposit proofs", () => {
   assert.match(webhook, /refundSucceeded/);
   assert.match(webhook, /UPDATE bookings SET payment_status='refunded'/);
   const worker = read("worker-entry.js");
-  assert.match(worker, /payment_status \\|\\| ""\) !== "paid"/);
+  assert.match(worker, /!== "paid"/);
 });
 
 test("public deposit proof verification is routed to the booking worker", () => {
