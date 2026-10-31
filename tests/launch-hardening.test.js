@@ -117,11 +117,15 @@ test("20/80 checkout prices the experience in the marketplace layer and validate
   assert.match(marketplace, /Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich/);
 });
 
-test("homepage formats supported provider currencies without mislabeling them", () => {
+test("homepage applies the selected EUR/RON display currency to every offer", () => {
   const html = read("index.html");
-  assert.match(html, /const locale = currentLang === "ro" \? "ro-RO" : currentLang === "en" \? "en-GB" : "de-DE"/);
-  assert.match(html, /if \(currency !== "EUR"\)/);
-  assert.match(html, /style: "currency", currency/);
+  assert.match(html, /const selectedCurrency = String\(currentCurrency \|\| "EUR"\)\.toUpperCase\(\)/);
+  assert.match(html, /sourceCurrency === "EUR" && selectedCurrency === "RON"/);
+  assert.match(html, /displayAmount = numericAmount \* currencyRates\.RON/);
+  assert.match(html, /sourceCurrency === "RON" && selectedCurrency === "EUR"/);
+  assert.match(html, /displayAmount = numericAmount \/ currencyRates\.RON/);
+  assert.match(html, /displayCurrency === "RON"/);
+  assert.match(html, /formatPrice\(item\.price, item\.currency\)/);
   assert.match(html, /currencyRates\.RON/);
 });
 
