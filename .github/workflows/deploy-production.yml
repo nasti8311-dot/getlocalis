@@ -204,6 +204,33 @@ jobs:
           fi
           printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
 
+      - name: Read production admin secret from Cloudflare
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          response_file=/tmp/admin-payout-secret.json
+          status="$(curl --silent --show-error --max-time 20 -o "$response_file" -w '%{http_code}' \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/secrets/ADMIN_PAYOUT_KEY")"
+          if [ "$status" != "200" ]; then
+            echo "Could not read ADMIN_PAYOUT_KEY from the production Worker in Cloudflare (HTTP $status)."
+            jq -r '.errors[]?.message // empty' "$response_file" || true
+            exit 1
+          fi
+          node - "$response_file" <<'NODE'
+          const fs = require("node:fs");
+          const response = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const value = response?.result?.text;
+          if (!response.success || typeof value !== "string" || !value.trim()) {
+            throw new Error("Cloudflare does not expose a non-empty ADMIN_PAYOUT_KEY secret for the production Worker.");
+          }
+          fs.writeFileSync("/tmp/admin-payout-key", value, { mode: 0o600 });
+          console.log("Read ADMIN_PAYOUT_KEY from Cloudflare; secret value was not logged.");
+          NODE
+
       - name: Upload and deploy Worker with updated static assets
         shell: bash
         env:
@@ -236,8 +263,13 @@ jobs:
           const fs = require("node:fs");
           const [mainModule, sha] = process.argv.slice(2);
           const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+          const adminPayoutKey = fs.readFileSync("/tmp/admin-payout-key", "utf8");
           if (!stripeWebhookSecret) {
             console.error("Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload.");
+            process.exit(1);
+          }
+          if (!adminPayoutKey.trim()) {
+            console.error("Cloudflare ADMIN_PAYOUT_KEY is empty; refusing Worker upload.");
             process.exit(1);
           }
           const bindings = [
@@ -246,6 +278,7 @@ jobs:
             { type: "r2_bucket", name: "PROVIDER_IMAGES", bucket_name: "fiiviu-provider-images" },
             { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
             { type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret },
+            { type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey },
           ];
           console.log("STRIPE_WEBHOOK_SECRET supplied to Worker version.");
           const metadata = {
@@ -273,6 +306,17 @@ jobs:
           fi
 
           cat "$response_file" | jq .
+
+          secret_check_file=/tmp/admin-payout-secret-check.json
+          secret_check_status="$(curl --silent --show-error --max-time 20 -o "$secret_check_file" -w '%{http_code}' \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/secrets/ADMIN_PAYOUT_KEY")"
+          if [ "$secret_check_status" != "200" ] || ! jq -e '.success == true and .result.name == "ADMIN_PAYOUT_KEY" and .result.type == "secret_text" and (.result.text | type == "string" and length > 0)' "$secret_check_file" >/dev/null; then
+            echo "Production deployment did not retain the Cloudflare ADMIN_PAYOUT_KEY secret binding."
+            jq -r '.errors[]?.message // empty' "$secret_check_file" || true
+            exit 1
+          fi
+          echo "Verified: production Worker has the ADMIN_PAYOUT_KEY secret binding from Cloudflare."
 
       - name: Verify production endpoint
         shell: bash
