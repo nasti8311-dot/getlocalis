@@ -56,7 +56,10 @@ export default {
 
     if (url.pathname === "/api/admin/partner-applications") {
       if (!env.ADMIN_PAYOUT_KEY) return json({error:"Admin key not configured"},500,corsHeaders);
-      if (!isAdmin(request,env)) return json({error:"Unauthorized"},401,corsHeaders);
+      if (!isAdmin(request,env)) {
+        const authorization = String(request.headers.get("Authorization") || "").trim();
+        return json({error: authorization ? "Unauthorized: Admin-Schlüssel stimmt nicht mit dem in Cloudflare hinterlegten Schlüssel überein." : "Unauthorized: Der Browser hat keinen Authorization-Header gesendet."},401,corsHeaders);
+      }
       if (!env.DB) return json({error:"D1 database not configured"},500,corsHeaders);
       try {
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
