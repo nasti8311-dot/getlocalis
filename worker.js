@@ -712,7 +712,7 @@ async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   });
 }
 
-function normalizeAdminCredential(value){return String(value||"").trim().replace(/^Bearer\\s+/i,"").trim()}
+function normalizeAdminCredential(value){return String(value||"").trim().replace(/^Bearer\s+/i,"").trim()}
 function isAdmin(request,env){const expected=normalizeAdminCredential(env.ADMIN_PAYOUT_KEY);const provided=normalizeAdminCredential(request.headers.get("Authorization"));return expected!==""&&provided===expected}
 async function requireTables(env, tableNames){
   for (const tableName of tableNames) {
