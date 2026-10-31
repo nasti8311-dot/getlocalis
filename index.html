@@ -3831,23 +3831,34 @@ function formatPrice(amount, offerCurrency = "EUR") {
     // Stored prices and Stripe charges remain in the offer's original currency.
     let displayAmount = numericAmount;
     let displayCurrency = sourceCurrency;
+    let wasConverted = false;
 
     if (sourceCurrency === "EUR" && selectedCurrency === "RON") {
         displayAmount = numericAmount * currencyRates.RON;
         displayCurrency = "RON";
+        wasConverted = true;
     } else if (sourceCurrency === "RON" && selectedCurrency === "EUR") {
         displayAmount = numericAmount / currencyRates.RON;
         displayCurrency = "EUR";
+        wasConverted = true;
     } else if (sourceCurrency === selectedCurrency) {
         displayCurrency = selectedCurrency;
+    }
+
+    // Converted RON prices are rounded to whole Lei; converted EUR prices
+    // are rounded to the nearest 10 cents. Original prices and payments stay exact.
+    if (wasConverted) {
+        displayAmount = displayCurrency === "RON"
+            ? Math.round(displayAmount)
+            : Math.round(displayAmount * 10) / 10;
     }
 
     // Only EUR/RON have a configured conversion rate. Keep any other source
     // currency explicit until a verified rate is configured for it.
     if (displayCurrency === "RON") {
         return new Intl.NumberFormat(locale, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            minimumFractionDigits: wasConverted ? 0 : 2,
+            maximumFractionDigits: wasConverted ? 0 : 2
         }).format(displayAmount) + " lei";
     }
 
