@@ -3299,10 +3299,10 @@ async function handleProviderExperiences(request,env){
       const body=await request.json().catch(()=>({}));
       const title=String(body.title||"").trim();
       const priceCents=Number(body.priceCents);
-      const currency=String(body.currency||"ron").toLowerCase();
+      const currency=String(body.currency||"eur").toLowerCase();
       if(!title)return json({error:"Titlul este obligatoriu."},400);
-      if(currency!=="ron")return json({error:"Noile oferte trebuie să aibă prețurile afișate în RON."},400);
-      if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Introduceți un preț de cel puțin 2,50 RON, astfel încât avansul online să fie de minimum 0,50 RON."},400);
+      if(!["eur","ron"].includes(currency))return json({error:"Alegeți EUR sau RON pentru prețul experienței."},400);
+      if(!Number.isInteger(priceCents)||priceCents<250)return json({error:"Introduceți un preț de cel puțin 2,50 în moneda selectată, astfel încât avansul online să fie de minimum 0,50."},400);
       const availabilityRules=body.availabilityRules&&typeof body.availabilityRules==="object"?body.availabilityRules:null;
       if(body.publish===true){
         if(!availabilityRules||!/^\d{4}-\d{2}-\d{2}$/.test(String(availabilityRules.startDate||""))||(availabilityRules.endDate&&!/^\d{4}-\d{2}-\d{2}$/.test(String(availabilityRules.endDate)))||!Array.isArray(availabilityRules.weekdays)||!Array.isArray(availabilityRules.extraDates)||!Array.isArray(availabilityRules.blockedDates)||(!availabilityRules.weekdays.length&&!availabilityRules.extraDates.length))return json({error:"Selectați cel puțin o zi sau dată disponibilă în calendar."},400);
