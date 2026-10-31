@@ -129,6 +129,21 @@ test("homepage applies the selected EUR/RON display currency to every offer", ()
   assert.match(html, /currencyRates\.RON/);
 });
 
+test("provider listings default to EUR and optionally preserve RON", () => {
+  const page = read("provider.html");
+  const worker = read("worker-entry.js");
+  assert.ok(page.includes('id="expCurrency"'));
+  assert.ok(page.includes('<option value="eur" selected>EUR €</option>'));
+  assert.ok(page.includes('<option value="ron">RON lei</option>'));
+  assert.match(page, /document\.getElementById\('expCurrency'\)\.value='eur'/);
+  assert.match(page, /document\.getElementById\('expCurrency'\)\.value=String\(offer\.currency\|\|'eur'\)\.toLowerCase\(\)/);
+  assert.match(page, /currency:document\.getElementById\('expCurrency'\)\.value/);
+  assert.match(page, /savedCurrency=payload\.currency\.toUpperCase\(\)/);
+  assert.match(worker, /const currency=String\(body\.currency\|\|"eur"\)\.toLowerCase\(\)/);
+  assert.match(worker, /!\["eur","ron"\]\.includes\(currency\)/);
+  assert.match(worker, /priceCents<250/);
+});
+
 test("homepage sends no client-priced amount and preserves the source offer ID", () => {
   const html = read("index.html");
   assert.match(html, /sourceOfferId: offer\.source === "experience" \? "" : String\(offer\.id \|\| ""\)/);
