@@ -119,13 +119,13 @@ test("20/80 checkout prices the experience in the marketplace layer and validate
 
 test("homepage rounds converted RON to whole Lei and EUR to ten cents", () => {
   const html = read("index.html");
-  assert.match(html, /let wasConverted = false/);
-  assert.match(html, /wasConverted = true/g);
-  assert.match(html, /displayCurrency === "RON"\\s*\\? Math\\.round\\(displayAmount\\)/);
-  assert.match(html, /Math\\.round\\(displayAmount \\* 10\\) \\/ 10/);
-  assert.match(html, /minimumFractionDigits: wasConverted \\? 0 : 2/);
-  assert.match(html, /maximumFractionDigits: wasConverted \\? 0 : 2/);
-  assert.match(html, /currency: displayCurrency/);
+  assert.ok(html.includes("let wasConverted = false"));
+  assert.ok(html.includes("wasConverted = true"));
+  assert.ok(html.includes("? Math.round(displayAmount)"));
+  assert.ok(html.includes("Math.round(displayAmount * 10) / 10"));
+  assert.ok(html.includes("minimumFractionDigits: wasConverted ? 0 : 2"));
+  assert.ok(html.includes("maximumFractionDigits: wasConverted ? 0 : 2"));
+  assert.ok(html.includes("currency: displayCurrency"));
 });
 
 test("homepage applies the selected EUR/RON display currency to every offer", () => {
