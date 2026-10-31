@@ -3845,10 +3845,12 @@ function formatPrice(amount, offerCurrency = "EUR") {
         displayCurrency = selectedCurrency;
     }
 
-    // Round converted catalog prices to whole currency units for a cleaner
-    // display. Original offer prices and payment amounts remain unchanged.
+    // Converted RON prices are rounded to whole Lei; converted EUR prices
+    // are rounded to the nearest 10 cents. Original prices and payments stay exact.
     if (wasConverted) {
-        displayAmount = Math.round(displayAmount);
+        displayAmount = displayCurrency === "RON"
+            ? Math.round(displayAmount)
+            : Math.round(displayAmount * 10) / 10;
     }
 
     // Only EUR/RON have a configured conversion rate. Keep any other source
@@ -3862,8 +3864,7 @@ function formatPrice(amount, offerCurrency = "EUR") {
 
     return new Intl.NumberFormat(locale, {
         style: "currency",
-        currency: displayCurrency,
-        ...(wasConverted ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {})
+        currency: displayCurrency
     }).format(displayAmount);
 }
 
