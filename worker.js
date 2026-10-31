@@ -712,7 +712,7 @@ async function sendPartnerLoginEmail(env,{email,partnerRef,password,loginUrl}){
   });
 }
 
-function isAdmin(request,env){return String(env.ADMIN_PAYOUT_KEY||"").trim()!==""&&String(request.headers.get("Authorization")||"").trim()==="Bearer "+String(env.ADMIN_PAYOUT_KEY||"").trim()}
+function normalizeAdminCredential(value){return String(value||"").trim().replace(/^Bearer\\s+/i,"").trim()}\nfunction isAdmin(request,env){const expected=normalizeAdminCredential(env.ADMIN_PAYOUT_KEY);const provided=normalizeAdminCredential(request.headers.get("Authorization"));return expected!==""&&provided===expected}
 async function requireTables(env, tableNames){
   for (const tableName of tableNames) {
     const row = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1").bind(tableName).first();
