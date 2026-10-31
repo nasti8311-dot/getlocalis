@@ -848,7 +848,8 @@ test("settlement status admin auth trims configured and incoming credentials", (
 test("all legacy admin auth comparisons trim configured and incoming credentials", () => {
   const worker = read("worker.js");
   const secure = read("secure-entry.js");
-  assert.match(worker, /function normalizeAdminCredential\(value\)/);\n  assert.match(worker, /function isAdmin\(request,env\)\{const expected=normalizeAdminCredential\(env\.ADMIN_PAYOUT_KEY\);const provided=normalizeAdminCredential\(request\.headers\.get\("Authorization"\)\);return expected!==""&&provided===expected\}/);
+  assert.match(worker, /function normalizeAdminCredential\(value\)/);
+  assert.match(worker, /function isAdmin\(request,env\)\{const expected=normalizeAdminCredential\(env\.ADMIN_PAYOUT_KEY\);const provided=normalizeAdminCredential\(request\.headers\.get\("Authorization"\)\);return expected!==""&&provided===expected\}/);
   assert.doesNotMatch(worker, /request\.headers\.get\("Authorization"\)==="Bearer "\+env\.ADMIN_PAYOUT_KEY/);
   assert.doesNotMatch(secure, /request\.headers\.get\("Authorization"\) !== "Bearer " \+ String\(env\.ADMIN_PAYOUT_KEY\)/);
   assert.match(secure, /String\(request\.headers\.get\("Authorization"\) \|\| ""\)\.trim\(\)/);
