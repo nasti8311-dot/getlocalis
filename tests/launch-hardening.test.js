@@ -117,14 +117,15 @@ test("20/80 checkout prices the experience in the marketplace layer and validate
   assert.match(marketplace, /Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich/);
 });
 
-test("homepage rounds converted display prices to whole EUR/RON units only", () => {
+test("homepage rounds converted RON to whole Lei and EUR to ten cents", () => {
   const html = read("index.html");
   assert.match(html, /let wasConverted = false/);
   assert.match(html, /wasConverted = true/g);
-  assert.match(html, /displayAmount = Math\.round\(displayAmount\)/);
-  assert.match(html, /minimumFractionDigits: wasConverted \? 0 : 2/);
-  assert.match(html, /maximumFractionDigits: wasConverted \? 0 : 2/);
-  assert.match(html, /wasConverted \? \{ minimumFractionDigits: 0, maximumFractionDigits: 0 \} : \{\}/);
+  assert.match(html, /displayCurrency === "RON"\\s*\\? Math\\.round\\(displayAmount\\)/);
+  assert.match(html, /Math\\.round\\(displayAmount \\* 10\\) \\/ 10/);
+  assert.match(html, /minimumFractionDigits: wasConverted \\? 0 : 2/);
+  assert.match(html, /maximumFractionDigits: wasConverted \\? 0 : 2/);
+  assert.match(html, /currency: displayCurrency/);
 });
 
 test("homepage applies the selected EUR/RON display currency to every offer", () => {
