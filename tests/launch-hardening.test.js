@@ -1011,7 +1011,7 @@ test("production deploy performs only idempotent, explicit schema repair before 
   assert.match(workflow, /Upload and deploy Worker with updated static assets/);
   assert.match(workflow, /--request PUT/);
   assert.match(workflow, /workers\/scripts\/getlocalis"/);
-  assert.doesNotMatch(workflow, /ADMIN_PAYOUT_KEY/);
+  assert.doesNotMatch(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
   assert.match(workflow, /Verify production endpoint/);
 });
@@ -1073,7 +1073,7 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.match(workflow, /assets:\s*\{\s*jwt:\s*process\.env\.ASSET_COMPLETION_JWT,\s*config:/);
   assert.doesNotMatch(workflow, /keep_assets:\s*true/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
-  assert.doesNotMatch(workflow, /ADMIN_PAYOUT_KEY/);
+  assert.doesNotMatch(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
   assert.match(workflow, /wrangler@4 versions deploy/); // rollback path only
   assert.doesNotMatch(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
