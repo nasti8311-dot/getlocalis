@@ -283,7 +283,29 @@ jobs:
             jq -r '.errors[]?.message // empty' "$secret_check_file" || true
             exit 1
           fi
-          echo "Verified: production Worker retains the ADMIN_PAYOUT_KEY secret binding. Secret value was not read or logged."
+          echo "Verified: production Worker retains the ADMIN_PAYOUT_KEY secret binding."
+
+          # When Cloudflare exposes the stored secret through its single-secret
+          # API, use it only in-memory to prove the deployed Worker accepts it.
+          # Never print, persist, or upload the secret value to a build artifact.
+          admin_secret_status="$(curl --silent --show-error --max-time 20 -o /tmp/admin-payout-secret.json -w '%{http_code}' \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/secrets/ADMIN_PAYOUT_KEY" || true)"
+          if [ "$admin_secret_status" = "200" ] && jq -e '.success == true and .result.type == "secret_text" and (.result.text | type == "string" and length > 0)' /tmp/admin-payout-secret.json >/dev/null; then
+            admin_key="$(jq -r '.result.text' /tmp/admin-payout-secret.json)"
+            admin_auth_status="$(curl --silent --show-error --max-time 20 -o /tmp/admin-auth-smoke.json -w '%{http_code}' \
+              --header "Authorization: Bearer $admin_key" \
+              --header "Accept: application/json" \
+              https://fiiviu.ro/api/admin/partner-applications)"
+            unset admin_key
+            if [ "$admin_auth_status" != "200" ]; then
+              echo "Authenticated admin smoke test failed (HTTP $admin_auth_status). The deployed Worker does not accept its stored ADMIN_PAYOUT_KEY."
+              exit 1
+            fi
+            echo "Verified: production Worker accepts its stored ADMIN_PAYOUT_KEY on /api/admin/partner-applications."
+          else
+            echo "Cloudflare did not return the secret value through its single-secret API; authenticated smoke test skipped. Binding existence was verified."
+          fi
 
       - name: Verify production endpoint
         shell: bash
