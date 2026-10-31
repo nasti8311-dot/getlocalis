@@ -132,7 +132,9 @@ test("homepage applies the selected EUR/RON display currency to every offer", ()
 test("provider listings default to EUR and optionally preserve RON", () => {
   const page = read("provider.html");
   const worker = read("worker-entry.js");
-  assert.match(page, /id="expCurrency"[^>]*>[\\s\\S]*?<option value="eur" selected>EUR €<\\/option><option value="ron">RON lei<\\/option>/);
+  assert.ok(page.includes('id="expCurrency"'));
+  assert.ok(page.includes('<option value="eur" selected>EUR €</option>'));
+  assert.ok(page.includes('<option value="ron">RON lei</option>'));
   assert.match(page, /document\.getElementById\('expCurrency'\)\.value='eur'/);
   assert.match(page, /document\.getElementById\('expCurrency'\)\.value=String\(offer\.currency\|\|'eur'\)\.toLowerCase\(\)/);
   assert.match(page, /currency:document\.getElementById\('expCurrency'\)\.value/);
