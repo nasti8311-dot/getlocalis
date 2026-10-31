@@ -276,7 +276,6 @@ jobs:
 
       - name: Verify production endpoint
         shell: bash
-        env:
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
