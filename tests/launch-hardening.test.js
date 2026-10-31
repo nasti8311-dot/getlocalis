@@ -117,6 +117,16 @@ test("20/80 checkout prices the experience in the marketplace layer and validate
   assert.match(marketplace, /Ein gültiges Buchungsdatum und eine gültige Uhrzeit sind erforderlich/);
 });
 
+test("homepage rounds converted display prices to whole EUR/RON units only", () => {
+  const html = read("index.html");
+  assert.match(html, /let wasConverted = false/);
+  assert.match(html, /wasConverted = true/g);
+  assert.match(html, /displayAmount = Math\.round\(displayAmount\)/);
+  assert.match(html, /minimumFractionDigits: wasConverted \? 0 : 2/);
+  assert.match(html, /maximumFractionDigits: wasConverted \? 0 : 2/);
+  assert.match(html, /wasConverted \? \{ minimumFractionDigits: 0, maximumFractionDigits: 0 \} : \{\}/);
+});
+
 test("homepage applies the selected EUR/RON display currency to every offer", () => {
   const html = read("index.html");
   assert.match(html, /const selectedCurrency = String\(currentCurrency \|\| "EUR"\)\.toUpperCase\(\)/);
