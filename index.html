@@ -3818,21 +3818,43 @@ function goBackToCategory() {
 ============================================================ */
 
 function formatPrice(amount, offerCurrency = "EUR") {
-    const currency = String(offerCurrency || "EUR").toUpperCase();
+    const sourceCurrency = String(offerCurrency || "EUR").toUpperCase();
+    const selectedCurrency = String(currentCurrency || "EUR").toUpperCase();
     const locale = currentLang === "ro" ? "ro-RO" : currentLang === "en" ? "en-GB" : "de-DE";
-    if (currency === "RON") {
-        return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(amount) + " lei";
+    const numericAmount = Number(amount);
+
+    if (!Number.isFinite(numericAmount)) {
+        return "—";
     }
-    // EUR can be displayed in the user's selected EUR/RON view. Other
-    // supported provider currencies stay in their original currency rather
-    // than being mislabeled as EUR or converted with an unrelated rate.
-    if (currency !== "EUR") {
-        return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+
+    // The currency selector controls the display of every catalog price.
+    // Stored prices and Stripe charges remain in the offer's original currency.
+    let displayAmount = numericAmount;
+    let displayCurrency = sourceCurrency;
+
+    if (sourceCurrency === "EUR" && selectedCurrency === "RON") {
+        displayAmount = numericAmount * currencyRates.RON;
+        displayCurrency = "RON";
+    } else if (sourceCurrency === "RON" && selectedCurrency === "EUR") {
+        displayAmount = numericAmount / currencyRates.RON;
+        displayCurrency = "EUR";
+    } else if (sourceCurrency === selectedCurrency) {
+        displayCurrency = selectedCurrency;
     }
-    if (currentCurrency === "RON") {
-        return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(amount * currencyRates.RON)) + " lei";
+
+    // Only EUR/RON have a configured conversion rate. Keep any other source
+    // currency explicit until a verified rate is configured for it.
+    if (displayCurrency === "RON") {
+        return new Intl.NumberFormat(locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(displayAmount) + " lei";
     }
-    return new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(amount);
+
+    return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: displayCurrency
+    }).format(displayAmount);
 }
 
 
