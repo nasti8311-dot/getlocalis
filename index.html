@@ -3831,29 +3831,39 @@ function formatPrice(amount, offerCurrency = "EUR") {
     // Stored prices and Stripe charges remain in the offer's original currency.
     let displayAmount = numericAmount;
     let displayCurrency = sourceCurrency;
+    let wasConverted = false;
 
     if (sourceCurrency === "EUR" && selectedCurrency === "RON") {
         displayAmount = numericAmount * currencyRates.RON;
         displayCurrency = "RON";
+        wasConverted = true;
     } else if (sourceCurrency === "RON" && selectedCurrency === "EUR") {
         displayAmount = numericAmount / currencyRates.RON;
         displayCurrency = "EUR";
+        wasConverted = true;
     } else if (sourceCurrency === selectedCurrency) {
         displayCurrency = selectedCurrency;
+    }
+
+    // Round converted catalog prices to whole currency units for a cleaner
+    // display. Original offer prices and payment amounts remain unchanged.
+    if (wasConverted) {
+        displayAmount = Math.round(displayAmount);
     }
 
     // Only EUR/RON have a configured conversion rate. Keep any other source
     // currency explicit until a verified rate is configured for it.
     if (displayCurrency === "RON") {
         return new Intl.NumberFormat(locale, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            minimumFractionDigits: wasConverted ? 0 : 2,
+            maximumFractionDigits: wasConverted ? 0 : 2
         }).format(displayAmount) + " lei";
     }
 
     return new Intl.NumberFormat(locale, {
         style: "currency",
-        currency: displayCurrency
+        currency: displayCurrency,
+        ...(wasConverted ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {})
     }).format(displayAmount);
 }
 
