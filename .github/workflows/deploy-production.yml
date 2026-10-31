@@ -288,6 +288,8 @@ jobs:
 
       - name: Verify production endpoint
         shell: bash
+        env:
+          ADMIN_PAYOUT_KEY: ${{ secrets.ADMIN_PAYOUT_KEY }}
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
@@ -373,6 +375,17 @@ jobs:
                 echo "Admin endpoint did not return the expected unauthorized status."
                 exit 1
               fi
+              if [ -z "${ADMIN_PAYOUT_KEY:-}" ]; then
+                echo "ADMIN_PAYOUT_KEY is unavailable to the authenticated admin smoke test."
+                exit 1
+              fi
+              admin_auth_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin-auth.json -w '%{http_code}' --header "Authorization: Bearer $ADMIN_PAYOUT_KEY" https://fiiviu.ro/api/admin/partners)"
+              echo "ADMIN authenticated /api/admin/partners HTTP $admin_auth_status"
+              if [ "$admin_auth_status" != "200" ]; then
+                echo "Production rejected the configured admin secret; response body follows (secret is not printed)."
+                cat /tmp/admin-auth.json
+                exit 1
+              fi
               stats_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/stats.json -w '%{http_code}' 'https://fiiviu.ro/api/partner-stats?ref=TEST')"
               echo "PARTNER STATS HTTP $stats_status"
               if [ "$stats_status" != "401" ]; then
@@ -392,6 +405,17 @@ jobs:
               echo "ADMIN /api/admin/partners HTTP $admin_api_status"
               if [ "$admin_api_status" != "401" ]; then
                 echo "Admin endpoint did not return the expected unauthorized status."
+                exit 1
+              fi
+              if [ -z "${ADMIN_PAYOUT_KEY:-}" ]; then
+                echo "ADMIN_PAYOUT_KEY is unavailable to the authenticated admin smoke test."
+                exit 1
+              fi
+              admin_auth_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/admin-auth.json -w '%{http_code}' --header "Authorization: Bearer $ADMIN_PAYOUT_KEY" https://fiiviu.ro/api/admin/partners)"
+              echo "ADMIN authenticated /api/admin/partners HTTP $admin_auth_status"
+              if [ "$admin_auth_status" != "200" ]; then
+                echo "Production rejected the configured admin secret; response body follows (secret is not printed)."
+                cat /tmp/admin-auth.json
                 exit 1
               fi
               stats_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/stats.json -w '%{http_code}' 'https://fiiviu.ro/api/partner-stats?ref=TEST')"
