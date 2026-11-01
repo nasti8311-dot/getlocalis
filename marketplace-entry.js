@@ -101,7 +101,8 @@ async function handlePublicOffers(request,env){
     await ensureOffersTable(env);
     const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.capacity,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
     const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.active=1 AND ((e.provider_connect_account_id IS NOT NULL AND e.provider_connect_account_id<>'' AND p.connect_account_id=e.provider_connect_account_id) OR ((e.provider_connect_account_id IS NULL OR e.provider_connect_account_id='') AND lower(p.name)=lower(e.provider_name))) WHERE e.status='published'").all();
-    const blockedTourTitle = title => /old[ -]?town story walk|turul cu povești al centrului vechi|bucharest bike story/i.test(String(title||""));\n    const legacyOffers=(legacy.results||[]).filter(x=>!blockedTourTitle(x.title)).map(x=>({...x,source:"offer"}));
+    const blockedTourTitle = title => /old[ -]?town story walk|turul cu povești al centrului vechi|bucharest bike story/i.test(String(title||""));
+    const legacyOffers=(legacy.results||[]).filter(x=>!blockedTourTitle(x.title)).map(x=>({...x,source:"offer"}));
     for (const offer of legacyOffers) {
       if (!translationFieldsNeedRefresh(offer)) continue;
       try {
@@ -123,7 +124,8 @@ async function handlePublicOffers(request,env){
       }
     }
     const providerExperiences=[];
-    for (const x of (experiences.results||[])) {\n      if (["old-town-walk","bike-bucharest"].includes(String(x.experience_id||"").toLowerCase()) || blockedTourTitle(x.title)) continue;
+    for (const x of (experiences.results||[])) {
+      if (["old-town-walk","bike-bucharest"].includes(String(x.experience_id||"").toLowerCase()) || blockedTourTitle(x.title)) continue;
       const offerLike={
         title:x.title,title_en:x.title_en,title_ro:x.title_ro,
         description:x.description||"",description_en:x.description_en,description_ro:x.description_ro,
@@ -247,7 +249,8 @@ async function createMarketplacePaymentIntent(request,env,ctx){
       ).bind(experienceId).first();
     }
 
-    if(!experience)return json({error:"Experience is not configured for marketplace checkout"},409);\n    if(["old-town-walk","bike-bucharest"].includes(String(experience.experience_id||experienceId||"").toLowerCase()) || /old[ -]?town story walk|turul cu povești al centrului vechi|bucharest bike story/i.test(String(experience.title||""))) return json({error:"This city-tour activity is no longer offered on FiiViu."},410);
+    if(!experience)return json({error:"Experience is not configured for marketplace checkout"},409);
+    if(["old-town-walk","bike-bucharest"].includes(String(experience.experience_id||experienceId||"").toLowerCase()) || /old[ -]?town story walk|turul cu povești al centrului vechi|bucharest bike story/i.test(String(experience.title||""))) return json({error:"This city-tour activity is no longer offered on FiiViu."},410);
     if(String(experience.status)!=="published")return json({error:"Experience is not currently bookable"},409);
 
     const providerAccount=String(experience.provider_connect_account_id||"").trim();
