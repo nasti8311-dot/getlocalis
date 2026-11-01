@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 843 1264" role="img" aria-labelledby="t d">
+<title id="t">Programul de parteneriat FiiViu</title><desc id="d">Flyer în limba română despre programul gratuit de parteneriat FiiViu, cu suport de masă QR de 10 pe 15 centimetri și acces la un panou online de statistici.</desc>
+<defs>
+ <linearGradient id="paper" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#f8f6f1"/></linearGradient>
+ <linearGradient id="orange" x2="1" y2="1"><stop stop-color="#f08b5e"/><stop offset="1" stop-color="#e56d3e"/></linearGradient>
+ <linearGradient id="soft" x2="1" y2="1"><stop stop-color="#fff2e9"/><stop offset="1" stop-color="#f5eee5"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#35291f" flood-opacity=".15"/></filter>
+</defs>
+<rect width="843" height="1264" rx="26" fill="url(#paper)"/>
+<circle cx="774" cy="80" r="180" fill="#f8eee6" opacity=".7"/><path d="M0 198 Q250 184 540 198" fill="none" stroke="#f2b99e" stroke-width="3"/>
+<!-- Logo -->
+<g font-family="Arial,sans-serif"><text x="54" y="119" font-size="92" font-weight="700" fill="url(#orange)">FiiViu</text><path d="M242 36c-24 16-30 35-15 52 12-9 18-24 15-52M259 37c24 16 30 35 15 52-12-9-18-24-15-52" fill="#e97c4e"/><circle cx="258" cy="25" r="12" fill="#e97c4e"/><text x="58" y="158" font-size="21" letter-spacing="2" fill="#27231f">BUCHAREST MOMENTS</text>
+<rect x="495" y="43" width="295" height="108" rx="26" fill="#f5eee5" stroke="#e8ddd2" filter="url(#shadow)"/><text x="520" y="84" font-size="28" fill="#24201c">Programul de</text><text x="520" y="119" font-size="31" font-weight="700" fill="#24201c">parteneriat FiiViu</text><text x="555" y="140" font-size="17" font-style="italic" fill="#51463e">Împreună, mai puternici!</text>
+<!-- Main heading -->
+<text x="54" y="255" font-size="48" font-weight="700" fill="#211e1b">Parteneriat simplu.</text><text x="54" y="310" font-size="48" font-weight="700" fill="#211e1b">Beneficii reale.</text>
+<text x="56" y="356" font-size="24" fill="#292522">Oferiți clienților acces la experiențe și oferte FiiViu,</text><text x="56" y="388" font-size="24" fill="#292522">iar în același timp câștigați comision pentru rezervările</text><text x="56" y="420" font-size="24" fill="#292522">finalizate prin codul QR personal.</text>
+<!-- Stand mockup -->
+<g filter="url(#shadow)" transform="translate(525 218) rotate(5 120 180)">
+ <path d="M22 25 Q22 12 35 12 H251 Q264 12 264 25 V365 H22Z" fill="#fff" stroke="#d9d0c7" stroke-width="4"/>
+ <text x="143" y="83" text-anchor="middle" font-size="46" font-weight="700" fill="#e8794c" font-family="Arial">FiiViu</text><text x="143" y="108" text-anchor="middle" font-size="12" letter-spacing="1" fill="#34302c" font-family="Arial">BUCHAREST MOMENTS</text>
+ <rect x="48" y="129" width="190" height="48" rx="15" fill="#f5eee5"/><text x="143" y="159" text-anchor="middle" font-size="19" fill="#28231f" font-family="Arial">Scanează codul QR</text>
+ <rect x="91" y="193" width="104" height="104" fill="#fff" stroke="#eee"/>
+ <g fill="#171717" transform="translate(100 202)"><path d="M0 0h31v31H0z M6 6v19h19V6z M12 12h7v7h-7z M63 0h31v31H63z M69 6v19h19V6z M75 12h7v7h-7z M0 63h31v31H0z M6 69v19h19V69z M12 75h7v7h-7z"/><path d="M38 0h7v7h-7z M49 12h7v7h-7z M38 31h7v7h-7z M56 38h7v7h-7z M38 50h7v7h-7z M69 44h7v7h-7z M50 63h7v7h-7z M63 75h7v7h-7z M81 63h7v7h-7z M38 88h7v7h-7z"/></g>
+ <text x="143" y="322" text-anchor="middle" font-size="15" fill="#302b26" font-family="Arial">www.fiiviu.ro</text><path d="M22 340h242v25H22z" fill="#e97b4c" opacity=".85"/>
+ <path d="M22 365h242l-18 22H40z" fill="#d8d0c7" stroke="#bdb4aa" stroke-width="2"/>
+</g>
+<rect x="578" y="185" width="170" height="42" rx="21" fill="#f5dfd2"/><text x="663" y="212" text-anchor="middle" font-size="19" font-weight="700" fill="#3b3029" font-family="Arial">10 × 15 cm</text>
+<!-- Benefit list -->
+<g font-family="Arial,sans-serif" fill="#211e1b">
+ <circle cx="86" cy="505" r="29" fill="#f5eee5"/><text x="86" y="516" text-anchor="middle" font-size="31" fill="#e8794c">€</text><text x="135" y="497" font-size="25" font-weight="700">100% Gratuit</text><text x="135" y="526" font-size="20">Participarea nu costă nimic. Fără taxe sau investiții.</text>
+ <circle cx="86" cy="585" r="29" fill="#f5eee5"/><text x="86" y="596" text-anchor="middle" font-size="29" fill="#e8794c">↗</text><text x="135" y="577" font-size="25" font-weight="700">Câștigați 5% comision</text><text x="135" y="606" font-size="20">Pentru fiecare rezervare finalizată prin recomandarea dvs.</text>
+ <circle cx="86" cy="665" r="29" fill="#f5eee5"/><text x="86" y="676" text-anchor="middle" font-size="28" fill="#e8794c">⌘</text><text x="135" y="657" font-size="25" font-weight="700">Acces propriu și control online</text><text x="135" y="686" font-size="20">Urmăriți scanările, vizitatorii, rezervările și comisioanele.</text>
+ <circle cx="86" cy="745" r="29" fill="#f5eee5"/><text x="86" y="756" text-anchor="middle" font-size="28" fill="#e8794c">★</text><text x="135" y="737" font-size="25" font-weight="700">Fără risc. Doar avantaje.</text><text x="135" y="766" font-size="20">Nu aveți nimic de pierdut – doar de câștigat!</text>
+</g>
+<!-- How it works -->
+<rect x="35" y="810" width="773" height="284" rx="28" fill="url(#soft)" stroke="#eee2d7" stroke-width="2"/>
+<text x="65" y="855" font-size="31" font-weight="700" fill="#28231f" font-family="Arial">Cum funcționează?</text>
+<g font-family="Arial,sans-serif" text-anchor="middle" fill="#28231f">
+ <circle cx="160" cy="900" r="21" fill="#e97b4c"/><text x="160" y="908" font-size="22" font-weight="700" fill="#fff">1</text><rect x="117" y="934" width="86" height="100" rx="9" fill="#fff" stroke="#bdb4aa" stroke-width="3"/><text x="160" y="975" font-size="15" font-weight="700">FiiViu</text><rect x="139" y="986" width="42" height="36" fill="#222"/><path d="M145 992h12v12h-12z M164 992h11v11h-11z M145 1011h12v8h-12z" fill="#fff"/><text x="160" y="1061" font-size="18" font-weight="700">Așezați suportul</text><text x="160" y="1084" font-size="16">într-un loc vizibil.</text>
+ <path d="M280 980h45m-14 -14 14 14-14 14" fill="none" stroke="#e8794c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+ <circle cx="420" cy="900" r="21" fill="#e97b4c"/><text x="420" y="908" font-size="22" font-weight="700" fill="#fff">2</text><rect x="390" y="940" width="60" height="92" rx="10" fill="#fff" stroke="#bdb4aa" stroke-width="4"/><rect x="400" y="952" width="40" height="57" rx="4" fill="#f5eee5"/><path d="M410 972h20m-10 -10v20" stroke="#e8794c" stroke-width="4"/><circle cx="420" cy="1020" r="4" fill="#bdb4aa"/><text x="420" y="1061" font-size="18" font-weight="700">Clienții scanează</text><text x="420" y="1084" font-size="16">și folosesc codul dvs.</text>
+ <path d="M540 980h45m-14 -14 14 14-14 14" fill="none" stroke="#e8794c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+ <circle cx="680" cy="900" r="21" fill="#e97b4c"/><text x="680" y="908" font-size="22" font-weight="700" fill="#fff">3</text><rect x="627" y="948" width="106" height="67" rx="6" fill="#fff" stroke="#bdb4aa" stroke-width="4"/><path d="M641 1000h16v-17h-16z M666 1000h16v-30h-16z M691 1000h16v-42h-16z" fill="#e8794c"/><path d="M635 1023h90" stroke="#bdb4aa" stroke-width="5"/><text x="680" y="1061" font-size="18" font-weight="700">Urmăriți totul</text><text x="680" y="1084" font-size="16">în panoul personal.</text>
+</g>
+<!-- dashboard explanation -->
+<rect x="52" y="1110" width="739" height="75" rx="18" fill="#fff" stroke="#eadfd5"/>
+<text x="76" y="1140" font-size="19" font-weight="700" fill="#28231f" font-family="Arial">Panoul dvs. de partener</text>
+<text x="76" y="1167" font-size="17" fill="#39332d" font-family="Arial">Accesați oricând statisticile: scanări, vizitatori unici, rezervări, valoarea</text><text x="76" y="1189" font-size="17" fill="#39332d" font-family="Arial">rezervărilor și comisioane disponibile, în așteptare sau deja plătite.</text>
+<rect x="35" y="1205" width="773" height="45" rx="22" fill="#e8794c"/><text x="421" y="1235" text-anchor="middle" font-size="23" font-weight="700" fill="#fff" font-family="Arial">Înscrieți-vă gratuit! Nu aveți nimic de pierdut.</text>
+</g></svg>
