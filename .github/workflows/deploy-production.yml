@@ -56,7 +56,8 @@ jobs:
               echo "$table.$column already exists."
               return 0
             fi
-            printf '%s\\n' "$output"
+            printf '%s\
+' "$output"
             return 1
           }
 
@@ -102,7 +103,11 @@ jobs:
           add_column_if_missing "experiences" "meeting_instructions_en" "TEXT"
           add_column_if_missing "experiences" "meeting_instructions_ro" "TEXT"
 
-          # Retire city sightseeing products from the live catalog and checkout.\n          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "UPDATE experiences SET status='draft', updated_at=CURRENT_TIMESTAMP WHERE experience_id IN ('old-town-walk','bike-bucharest')"\n          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "UPDATE offers SET active=0, updated_at=CURRENT_TIMESTAMP WHERE lower(title) LIKE '%old town story walk%' OR lower(title) LIKE '%turul cu povești al centrului vechi%' OR lower(title) LIKE '%bucharest bike story%'"\n\n          echo "Production D1 schema repair completed."
+          # Retire city sightseeing products from the live catalog and checkout.
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "UPDATE experiences SET status='draft', updated_at=CURRENT_TIMESTAMP WHERE experience_id IN ('old-town-walk','bike-bucharest')"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "UPDATE offers SET active=0, updated_at=CURRENT_TIMESTAMP WHERE lower(title) LIKE '%old town story walk%' OR lower(title) LIKE '%turul cu povești al centrului vechi%' OR lower(title) LIKE '%bucharest bike story%'"
+
+          echo "Production D1 schema repair completed."
 
       - name: Upload changed static assets
         id: assets
@@ -117,7 +122,8 @@ jobs:
           const path = require("node:path");
           const crypto = require("node:crypto");
           const root = process.cwd();
-          const ignored = fs.readFileSync(".assetsignore", "utf8").split(/\r?\n/).map(x => x.trim()).filter(x => x && !x.startsWith("#"));
+          const ignored = fs.readFileSync(".assetsignore", "utf8").split(/\r?
+/).map(x => x.trim()).filter(x => x && !x.startsWith("#"));
           const skip = (rel) => ignored.some(pattern => {
             if (pattern.endsWith("/")) return rel.startsWith(pattern);
             if (pattern.startsWith("*.")) return rel.endsWith(pattern.slice(1));
@@ -181,7 +187,8 @@ jobs:
               if (data.result?.jwt) completionJwt = data.result.jwt;
             }
             if (session.buckets.length && completionJwt === session.jwt) throw new Error("Cloudflare did not return the final asset completion token.");
-            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "\n");
+            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "
+");
             console.log("Static asset manifest prepared (" + files.length + " files); uploaded " + session.buckets.length + " changed batch(es).");
           })().catch(error => { console.error(error); process.exit(1); });
           NODE
@@ -202,7 +209,8 @@ jobs:
           else
             echo "No prior production version returned; automatic rollback will be skipped if needed."
           fi
-          printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
+          printf 'KNOWN_GOOD_VERSION_ID=%s
+' "$known_good" >> "$GITHUB_ENV"
 
       - name: Upload and deploy Worker with updated static assets
         shell: bash
