@@ -331,8 +331,8 @@ jobs:
                 sed -n '1,80p' /tmp/admin-slash.html
                 exit 1
               fi
-              admin_api_status="$(curl --silent --show-error --max-time 20 -o /tmp/admin-api-response -w '%{http_code}' \\
-                --header "Authorization: Bearer $ADMIN_PAYOUT_KEY" \\
+              admin_api_status="$(curl --silent --show-error --max-time 20 -o /tmp/admin-api-response -w '%{http_code}' \
+                --header "Authorization: Bearer $ADMIN_PAYOUT_KEY" \
                 https://fiiviu.ro/api/admin/partner-applications)"
               echo "Authenticated admin API status=$admin_api_status"
               if [ "$admin_api_status" != "200" ]; then
