@@ -285,24 +285,10 @@ jobs:
           fi
           echo "Verified: production Worker retains the ADMIN_PAYOUT_KEY secret binding."
 
-          # Cloudflare's documented list-secrets endpoint returns the secret
-          # text in its result objects. Keep it in memory only and never log it.
-          admin_key="$(jq -er '.result[] | select(.name == "ADMIN_PAYOUT_KEY" and .type == "secret_text") | .text | strings | select(length > 0)' "$secret_check_file")"
-          if [ -z "$admin_key" ]; then
-            echo "Cloudflare did not return the ADMIN_PAYOUT_KEY value from the documented secrets-list endpoint."
-            exit 1
-          fi
-          admin_auth_status="$(curl --silent --show-error --max-time 20 -o /tmp/admin-auth-smoke.json -w '%{http_code}' \
-            --header "Authorization: Bearer $admin_key" \
-            --header "Accept: application/json" \
-            https://fiiviu.ro/api/admin/partner-applications)"
-          unset admin_key
-          if [ "$admin_auth_status" != "200" ]; then
-            echo "Authenticated admin smoke test failed (HTTP $admin_auth_status). The deployed Worker does not accept its stored ADMIN_PAYOUT_KEY."
-            exit 1
-          fi
-          echo "Verified: production Worker accepts its stored ADMIN_PAYOUT_KEY on /api/admin/partner-applications."
-
+          # Cloudflare intentionally never returns secret values from this API.
+          # Verify only that the secret binding exists; never pretend this proves
+          # that the browser's entered value matches the stored secret.
+          echo "Secret binding exists. Secret value is write-only; authenticated value comparison is not available through this API."
       - name: Verify production endpoint
         shell: bash
         run: |
