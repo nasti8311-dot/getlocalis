@@ -56,8 +56,7 @@ jobs:
               echo "$table.$column already exists."
               return 0
             fi
-            printf '%s\
-' "$output"
+            printf '%s\\n' "$output"
             return 1
           }
 
