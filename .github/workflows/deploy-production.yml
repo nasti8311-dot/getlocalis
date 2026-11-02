@@ -185,8 +185,7 @@ jobs:
               if (data.result?.jwt) completionJwt = data.result.jwt;
             }
             if (session.buckets.length && completionJwt === session.jwt) throw new Error("Cloudflare did not return the final asset completion token.");
-            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "
-");
+            fs.appendFileSync(process.env.GITHUB_ENV, "ASSET_COMPLETION_JWT=" + completionJwt + "\n");
             console.log("Static asset manifest prepared (" + files.length + " files); uploaded " + session.buckets.length + " changed batch(es).");
           })().catch(error => { console.error(error); process.exit(1); });
           NODE
