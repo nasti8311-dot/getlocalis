@@ -494,10 +494,10 @@
             </p>
             <p>
                 Kategorien:
-                <a href="/?category=relax">Freizeit & Erholung</a>,
-                <a href="/?category=relax">Relax &amp; Wellness</a>,
+                <a href="/?category=wellness-beauty">Freizeit & Erholung</a>,
+                <a href="/?category=wellness-beauty">Relax &amp; Wellness</a>,
                 <a href="/?category=nightlife">Nightlife</a>,
-                <a href="/?category=adventure">Adventure</a>,
+                <a href="/?category=action-adventure">Adventure</a>,
                 <a href="/?category=vip">VIP</a>,
                 <a href="/?category=secret-menus">Secret Menüs</a>.
             </p>
@@ -551,16 +551,16 @@
                 </a>
 
                 <a href="#"
-                   onclick="showCategory('explore'); return false;"
+                   onclick="showCategory('action-adventure'); return false;"
                    class="hover:text-fii-orange transition"
-                   data-i18n="nav_explore">
+                   data-i18n="nav_action_adventure">
                     Entdecken
                 </a>
 
                 <a href="#"
-                   onclick="showCategory('relax'); return false;"
+                   onclick="showCategory('wellness-beauty'); return false;"
                    class="hover:text-fii-orange transition"
-                   data-i18n="nav_relax">
+                   data-i18n="nav_wellness_beauty">
                     Relax
                 </a>
 
@@ -572,9 +572,9 @@
                 </a>
 
                 <a href="#"
-                   onclick="showCategory('adventure'); return false;"
+                   onclick="showCategory('action-adventure'); return false;"
                    class="hover:text-fii-orange transition"
-                   data-i18n="nav_adventure">
+                   data-i18n="nav_action_adventure">
                     Adventure
                 </a>
 
@@ -633,15 +633,15 @@
                     Start
                 </button>
 
-                <button onclick="mobileCategory('explore')"
+                <button onclick="mobileCategory('action-adventure')"
                         class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_explore">
+                        data-i18n="nav_action_adventure">
                     Entdecken
                 </button>
 
-                <button onclick="mobileCategory('relax')"
+                <button onclick="mobileCategory('wellness-beauty')"
                         class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_relax">
+                        data-i18n="nav_wellness_beauty">
                     Relax
                 </button>
 
@@ -651,9 +651,9 @@
                     Nightlife
                 </button>
 
-                <button onclick="mobileCategory('adventure')"
+                <button onclick="mobileCategory('action-adventure')"
                         class="text-left p-3 rounded-xl hover:bg-white"
-                        data-i18n="nav_adventure">
+                        data-i18n="nav_action_adventure">
                     Adventure
                 </button>
 
@@ -714,8 +714,8 @@
                 <div class="fii-home-hero__discovery">
                     <span class="fii-home-hero__discovery-label" data-i18n="hero_discovery_label">Descoperă după stare</span>
                     <div class="fii-home-hero__chips" aria-label="Explore categories">
-                        <button type="button" onclick="showCategory('explore')" data-i18n="nav_explore">Explorează</button>
-                        <button type="button" onclick="showCategory('relax')" data-i18n="nav_relax">Relax</button>
+                        <button type="button" onclick="showCategory('action-adventure')" data-i18n="nav_action_adventure">Explorează</button>
+                        <button type="button" onclick="showCategory('wellness-beauty')" data-i18n="nav_wellness_beauty">Relax</button>
                         <button type="button" onclick="showCategory('nightlife')" data-i18n="nav_nightlife">Nightlife</button>
                     </div>
                 </div>
@@ -738,7 +738,7 @@
             </div>
             <div id="moments" class="fii-moment-grid">
 
-            <div data-category="relax"
+            <div data-category="wellness-beauty"
                  role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
@@ -750,11 +750,11 @@
 
                 <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
-                        data-i18n="cat_relax">
+                        data-i18n="cat_wellness_beauty">
                         Relax
                     </h3>
                     <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_relax_desc">
+                       data-i18n="cat_wellness_beauty_desc">
                         Spa, Therme & Momente zum Abschalten.
                     </p>
                 </div>
@@ -784,7 +784,7 @@
             </div>
 
 
-            <div data-category="adventure"
+            <div data-category="action-adventure"
                  role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
 
                 <img
@@ -796,11 +796,11 @@
 
                 <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
 <h3 class="text-3xl font-black"
-                        data-i18n="cat_adventure">
+                        data-i18n="cat_action_adventure">
                         Adventure
                     </h3>
                     <p class="text-sm text-white/75 mt-2"
-                       data-i18n="cat_adventure_desc">
+                       data-i18n="cat_action_adventure_desc">
                         Adrenalin, Action & neue Erfahrungen.
                     </p>
                 </div>
@@ -871,7 +871,7 @@
                 </div>
 
                 <button
-                    onclick="showCategory('explore')"
+                    onclick="showCategory('action-adventure')"
                     class="font-bold text-sm text-fii-orange hover:underline">
                     <span data-i18n="view_all">
                         Alle Erlebnisse
@@ -1698,15 +1698,15 @@
 
                 <div class="space-y-3 text-sm text-white/50">
 
-                    <button onclick="showCategory('explore')"
+                    <button onclick="showCategory('action-adventure')"
                             class="block hover:text-white"
                             data-i18n="cat_explore">
                         Explore
                     </button>
 
-                    <button onclick="showCategory('relax')"
+                    <button onclick="showCategory('wellness-beauty')"
                             class="block hover:text-white"
-                            data-i18n="cat_relax">
+                            data-i18n="cat_wellness_beauty">
                         Relax
                     </button>
 
@@ -1716,9 +1716,9 @@
                         Nightlife
                     </button>
 
-                    <button onclick="showCategory('adventure')"
+                    <button onclick="showCategory('action-adventure')"
                             class="block hover:text-white"
-                            data-i18n="cat_adventure">
+                            data-i18n="cat_action_adventure">
                         Adventure
                     </button>
 
@@ -2420,10 +2420,10 @@ const translations = {
     de: {
 
         nav_home: "Start",
-        nav_explore: "Entdecken",
-        nav_relax: "Relax",
+        nav_action_adventure: "Action & Adventure",
+        nav_wellness_beauty: "Wellness & Beauty",
         nav_nightlife: "Nightlife",
-        nav_adventure: "Adventure",
+        nav_action_adventure: "Action & Adventure",
         nav_secret_menus: "Secret Menüs",
 
         hero_title: "Halte die Zeit an.<br>Erlebe den Moment.",
@@ -2439,16 +2439,18 @@ const translations = {
 
         cat_explore: "Explore",
         cat_explore_desc: "Geschichte, Kultur & lokale Geschichten.",
-        cat_relax: "Relax",
-        cat_relax_desc: "Spa, Therme & Momente zum Abschalten.",
+        cat_wellness_beauty: "Wellness & Beauty",
+        cat_wellness_beauty_desc: "Spa, Beauty & Momente zum Abschalten.",
         cat_nightlife: "Nightlife",
         cat_nightlife_desc: "Drinks, Clubs & besondere Nächte.",
-        cat_adventure: "Adventure",
-        cat_adventure_desc: "Adrenalin, Action & neue Erfahrungen.",
+        cat_action_adventure: "Action & Adventure",
+        cat_action_adventure_desc: "Adrenalin, Action & neue Erfahrungen.",
         cat_vip: "VIP",
         cat_vip_desc: "Komfort, Stil & besondere Zugänge.",
         cat_secret_menus: "Secret Menüs",
         cat_secret_menus_desc: "Überraschungsmenüs in ausgewählten Restaurants.",
+        cat_kids: "For Kids",
+        cat_kids_desc: "Besondere Erlebnisse für Kinder und Familien.",
 
         featured_label: "Jetzt entdecken",
         featured_title: "Momente, die bleiben.",
@@ -2539,10 +2541,10 @@ const translations = {
     en: {
 
         nav_home: "Home",
-        nav_explore: "Explore",
-        nav_relax: "Relax",
+        nav_action_adventure: "Action & Adventure",
+        nav_wellness_beauty: "Wellness & Beauty",
         nav_nightlife: "Nightlife",
-        nav_adventure: "Adventure",
+        nav_action_adventure: "Action & Adventure",
         nav_secret_menus: "Secret Menus",
 
         hero_title: "Stop time.<br>Live the moment.",
@@ -2558,16 +2560,18 @@ const translations = {
 
         cat_explore: "Explore",
         cat_explore_desc: "History, culture & local stories.",
-        cat_relax: "Relax",
-        cat_relax_desc: "Spa, thermal baths & time to switch off.",
+        cat_wellness_beauty: "Wellness & Beauty",
+        cat_wellness_beauty_desc: "Spa, beauty & time to switch off.",
         cat_nightlife: "Nightlife",
         cat_nightlife_desc: "Drinks, clubs & unforgettable nights.",
-        cat_adventure: "Adventure",
-        cat_adventure_desc: "Adrenaline, action & new experiences.",
+        cat_action_adventure: "Action & Adventure",
+        cat_action_adventure_desc: "Adrenaline, action & new experiences.",
         cat_vip: "VIP",
         cat_vip_desc: "Comfort, style & special access.",
         cat_secret_menus: "Secret Menus",
         cat_secret_menus_desc: "Surprise menus at selected restaurants.",
+        cat_kids: "For Kids",
+        cat_kids_desc: "Fun experiences for children and families.",
 
         featured_label: "Discover now",
         featured_title: "Moments that stay with you.",
@@ -2658,10 +2662,10 @@ const translations = {
     ro: {
 
         nav_home: "Acasă",
-        nav_explore: "Explorează",
-        nav_relax: "Relax",
+        nav_action_adventure: "Action & Adventure",
+        nav_wellness_beauty: "Wellness & Beauty",
         nav_nightlife: "Nightlife",
-        nav_adventure: "Aventură",
+        nav_action_adventure: "Action & Adventure",
 
         hero_title: "Oprește timpul.<br>Trăiește momentul.",
         hero_subtitle: "Uneori, lucrurile speciale sunt chiar după colț. FiiViu îți arată locuri și experiențe care îți fac ziua mai frumoasă.",
@@ -2676,16 +2680,18 @@ const translations = {
 
         cat_explore: "Explore",
         cat_explore_desc: "Istorie, cultură și povești locale.",
-        cat_relax: "Relax",
-        cat_relax_desc: "Spa, Therme și momente de relaxare.",
+        cat_wellness_beauty: "Wellness & Beauty",
+        cat_wellness_beauty_desc: "Spa, frumusețe și momente de relaxare.",
         cat_nightlife: "Nightlife",
         cat_nightlife_desc: "Cocktailuri, cluburi și nopți speciale.",
-        cat_adventure: "Adventure",
-        cat_adventure_desc: "Adrenalină, acțiune și experiențe noi.",
+        cat_action_adventure: "Action & Adventure",
+        cat_action_adventure_desc: "Adrenalină, acțiune și experiențe noi.",
         cat_vip: "VIP",
         cat_vip_desc: "Confort, stil și acces special.",
         cat_secret_menus: "Meniuri secrete",
         cat_secret_menus_desc: "Meniuri surpriză în restaurante selectate.",
+        cat_kids: "For Kids",
+        cat_kids_desc: "Experiențe distractive pentru copii și familii.",
 
         featured_label: "Descoperă acum",
         featured_title: "Momente care rămân.",
