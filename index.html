@@ -839,6 +839,14 @@
                 </div>
             </div>
 
+            <div data-category="kids" role="button" tabindex="0" aria-label="Open category" data-i18n-aria-label="category_open_label" class="category-card fii-moment-card group cursor-pointer">
+                <img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?q=85&w=900" class="fii-moment-card__image" alt="For Kids">
+                <div class="fii-moment-card__overlay"></div>
+                <div class="fii-moment-card__content"><span class="fii-moment-marker" aria-hidden="true"></span>
+                    <h3 class="text-3xl font-black" data-i18n="cat_kids">For Kids</h3>
+                    <p class="text-sm text-white/75 mt-2" data-i18n="cat_kids_desc">Fun experiences for children and families.</p>
+                </div>
+            </div>
 
         </div>
     </section>
@@ -2388,6 +2396,20 @@ const categoriesData = {
 
 };
 
+// Merge the former Explore and Adventure catalogues into Action & Adventure.
+categoriesData["action-adventure"] = categoriesData.explore;
+categoriesData["action-adventure"].items = [...categoriesData.explore.items, ...categoriesData.adventure.items];
+delete categoriesData.explore;
+delete categoriesData.adventure;
+categoriesData["wellness-beauty"] = categoriesData.relax;
+delete categoriesData.relax;
+categoriesData.kids = {
+    eyebrow: { de: "06 · For Kids", en: "06 · For Kids", ro: "06 · Pentru copii" },
+    title: { de: "For Kids", en: "For Kids", ro: "Pentru copii" },
+    subtitle: { de: "Erlebnisse und Aktivitäten für Kinder und Familien.", en: "Experiences and activities for children and families.", ro: "Experiențe și activități pentru copii și familii." },
+    items: []
+};
+
 
 /* ============================================================
    TRANSLATIONS
@@ -2761,19 +2783,17 @@ const translations = {
 const PUBLIC_API_BASE = "";
 
 const categoryFallbackImages = {
-    explore: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?q=85&w=1000",
-    relax: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1000",
+    "action-adventure": "https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=1000",
+    "wellness-beauty": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=85&w=1000",
     nightlife: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=85&w=1000",
-    adventure: "https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=1000",
     vip: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=85&w=1000",
     "secret-menus": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=85&w=1000"
 };
 
 const categoryBadges = {
-    explore: { de: "Neu bei FiiViu", en: "New at FiiViu", ro: "Nou la FiiViu" },
-    relax: { de: "Relax", en: "Relax", ro: "Relax" },
+    "action-adventure": { de: "Action & Adventure", en: "Action & Adventure", ro: "Action & Adventure" },
+    "wellness-beauty": { de: "Wellness & Beauty", en: "Wellness & Beauty", ro: "Wellness & Beauty" },
     nightlife: { de: "Nightlife", en: "Nightlife", ro: "Nightlife" },
-    adventure: { de: "Adventure", en: "Adventure", ro: "Adventure" },
     vip: { de: "VIP", en: "VIP", ro: "VIP" },
     "secret-menus": { de: "Secret Menü", en: "Secret Menu", ro: "Meniu secret" }
 };
@@ -2907,10 +2927,16 @@ function localizeOfferFallback(value, lang) {
     return source;
 }
 
+function normalizePublicCategory(value) {
+    const category = String(value || "").trim().toLowerCase();
+    if (["explore", "adventure", "action", "action-adventure"].includes(category)) return "action-adventure";
+    if (["relax", "wellness", "beauty", "wellness-beauty"].includes(category)) return "wellness-beauty";
+    if (["nightlife", "vip", "secret-menus", "kids"].includes(category)) return category;
+    return "action-adventure";
+}
+
 function mapPublicOffer(offer) {
-    const categoryKey = ["explore","relax","nightlife","adventure","vip","secret-menus"].includes(String(offer.category || "").toLowerCase())
-        ? String(offer.category).toLowerCase()
-        : "explore";
+    const categoryKey = normalizePublicCategory(offer.category);
     const title = String(offer.title || "FiiViu Erlebnis").trim();
     const description = String(offer.description || "").trim() || "Ein besonderes Erlebnis in Bukarest.";
     const fallbackImage = categoryFallbackImages[categoryKey];
@@ -2989,19 +3015,13 @@ async function loadPublicOffers() {
         if (!offers.length) return;
 
         const grouped = {
-            explore: [],
-            relax: [],
-            nightlife: [],
-            adventure: [],
-            vip: [],
-            "secret-menus": []
+            "wellness-beauty": [], nightlife: [], "action-adventure": [],
+            "secret-menus": [], vip: [], kids: []
         };
 
         offers.forEach(offer => {
             const item = mapPublicOffer(offer);
-            const categoryKey = ["explore","relax","nightlife","adventure","vip","secret-menus"].includes(String(offer.category || "").toLowerCase())
-                ? String(offer.category).toLowerCase()
-                : "explore";
+            const categoryKey = normalizePublicCategory(offer.category);
             grouped[categoryKey].push(item);
         });
 
