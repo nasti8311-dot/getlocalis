@@ -32,7 +32,7 @@ async function handleProviderRoute(request,env,ctx){
     const meetingCity=String(body.meetingCity||"").trim();
     const meetingCountry=String(body.meetingCountry||"").trim();
     const meetingInstructions=String(body.meetingInstructions||"").trim();
-    const category=String(body.category||"explore").trim().toLowerCase();
+    const category=String(body.category||"action-adventure").trim().toLowerCase();
     const description=String(body.description||"").trim();
     const imageUrl=String(body.imageUrl||"").trim();
     const galleryUrls=String(body.galleryUrls||"").trim();
@@ -46,7 +46,7 @@ async function handleProviderRoute(request,env,ctx){
     if(!title)return json({error:"Titel fehlt."},400);
     if(!Number.isInteger(priceCents)||priceCents<50)return json({error:"Preis muss mindestens 0,50 betragen."},400);
     if(!["eur","ron","usd","gbp"].includes(currency))return json({error:"Nicht unterstützte Währung."},400);
-    if(!["explore","relax","nightlife","adventure","vip","secret-menus"].includes(category))return json({error:"Ungültige Kategorie."},400);
+    if(!["wellness-beauty","nightlife","action-adventure","secret-menus","vip","kids"].includes(category))return json({error:"Ungültige Kategorie."},400);
     if(publish){
       if(!meetingPointName||!meetingAddress||!meetingCity||!meetingCountry)return json({error:"Veröffentlichung blockiert: Treffpunkt, Adresse, Stadt und Land sind erforderlich."},400);
     }
