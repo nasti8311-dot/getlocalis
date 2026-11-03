@@ -82,7 +82,7 @@ td,th{border-bottom:1px solid #eee9e1}
 <section><h2>Adaugă o experiență nouă</h2><p class="muted">Adaugă o experiență în București. Prețul este introdus implicit în EUR; poți alege RON dacă preferi. Încarcă fotografiile și stabilește zilele și orele în care experiența poate fi rezervată.</p>
 <form id="experienceForm" class="card" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
 <div><label for="expTitle">Titlul experienței *</label><input id="expTitle" required maxlength="180" placeholder="de ex. Spa și masaj"></div>
-<div><label for="expCategory">Categorie *</label><select id="expCategory" required><option value="explore">Explore – Explorare</option><option value="relax">Relax – Relaxare și wellness</option><option value="nightlife">Nightlife – Viață de noapte</option><option value="adventure">Adventure – Aventură și acțiune</option><option value="vip">VIP – Experiențe exclusive</option><option value="secret-menus">Secret Menus – Experiențe culinare</option></select></div>
+<div><label for="expCategory">Categorie *</label><select id="expCategory" required><option value="wellness-beauty">Wellness &amp; Beauty – Wellness și frumusețe</option><option value="nightlife">Nightlife – Viață de noapte</option><option value="action-adventure">Action &amp; Adventure – Acțiune și aventură</option><option value="secret-menus">Secret Menus – Experiențe culinare</option><option value="vip">VIP – Experiențe exclusive</option><option value="kids">For Kids – Experiențe pentru copii</option></select></div>
 <div style="grid-column:1/-1"><label for="expDescription">Descriere *</label><textarea id="expDescription" required maxlength="5000" placeholder="Descrie experiența, ce este inclus și informațiile importante."></textarea></div>
 <div><label for="expPrice">Preț total *</label><div style="display:flex;gap:8px"><input id="expPrice" type="number" min="2.50" step="0.01" required placeholder="50.00" style="flex:1;min-width:0"><select id="expCurrency" aria-label="Moneda prețului" style="width:105px"><option value="eur" selected>EUR €</option><option value="ron">RON lei</option></select></div></div>
 <div><label for="expDuration">Durată</label><input id="expDuration" placeholder="de ex. 90 de minute"></div>
@@ -340,7 +340,7 @@ function editOffer(id,rows){
  editingOffer=offer;
  document.getElementById('expTitle').value=offer.title||'';
  document.getElementById('expDescription').value=offer.description||'';
- document.getElementById('expCategory').value=offer.category||'wellness';
+ document.getElementById('expCategory').value=({'explore':'action-adventure','adventure':'action-adventure','relax':'wellness-beauty','wellness':'wellness-beauty','beauty':'wellness-beauty'})[String(offer.category||'').toLowerCase()]||offer.category||'wellness-beauty';
  document.getElementById('expPrice').value=(Number(offer.price_cents||0)/100).toFixed(2);document.getElementById('expCurrency').value=String(offer.currency||'eur').toLowerCase();
  document.getElementById('expDuration').value=offer.duration||'';
  document.getElementById('expTimes').value=Array.isArray(offer.available_times)?offer.available_times.join(', '):String(offer.available_times||'');
