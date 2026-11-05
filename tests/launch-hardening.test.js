@@ -1000,7 +1000,7 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy performs only idempotent, explicit schema repair before Worker deployment", () => {
+test("production deploy performs idempotent schema repair and preserves the required payout secret", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.match(workflow, /add_column_if_missing\(\)/);
   assert.match(workflow, /duplicate column name/);
@@ -1011,7 +1011,8 @@ test("production deploy performs only idempotent, explicit schema repair before 
   assert.match(workflow, /Upload and deploy Worker with updated static assets/);
   assert.match(workflow, /--request PUT/);
   assert.match(workflow, /workers\/scripts\/getlocalis"/);
-  assert.doesNotMatch(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
+  assert.match(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
+  assert.match(workflow, /Required GitHub Actions secret ADMIN_PAYOUT_KEY is missing/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
   assert.match(workflow, /Verify production endpoint/);
 });
@@ -1066,14 +1067,15 @@ test("production deploy does not depend on GitHub Pages readiness", () => {
   assert.match(workflow, /Verify production endpoint/);
 });
 
-test("production deploy avoids route-write permission dependency", () => {
+test("production deploy avoids route-write permission dependency and verifies payout secret binding", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
   assert.match(workflow, /workers\/scripts\/getlocalis"/);
   assert.match(workflow, /--request PUT/);
   assert.match(workflow, /assets:\s*\{\s*jwt:\s*process\.env\.ASSET_COMPLETION_JWT,\s*config:/);
   assert.doesNotMatch(workflow, /keep_assets:\s*true/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
-  assert.doesNotMatch(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
+  assert.match(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
+  assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
   assert.match(workflow, /wrangler@4 versions deploy/); // rollback path only
   assert.doesNotMatch(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
@@ -1132,8 +1134,8 @@ test("homepage redesign preserves translated copy and existing category actions"
       assert.match(block, new RegExp(key + ":"));
     }
   }
-  assert.match(source, /onclick=["']showCategory\('explore'\)/);
-  assert.match(source, /onclick=["']showCategory\('relax'\)/);
+  assert.match(source, /onclick=["']showCategory\('action-adventure'\)/);
+  assert.match(source, /onclick=["']showCategory\('wellness-beauty'\)/);
   assert.match(source, /onclick=["']showCategory\('nightlife'\)/);
   assert.match(source, /BUCUREȘTI/);
   assert.match(source, /id="category-view"/, "the category route container must remain present");
