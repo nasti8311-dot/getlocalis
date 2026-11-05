@@ -1426,7 +1426,7 @@
                         <p class="mt-2 text-sm leading-relaxed text-gray-800" data-i18n="payment_split_body">Bei der Buchung werden 20 % des Gesamtpreises online bezahlt. Die übrigen 80 % bezahlst du später direkt vor Ort beim Erlebnisanbieter – nicht jetzt online.</p>
                     </div>
 
-                    <div id="card-element"></div>
+                    <div id="payment-element" class="min-h-[52px]"></div>
 
                     <div id="card-errors"
                          class="text-red-500 text-xs mt-2"
@@ -1827,7 +1827,7 @@ let detailDatePickerInstance = null;
 let datePickerInstance = null;
 
 let stripe = null;
-let cardElement = null;
+let pendingStripeCheckout = null;
 
 // =========================================================
 // FIIVIU PARTNER TRACKING
@@ -1850,21 +1850,7 @@ try {
         'pk_test_51TFUSyDYZ2rKxcVVhaOSfQxz3mFyltyLVPL6IA6LtkYdEz8xPMhFI9UKrhrQVMEnHcoaJGp8MNP8xeWcAP6n9RKB00kdPUXH7n'
     );
 
-    const elements = stripe.elements();
-
-    cardElement = elements.create('card', {
-        style: {
-            base: {
-                color: '#222222',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '16px',
-                fontSmoothing: 'antialiased',
-                '::placeholder': {
-                    color: '#9CA3AF'
-                }
-            }
-        }
-    });
+    // Payment Element is initialized after the server creates the PaymentIntent.
 
 } catch (error) {
 
@@ -3115,19 +3101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    if (cardElement) {
-
-        setTimeout(() => {
-
-            const cardContainer = document.getElementById("card-element");
-
-            if (cardContainer && !cardContainer.hasChildNodes()) {
-                cardElement.mount("#card-element");
-            }
-
-        }, 300);
-
-    }
+    // Payment Element is mounted on demand after PaymentIntent creation.
 
 });
 
