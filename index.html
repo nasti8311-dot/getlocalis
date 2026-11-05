@@ -4366,12 +4366,7 @@ async function processBooking(event) {
     }
 
 
-    const bookingId =
-        "FV-" +
-        Math.floor(
-            100000 +
-            Math.random() * 900000
-        );
+    const bookingId = pendingBookingContext?.bookingId || ("FV-" + Math.floor(100000 + Math.random() * 900000));
 
 
     try {
@@ -4380,10 +4375,8 @@ async function processBooking(event) {
            STRIPE
         ---------------------------------------------------- */
 
-        if (!stripe || !cardElement) {
-            throw new Error(
-                "Stripe konnte nicht geladen werden. Bitte Seite neu laden."
-            );
+        if (!stripe) {
+            throw new Error("Stripe konnte nicht geladen werden. Bitte Seite neu laden.");
         }
 
 
@@ -4392,8 +4385,9 @@ async function processBooking(event) {
          * Der Browser bekommt nur das Client Secret.
          */
 
-        const paymentData =
-            await createPaymentIntent({
+        let paymentData = pendingPaymentData;
+        if (!paymentData) {
+            paymentData = await createPaymentIntent({
                 bookingId: bookingId,
                 tourName: tourName,
                 guests: guests,
@@ -4414,26 +4408,39 @@ async function processBooking(event) {
                 meetingLatitude: String(item.meetingPoint?.latitude || "").trim(),
                 meetingLongitude: String(item.meetingPoint?.longitude || "").trim()
             });
+            pendingPaymentData = paymentData;
+            pendingBookingContext = { bookingId, tourName, date, time, guests, name, email };
+            paymentElements = stripe.elements({
+                clientSecret: paymentData.clientSecret,
+                appearance: { theme: "stripe" }
+            });
+            paymentElement = paymentElements.create("payment", {
+                layout: { type: "accordion" },
+                paymentMethodOrder: ["revolut_pay", "card"]
+            });
+            paymentElement.mount("#payment-element");
+            document.getElementById("payment-element")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            cardErrors.textContent = "";
+            return;
+        }
 
+        if (!paymentElements || !paymentElement) {
+            throw new Error("Das Zahlungsformular konnte nicht geladen werden. Bitte erneut versuchen.");
+        }
 
-        /*
-         * Karte mit dem PaymentIntent bestätigen.
-         */
+        const elementSubmission = await paymentElements.submit();
+        if (elementSubmission.error) {
+            throw new Error(elementSubmission.error.message || "Bitte überprüfe deine Zahlungsdaten.");
+        }
 
-        const paymentResult =
-            await stripe.confirmCardPayment(
-                paymentData.clientSecret,
-                {
-                    payment_method: {
-                        card: cardElement,
-
-                        billing_details: {
-                            name: name,
-                            email: email
-                        }
-                    }
-                }
-            );
+        const paymentResult = await stripe.confirmPayment({
+            elements: paymentElements,
+            clientSecret: paymentData.clientSecret,
+            confirmParams: {
+                return_url: window.location.origin + window.location.pathname + "?stripe_return=1"
+            },
+            redirect: "if_required"
+        });
 
 
         if (paymentResult.error) {
@@ -4450,15 +4457,8 @@ async function processBooking(event) {
         }
 
 
-        if (
-            !paymentResult.paymentIntent ||
-            paymentResult.paymentIntent.status !== "succeeded"
-        ) {
-
-            throw new Error(
-                "Die Zahlung wurde nicht erfolgreich abgeschlossen."
-            );
-
+        if (!paymentResult.paymentIntent || paymentResult.paymentIntent.status !== "succeeded") {
+            throw new Error("Die Zahlung wurde nicht erfolgreich abgeschlossen.");
         }
 
         // Finalize the booking immediately. The Stripe webhook remains
@@ -4516,6 +4516,10 @@ async function processBooking(event) {
         refreshSuccessViewLanguage();
 
 
+        pendingPaymentData = null;
+        pendingBookingContext = null;
+        paymentElements = null;
+        paymentElement = null;
         showView("success-view");
 
 
@@ -4534,12 +4538,9 @@ async function processBooking(event) {
 
         submitButton.disabled = false;
 
-        submitButton.innerHTML = `
-            <i class="fa-solid fa-lock mr-2"></i>
-            <span data-i18n="pay_book">
-                Sicher buchen
-            </span>
-        `;
+        submitButton.innerHTML = pendingPaymentData
+            ? '<i class="fa-solid fa-lock mr-2"></i> Jetzt 20 % online bezahlen'
+            : '<i class="fa-solid fa-lock mr-2"></i><span data-i18n="pay_book">Sicher buchen</span>';
 
     }
 
