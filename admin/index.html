@@ -7,6 +7,20 @@ body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 20p
 @media(max-width:650px){.grid,.partner,.balance{grid-template-columns:1fr}.qr{width:180px;height:180px}.secondary{margin-left:0}.history{overflow-x:auto}}
 </style>    <link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
     <link rel="stylesheet" href="/assets/css/fiiviu-pages.css">
+<style id="fiiviu-admin-visual-polish">
+:root{--fii-accent:#e86f2d;--fii-ink:#211b17;--fii-muted:#746b63;--fii-line:#e9e2da}
+*{box-sizing:border-box}body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;max-width:1180px;margin:0 auto;padding:36px 24px 80px;background:radial-gradient(circle at 92% 0%,rgba(232,111,45,.12),transparent 28%),linear-gradient(180deg,#fbfaf8,#f5f1eb);color:var(--fii-ink)}
+h1{font-size:clamp(34px,5vw,48px);letter-spacing:-.055em;font-weight:850;margin:8px 0 10px}h2{font-size:22px;letter-spacing:-.035em;margin:0 0 8px}.hint,.muted{color:var(--fii-muted);line-height:1.6}
+section{background:rgba(255,255,255,.94);border:1px solid var(--fii-line);border-radius:22px;padding:26px;margin:20px 0;box-shadow:0 12px 36px rgba(42,30,20,.055)}
+label{font-size:12px;letter-spacing:.065em;text-transform:uppercase;color:#665b52;margin:16px 0 8px}
+input,select,textarea{border:1px solid #ddd5cc!important;border-radius:12px!important;padding:13px 14px!important;background:#fff;transition:border-color .18s,box-shadow .18s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(232,111,45,.7)!important;box-shadow:0 0 0 4px rgba(232,111,45,.12)}
+button{border-radius:12px!important;padding:12px 17px!important;font-weight:700!important;background:#211b17!important;transition:transform .18s,box-shadow .18s}
+button:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(33,27,23,.12)}button.secondary{background:#f3eee8!important;color:#33271f!important;border:1px solid #e5dbd1!important}button.warn{background:#fff4f1!important;color:#a43e2d!important;border-color:#f0cfc6!important}
+.partner{padding:22px 0;border-color:#eee7df}.qr{border-radius:14px!important;padding:8px}.balance div{background:#f8f5f0!important;border:1px solid #eee7df}.balance strong{font-size:24px;color:#292019}.edit{background:#faf7f3!important;border-color:#ece3da!important;border-radius:14px}.history{border-color:#eee7df}.history th{color:#786c62;font-size:11px;text-transform:uppercase;letter-spacing:.06em}.history td,.history th{padding:12px 9px}.result{border-radius:12px}
+@media(max-width:700px){body{padding:22px 14px 56px}section{padding:20px;border-radius:18px}.grid,.partner,.balance{grid-template-columns:1fr}.qr{width:180px;height:180px}.history{overflow-x:auto}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
+</style>
 </head>
 <body>
 <h1>FiiViu Admin</h1><div class="hint">Partner anlegen, individuelle Links erzeugen und QR-Codes verwalten.</div>
