@@ -1011,7 +1011,7 @@ test("production deploy performs only idempotent, explicit schema repair before 
   assert.match(workflow, /Upload and deploy Worker with updated static assets/);
   assert.match(workflow, /--request PUT/);
   assert.match(workflow, /workers\/scripts\/getlocalis"/);
-  assert.doesNotMatch(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
+  assert.match(workflow, /ADMIN_PAYOUT_KEY:\s*\$\{\{\s*secrets\.ADMIN_PAYOUT_KEY\s*\}\}/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
   assert.match(workflow, /Verify production endpoint/);
 });
@@ -1073,7 +1073,7 @@ test("production deploy avoids route-write permission dependency", () => {
   assert.match(workflow, /assets:\s*\{\s*jwt:\s*process\.env\.ASSET_COMPLETION_JWT,\s*config:/);
   assert.doesNotMatch(workflow, /keep_assets:\s*true/);
   assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
-  assert.doesNotMatch(workflow, /secrets\.ADMIN_PAYOUT_KEY/);
+  assert.match(workflow, /ADMIN_PAYOUT_KEY:\s*\$\{\{\s*secrets\.ADMIN_PAYOUT_KEY\s*\}\}/);
   assert.match(workflow, /wrangler@4 versions deploy/); // rollback path only
   assert.doesNotMatch(workflow, /WORKER_VERSION_ID/);
   assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
@@ -1132,9 +1132,11 @@ test("homepage redesign preserves translated copy and existing category actions"
       assert.match(block, new RegExp(key + ":"));
     }
   }
-  assert.match(source, /onclick=["']showCategory\('explore'\)/);
-  assert.match(source, /onclick=["']showCategory\('relax'\)/);
+  assert.match(source, /onclick=["']showCategory\('action-adventure'\)/);
+  assert.match(source, /onclick=["']showCategory\('wellness-beauty'\)/);
   assert.match(source, /onclick=["']showCategory\('nightlife'\)/);
+  assert.match(source, /data-category="wellness-beauty"/);
+  assert.match(source, /data-category="action-adventure"/);
   assert.match(source, /BUCUREȘTI/);
   assert.match(source, /id="category-view"/, "the category route container must remain present");
   assert.match(source, /id="category-items-grid"/, "the category result grid must remain present");

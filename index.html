@@ -3115,19 +3115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    if (cardElement) {
-
-        setTimeout(() => {
-
-            const cardContainer = document.getElementById("card-element");
-
-            if (cardContainer && !cardContainer.hasChildNodes()) {
-                cardElement.mount("#card-element");
-            }
-
-        }, 300);
-
-    }
+    // Stripe Card Element is mounted only after checkout becomes visible.
 
 });
 
@@ -3135,6 +3123,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 /* ============================================================
    VIEW NAVIGATION
 ============================================================ */
+
+let cardElementMounted = false;
+let cardElementReady = false;
+let resolveCardElementReady;
+const cardElementReadyPromise = new Promise(resolve => {
+    resolveCardElementReady = resolve;
+});
+
+function mountStripeCardElement() {
+    const container = document.getElementById("card-element");
+    if (!stripe || !cardElement || !container || cardElementMounted) return;
+
+    try {
+        // Register before mount: Stripe emits "ready" asynchronously after its iframe is usable.
+        cardElement.on("ready", () => {
+            cardElementReady = true;
+            resolveCardElementReady(true);
+        });
+        cardElement.on("loaderror", event => {
+            console.error("Stripe Card Element load error.", event);
+            resolveCardElementReady(false);
+        });
+        cardElement.mount(container);
+        cardElementMounted = true;
+    } catch (error) {
+        console.error("Stripe-Kartenfeld konnte nicht eingebunden werden.", error);
+        const errors = document.getElementById("card-errors");
+        if (errors) errors.textContent = "Das Kartenfeld konnte nicht geladen werden. Bitte Seite neu laden.";
+        resolveCardElementReady(false);
+    }
+}
+
+async function waitForStripeCardElementReady() {
+    if (cardElementReady) return true;
+    if (!cardElementMounted) mountStripeCardElement();
+
+    const timeout = new Promise(resolve => {
+        setTimeout(() => resolve(false), 10000);
+    });
+    return await Promise.race([cardElementReadyPromise, timeout]);
+}
 
 function showView(viewId, { pushHistory = true } = {}) {
 
@@ -3250,23 +3279,19 @@ function scrollToMoments() {
 function getFeaturedItems() {
 
     return [
-
         {
-            item: categoriesData.explore.items[0],
+            item: categoriesData?.explore?.items?.[0],
             category: "explore"
         },
-
         {
-            item: categoriesData.relax.items[0],
+            item: categoriesData?.relax?.items?.[0],
             category: "relax"
         },
-
         {
-            item: categoriesData.nightlife.items[0],
+            item: categoriesData?.nightlife?.items?.[0],
             category: "nightlife"
         }
-
-    ];
+    ].filter(featured => featured.item);
 
 }
 
@@ -4153,6 +4178,9 @@ function proceedToCheckout({ pushHistory = true } = {}) {
 
     showView("checkout-view");
 
+    // Mount Stripe's iframe only once its parent checkout view is visible.
+    requestAnimationFrame(() => mountStripeCardElement());
+
 }
 
 
@@ -4427,6 +4455,11 @@ async function processBooking(event) {
         /*
          * Karte mit dem PaymentIntent bestätigen.
          */
+
+        const cardReady = await waitForStripeCardElementReady();
+        if (!cardReady) {
+            throw new Error("Das Kartenfeld ist noch nicht bereit. Bitte kurz warten und erneut versuchen.");
+        }
 
         const paymentResult =
             await stripe.confirmCardPayment(
