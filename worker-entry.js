@@ -1378,7 +1378,7 @@ function normalizeCapacityBookingTime(value){
   const match=raw.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   return match?String(Number(match[1])).padStart(2,"0")+":"+match[2]:raw;
 }
-async function finalizePaidBooking(
+export async function finalizePaidBooking(
   env,
   paymentIntent
 ) {
@@ -1510,12 +1510,10 @@ async function finalizePaidBooking(
             return sum+Math.max(0,Number(row?.guests||0));
           },0);
           if(booked+guests>capacity){
-            try{
-              await stripePostForm(env,"/v1/refunds",{payment_intent:paymentIntent.id});
-            }catch(refundError){
-              throw new Error("Kapazität überschritten und Rückerstattung fehlgeschlagen: "+String(refundError?.message||refundError));
-            }
-            throw new Error("Der gewählte Termin war inzwischen ausgebucht. Die Zahlung wurde automatisch zurückerstattet.");
+            // Never create an automatic refund while recovering a paid booking.
+            // Keep the successful payment intact and surface the capacity conflict
+            // for a human decision instead of moving money without approval.
+            throw new Error("Kapazität für diesen Termin überschritten. Zahlung bleibt unangetastet; manuelle Prüfung erforderlich.");
           }
         }
       }
