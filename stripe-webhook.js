@@ -1,3 +1,4 @@
+import { finalizePaidBooking } from "./worker-entry.js";
 const DEFAULT_TOLERANCE_SECONDS = 300;
 export { calculateSettlementReleaseAt, parseBookingDateTime };
 const PROVIDER_SHARE_PERCENT = 82.5;
@@ -34,6 +35,24 @@ export async function handleStripeWebhook(request, env) {
       "INSERT OR IGNORE INTO stripe_webhook_events (event_id,event_type,created_at) VALUES (?,?,CURRENT_TIMESTAMP)"
     ).bind(event.id,event.type).run();
     if (Number(claim.meta?.changes || 0) !== 1) {
+      // Stripe may redeliver an event that was recorded before booking
+      // finalization was wired into this webhook. Retry the idempotent
+      // finalizer for direct FiiViu checkouts even on duplicate event IDs.
+      const paymentIntent = event.type === "payment_intent.succeeded" ? event.data?.object : null;
+      const metadata = paymentIntent?.metadata || {};
+      if (
+        paymentIntent?.id &&
+        String(metadata.fiiviu_checkout || "") === "1" &&
+        String(metadata.booking_id || "").startsWith("FV-") &&
+        String(metadata.payment_model || "") === "fiiviu_fee_20_direct_80"
+      ) {
+        try {
+          await finalizePaidBooking(env, paymentIntent);
+        } catch (error) {
+          console.error("FiiViu duplicate payment event finalization failed", error);
+          return webhookError(error?.message || "Booking finalization failed", 500);
+        }
+      }
       return webhookJson({ received: true, duplicate: true });
     }
   }
@@ -50,7 +69,9 @@ export async function handleStripeWebhook(request, env) {
       if (isFiiViuCheckout && !directProviderPayment) {
         await createBookingSettlement(env,event);
       } else if (directProviderPayment) {
-        console.info("FiiViu 20/80 booking: provider is paid directly by customer; Stripe Connect settlement skipped.");
+        // The customer pays the FiiViu fee directly; there is no Connect
+        // settlement, but the paid booking must still be finalized in D1.
+        await finalizePaidBooking(env, paymentIntent);
       } else {
         console.warn("FiiViu Stripe payment intent is not a recognized checkout; settlement skipped");
       }
