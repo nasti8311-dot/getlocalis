@@ -22,10 +22,28 @@ try {
       const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 });
       const errors = [];
       page.on("pageerror", error => errors.push(error.message));
+
+      // The CI preview uses Python's static file server, not the Cloudflare
+      // Worker. Model the real unauthenticated API response so the partner
+      // page can render its login state instead of parsing the server's 404
+      // HTML response as JSON.
+      if (dashboard.name === "partner") {
+        await page.route("**/api/partner-stats**", route => route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Unauthorized" }),
+        }));
+      }
+
       const response = await page.goto(`http://127.0.0.1:4173${dashboard.path}`, { waitUntil: "domcontentloaded" });
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(700);
       assert.ok(response && response.ok(), `Could not load ${dashboard.path}: HTTP ${response?.status()}`);
+      if (dashboard.name === "partner") {
+        await page.locator("#login").waitFor({ state: "visible" });
+        assert.equal(await page.locator("#message").isVisible(), false,
+          "Partner login state should replace the initial loading message after an unauthenticated API response.");
+      }
       const metrics = await page.evaluate(() => ({
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
