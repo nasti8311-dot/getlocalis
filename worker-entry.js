@@ -262,6 +262,9 @@ export default {
         if (!env.STRIPE_SECRET_KEY) {
           return json({error:"Stripe secret not configured"},500);
         }
+        if (!String(env.STRIPE_SECRET_KEY).startsWith("sk_test_")) {
+          return json({error:"Dieser Checkout-Branch ist aus Sicherheitsgründen ausschließlich für Stripe-Testzahlungen freigegeben."},503);
+        }
 
         // This worker is called internally by marketplace-entry.js, which has
         // already loaded the active experience/provider from D1 and calculated
