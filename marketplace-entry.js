@@ -318,9 +318,30 @@ async function createMarketplacePaymentIntent(request,env,ctx){
       if(remaining<guests)return json({error:remaining<=0?"Dieser Termin ist ausgebucht.":"Für diesen Termin sind nur noch "+remaining+" Plätze verfügbar."},409);
     }
     const unitPrice=Number(experience.price_cents);
+    const sourceCurrency=String(experience.currency||"eur").toLowerCase();
+    const displayCurrency=String(body.displayCurrency||sourceCurrency).toLowerCase();
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
+    if(!["eur","ron","usd","gbp"].includes(sourceCurrency) ||
+       !["eur","ron","usd","gbp"].includes(displayCurrency)){
+      return json({error:"Unsupported checkout currency"},400);
+    }
 
-    const totalAmount=unitPrice*guests;
+    // The selector changes the checkout currency, not just the label. Convert
+    // only between EUR/RON using the same published rate as the catalog UI.
+    // The source price always comes from D1; no client-supplied amount is used.
+    let checkoutCurrency=sourceCurrency;
+    let totalAmount=unitPrice*guests;
+    if(displayCurrency!==sourceCurrency){
+      if(sourceCurrency==="eur" && displayCurrency==="ron"){
+        totalAmount=Math.round((totalAmount/100)*4.97)*100;
+        checkoutCurrency="ron";
+      }else if(sourceCurrency==="ron" && displayCurrency==="eur"){
+        totalAmount=Math.round((totalAmount/100/4.97)*10)*10;
+        checkoutCurrency="eur";
+      }else{
+        return json({error:"Currency conversion is not configured for this offer"},400);
+      }
+    }
     if(!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der Gesamtpreis muss mindestens 2,50 betragen, damit die 20-%-Onlinegebühr über Stripe bezahlt werden kann."},409);
     const fiiviuFeeAmount=Math.round(totalAmount*0.20);
     const providerDueAmount=totalAmount-fiiviuFeeAmount;
@@ -342,7 +363,11 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.fiiviuFeeCents=fiiviuFeeAmount;
     body.providerDueCents=providerDueAmount;
     body.paymentModel="fiiviu_fee_20_direct_80";
-    body.currency=String(experience.currency||"eur").toLowerCase();
+    body.sourceCurrency=sourceCurrency;
+    body.displayCurrency=displayCurrency;
+    body.currency=checkoutCurrency;
+    body.sourceCurrency=sourceCurrency;
+    body.displayCurrency=displayCurrency;
     body.guests=guests;
     body.meetingPointName=String(experience.meeting_point_name||"");
     body.meetingAddress=String(experience.meeting_address||"");
