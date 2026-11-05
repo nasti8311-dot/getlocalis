@@ -27,8 +27,11 @@
       window.history.replaceState({}, document.title, "/payment-return.html");
 
       function showError(message) {
+        const safeMessage = String(message || "").replace(/[&<>"']/g, character => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[character]);
         status.innerHTML = '<h1 class="error">Zahlung noch nicht bestätigt</h1><p>' +
-          message + '</p><p class="muted">Bitte prüfe deine E-Mail auf eine Buchungsbestätigung. Falls keine Bestätigung eintrifft, kontaktiere bitte den Support.</p><p><a href="/">Zurück zu FiiViu</a></p>';
+          safeMessage + '</p><p class="muted">Bitte prüfe deine E-Mail auf eine Buchungsbestätigung. Falls keine Bestätigung eintrifft, kontaktiere bitte den Support.</p><p><a href="/">Zurück zu FiiViu</a></p>';
       }
       if (!paymentIntentId || !clientSecret) {
         showError("Die Rückmeldung des Zahlungsanbieters ist unvollständig. Bitte starte keine weitere Zahlung, bevor du deinen Zahlungsstatus geprüft hast.");
