@@ -1,5 +1,7 @@
 name: FiiViu Visual Review
 
+# Dashboard API responses are mocked explicitly in the static-browser review.
+
 on:
   pull_request:
     branches: [main]
@@ -8,6 +10,7 @@ on:
       - "assets/css/**"
       - "assets/fonts/**"
       - "tests/visual-review.mjs"
+      - "tests/dashboard-visual-review.mjs"
       - ".github/workflows/visual-review.yml"
 
 permissions:
@@ -31,10 +34,12 @@ jobs:
           echo $! > /tmp/fiiviu-http.pid
       - name: Capture responsive screenshots and verify overflow
         run: node tests/visual-review.mjs
+      - name: Capture admin, provider and partner dashboards at mobile and desktop sizes
+        run: node tests/dashboard-visual-review.mjs
       - name: Upload responsive screenshots
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: fiiviu-responsive-homepage
+          name: fiiviu-dashboard-and-homepage-visual-review
           path: artifacts/fiiviu-visual-review/
           if-no-files-found: warn
