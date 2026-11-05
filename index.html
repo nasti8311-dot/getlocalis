@@ -4148,10 +4148,7 @@ function proceedToCheckout({ pushHistory = true } = {}) {
 
 function updateTotal() {
 
-    const guests =
-        parseInt(
-            document.getElementById("guest-count").value
-        ) || 1;
+    const guests = pendingBookingContext?.guests || (parseInt(document.getElementById("guest-count").value) || 1);
 
     const total =
         currentUnitPrice * guests;
@@ -4296,11 +4293,9 @@ async function processBooking(event) {
     `;
 
 
-    const name =
-        document.getElementById("customer-name").value.trim();
+    const name = pendingBookingContext?.name || document.getElementById("customer-name").value.trim();
 
-    const email =
-        document.getElementById("customer-email").value.trim();
+    const email = pendingBookingContext?.email || document.getElementById("customer-email").value.trim();
 
     // Use the canonical ISO date selected on the experience page.
     // The checkout field is display-only and must never be the source of truth.
@@ -4317,15 +4312,10 @@ async function processBooking(event) {
     // The picker is the primary source. If the global state was lost during
     // the detail -> checkout transition, recover the same date from the
     // read-only checkout field instead of sending an empty bookingDate.
-    const date =
-        normalizeBookingDateValue(
-            pickerDateIso || selectedDetailDate || checkoutDateText
-        );
+    const date = pendingBookingContext?.date || normalizeBookingDateValue(pickerDateIso || selectedDetailDate || checkoutDateText);
 
-    const rawSelectedTime =
-        String(selectedTourTime || "").trim();
-    const time =
-        normalizeBookingTimeValue(rawSelectedTime);
+    const rawSelectedTime = String(pendingBookingContext?.time || selectedTourTime || "").trim();
+    const time = normalizeBookingTimeValue(rawSelectedTime);
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !time) {
         cardErrors.textContent =
@@ -4349,8 +4339,7 @@ async function processBooking(event) {
         return;
     }
 
-    const tourName =
-        document.getElementById("selected-tour-display").value;
+    const tourName = pendingBookingContext?.tourName || document.getElementById("selected-tour-display").value;
 
     // Resolve the currently selected experience again at payment time.
     // The checkout view must never rely on a stale or undefined global item.
