@@ -275,11 +275,19 @@ export default {
         const totalAmountCents = Number(data.totalAmountCents);
         const fiiviuFeeCents = Number(data.fiiviuFeeCents);
         const providerDueCents = Number(data.providerDueCents);
+        const originalTotalAmountCents = Number(data.originalTotalAmountCents);
+        const exchangeRate = Number(data.exchangeRate);
+        const exchangeRateDate = String(data.exchangeRateDate || "");
+        const originalCurrency = String(data.originalCurrency || "").toLowerCase();
         const guests = Number(data.guests || 1);
         if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(totalAmountCents) ||
             !Number.isSafeInteger(fiiviuFeeCents) || !Number.isSafeInteger(providerDueCents) ||
             amount < 50 || totalAmountCents < 250 || amount !== fiiviuFeeCents ||
             totalAmountCents !== fiiviuFeeCents + providerDueCents ||
+            !Number.isSafeInteger(originalTotalAmountCents) || originalTotalAmountCents < 250 ||
+            !Number.isFinite(exchangeRate) || exchangeRate <= 0 ||
+            !/^\\d{4}-\\d{2}-\\d{2}$/.test(exchangeRateDate) ||
+            !["eur","ron","usd","gbp"].includes(originalCurrency) ||
             !Number.isSafeInteger(guests) || guests < 1 || guests > 50 ||
             !["eur","ron","usd","gbp"].includes(currency) ||
             !/^FV-[A-F0-9]{12}$/.test(String(data.bookingId || "")) ||
@@ -299,6 +307,10 @@ export default {
         params.set("metadata[total_amount_cents]",String(totalAmountCents));
         params.set("metadata[fiiviu_fee_cents]",String(fiiviuFeeCents));
         params.set("metadata[provider_due_cents]",String(providerDueCents));
+        params.set("metadata[original_currency]",originalCurrency);
+        params.set("metadata[original_total_amount_cents]",String(originalTotalAmountCents));
+        params.set("metadata[exchange_rate]",exchangeRate.toFixed(10));
+        params.set("metadata[exchange_rate_date]",exchangeRateDate);
         params.set("metadata[provider_ref]",String(data.providerRef||""));
         params.set("metadata[booking_id]",String(data.bookingId||""));
         params.set("metadata[tour_name]",String(data.tourName||data.experienceName||""));
