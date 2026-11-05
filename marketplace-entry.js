@@ -347,8 +347,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const targetEurRate=Number(fx.rates[selectedCurrency]);
     if(!sourceEurRate||!targetEurRate)return json({error:"Für diese Angebotswährung ist keine verlässliche Umrechnung verfügbar."},409);
     const appliedFxRate=targetEurRate/sourceEurRate;
-    const totalAmount=Math.round(originalTotalAmount*appliedFxRate);
-    if(!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der umgerechnete Gesamtpreis ist ungültig."},409);
+    // Round the converted per-person price to minor units first, matching the catalog display; multiply only afterwards.
+    const convertedUnitPrice=Math.round(unitPrice*appliedFxRate);
+    const totalAmount=convertedUnitPrice*guests;
+    if(!Number.isSafeInteger(convertedUnitPrice)||convertedUnitPrice<1||!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der umgerechnete Gesamtpreis ist ungültig."},409);
     const fiiviuFeeAmount=Math.round(totalAmount*0.20);
     const providerDueAmount=totalAmount-fiiviuFeeAmount;
     if(!Number.isSafeInteger(fiiviuFeeAmount)||fiiviuFeeAmount<50||!Number.isSafeInteger(providerDueAmount)||providerDueAmount<0)return json({error:"Invalid calculated payment split"},409);
