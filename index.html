@@ -3115,19 +3115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    if (cardElement) {
-
-        setTimeout(() => {
-
-            const cardContainer = document.getElementById("card-element");
-
-            if (cardContainer && !cardContainer.hasChildNodes()) {
-                cardElement.mount("#card-element");
-            }
-
-        }, 300);
-
-    }
+    // Stripe Card Element is mounted only after checkout becomes visible.
 
 });
 
@@ -3135,6 +3123,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 /* ============================================================
    VIEW NAVIGATION
 ============================================================ */
+
+let cardElementMounted = false;
+
+function mountStripeCardElement() {
+    const container = document.getElementById("card-element");
+    if (!stripe || !cardElement || !container || cardElementMounted) return;
+
+    try {
+        cardElement.mount(container);
+        cardElementMounted = true;
+    } catch (error) {
+        console.error("Stripe-Kartenfeld konnte nicht eingebunden werden.", error);
+        const errors = document.getElementById("card-errors");
+        if (errors) errors.textContent = "Das Kartenfeld konnte nicht geladen werden. Bitte Seite neu laden.";
+    }
+}
 
 function showView(viewId, { pushHistory = true } = {}) {
 
@@ -4152,6 +4156,9 @@ function proceedToCheckout({ pushHistory = true } = {}) {
 
 
     showView("checkout-view");
+
+    // Mount Stripe's iframe only once its parent checkout view is visible.
+    requestAnimationFrame(() => mountStripeCardElement());
 
 }
 
