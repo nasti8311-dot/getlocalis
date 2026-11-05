@@ -1,4 +1,5 @@
 name: Deploy isolated Revolut Sandbox Worker
+# Trigger deployment after Sandbox credentials were configured.
 
 on:
   push:
