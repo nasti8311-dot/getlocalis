@@ -363,8 +363,6 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.fiiviuFeeCents=fiiviuFeeAmount;
     body.providerDueCents=providerDueAmount;
     body.paymentModel="fiiviu_fee_20_direct_80";
-    body.sourceCurrency=sourceCurrency;
-    body.displayCurrency=displayCurrency;
     body.currency=checkoutCurrency;
     body.sourceCurrency=sourceCurrency;
     body.displayCurrency=displayCurrency;
