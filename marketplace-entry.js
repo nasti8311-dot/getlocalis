@@ -99,7 +99,7 @@ async function fetchEurRates(){
   if(!response.ok)throw new Error("Der aktuelle Wechselkurs ist vorübergehend nicht verfügbar.");
   const data=await response.json();
   const rateDate=String(data.date||"");
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(rateDate))throw new Error("Ungültiges Wechselkursdatum.");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(rateDate))throw new Error("Ungültiges Wechselkursdatum.");
   const ageDays=(Date.now()-Date.parse(rateDate+"T00:00:00Z"))/86400000;
   if(!Number.isFinite(ageDays)||ageDays>4||ageDays< -1)throw new Error("Der Wechselkurs ist nicht aktuell genug.");
   const rates={EUR:1};
