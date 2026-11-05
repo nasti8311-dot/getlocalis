@@ -1426,7 +1426,7 @@
                         <p class="mt-2 text-sm leading-relaxed text-gray-800" data-i18n="payment_split_body">Bei der Buchung werden 20 % des Gesamtpreises online bezahlt. Die übrigen 80 % bezahlst du später direkt vor Ort beim Erlebnisanbieter – nicht jetzt online.</p>
                     </div>
 
-                    <div id="card-element"></div>
+                    <div id="payment-element" class="min-h-[120px]"></div>
 
                     <div id="card-errors"
                          class="text-red-500 text-xs mt-2"
@@ -1810,10 +1810,27 @@
 let currentLang = 'en';
 let currentCurrency = 'EUR';
 
-const currencyRates = {
-    EUR: 1,
-    RON: 4.97
-};
+let currencyRates = { EUR: 1, RON: 4.97 };
+let paymentElements = null;
+let paymentElement = null;
+let pendingPaymentData = null;
+let pendingBookingContext = null;
+
+async function loadExchangeRates() {
+    try {
+        const response = await fetch("/api/exchange-rates", { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok || !Number.isFinite(Number(data?.rates?.RON)) || Number(data.rates.RON) <= 0) return;
+        currencyRates = { EUR: 1, RON: Number(data.rates.RON) };
+        if (typeof currentCategoryKey !== "undefined" && currentCategoryKey) {
+            const categoryView = document.getElementById("category-view");
+            const detailView = document.getElementById("detail-view");
+            if (categoryView && !categoryView.classList.contains("hidden")) showCategory(currentCategoryKey);
+            else if (detailView && !detailView.classList.contains("hidden")) showCategory(currentCategoryKey);
+        }
+    } catch (error) { console.warn("Aktuelle Wechselkurse konnten nicht geladen werden.", error); }
+}
+loadExchangeRates();
 
 let currentCategoryKey = '';
 let currentTourKey = '';
@@ -1850,21 +1867,7 @@ try {
         'pk_test_51TFUSyDYZ2rKxcVVhaOSfQxz3mFyltyLVPL6IA6LtkYdEz8xPMhFI9UKrhrQVMEnHcoaJGp8MNP8xeWcAP6n9RKB00kdPUXH7n'
     );
 
-    const elements = stripe.elements();
-
-    cardElement = elements.create('card', {
-        style: {
-            base: {
-                color: '#222222',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '16px',
-                fontSmoothing: 'antialiased',
-                '::placeholder': {
-                    color: '#9CA3AF'
-                }
-            }
-        }
-    });
+    // Payment Element is created only after the server returns the final PaymentIntent client secret.
 
 } catch (error) {
 
@@ -3115,19 +3118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    if (cardElement) {
 
-        setTimeout(() => {
-
-            const cardContainer = document.getElementById("card-element");
-
-            if (cardContainer && !cardContainer.hasChildNodes()) {
-                cardElement.mount("#card-element");
-            }
-
-        }, 300);
-
-    }
 
 });
 
@@ -4255,7 +4246,8 @@ const response =
                 arrivalMinutesBefore: arrivalMinutesBefore ?? null,
                 meetingLatitude: meetingLatitude || "",
                 meetingLongitude: meetingLongitude || "",
-                partnerRef: partnerRef
+                partnerRef: partnerRef,
+                selectedCurrency: String(currentCurrency || "EUR").toUpperCase()
             })
         });
 
