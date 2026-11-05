@@ -107,7 +107,7 @@ async function fetchEurRates(){
   return {date:rateDate,rates};
 }
 async function handleExchangeRates(){
-  try{const fx=await fetchEurRates();return json({base:"EUR",date:fx.date,rates:{EUR:1,RON:fx.rates.RON}});}
+  try{const fx=await fetchEurRates();return json({base:"EUR",date:fx.date,rates:{EUR:1,RON:fx.rates.RON,USD:fx.rates.USD,GBP:fx.rates.GBP}});}
   catch(error){return json({error:error?.message||"Exchange rates unavailable"},503);}
 }
 async function handlePublicOffers(request,env){
