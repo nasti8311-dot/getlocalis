@@ -1,6 +1,9 @@
 name: Deploy isolated Revolut Sandbox Worker
 
 on:
+  push:
+    branches:
+      - sandbox/revolut-preview-isolation
   workflow_dispatch:
 
 permissions:
