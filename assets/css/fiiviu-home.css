@@ -238,3 +238,28 @@
   .fii-site-header nav .fii-nav-home,
   .fii-site-header nav .fii-nav-category { transition: none; }
 }
+
+
+/* Keep the refreshed header within common laptop widths */
+@media (min-width: 1024px) and (max-width: 1350px) {
+  .fii-site-header > div { padding-left: 1rem; padding-right: 1rem; }
+  .fii-site-header > div > div { gap: .65rem; }
+  .fii-site-header > div > div > button { gap: .5rem; flex-shrink: 0; }
+  .fii-site-header nav { gap: .25rem !important; min-width: 0; }
+  .fii-site-header nav .fii-nav-home,
+  .fii-site-header nav .fii-nav-category {
+    min-height: 38px;
+    gap: .35rem;
+    padding: .45rem .58rem;
+    font-size: .7rem;
+  }
+  .fii-site-header nav a[href="/anbieter/register"],
+  .fii-site-header nav a[href="/partner-werden.html"] {
+    gap: .35rem;
+    padding-left: .6rem;
+    padding-right: .6rem;
+    font-size: .64rem;
+  }
+  .fii-site-header #currency-select,
+  .fii-site-header #lang-select { font-size: .68rem; padding-left: .4rem; padding-right: .4rem; }
+}
