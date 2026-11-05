@@ -1514,6 +1514,10 @@ async function finalizePaidBooking(
           provider_due_cents,
           payment_model,
           currency,
+          original_currency,
+          original_total_amount_cents,
+          exchange_rate,
+          exchange_rate_date,
           meeting_point_name,
           meeting_address,
           meeting_city,
@@ -1529,7 +1533,7 @@ async function finalizePaidBooking(
           cancellation_token,
           created_at,
           updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
           status='confirmed',
@@ -1549,6 +1553,10 @@ async function finalizePaidBooking(
           provider_due_cents=excluded.provider_due_cents,
           payment_model=excluded.payment_model,
           currency=excluded.currency,
+          original_currency=excluded.original_currency,
+          original_total_amount_cents=excluded.original_total_amount_cents,
+          exchange_rate=excluded.exchange_rate,
+          exchange_rate_date=excluded.exchange_rate_date,
           meeting_point_name=excluded.meeting_point_name,
           meeting_address=excluded.meeting_address,
           meeting_city=excluded.meeting_city,
@@ -1587,6 +1595,10 @@ async function finalizePaidBooking(
         providerDueCents,
         paymentModel,
         currency,
+        clean(metadata.original_currency) || currency,
+        Number(metadata.original_total_amount_cents || totalAmountCents),
+        clean(metadata.exchange_rate) || "1",
+        clean(metadata.exchange_rate_date),
         meeting.name,
         meeting.address,
         meeting.city,
@@ -3824,6 +3836,8 @@ async function ensureBookingColumns(env) {
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
+  const additions=[["original_currency","TEXT"],["original_total_amount_cents","INTEGER"],["exchange_rate","TEXT"],["exchange_rate_date","TEXT"]];
+  for(const [name,type] of additions){if(!existing.has(name))await env.DB.prepare("ALTER TABLE bookings ADD COLUMN "+name+" "+type).run();}
 }
 
 function normalizeLanguage(value) {
