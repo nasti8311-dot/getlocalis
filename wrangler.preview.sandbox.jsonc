@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Dedicated Revolut Pay Sandbox Worker. No production route, R2, Email or cron.
+  "name": "getlocalis-preview",
+  "main": "./secure-entry.js",
+  "compatibility_date": "2026-09-14",
+  "workers_dev": true,
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "getlocalis-preview",
+      "database_id": "dae6a949-a2d2-45e2-8ce2-961d9806282c"
+    }
+  ],
+  "vars": {
+    "UNDER_CONSTRUCTION": "false",
+    "PUBLIC_APP_URL": "https://getlocalis-preview.<your-account>.workers.dev"
+  }
+}
