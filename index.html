@@ -1810,7 +1810,7 @@
 let currentLang = 'en';
 let currentCurrency = 'EUR';
 
-let currencyRates = { EUR: 1, RON: 4.97 };
+let currencyRates = { EUR: 1, RON: 4.97, USD: 1, GBP: 1 };
 let paymentElements = null;
 let paymentElement = null;
 let pendingPaymentData = null;
@@ -1821,7 +1821,7 @@ async function loadExchangeRates() {
         const response = await fetch("/api/exchange-rates", { cache: "no-store" });
         const data = await response.json();
         if (!response.ok || !Number.isFinite(Number(data?.rates?.RON)) || Number(data.rates.RON) <= 0) return;
-        currencyRates = { EUR: 1, RON: Number(data.rates.RON) };
+        currencyRates = { EUR: 1, RON: Number(data.rates.RON), USD: Number(data.rates.USD), GBP: Number(data.rates.GBP) };
         if (typeof currentCategoryKey !== "undefined" && currentCategoryKey) {
             const categoryView = document.getElementById("category-view");
             const detailView = document.getElementById("detail-view");
@@ -3831,29 +3831,20 @@ function formatPrice(amount, offerCurrency = "EUR") {
         return "—";
     }
 
-    // The currency selector controls the display of every catalog price.
-    // Stored prices and Stripe charges remain in the offer's original currency.
+    // Convert all supported catalog currencies using the latest EUR-based rates.
     let displayAmount = numericAmount;
     let displayCurrency = sourceCurrency;
     let wasConverted = false;
-
-    if (sourceCurrency === "EUR" && selectedCurrency === "RON") {
-        displayAmount = numericAmount * currencyRates.RON;
-        displayCurrency = "RON";
-        wasConverted = true;
-    } else if (sourceCurrency === "RON" && selectedCurrency === "EUR") {
-        displayAmount = numericAmount / currencyRates.RON;
-        displayCurrency = "EUR";
-        wasConverted = true;
-    } else if (sourceCurrency === selectedCurrency) {
+    const sourceRate = Number(currencyRates[sourceCurrency]);
+    const selectedRate = Number(currencyRates[selectedCurrency]);
+    if (Number.isFinite(sourceRate) && sourceRate > 0 && Number.isFinite(selectedRate) && selectedRate > 0) {
+        displayAmount = numericAmount / sourceRate * selectedRate;
         displayCurrency = selectedCurrency;
+        wasConverted = sourceCurrency !== selectedCurrency;
     }
-
-    // Match the currency's two-decimal minor units used by the server checkout.
     if (wasConverted) displayAmount = Math.round(displayAmount * 100) / 100;
 
-    // Only EUR/RON have a configured conversion rate. Keep any other source
-    // currency explicit until a verified rate is configured for it.
+    // If a currency is not supported by the current rate feed, show its original currency.
     if (displayCurrency === "RON") {
         return new Intl.NumberFormat(locale, {
             minimumFractionDigits: wasConverted ? 0 : 2,
