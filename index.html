@@ -4301,12 +4301,19 @@ async function processBooking(event) {
             if (!paymentResult.paymentIntent || paymentResult.paymentIntent.status !== "succeeded") {
                 throw new Error("Die Zahlung wurde noch nicht erfolgreich abgeschlossen.");
             }
+            const finalizedPaymentIntentId = String(paymentResult.paymentIntent.id || "").trim();
+            const finalizedClientSecret = String(
+                paymentResult.paymentIntent.client_secret || pending.paymentData.clientSecret || ""
+            ).trim();
+            if (!finalizedPaymentIntentId || !finalizedClientSecret) {
+                throw new Error("Stripe hat keine gültigen Zahlungsdaten für die Buchungsbestätigung zurückgegeben.");
+            }
             const finalizeResponse = await fetch("/api/finalize-booking", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    paymentIntentId: paymentResult.paymentIntent.id,
-                    clientSecret: paymentResult.paymentIntent.client_secret || pending.paymentData.clientSecret
+                    paymentIntentId: finalizedPaymentIntentId,
+                    clientSecret: finalizedClientSecret
                 })
             });
             const finalizeData = await finalizeResponse.json().catch(() => ({}));
