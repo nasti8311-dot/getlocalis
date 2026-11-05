@@ -263,3 +263,20 @@
   .fii-site-header #currency-select,
   .fii-site-header #lang-select { font-size: .68rem; padding-left: .4rem; padding-right: .4rem; }
 }
+
+
+/* Additional top-level categories */
+@media (min-width: 1024px) {
+  .fii-site-header nav .fii-nav-category--vip {
+    background: #f8eaf0;
+    border-color: #f0d8e3;
+    color: #914765;
+  }
+  .fii-site-header nav .fii-nav-category--vip:hover { background: #f2dce6; }
+  .fii-site-header nav .fii-nav-category--kids {
+    background: #e8f2f7;
+    border-color: #d7e8f0;
+    color: #416d82;
+  }
+  .fii-site-header nav .fii-nav-category--kids:hover { background: #dcecf3; }
+}
