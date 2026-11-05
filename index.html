@@ -3223,24 +3223,16 @@ function scrollToMoments() {
 
 function getFeaturedItems() {
 
-    return [
-
-        {
-            item: categoriesData.explore.items[0],
-            category: "explore"
-        },
-
-        {
-            item: categoriesData.relax.items[0],
-            category: "relax"
-        },
-
-        {
-            item: categoriesData.nightlife.items[0],
-            category: "nightlife"
-        }
-
+    const featuredCategories = [
+        "action-adventure",
+        "wellness-beauty",
+        "nightlife"
     ];
+
+    return featuredCategories.flatMap(category => {
+        const item = categoriesData[category]?.items?.[0];
+        return item ? [{ item, category }] : [];
+    });
 
 }
 
