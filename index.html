@@ -4235,7 +4235,10 @@ const response =
                 arrivalMinutesBefore: arrivalMinutesBefore ?? null,
                 meetingLatitude: meetingLatitude || "",
                 meetingLongitude: meetingLongitude || "",
-                partnerRef: partnerRef
+                partnerRef: partnerRef,
+                // Currency selector is a display choice; the server converts
+                // the trusted catalog price before creating the PaymentIntent.
+                displayCurrency: currentCurrency
             })
         });
 
