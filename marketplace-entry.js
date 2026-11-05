@@ -376,7 +376,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.meetingLatitude=String(experience.meeting_latitude||"");
     body.meetingLongitude=String(experience.meeting_longitude||"");
 
-    return baseWorker.fetch(new Request(request,{method:"POST",headers:request.headers,body:JSON.stringify(body)}),env,ctx);
+    return withMarketplaceCors(await baseWorker.fetch(new Request(request,{method:"POST",headers:request.headers,body:JSON.stringify(body)}),env,ctx));
   }catch(error){
     console.error("FiiViu marketplace payment routing failed",error);
     return json({error:error?.message||"Marketplace payment routing failed"},500);
@@ -608,3 +608,4 @@ async function ensureExperiencesTable(env){
   if(missing.length) throw new Error("Experiences schema is incomplete. Apply the required D1 migrations before enabling marketplace routes: "+missing.join(", "));
 }
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json","Cache-Control":"no-store"}})}
+function withMarketplaceCors(response){const headers=new Headers(response.headers);for(const [name,value] of Object.entries(CORS))headers.set(name,value);return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
