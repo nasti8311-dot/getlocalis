@@ -1160,3 +1160,17 @@ test("admin control center health checks are read-only and independent", () => {
   );
   assert.ok(handler.includes("result.system.d1 = true"));
 });
+
+ 
+test("Stripe checkout uses Payment Element and finalizes redirect payments safely", () => {
+  const checkout = read("index.html");
+  const returnPage = read("payment-return.html");
+  assert.match(checkout, /id="payment-element"/);
+  assert.match(checkout, /stripe\.confirmPayment\(/);
+  assert.match(checkout, /payment-return\.html/);
+  assert.doesNotMatch(checkout, /confirmCardPayment|card-element|cardElement/);
+  assert.match(returnPage, /payment_intent_client_secret/);
+  assert.match(returnPage, /redirectStatus !== "succeeded"/);
+  assert.match(returnPage, /\/api\/finalize-booking/);
+  assert.match(returnPage, /credentials: "omit"/);
+});
