@@ -4,7 +4,8 @@ import { authenticateProviderSession } from "./provider-auth.js";
 
 const CORS={"Access-Control-Allow-Methods":"GET, POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type, Authorization","Cache-Control":"no-store","Vary":"Origin"};
 
-export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname==="/api/partner-login"||url.pathname==="/api/partner-logout"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="GET"&&url.pathname==="/api/offers")return handlePublicOffers(request,env);
+export default {async fetch(request,env,ctx){const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(url.pathname==="/api/partner-stats"||url.pathname==="/api/partner-visit"||url.pathname==="/api/partner-login"||url.pathname==="/api/partner-logout"||url.pathname.startsWith("/api/admin/partner-"))return partnerWorker.fetch(request,env,ctx);if(request.method==="GET"&&url.pathname==="/api/exchange-rates")return handleExchangeRates();
+ if(request.method==="GET"&&url.pathname==="/api/offers")return handlePublicOffers(request,env);
 if(request.method==="GET"&&url.pathname==="/api/offer-availability")return handleOfferAvailability(request,env);
 if(request.method==="POST"&&url.pathname==="/api/create-payment-intent")return createMarketplacePaymentIntent(request,env,ctx);if(request.method==="POST"&&url.pathname==="/api/stripe/webhook")return handleMarketplaceWebhook(request,env,ctx);if(request.method==="GET"&&url.pathname==="/"&&url.searchParams.get("ref"))ctx.waitUntil(recordPartnerScan(env,url.searchParams.get("ref")));const response=await baseWorker.fetch(request,env,ctx);if(request.method==="GET"&&isHtml(response,url))return injectMarketplaceCheckoutBridge(response,url);return response;}};
 
@@ -93,6 +94,22 @@ async function resolveProviderAccount(request,env){
   return /^acct_[A-Za-z0-9]+$/.test(sessionAccount)?sessionAccount:"";
 }
 
+async function fetchEurRates(){
+  const response=await fetch("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=RON,USD,GBP");
+  if(!response.ok)throw new Error("Der aktuelle Wechselkurs ist vorübergehend nicht verfügbar.");
+  const data=await response.json();
+  const rateDate=String(data.date||"");
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(rateDate))throw new Error("Ungültiges Wechselkursdatum.");
+  const ageDays=(Date.now()-Date.parse(rateDate+"T00:00:00Z"))/86400000;
+  if(!Number.isFinite(ageDays)||ageDays>4||ageDays< -1)throw new Error("Der Wechselkurs ist nicht aktuell genug.");
+  const rates={EUR:1};
+  for(const code of ["RON","USD","GBP"]){const value=Number(data.rates?.[code]);if(!Number.isFinite(value)||value<=0)throw new Error("Ungültiger Wechselkurs "+code);rates[code]=value;}
+  return {date:rateDate,rates};
+}
+async function handleExchangeRates(){
+  try{const fx=await fetchEurRates();return json({base:"EUR",date:fx.date,rates:{EUR:1,RON:fx.rates.RON}});}
+  catch(error){return json({error:error?.message||"Exchange rates unavailable"},503);}
+}
 async function handlePublicOffers(request,env){
   if(request.method!=="GET")return json({error:"Method Not Allowed"},405);
   if(!env.DB)return json({offers:[]});
@@ -320,8 +337,18 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const unitPrice=Number(experience.price_cents);
     if(!Number.isInteger(unitPrice)||unitPrice<50)return json({error:"Experience has no valid server-side price"},409);
 
-    const totalAmount=unitPrice*guests;
-    if(!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der Gesamtpreis muss mindestens 2,50 betragen, damit die 20-%-Onlinegebühr über Stripe bezahlt werden kann."},409);
+    const originalTotalAmount=unitPrice*guests;
+    if(!Number.isSafeInteger(originalTotalAmount)||originalTotalAmount<250)return json({error:"Der Gesamtpreis muss mindestens 2,50 betragen, damit die 20-%-Onlinegebühr über Stripe bezahlt werden kann."},409);
+    const originalCurrency=String(experience.currency||"eur").toUpperCase();
+    const selectedCurrency=String(body.selectedCurrency||originalCurrency).toUpperCase();
+    if(!["EUR","RON"].includes(selectedCurrency))return json({error:"Bitte EUR oder RON als Zahlungswährung auswählen."},400);
+    const fx=await fetchEurRates();
+    const sourceEurRate=Number(fx.rates[originalCurrency]);
+    const targetEurRate=Number(fx.rates[selectedCurrency]);
+    if(!sourceEurRate||!targetEurRate)return json({error:"Für diese Angebotswährung ist keine verlässliche Umrechnung verfügbar."},409);
+    const appliedFxRate=targetEurRate/sourceEurRate;
+    const totalAmount=Math.round(originalTotalAmount*appliedFxRate);
+    if(!Number.isSafeInteger(totalAmount)||totalAmount<250)return json({error:"Der umgerechnete Gesamtpreis ist ungültig."},409);
     const fiiviuFeeAmount=Math.round(totalAmount*0.20);
     const providerDueAmount=totalAmount-fiiviuFeeAmount;
     if(!Number.isSafeInteger(fiiviuFeeAmount)||fiiviuFeeAmount<50||!Number.isSafeInteger(providerDueAmount)||providerDueAmount<0)return json({error:"Invalid calculated payment split"},409);
@@ -338,11 +365,15 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     body.experienceName=experience.title||body.tourName||"";
     // Collect only FiiViu's 20% fee online; the remaining 80% is paid directly to the provider.
     body.amount=fiiviuFeeAmount;
+    body.originalCurrency=originalCurrency.toLowerCase();
+    body.originalTotalAmountCents=originalTotalAmount;
+    body.exchangeRate=appliedFxRate.toFixed(10);
+    body.exchangeRateDate=fx.date;
     body.totalAmountCents=totalAmount;
     body.fiiviuFeeCents=fiiviuFeeAmount;
     body.providerDueCents=providerDueAmount;
     body.paymentModel="fiiviu_fee_20_direct_80";
-    body.currency=String(experience.currency||"eur").toLowerCase();
+    body.currency=selectedCurrency.toLowerCase();
     body.guests=guests;
     body.meetingPointName=String(experience.meeting_point_name||"");
     body.meetingAddress=String(experience.meeting_address||"");
