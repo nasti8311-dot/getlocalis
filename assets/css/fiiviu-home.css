@@ -180,3 +180,86 @@
 @media(prefers-reduced-motion:reduce) {
   #category-items-grid .experience-card,#category-items-grid .experience-card img { transition:none; }
 }
+
+
+/* Refined desktop category navigation */
+@media (min-width: 1024px) {
+  .fii-site-header nav { gap: .55rem !important; }
+  .fii-site-header nav .fii-nav-home,
+  .fii-site-header nav .fii-nav-category {
+    position: relative;
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: .52rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: .58rem .88rem;
+    color: #514b44;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .fii-site-header nav .fii-nav-home { color: #8b8176; }
+  .fii-site-header nav .fii-nav-home i { font-size: .78rem; }
+  .fii-site-header nav .fii-nav-category i {
+    font-size: .88rem;
+    transition: transform .2s ease;
+  }
+  .fii-site-header nav .fii-nav-category--relax {
+    background: #edf2e9; border-color: #e0e9dc; color: #52684d;
+  }
+  .fii-site-header nav .fii-nav-category--nightlife {
+    background: #f3edf7; border-color: #e9dff0; color: #74557f;
+  }
+  .fii-site-header nav .fii-nav-category--adventure {
+    background: #fff0e6; border-color: #f7dfce; color: #a64e20;
+  }
+  .fii-site-header nav .fii-nav-category--secret {
+    background: #f7f0df; border-color: #eee4ca; color: #80652d;
+  }
+  .fii-site-header nav .fii-nav-home:hover,
+  .fii-site-header nav .fii-nav-category:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px rgba(43,35,27,.09);
+  }
+  .fii-site-header nav .fii-nav-home:hover { background: #fff; border-color: #eee8df; color: #242321; }
+  .fii-site-header nav .fii-nav-category:hover i { transform: scale(1.12); }
+  .fii-site-header nav .fii-nav-category--relax:hover { background: #e4eddf; }
+  .fii-site-header nav .fii-nav-category--nightlife:hover { background: #ece2f2; }
+  .fii-site-header nav .fii-nav-category--adventure:hover { background: #ffe5d3; }
+  .fii-site-header nav .fii-nav-category--secret:hover { background: #f0e6cb; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fii-site-header nav .fii-nav-home,
+  .fii-site-header nav .fii-nav-category { transition: none; }
+}
+
+
+/* Keep the refreshed header within common laptop widths */
+@media (min-width: 1024px) and (max-width: 1350px) {
+  .fii-site-header > div { padding-left: 1rem; padding-right: 1rem; }
+  .fii-site-header > div > div { gap: .65rem; }
+  .fii-site-header > div > div > button { gap: .5rem; flex-shrink: 0; }
+  .fii-site-header nav { gap: .25rem !important; min-width: 0; }
+  .fii-site-header nav .fii-nav-home,
+  .fii-site-header nav .fii-nav-category {
+    min-height: 38px;
+    gap: .35rem;
+    padding: .45rem .58rem;
+    font-size: .7rem;
+  }
+  .fii-site-header nav a[href="/anbieter/register"],
+  .fii-site-header nav a[href="/partner-werden.html"] {
+    gap: .35rem;
+    padding-left: .6rem;
+    padding-right: .6rem;
+    font-size: .64rem;
+  }
+  .fii-site-header #currency-select,
+  .fii-site-header #lang-select { font-size: .68rem; padding-left: .4rem; padding-right: .4rem; }
+}
