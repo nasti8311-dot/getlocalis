@@ -20,6 +20,6 @@
   ],
   "vars": {
     "UNDER_CONSTRUCTION": "false",
-    "PUBLIC_APP_URL": "https://getlocalis-preview.<your-account>.workers.dev"
+    "PUBLIC_APP_URL": "https://sandbox-revolut-preview-isol.getlocalis.pages.dev"
   }
 }
