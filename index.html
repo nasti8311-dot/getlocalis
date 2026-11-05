@@ -3849,13 +3849,8 @@ function formatPrice(amount, offerCurrency = "EUR") {
         displayCurrency = selectedCurrency;
     }
 
-    // Converted RON prices are rounded to whole Lei; converted EUR prices
-    // are rounded to the nearest 10 cents. Original prices and payments stay exact.
-    if (wasConverted) {
-        displayAmount = displayCurrency === "RON"
-            ? Math.round(displayAmount)
-            : Math.round(displayAmount * 10) / 10;
-    }
+    // Match the currency's two-decimal minor units used by the server checkout.
+    if (wasConverted) displayAmount = Math.round(displayAmount * 100) / 100;
 
     // Only EUR/RON have a configured conversion rate. Keep any other source
     // currency explicit until a verified rate is configured for it.
@@ -4547,6 +4542,47 @@ async function processBooking(event) {
 }
 
 
+async function handleStripeReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const clientSecret = params.get("payment_intent_client_secret");
+    if (!clientSecret || !stripe) return;
+    const errors = document.getElementById("card-errors");
+    try {
+        const result = await stripe.retrievePaymentIntent(clientSecret);
+        const paymentIntent = result?.paymentIntent;
+        if (result?.error) throw new Error(result.error.message || "Zahlungsstatus konnte nicht geprüft werden.");
+        if (!paymentIntent || paymentIntent.status !== "succeeded") {
+            throw new Error("Die Zahlung wurde nicht abgeschlossen. Bitte kontaktiere den Support, falls ein Betrag reserviert wurde.");
+        }
+        const response = await fetch("/api/finalize-booking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                paymentIntentId: paymentIntent.id,
+                clientSecret: clientSecret
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Die Buchung konnte nach der Zahlung nicht bestätigt werden.");
+        const metadata = paymentIntent.metadata || {};
+        document.getElementById("conf-id").innerText = data.booking_id || metadata.booking_id || paymentIntent.id;
+        const tourName = metadata.experience_name || metadata.tour_name || "Experience";
+        const date = metadata.booking_date || "";
+        document.getElementById("conf-tour").dataset.rawTourName = tourName;
+        document.getElementById("conf-date").dataset.rawDate = date;
+        document.getElementById("conf-date").dataset.rawTime = metadata.booking_time || "";
+        document.getElementById("conf-date").dataset.rawGuests = String(metadata.guests || 1);
+        document.getElementById("conf-email").innerText = metadata.customer_email || "";
+        refreshSuccessViewLanguage();
+        history.replaceState({}, document.title, window.location.pathname);
+        showView("success-view");
+    } catch (error) {
+        console.error("Stripe return handling failed:", error);
+        if (errors) errors.textContent = error.message || "Die Zahlung konnte nicht verifiziert werden.";
+        showView("checkout-view");
+    }
+}
+
 function normalizeBookingDateValue(dateText) {
     const value = String(dateText || "").trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -4877,7 +4913,9 @@ function escapeHtml(value) {
         if (isStandalone) {
             pwaInstallButton.classList.remove("visible");
         }
-    </script>
+    window.addEventListener("load", handleStripeReturn);
+
+</script>
 
 </body>
 </html>
