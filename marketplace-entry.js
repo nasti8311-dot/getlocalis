@@ -481,8 +481,21 @@ async function handleOfferAvailability(request,env){
   await ensureOffersTable(env);
   const params=new URL(request.url).searchParams;
   const offerId=Number(params.get("offerId")||0);
+  const experienceId=String(params.get("experienceId")||"").trim().toLowerCase();
   const date=String(params.get("date")||"").trim();
   const time=String(params.get("time")||"").trim();
+  if(experienceId && (!Number.isInteger(offerId)||offerId<1)){
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
+    const experience=await env.DB.prepare("SELECT experience_id,available_times,status FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
+    if(!experience||String(experience.status)!=="published")return json({error:"Erlebnis nicht gefunden."},404);
+    const times=normalizeAvailableTimes(experience.available_times);
+    const normalizedRequestedTime=normalizeAvailabilityTime(time);
+    if(time && times.length && !times.some(value=>normalizeAvailabilityTime(value)===normalizedRequestedTime))return json({error:"Diese Uhrzeit ist für dieses Erlebnis nicht verfügbar."},409);
+    const selectedTimes=time ? times.filter(value=>normalizeAvailabilityTime(value)===normalizedRequestedTime) : times;
+    const slots={};
+    for(const slotTime of selectedTimes)slots[String(slotTime).trim()]={capacity:null,booked:0,remaining:null,soldOut:false};
+    return json({experienceId,date,available:true,slots});
+  }
   if(!Number.isInteger(offerId)||offerId<1)return json({error:"Ungültige Angebots-ID."},400);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
   const offer=await env.DB.prepare("SELECT id,capacity,available_times,availability_rules,active FROM offers WHERE id=? LIMIT 1").bind(offerId).first();
