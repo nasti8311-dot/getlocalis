@@ -485,7 +485,7 @@ async function handleOfferAvailability(request,env){
   const date=String(params.get("date")||"").trim();
   const time=String(params.get("time")||"").trim();
   if(experienceId && (!Number.isInteger(offerId)||offerId<1)){
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Ungültiges Datum."},400);
     const experience=await env.DB.prepare("SELECT experience_id,available_times,status FROM experiences WHERE experience_id=? LIMIT 1").bind(experienceId).first();
     if(!experience||String(experience.status)!=="published")return json({error:"Erlebnis nicht gefunden."},404);
     const times=normalizeAvailableTimes(experience.available_times);
