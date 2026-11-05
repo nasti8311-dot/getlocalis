@@ -206,8 +206,7 @@ jobs:
           else
             echo "No prior production version returned; automatic rollback will be skipped if needed."
           fi
-          printf 'KNOWN_GOOD_VERSION_ID=%s
-' "$known_good" >> "$GITHUB_ENV"
+          printf 'KNOWN_GOOD_VERSION_ID=%s\n' "$known_good" >> "$GITHUB_ENV"
 
       - name: Upload and deploy Worker with updated static assets
         shell: bash
