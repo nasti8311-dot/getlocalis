@@ -1826,7 +1826,7 @@ async function loadExchangeRates() {
             const categoryView = document.getElementById("category-view");
             const detailView = document.getElementById("detail-view");
             if (categoryView && !categoryView.classList.contains("hidden")) showCategory(currentCategoryKey);
-            else if (detailView && !detailView.classList.contains("hidden")) showCategory(currentCategoryKey);
+            else if (detailView && !detailView.classList.contains("hidden")) showDetail(currentCategoryKey, currentTourKey);
         }
     } catch (error) { console.warn("Aktuelle Wechselkurse konnten nicht geladen werden.", error); }
 }
@@ -1844,7 +1844,6 @@ let detailDatePickerInstance = null;
 let datePickerInstance = null;
 
 let stripe = null;
-let cardElement = null;
 
 // =========================================================
 // FIIVIU PARTNER TRACKING
