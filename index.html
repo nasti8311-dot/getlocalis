@@ -1433,7 +1433,7 @@
                         <p class="mt-2 text-sm leading-relaxed text-gray-800" data-i18n="payment_split_body">Bei der Buchung werden 20 % des Gesamtpreises online bezahlt. Die übrigen 80 % bezahlst du später direkt vor Ort beim Erlebnisanbieter – nicht jetzt online.</p>
                     </div>
 
-                    <div id="card-element"></div>
+                    <div id="payment-element" class="min-h-[52px]"></div>
 
                     <div id="card-errors"
                          class="text-red-500 text-xs mt-2"
@@ -1834,7 +1834,7 @@ let detailDatePickerInstance = null;
 let datePickerInstance = null;
 
 let stripe = null;
-let cardElement = null;
+let pendingStripeCheckout = null;
 
 // =========================================================
 // FIIVIU PARTNER TRACKING
@@ -1857,21 +1857,7 @@ try {
         'pk_test_51TFUSyDYZ2rKxcVVhaOSfQxz3mFyltyLVPL6IA6LtkYdEz8xPMhFI9UKrhrQVMEnHcoaJGp8MNP8xeWcAP6n9RKB00kdPUXH7n'
     );
 
-    const elements = stripe.elements();
-
-    cardElement = elements.create('card', {
-        style: {
-            base: {
-                color: '#222222',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '16px',
-                fontSmoothing: 'antialiased',
-                '::placeholder': {
-                    color: '#9CA3AF'
-                }
-            }
-        }
-    });
+    // Payment Element is initialized after the server creates the PaymentIntent.
 
 } catch (error) {
 
@@ -3122,7 +3108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
     }
 
-    // Stripe Card Element is mounted only after checkout becomes visible.
+    // Payment Element is mounted after the server creates the PaymentIntent.
 
 });
 
@@ -3130,47 +3116,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 /* ============================================================
    VIEW NAVIGATION
 ============================================================ */
-
-let cardElementMounted = false;
-let cardElementReady = false;
-let resolveCardElementReady;
-const cardElementReadyPromise = new Promise(resolve => {
-    resolveCardElementReady = resolve;
-});
-
-function mountStripeCardElement() {
-    const container = document.getElementById("card-element");
-    if (!stripe || !cardElement || !container || cardElementMounted) return;
-
-    try {
-        // Register before mount: Stripe emits "ready" asynchronously after its iframe is usable.
-        cardElement.on("ready", () => {
-            cardElementReady = true;
-            resolveCardElementReady(true);
-        });
-        cardElement.on("loaderror", event => {
-            console.error("Stripe Card Element load error.", event);
-            resolveCardElementReady(false);
-        });
-        cardElement.mount(container);
-        cardElementMounted = true;
-    } catch (error) {
-        console.error("Stripe-Kartenfeld konnte nicht eingebunden werden.", error);
-        const errors = document.getElementById("card-errors");
-        if (errors) errors.textContent = "Das Kartenfeld konnte nicht geladen werden. Bitte Seite neu laden.";
-        resolveCardElementReady(false);
-    }
-}
-
-async function waitForStripeCardElementReady() {
-    if (cardElementReady) return true;
-    if (!cardElementMounted) mountStripeCardElement();
-
-    const timeout = new Promise(resolve => {
-        setTimeout(() => resolve(false), 10000);
-    });
-    return await Promise.race([cardElementReadyPromise, timeout]);
-}
 
 function showView(viewId, { pushHistory = true } = {}) {
 
@@ -4185,8 +4130,7 @@ function proceedToCheckout({ pushHistory = true } = {}) {
 
     showView("checkout-view");
 
-    // Mount Stripe's iframe only once its parent checkout view is visible.
-    requestAnimationFrame(() => mountStripeCardElement());
+    // Payment Element is mounted on demand after PaymentIntent creation.
 
 }
 
@@ -4344,6 +4288,52 @@ async function processBooking(event) {
     `;
 
 
+    // A second click confirms the method selected in Stripe's Payment Element.
+    if (pendingStripeCheckout) {
+        try {
+            const pending = pendingStripeCheckout;
+            const paymentResult = await stripe.confirmPayment({
+                elements: pending.elements,
+                confirmParams: { return_url: window.location.origin + "/payment-return.html" },
+                redirect: "if_required"
+            });
+            if (paymentResult.error) throw new Error(paymentResult.error.message || "Die Zahlung konnte nicht durchgeführt werden.");
+            if (!paymentResult.paymentIntent || paymentResult.paymentIntent.status !== "succeeded") {
+                throw new Error("Die Zahlung wurde noch nicht erfolgreich abgeschlossen.");
+            }
+            const finalizeResponse = await fetch("/api/finalize-booking", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    paymentIntentId: paymentResult.paymentIntent.id,
+                    clientSecret: paymentResult.paymentIntent.client_secret || pending.paymentData.clientSecret
+                })
+            });
+            const finalizeData = await finalizeResponse.json().catch(() => ({}));
+            if (!finalizeResponse.ok || !finalizeData.success) {
+                throw new Error(finalizeData.error || "Die Zahlung wurde abgeschlossen, aber die Buchung konnte nicht bestätigt werden.");
+            }
+            document.getElementById("conf-id").innerText = finalizeData.booking_id || pending.bookingId;
+            document.getElementById("conf-tour").dataset.rawTourName = pending.tourName;
+            document.getElementById("conf-date").dataset.rawDate = pending.date;
+            document.getElementById("conf-date").dataset.rawTime = pending.time;
+            document.getElementById("conf-date").dataset.rawGuests = String(pending.guests);
+            document.getElementById("conf-email").innerText = pending.email;
+            refreshSuccessViewLanguage();
+            pendingStripeCheckout = null;
+            showView("success-view");
+        } catch (error) {
+            console.error("Stripe Payment Element confirmation failed:", error);
+            cardErrors.textContent = error.message || "Es ist ein Fehler aufgetreten.";
+        } finally {
+            submitButton.disabled = false;
+            submitButton.innerHTML = pendingStripeCheckout
+                ? '<i class="fa-solid fa-lock mr-2"></i><span data-i18n="pay_book">Jetzt sicher bezahlen</span>'
+                : '<i class="fa-solid fa-lock mr-2"></i><span data-i18n="pay_book">Sicher buchen</span>';
+        }
+        return;
+    }
+
     const name =
         document.getElementById("customer-name").value.trim();
 
@@ -4423,11 +4413,7 @@ async function processBooking(event) {
            STRIPE
         ---------------------------------------------------- */
 
-        if (!stripe || !cardElement) {
-            throw new Error(
-                "Stripe konnte nicht geladen werden. Bitte Seite neu laden."
-            );
-        }
+        if (!stripe) throw new Error("Stripe konnte nicht geladen werden. Bitte Seite neu laden.");
 
 
         /*
@@ -4459,113 +4445,16 @@ async function processBooking(event) {
             });
 
 
-        /*
-         * Karte mit dem PaymentIntent bestätigen.
-         */
-
-        const cardReady = await waitForStripeCardElementReady();
-        if (!cardReady) {
-            throw new Error("Das Kartenfeld ist noch nicht bereit. Bitte kurz warten und erneut versuchen.");
-        }
-
-        const paymentResult =
-            await stripe.confirmCardPayment(
-                paymentData.clientSecret,
-                {
-                    payment_method: {
-                        card: cardElement,
-
-                        billing_details: {
-                            name: name,
-                            email: email
-                        }
-                    }
-                }
-            );
-
-
-        if (paymentResult.error) {
-
-            cardErrors.textContent =
-                paymentResult.error.message ||
-                "Die Zahlung konnte nicht durchgeführt werden.";
-
-            throw new Error(
-                paymentResult.error.message ||
-                "Die Zahlung konnte nicht durchgeführt werden."
-            );
-
-        }
-
-
-        if (
-            !paymentResult.paymentIntent ||
-            paymentResult.paymentIntent.status !== "succeeded"
-        ) {
-
-            throw new Error(
-                "Die Zahlung wurde nicht erfolgreich abgeschlossen."
-            );
-
-        }
-
-        // Finalize the booking immediately. The Stripe webhook remains
-        // as a second idempotent safety net.
-        const finalizedPaymentIntentId = String(paymentResult?.paymentIntent?.id || "").trim();
-        const finalizedClientSecret = String(
-            paymentResult?.paymentIntent?.client_secret || paymentData?.clientSecret || ""
-        ).trim();
-
-        if (!finalizedPaymentIntentId || !finalizedClientSecret) {
-            throw new Error("Stripe hat keine gültigen Zahlungsdaten für die Buchungsbestätigung zurückgegeben.");
-        }
-
-        const finalizeResponse = await fetch(
-            "/api/finalize-booking",
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    paymentIntentId: finalizedPaymentIntentId,
-                    clientSecret: finalizedClientSecret
-                })
-            }
-        );
-
-        const finalizeData = await finalizeResponse.json().catch(() => ({}));
-
-        if (!finalizeResponse.ok) {
-            throw new Error(
-                finalizeData.error ||
-                "Die Zahlung wurde abgeschlossen, aber die Buchung konnte nicht bestätigt werden."
-            );
-        }
-
-        /*
-         * Die Bestätigungs-Mail wird serverseitig nach bestätigter
-         * Zahlung versendet. Der Browser sendet deshalb keine
-         * zweite E-Mail mehr und zeigt nach erfolgreicher Zahlung
-         * direkt die vollständige Bestätigungsseite.
-         */
-
-        /* ----------------------------------------------------
-           SUCCESS
-        ---------------------------------------------------- */
-
-        document.getElementById("conf-id").innerText =
-            bookingId;
-
-        document.getElementById("conf-tour").dataset.rawTourName = tourName;
-        document.getElementById("conf-date").dataset.rawDate = date;
-        document.getElementById("conf-date").dataset.rawTime = selectedTourTime || "";
-        document.getElementById("conf-date").dataset.rawGuests = String(guests);
-        document.getElementById("conf-email").innerText = email;
-
-        refreshSuccessViewLanguage();
-
-
-        showView("success-view");
-
+        // Show every payment method enabled and eligible for this PaymentIntent.
+        const paymentElements = stripe.elements({ clientSecret: paymentData.clientSecret });
+        const paymentElement = paymentElements.create("payment", {
+            layout: { type: "accordion", defaultCollapsed: false }
+        });
+        paymentElement.mount("#payment-element");
+        pendingStripeCheckout = { elements: paymentElements, paymentData, bookingId, tourName, date, time, guests, email };
+        cardErrors.textContent = "Bitte wähle deine Zahlungsmethode und klicke anschließend auf „Jetzt sicher bezahlen“. Die Zahlung erfolgt weiterhin im Stripe-Testmodus.";
+        return;
+        // Confirmation and booking finalization run after the customer selects a payment method.
 
     } catch (error) {
 
