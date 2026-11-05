@@ -29,6 +29,7 @@ export default {
         url.pathname === "/api/admin/resend-provider-contract" ||
         url.pathname === "/api/admin/offers" ||
         url.pathname === "/api/admin/experience-approvals" ||
+        url.pathname === "/api/admin/experiences" ||
         url.pathname === "/api/admin/translate-offers" ||
         url.pathname === "/api/admin/control-center")
     ) {
@@ -75,6 +76,7 @@ export default {
       return handleAdminProviders(request, env);
     }
 
+    if (url.pathname === "/api/admin/experiences") return handleAdminExperiences(request, env);
     if (url.pathname === "/api/admin/experience-approvals") return handleAdminExperienceApprovals(request, env);
     if (url.pathname === "/api/admin/control-center") {
       return handleAdminControlCenter(request, env);
@@ -385,6 +387,49 @@ function sanitizeSettlementError(value) {
   return message.slice(0, 1000);
 }
 
+async function handleAdminExperiences(request,env){
+  if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key is not configured."},500);
+  if(!isAdminRequest(request,env))return json({error:"Unauthorized"},401);
+  if(!env.DB)return json({error:"D1 database not configured."},500);
+  try{
+    await ensureProviderRegistrationSchema(env);await ensureOffersTable(env);
+    if(request.method==="GET"){
+      const rows=await env.DB.prepare("SELECT o.*,p.name AS provider_name,p.active AS provider_active FROM offers o LEFT JOIN providers p ON p.provider_ref=o.provider_ref ORDER BY o.id DESC").all();
+      return json({experiences:rows.results||[]});
+    }
+    if(request.method==="PATCH"){
+      const body=await request.json().catch(()=>({})),id=Number(body.id);
+      if(!Number.isInteger(id)||id<1)return json({error:"Ungültige Erlebnis-ID."},400);
+      const allowed={title:"TEXT",description:"TEXT",category:"TEXT",price_cents:"INTEGER",currency:"TEXT",active:"INTEGER",approval_status:"TEXT"};
+      const sets=[],values=[];
+      for(const [key] of Object.entries(allowed)){
+        if(!Object.prototype.hasOwnProperty.call(body,key))continue;
+        let value=body[key];
+        if(key==="title"){value=String(value||"").trim();if(!value||value.length>180)return json({error:"Der Titel muss zwischen 1 und 180 Zeichen lang sein."},400);}
+        if(key==="description")value=String(value||"").trim()||null;
+        if(key==="category"){value=String(value||"").trim().toLowerCase();if(!value||value.length>80)return json({error:"Ungültige Kategorie."},400);}
+        if(key==="price_cents"){value=Number(value);if(!Number.isSafeInteger(value)||value<0)return json({error:"Ungültiger Preis."},400);}
+        if(key==="currency"){value=String(value||"").trim().toUpperCase();if(!["RON","EUR"].includes(value))return json({error:"Währung muss RON oder EUR sein."},400);}
+        if(key==="active"){value=Number(value);if(![0,1].includes(value))return json({error:"Ungültiger Aktiv-Status."},400);}
+        if(key==="approval_status"){value=String(value||"");if(!["pending","approved","rejected"].includes(value))return json({error:"Ungültiger Freigabestatus."},400);}
+        sets.push(key+"=?");values.push(value);
+      }
+      if(!sets.length)return json({error:"Keine Änderungen übermittelt."},400);
+      if(Object.prototype.hasOwnProperty.call(body,"approval_status")){
+        const state=String(body.approval_status);
+        if(state==="pending"||state==="rejected"){sets.push("active=0");}
+        else if(!Object.prototype.hasOwnProperty.call(body,"active")){sets.push("active=1");}
+      }
+      if(Number(body.active)===1&&!Object.prototype.hasOwnProperty.call(body,"approval_status"))sets.push("approval_status='approved'");
+      sets.push("updated_at=CURRENT_TIMESTAMP");values.push(id);
+      const result=await env.DB.prepare("UPDATE offers SET "+sets.join(",")+" WHERE id=?").bind(...values).run();
+      if(!Number(result.meta?.changes||0))return json({error:"Erlebnis nicht gefunden oder unverändert."},404);
+      const experience=await env.DB.prepare("SELECT o.*,p.name AS provider_name,p.active AS provider_active FROM offers o LEFT JOIN providers p ON p.provider_ref=o.provider_ref WHERE o.id=?").bind(id).first();
+      return json({success:true,experience});
+    }
+    return json({error:"Method Not Allowed"},405);
+  }catch(error){console.error("FiiViu admin experience management failed",error);return json({error:error?.message||"Erlebnisverwaltung fehlgeschlagen."},500);}
+}
 async function handleAdminExperienceApprovals(request,env){
   if(!env.ADMIN_PAYOUT_KEY)return json({error:"Admin key is not configured."},500);
   if(!isAdminRequest(request,env))return json({error:"Unauthorized"},401);
