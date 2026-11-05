@@ -69,8 +69,8 @@ export async function handleStripeWebhook(request, env) {
       if (isFiiViuCheckout && !directProviderPayment) {
         await createBookingSettlement(env,event);
       } else if (directProviderPayment) {
-        // The customer pays the FiiViu fee directly; there is no Connect
-        // settlement, but the paid booking must still be finalized in D1.
+        // Stripe Connect settlement skipped: the customer pays the FiiViu fee
+        // directly, but the paid booking must still be finalized in D1.
         await finalizePaidBooking(env, paymentIntent);
       } else {
         console.warn("FiiViu Stripe payment intent is not a recognized checkout; settlement skipped");
