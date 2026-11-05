@@ -2779,7 +2779,7 @@ const translations = {
    PUBLIC ORGANIZER OFFERS
 ============================================================ */
 
-const PUBLIC_API_BASE = "";
+const PUBLIC_API_BASE = "https://getlocalis-preview.nasti8311.workers.dev";
 
 const categoryFallbackImages = {
     "action-adventure": "https://images.unsplash.com/photo-1551632811-561732d1e306?q=85&w=1000",
@@ -4203,7 +4203,7 @@ async function createPaymentIntent({
 
 const response =
     await fetch(
-    "/api/create-payment-intent?ref=" +
+    PUBLIC_API_BASE + "/api/create-payment-intent?ref=" +
     encodeURIComponent(partnerRef),
     {
             method: "POST",
