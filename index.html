@@ -4292,6 +4292,8 @@ async function processBooking(event) {
     if (pendingStripeCheckout) {
         try {
             const pending = pendingStripeCheckout;
+            const { error: submitError } = await pending.elements.submit();
+            if (submitError) throw new Error(submitError.message || "Bitte prüfe deine Zahlungsdaten.");
             const paymentResult = await stripe.confirmPayment({
                 elements: pending.elements,
                 confirmParams: { return_url: window.location.origin + "/payment-return.html" },
