@@ -289,7 +289,7 @@ export default {
             totalAmountCents !== fiiviuFeeCents + providerDueCents ||
             !Number.isSafeInteger(originalTotalAmountCents) || originalTotalAmountCents < 250 ||
             !Number.isFinite(exchangeRate) || exchangeRate <= 0 ||
-            !/^\\d{4}-\\d{2}-\\d{2}$/.test(exchangeRateDate) ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(exchangeRateDate) ||
             !["eur","ron","usd","gbp"].includes(originalCurrency) ||
             !Number.isSafeInteger(guests) || guests < 1 || guests > 50 ||
             !["eur","ron","usd","gbp"].includes(currency) ||
