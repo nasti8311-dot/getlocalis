@@ -3279,23 +3279,19 @@ function scrollToMoments() {
 function getFeaturedItems() {
 
     return [
-
         {
-            item: categoriesData.explore.items[0],
+            item: categoriesData?.explore?.items?.[0],
             category: "explore"
         },
-
         {
-            item: categoriesData.relax.items[0],
+            item: categoriesData?.relax?.items?.[0],
             category: "relax"
         },
-
         {
-            item: categoriesData.nightlife.items[0],
+            item: categoriesData?.nightlife?.items?.[0],
             category: "nightlife"
         }
-
-    ];
+    ].filter(featured => featured.item);
 
 }
 
