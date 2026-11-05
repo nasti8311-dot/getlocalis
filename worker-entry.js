@@ -324,6 +324,8 @@ export default {
         params.set("metadata[meeting_latitude]",String(data.meetingLatitude||""));
         params.set("metadata[meeting_longitude]",String(data.meetingLongitude||""));
         params.set("metadata[provider_connect_account_id]",String(data.providerConnectAccountId||""));
+        params.set("metadata[source_currency]",String(data.sourceCurrency||currency));
+        params.set("metadata[display_currency]",String(data.displayCurrency||currency));
         // Partner attribution was already validated by marketplace-entry.js.
         // Persist the verified ref in Stripe metadata so webhook settlement can
         // calculate and retain the partner commission.
