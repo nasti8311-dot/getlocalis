@@ -46,7 +46,6 @@
     <script src="https://npmcdn.com/flatpickr/dist/l10n/ro.js"></script>
 
     <!-- Stripe -->
-    <script src="https://js.stripe.com/v3/"></script>
 
     <script>
         tailwind.config = {
@@ -1854,18 +1853,42 @@ function capturePartnerRef() {
    STRIPE
 ============================================================ */
 
-try {
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51TFUSyDYZ2rKxcVVhaOSfQxz3mFyltyLVPL6IA6LtkYdEz8xPMhFI9UKrhrQVMEnHcoaJGp8MNP8xeWcAP6n9RKB00kdPUXH7n';
+let stripeLoadPromise = null;
 
-    stripe = Stripe(
-        'pk_test_51TFUSyDYZ2rKxcVVhaOSfQxz3mFyltyLVPL6IA6LtkYdEz8xPMhFI9UKrhrQVMEnHcoaJGp8MNP8xeWcAP6n9RKB00kdPUXH7n'
-    );
-
-    // The Payment Element is initialized after the server creates the PaymentIntent.
-
-} catch (error) {
-
-    console.warn("Stripe konnte nicht initialisiert werden.", error);
-
+async function ensureStripeLoaded() {
+    if (stripe) return stripe;
+    if (stripeLoadPromise) return stripeLoadPromise;
+    stripeLoadPromise = new Promise((resolve, reject) => {
+        const initialize = () => {
+            if (typeof window.Stripe !== "function") {
+                stripeLoadPromise = null;
+                reject(new Error("Stripe konnte nicht initialisiert werden."));
+                return;
+            }
+            try {
+                stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
+                resolve(stripe);
+            } catch (error) {
+                stripeLoadPromise = null;
+                reject(error);
+            }
+        };
+        if (typeof window.Stripe === "function") {
+            initialize();
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://js.stripe.com/v3/";
+        script.async = true;
+        script.onload = initialize;
+        script.onerror = () => {
+            stripeLoadPromise = null;
+            reject(new Error("Stripe konnte nicht geladen werden."));
+        };
+        document.head.appendChild(script);
+    });
+    return stripeLoadPromise;
 }
 
 
@@ -4407,11 +4430,7 @@ async function processBooking(event) {
            STRIPE
         ---------------------------------------------------- */
 
-        if (!stripe) {
-            throw new Error(
-                "Stripe konnte nicht geladen werden. Bitte Seite neu laden."
-            );
-        }
+        await ensureStripeLoaded();
 
 
         /*
@@ -4917,6 +4936,8 @@ function escapeHtml(value) {
             pwaInstallButton.classList.remove("visible");
         }
     </script>
+
+    <script src="/assets/js/fiiviu-consent.js" defer></script>
 
 </body>
 </html>
