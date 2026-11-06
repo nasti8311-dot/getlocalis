@@ -1248,3 +1248,23 @@ test("admin test email uses authenticated Resend path without touching booking d
   assert.doesNotMatch(handler, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i);
   assert.doesNotMatch(handler, /STRIPE_SECRET_KEY|payment_intent|booking_id/i);
 });
+
+
+test("paid booking notifications validate internal recipient and retry Resend delivery", () => {
+  const worker = read("worker-entry.js");
+  const adminStart = worker.indexOf("// Notify FiiViu independently");
+  const adminEnd = worker.indexOf("// Notify the organizer independently", adminStart);
+  const admin = worker.slice(adminStart, adminEnd);
+  assert.ok(adminStart >= 0 && adminEnd > adminStart);
+  assert.match(admin, /\^\[\^\\s@\]\+@\[\^\\s@\]\+\\\.\[\^\\s@\]\+\$/);
+  assert.match(admin, /sendResendEmailWithRetry\(env/);
+  assert.match(worker, /async function sendResendEmailWithRetry/);
+  assert.match(worker, /attempt < 3/);
+  assert.match(worker, /notificationType/);
+  const providerStart = worker.indexOf("async function sendProviderBookingNotification");
+  const providerEnd = worker.indexOf("async function sendCancellationNotifications", providerStart);
+  const provider = worker.slice(providerStart, providerEnd);
+  assert.match(provider, /sendResendEmailWithRetry\(env/);
+  assert.match(provider, /provider_notification_email_error/);
+  assert.match(provider, /provider_notification_email_sent_at=CURRENT_TIMESTAMP/);
+});
