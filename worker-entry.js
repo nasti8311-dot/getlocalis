@@ -322,6 +322,7 @@ export default {
         params.set("metadata[offer_id]",String(data.offerId||""));
         params.set("metadata[customer_name]",String(data.customerName||""));
         params.set("metadata[customer_email]",String(data.customerEmail||""));
+        params.set("metadata[customer_note]",String(data.customerNote||"").slice(0,500));
         params.set("metadata[customer_phone]",String(data.customerPhone||""));
         params.set("metadata[customer_language]",normalizeLanguage(data.customerLanguage));
         params.set("metadata[booking_date]",String(data.bookingDate||""));
@@ -2102,6 +2103,19 @@ async function sendProviderBookingNotification(env, booking) {
     "SELECT provider_ref,name,contact_email,active FROM providers WHERE (provider_ref=? OR name=?) AND active=1 LIMIT 1"
   ).bind(clean(booking.provider_ref) || "", clean(booking.provider_name) || "").first();
 
+  let customerNote = String(booking.customer_note || "").trim();
+  if (booking.payment_intent_id && env.STRIPE_SECRET_KEY) {
+    try {
+      const paymentIntent = await stripeGet(env, "/v1/payment_intents/" + encodeURIComponent(String(booking.payment_intent_id)));
+      customerNote = String(paymentIntent?.metadata?.customer_note || customerNote).trim();
+    } catch (error) {
+      console.error("FiiViu organizer email could not read customer note metadata", {
+        bookingId: booking.booking_id,
+        error: error?.message || String(error)
+      });
+    }
+  }
+
   const onSiteOffer = booking.offer_id ? await env.DB.prepare(
     "SELECT pay_on_site_cash,pay_on_site_card FROM offers WHERE id=? LIMIT 1"
   ).bind(booking.offer_id).first().catch(() => null) : null;
@@ -2141,6 +2155,7 @@ async function sendProviderBookingNotification(env, booking) {
       {label:"Client",value:booking.customer_name},
       {label:"E-mail client",value:booking.customer_email},
       {label:"Telefon",value:booking.customer_phone},
+      {label:"Nachricht des Kunden",value:customerNote},
       ...(directPayment ? [{label:"Avans online (20%)",value:onlineFee},{label:"De încasat direct (80%)",value:providerDue},{label:"Metode de plată la fața locului",value:onSiteMethods}] : []),
       {label:"Punct de întâlnire",value:meetingPoint},
       {label:"Adresă",value:[booking.meeting_address,booking.meeting_city,booking.meeting_country].filter(Boolean).join(", ")}
@@ -2153,6 +2168,7 @@ async function sendProviderBookingNotification(env, booking) {
     "Data: " + (booking.booking_date || ""), "Ora: " + (booking.booking_time || ""),
     "Număr de persoane: " + (booking.guests || 1), "Client: " + (booking.customer_name || ""),
     "E-mail client: " + (booking.customer_email || ""), "Telefon: " + (booking.customer_phone || ""),
+    customerNote ? "Mesaj de la client: " + customerNote : "",
     "Valoarea totală a rezervării: " + amount,
     ...(directPayment ? ["Avans online (20%): " + onlineFee, "De încasat direct (80%): " + providerDue, "Metode de plată: " + onSiteMethods] : []),
     "Punct de întâlnire: " + meetingPoint,
@@ -2165,15 +2181,21 @@ async function sendProviderBookingNotification(env, booking) {
       .bind("RESEND_API_KEY ist nicht konfiguriert.", booking.payment_intent_id).run();
     return;
   }
+  // Claim delivery atomically before sending. The finalize endpoint and Stripe
+  // webhook can run at the same time; a stale booking object alone allowed both
+  // executions to send the organizer notification.
+  const claim = await env.DB.prepare(
+    "UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL"
+  ).bind(booking.payment_intent_id).run();
+  if (Number(claim?.meta?.changes || 0) !== 1) return;
+
   try {
     await sendResendEmailWithRetry(env, {from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text}, "provider-booking");
   } catch (error) {
-    await env.DB.prepare("UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=NULL,provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
       .bind(String(error?.message || error).slice(0,1000), booking.payment_intent_id).run();
     throw error;
   }
-  await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL")
-    .bind(booking.payment_intent_id).run();
 }
 
 async function sendCancellationNotifications(env, booking) {
