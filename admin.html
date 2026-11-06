@@ -175,7 +175,15 @@ async function loadControlCenter(){
     if(!r.ok && !data.today) throw new Error(data.error||'Kontrollzentrum konnte nicht geladen werden.');
     const t=data.today||{},s=data.system||{};
     document.getElementById('ccBookings').textContent=Number(t.bookings||0).toLocaleString('de-DE');
-    document.getElementById('ccRevenue').textContent=euro(Number(t.revenueCents||0)/100);
+    const revenueByCurrency=t.revenueByCurrency&&typeof t.revenueByCurrency==='object'?t.revenueByCurrency:{eur:Number(t.revenueCents||0)};
+    const revenueParts=Object.entries(revenueByCurrency)
+      .filter(([currency,cents])=>/^[a-z]{3}$/i.test(currency)&&Number(cents)>0)
+      .sort(([a],[b])=>a.localeCompare(b))
+      .map(([currency,cents])=>{
+        try{return new Intl.NumberFormat('de-DE',{style:'currency',currency:currency.toUpperCase()}).format(Number(cents)/100);}
+        catch(_){return (Number(cents)/100).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+currency.toUpperCase();}
+      });
+    document.getElementById('ccRevenue').textContent=revenueParts.join(' + ')||euro(0);
     document.getElementById('ccPayouts').textContent=euro(Number(t.openPayoutsCents||0)/100);
     document.getElementById('ccCancellations').textContent=Number(t.cancellations||0).toLocaleString('de-DE');
     document.getElementById('ccFailedPayments').textContent=Number(t.failedPayments||0).toLocaleString('de-DE');
