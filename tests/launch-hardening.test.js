@@ -1236,3 +1236,15 @@ test("admin provider directory is authenticated, read-only, and includes provide
   }
 });
 
+
+test("admin test email uses authenticated Resend path without touching booking data", () => {
+  const source = read("worker-entry.js");
+  assert.match(source, /url\.pathname === "\/api\/admin\/test-email"/);
+  assert.match(source, /async function handleAdminTestEmail\(request, env\)/);
+  assert.match(source, /from: "FiiViu <noreply@fiiviu\.ro>"/);
+  assert.match(source, /to: \[recipient\]/);
+  const handler = source.slice(source.indexOf("async function handleAdminTestEmail"), source.indexOf("async function handleAdminProviderDirectory"));
+  assert.match(handler, /isAdminRequest\(request, env\)/);
+  assert.doesNotMatch(handler, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i);
+  assert.doesNotMatch(handler, /STRIPE_SECRET_KEY|payment_intent|booking_id/i);
+});
