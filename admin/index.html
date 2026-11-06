@@ -39,6 +39,13 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 <h1>FiiViu Admin</h1><div class="hint">Partner anlegen, individuelle Links erzeugen und QR-Codes verwalten.</div>
 <nav aria-label="Admin-Bereiche" style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px"><a href="#providerDirectorySection" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid #dce4ef;text-decoration:none;font-weight:700">Erlebnisanbieter</a></nav>
 <section><h2>Admin-Zugang</h2><label for="token">Admin-Schlüssel</label><input id="token" type="password" autocomplete="off" placeholder="Cloudflare Admin-Schlüssel"><div class="hint" style="margin-top:8px;margin-bottom:0">Der Schlüssel wird nicht gespeichert.</div></section>
+<section id="adminEmailTestSection">
+  <h2>E-Mail-Zustellung testen</h2>
+  <p class="hint">Sendet eine einzelne Testnachricht über denselben Resend-Absender wie die interne Buchungsbenachrichtigung. Es wird keine Buchung angelegt oder verändert.</p>
+  <button id="sendAdminEmailTest" class="secondary" type="button">Testmail an interne Buchungsadresse senden</button>
+  <div id="adminEmailTestMessage" class="muted" style="margin-top:12px" aria-live="polite">Noch kein Test ausgeführt.</div>
+</section>
+
 <section><h2>Neuen Partner anlegen</h2><div class="grid"><div><label for="name">Hotel / Apartment</label><input id="name" placeholder="z. B. Hotel Bucharest Central"></div><div><label for="type">Typ</label><select id="type"><option>Hotel</option><option>Apartment</option><option>Hostel</option><option>Sonstiges</option></select></div><div><label for="contactName">Kontaktperson (optional)</label><input id="contactName" placeholder="Name"></div><div><label for="contactEmail">E-Mail (optional)</label><input id="contactEmail" type="email" placeholder="partner@example.com"></div><div><label for="partnerRef">Partner-Code (optional)</label><input id="partnerRef" placeholder="Leer lassen = automatisch"></div></div><button id="create">Partner anlegen</button><div id="createResult"></div></section>
 <section><h2>Partner & QR-Codes</h2><button id="reload" class="secondary">Liste aktualisieren</button><div id="partners" style="margin-top:12px">Noch keine Liste geladen.</div></section>
 <section><h2>Partner-Aktivitäten</h2>
@@ -376,4 +383,21 @@ document.getElementById('loadProviderDirectory')?.addEventListener('click',loadP
 document.getElementById('providerDirectorySearch')?.addEventListener('input',renderProviderDirectory);
 document.getElementById('providerDirectoryStatus')?.addEventListener('change',renderProviderDirectory);
 
+
+document.getElementById('sendAdminEmailTest')?.addEventListener('click', async () => {
+  const button = document.getElementById('sendAdminEmailTest');
+  const message = document.getElementById('adminEmailTestMessage');
+  button.disabled = true;
+  message.textContent = 'Testmail wird über Resend versendet…';
+  try {
+    const response = await fetch(WORKER + '/api/admin/test-email', { method: 'POST', headers: headers(), body: JSON.stringify({}) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Testversand fehlgeschlagen.');
+    message.textContent = 'Resend hat die Testmail an ' + data.recipient + ' angenommen. E-Mail-ID: ' + (data.email_id || 'nicht zurückgegeben') + '. Zustellstatus bitte im Resend-E-Mail-Verlauf prüfen.';
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
 </script></body></html>
