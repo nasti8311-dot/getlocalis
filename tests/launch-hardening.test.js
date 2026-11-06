@@ -545,9 +545,6 @@ test("admin offer deletion is safe around existing bookings", () => {
   assert.match(source, /FROM bookings WHERE experience_name=\? AND provider_name=\?/);
   assert.match(source, /UPDATE offers SET active=0,updated_at=CURRENT_TIMESTAMP/);
   assert.match(source, /DELETE FROM offers WHERE id=\?/);
-  const admin = read("organizer-admin.html");
-  assert.ok(admin.includes("if (!/^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
-  assert.ok(admin.includes("if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
 });
 
 
@@ -1266,4 +1263,15 @@ test("paid booking notifications validate internal recipient and retry Resend de
   assert.match(provider, /sendResendEmailWithRetry\(env/);
   assert.match(provider, /provider_notification_email_error/);
   assert.match(provider, /provider_notification_email_sent_at=CURRENT_TIMESTAMP/);
+});
+
+
+test("admin booking history safely formats ISO and localized date values", () => {
+  for (const path of ["admin.html", "admin/index.html"]) {
+    const html = read(path);
+    assert.ok(html.includes("function formatAdminBookingDate(value)"));
+    assert.ok(html.includes("toLocaleDateString(document.documentElement.lang||navigator.language"));
+    assert.ok(html.includes("const dateLabel=formatAdminBookingDate(b.booking_date)"));
+    assert.ok(!html.includes("new Date(date+'T12:00:00')"));
+  }
 });

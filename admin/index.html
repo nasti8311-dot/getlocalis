@@ -247,6 +247,29 @@ document.getElementById('payout').onclick=async()=>{const amount=Number(document
 let adminBookings=[];
 let adminBookingPage=1;
 let adminBookingTotalPages=1;
+function formatAdminBookingDate(value){
+  const raw=String(value??"").trim();
+  if(!raw)return "Termin fehlt";
+  let year,month,day,match;
+  if((match=raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/))){
+    year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);
+  }else if((match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/))){
+    const first=Number(match[1]),second=Number(match[2]);
+    const english=String(document.documentElement.lang||"").toLowerCase().startsWith("en");
+    if(first>12){day=first;month=second;}
+    else if(second>12){month=first;day=second;}
+    else if(english&&raw.includes("/")){month=first;day=second;}
+    else{day=first;month=second;}
+    year=Number(match[3]);
+  }else{
+    const parsed=new Date(raw);
+    if(!Number.isNaN(parsed.getTime()))return parsed.toLocaleDateString(document.documentElement.lang||navigator.language||"de-DE");
+    return raw;
+  }
+  const parsed=new Date(year,month-1,day,12,0,0);
+  if(parsed.getFullYear()!==year||parsed.getMonth()!==month-1||parsed.getDate()!==day)return raw;
+  return parsed.toLocaleDateString(document.documentElement.lang||navigator.language||"de-DE");
+}
 function renderAdminBookings(){
   const box=document.getElementById('bookingList');
   if(!adminBookings.length){box.innerHTML='<p class="muted">Keine Buchungen für diese Filter gefunden.</p>';return;}
@@ -254,8 +277,7 @@ function renderAdminBookings(){
     adminBookings.map(b=>{
       const created=String(b.created_at||'');
       const createdLabel=created?new Date(created).toLocaleString('de-DE'):'–';
-      const date=String(b.booking_date||'').slice(0,10);
-      const dateLabel=date?new Date(date+'T12:00:00').toLocaleDateString('de-DE'):'Termin fehlt';
+      const dateLabel=formatAdminBookingDate(b.booking_date);
       const time=String(b.booking_time||'').trim();
       const status=[b.status,b.payment_status].filter(Boolean).join(' · ')||'–';
       const guest=[b.customer_name,b.customer_email].filter(Boolean).map(escapeHtml).join('<br>')||'–';
