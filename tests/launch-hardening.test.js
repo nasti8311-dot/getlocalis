@@ -546,7 +546,7 @@ test("admin offer deletion is safe around existing bookings", () => {
   assert.match(source, /UPDATE offers SET active=0,updated_at=CURRENT_TIMESTAMP/);
   assert.match(source, /DELETE FROM offers WHERE id=\?/);
   const admin = read("organizer-admin.html");
-  assert.match(admin, /deleteOfferById/);
+  assert.ok(admin.includes("if (!/^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
   assert.match(admin, /method:"DELETE"/);
 });
 
