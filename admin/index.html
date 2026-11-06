@@ -37,6 +37,7 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 </head>
 <body>
 <h1>FiiViu Admin</h1><div class="hint">Partner anlegen, individuelle Links erzeugen und QR-Codes verwalten.</div>
+<nav aria-label="Admin-Bereiche" style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px"><a href="#providerDirectorySection" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid #dce4ef;text-decoration:none;font-weight:700">Erlebnisanbieter</a></nav>
 <section><h2>Admin-Zugang</h2><label for="token">Admin-Schlüssel</label><input id="token" type="password" autocomplete="off" placeholder="Cloudflare Admin-Schlüssel"><div class="hint" style="margin-top:8px;margin-bottom:0">Der Schlüssel wird nicht gespeichert.</div></section>
 <section><h2>Neuen Partner anlegen</h2><div class="grid"><div><label for="name">Hotel / Apartment</label><input id="name" placeholder="z. B. Hotel Bucharest Central"></div><div><label for="type">Typ</label><select id="type"><option>Hotel</option><option>Apartment</option><option>Hostel</option><option>Sonstiges</option></select></div><div><label for="contactName">Kontaktperson (optional)</label><input id="contactName" placeholder="Name"></div><div><label for="contactEmail">E-Mail (optional)</label><input id="contactEmail" type="email" placeholder="partner@example.com"></div><div><label for="partnerRef">Partner-Code (optional)</label><input id="partnerRef" placeholder="Leer lassen = automatisch"></div></div><button id="create">Partner anlegen</button><div id="createResult"></div></section>
 <section><h2>Partner & QR-Codes</h2><button id="reload" class="secondary">Liste aktualisieren</button><div id="partners" style="margin-top:12px">Noch keine Liste geladen.</div></section>
@@ -309,7 +310,7 @@ function renderProviderDirectory(){
  const q=String(document.getElementById('providerDirectorySearch').value||'').trim().toLowerCase();
  const status=document.getElementById('providerDirectoryStatus').value;
  const rows=providerDirectoryData.filter(p=>{
-  const hay=[p.name,p.provider_ref,p.company_name,p.representative_name,p.contact_email,p.cui].join(' ').toLowerCase();
+  const hay=[p.name,p.provider_ref,p.company_name,p.representative_name,p.contact_email,p.phone,p.contact_phone,p.cui].join(' ').toLowerCase();
   return (!q||hay.includes(q))&&(status==='all'||(status==='active'?Number(p.active)===1:Number(p.active)!==1));
  });
  if(!rows.length){box.innerHTML='<p class="muted">Keine passenden Erlebnisanbieter gefunden.</p>';return;}
@@ -317,7 +318,7 @@ function renderProviderDirectory(){
   const active=Number(p.active)===1;
   return '<article style="border:1px solid #e4e9f1;border-radius:14px;padding:16px;margin:12px 0;background:#fbfcfe">'
    +'<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><b style="font-size:17px">'+escapeHtml(p.name||p.company_name||'Ohne Namen')+'</b><div class="muted">'+escapeHtml(p.provider_ref||'')+' · '+escapeHtml(p.company_name||'')+'</div></div><span class="status '+(active?'active':'inactive')+'">'+(active?'● Aktiv':'● Inaktiv')+'</span></div>'
-   +'<div class="grid" style="margin-top:12px"><div class="muted">Kontakt: '+escapeHtml(p.representative_name||'–')+'<br>E-Mail: '+escapeHtml(p.contact_email||'–')+'<br>Firmen-ID / CUI: '+escapeHtml(p.cui||'–')+'</div><div class="muted">Erlebnisse: <b>'+Number(p.experience_count||0)+'</b> ('+Number(p.active_experience_count||0)+' aktiv)<br>Buchungen: <b>'+Number(p.booking_count||0)+'</b> · bezahlt: '+Number(p.paid_booking_count||0)+'<br>Buchungswert: <b>'+escapeHtml(providerDirectoryCurrency(p.booking_value_by_currency))+'</b></div></div>'
+   +'<div class="grid" style="margin-top:12px"><div class="muted">Kontakt: '+escapeHtml(p.representative_name||'–')+'<br>E-Mail: '+escapeHtml(p.contact_email||'–')+'<br>Telefon: '+escapeHtml(p.phone||p.contact_phone||'–')+'<br>Firmen-ID / CUI: '+escapeHtml(p.cui||'–')+'</div><div class="muted">Erlebnisse: <b>'+Number(p.experience_count||0)+'</b> ('+Number(p.active_experience_count||0)+' aktiv)<br>Buchungen: <b>'+Number(p.booking_count||0)+'</b> · bezahlt: '+Number(p.paid_booking_count||0)+'<br>Buchungswert: <b>'+escapeHtml(providerDirectoryCurrency(p.booking_value_by_currency))+'</b></div></div>'
    +'<div class="muted" style="margin-top:8px">Registriert: '+escapeHtml(p.created_at||'–')+'</div>'
    +'<button class="secondary" data-provider-detail="'+escapeHtml(p.provider_ref||'')+'">Vollständiges Profil und Details öffnen</button></article>';
  }).join('');
@@ -343,7 +344,7 @@ async function loadProviderDirectory(){
  }catch(error){message.textContent=error.message;box.innerHTML='<div class="result error">'+escapeHtml(error.message)+'</div>';}
 }
 function providerFieldLabel(key){
- const labels={provider_ref:'Anbieter-Code',name:'Name',company_name:'Firma',cui:'CUI / Firmen-ID',representative_name:'Ansprechpartner',contact_email:'E-Mail',connect_account_id:'Connect-Konto (Bestandsfeld)',active:'Aktiv',created_at:'Registriert am',updated_at:'Zuletzt aktualisiert'};
+ const labels={provider_ref:'Anbieter-Code',name:'Name',company_name:'Firma',cui:'CUI / Firmen-ID',representative_name:'Ansprechpartner',contact_email:'E-Mail',phone:'Telefon',contact_phone:'Telefon',connect_account_id:'Connect-Konto (Bestandsfeld)',active:'Aktiv',created_at:'Registriert am',updated_at:'Zuletzt aktualisiert'};
  return labels[key]||key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 }
 async function loadProviderDirectoryDetail(ref,button){
