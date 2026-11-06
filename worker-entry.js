@@ -462,7 +462,7 @@ async function handleAdminTestEmail(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
   const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) return json({ error: "ADMIN_BOOKING_EMAIL ist ungültig." }, 500);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) return json({ error: "ADMIN_BOOKING_EMAIL ist ungültig." }, 500);
   if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY ist nicht konfiguriert." }, 500);
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -472,7 +472,7 @@ async function handleAdminTestEmail(request, env) {
         from: "FiiViu <noreply@fiiviu.ro>",
         to: [recipient],
         subject: "FiiViu – Test der Buchungsbenachrichtigung",
-        text: "Dies ist eine technische Testnachricht aus dem FiiViu-Control-Center.\\n\\nDer Resend-Versandweg für interne Buchungsbenachrichtigungen wurde getestet. Es wurde keine Buchung angelegt oder verändert."
+        text: "Dies ist eine technische Testnachricht aus dem FiiViu-Control-Center.\n\nDer Resend-Versandweg für interne Buchungsbenachrichtigungen wurde getestet. Es wurde keine Buchung angelegt oder verändert."
       })
     });
     const result = await response.json().catch(() => ({}));
