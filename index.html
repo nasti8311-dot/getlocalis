@@ -4368,17 +4368,22 @@ async function processBooking(event) {
 
     const checkoutDateText =
         String(document.getElementById("booking-date")?.value || "").trim();
+    const checkoutSummaryText =
+        String(document.getElementById("checkout-summary-date")?.textContent || "").trim();
+    const summaryDateMatch = checkoutSummaryText.match(/(\d{1,2}[./]\d{1,2}[./]\d{4}|\d{4}-\d{2}-\d{2})/);
+    const summaryDateText = summaryDateMatch ? summaryDateMatch[1] : "";
 
-    // The picker is the primary source. If the global state was lost during
-    // the detail -> checkout transition, recover the same date from the
-    // read-only checkout field instead of sending an empty bookingDate.
+    // The visible checkout summary is the last-resort source of truth if
+    // navigation or a restored page has cleared the date-picker globals.
     const date =
         normalizeBookingDateValue(
-            pickerDateIso || selectedDetailDate || checkoutDateText
+            selectedDetailDate || pickerDateIso || checkoutDateText || summaryDateText
         );
 
+    const activeTimeButton = document.querySelector("#time-slots-container .time-slot-btn.active");
+    const summaryTimeMatch = checkoutSummaryText.match(/(?:^|[·\s])((?:[01]?\d|2[0-3]):[0-5]\d)(?:$|\s)/);
     const rawSelectedTime =
-        String(selectedTourTime || "").trim();
+        String(selectedTourTime || activeTimeButton?.dataset?.time || (summaryTimeMatch ? summaryTimeMatch[1] : "")).trim();
     const time =
         normalizeBookingTimeValue(rawSelectedTime);
 
