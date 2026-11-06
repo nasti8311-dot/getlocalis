@@ -472,11 +472,11 @@ async function handleAdminBookings(request, env) {
       const term = "%" + search.toLowerCase() + "%";
       values.push(term, term, term, term);
     }
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(from)) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
       clauses.push("date(created_at) >= date(?)");
       values.push(from);
     }
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(to)) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
       clauses.push("date(created_at) <= date(?)");
       values.push(to);
     }
