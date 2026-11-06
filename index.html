@@ -4461,10 +4461,20 @@ async function processBooking(event) {
 
         const paymentData = pendingPaymentData;
         const bookingContext = pendingBookingContext;
+        if (!paymentData || !bookingContext || !stripeElements || !paymentElement) {
+            throw new Error("Die Zahlungssitzung ist nicht mehr verfügbar. Bitte lade die Seite neu und starte die Buchung erneut.");
+        }
+
+        // Validate the selected method and billing details before confirming.
+        const { error: submitError } = await stripeElements.submit();
+        if (submitError) {
+            throw new Error(submitError.message || "Bitte prüfe deine Zahlungsdaten.");
+        }
+
         const paymentResult = await stripe.confirmPayment({
             elements: stripeElements,
             confirmParams: {
-                return_url: window.location.href,
+                return_url: window.location.origin + "/payment-return.html",
                 payment_method_data: {
                     billing_details: { name: bookingContext.name, email: bookingContext.email }
                 }
