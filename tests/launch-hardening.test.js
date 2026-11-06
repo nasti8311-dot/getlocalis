@@ -1269,9 +1269,9 @@ test("paid booking notifications validate internal recipient and retry Resend de
 test("admin booking history safely formats ISO and localized date values", () => {
   for (const path of ["admin.html", "admin/index.html"]) {
     const html = read(path);
-    assert.match(html, /function formatAdminBookingDate\\(value\\)/);
-    assert.match(html, /toLocaleDateString\\(document\\.documentElement\\.lang\\|\\|navigator\\.language/);
-    assert.match(html, /const dateLabel=formatAdminBookingDate\\(b\\.booking_date\\)/);
-    assert.doesNotMatch(html, /new Date\\(date\\+'T12:00:00'\\)/);
+    assert.ok(html.includes("function formatAdminBookingDate(value)"));
+    assert.ok(html.includes("toLocaleDateString(document.documentElement.lang||navigator.language"));
+    assert.ok(html.includes("const dateLabel=formatAdminBookingDate(b.booking_date)"));
+    assert.ok(!html.includes("new Date(date+'T12:00:00')"));
   }
 });
