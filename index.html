@@ -4243,6 +4243,7 @@ async function createPaymentIntent({
     customerName,
     customerEmail,
     customerLanguage,
+    customerNote,
     bookingDate,
     bookingTime,
     offerId,
@@ -4281,6 +4282,7 @@ const response =
                 customerName: customerName,
                 customerEmail: customerEmail,
                 customerLanguage: customerLanguage,
+                customerNote: customerNote || "",
                 bookingDate: normalizeBookingDateValue(bookingDate),
                 // Keep a second canonical field for deployments where the
                 // checkout state was restored after navigation.
@@ -4452,6 +4454,7 @@ async function processBooking(event) {
                 customerName: name,
                 customerEmail: email,
                 customerLanguage: currentLang,
+                customerNote: notes,
                 bookingDate: date,
                 bookingTime: time,
                 offerId: String(item.sourceOfferId || String(currentTourKey || "").replace(/^(offer-|experience-)/, "")),
