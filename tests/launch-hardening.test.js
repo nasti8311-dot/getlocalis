@@ -1175,5 +1175,5 @@ test("admin control center keeps daily revenue separated by original currency", 
   assert.match(handler, /revenueCents = Number\(result\.today\.revenueByCurrency\.eur \|\| 0\)/);
   assert.match(admin, /Object\.entries\(revenueByCurrency\)/);
   assert.match(admin, /currency:currency\.toUpperCase\(\)/);
-  assert.match(admin, /revenueParts\.join\(' \\+ '\)/);
+  assert.match(admin, /revenueParts\.join\(' \+ '\)/);
 });
