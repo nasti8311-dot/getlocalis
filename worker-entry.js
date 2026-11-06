@@ -32,7 +32,8 @@ export default {
         url.pathname === "/api/admin/experiences" ||
         url.pathname === "/api/admin/translate-offers" ||
         url.pathname === "/api/admin/control-center" ||
-        url.pathname === "/api/admin/bookings")
+        url.pathname === "/api/admin/bookings" ||
+        url.pathname === "/api/admin/provider-directory")
     ) {
       const origin = String(request.headers.get("Origin") || "").trim();
       const allowedOrigins = new Set([
@@ -84,6 +85,10 @@ export default {
     }
     if (url.pathname === "/api/admin/bookings") {
       return handleAdminBookings(request, env);
+    }
+
+    if (url.pathname === "/api/admin/provider-directory") {
+      return handleAdminProviderDirectory(request, env);
     }
 
     if (url.pathname === "/api/admin/provider-password") {
@@ -447,6 +452,115 @@ async function handleAdminExperienceApprovals(request,env){
     return json({error:"Method Not Allowed"},405);
   }catch(error){console.error("FiiViu admin experience approvals failed",error);return json({error:error?.message||"Freigabeliste konnte nicht geladen werden."},500);}
 }
+
+async function handleAdminProviderDirectory(request, env) {
+  if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.DB) return json({ error: "D1 database not configured." }, 500);
+
+  try {
+    // Strictly read-only directory: validate the existing schemas, never migrate or mutate.
+    await ensureProvidersTable(env);
+    await ensureProviderRegistrationSchema(env);
+    await ensureOffersTable(env);
+    const bookingColumns = await env.DB.prepare("PRAGMA table_info(bookings)").all();
+    const availableBookingColumns = new Set((bookingColumns.results || []).map(row => String(row.name || "")));
+    if (!availableBookingColumns.has("provider_ref")) {
+      throw new Error("Booking schema is missing provider_ref; no data was changed.");
+    }
+
+    const url = new URL(request.url);
+    const providerRef = String(url.searchParams.get("ref") || "").trim();
+    if (providerRef) {
+      const provider = await env.DB.prepare(
+        "SELECT * FROM providers WHERE provider_ref=? LIMIT 1"
+      ).bind(providerRef).first();
+      if (!provider) return json({ error: "Erlebnisanbieter nicht gefunden." }, 404);
+
+      const [experiences, bookings, contracts] = await Promise.all([
+        env.DB.prepare("SELECT * FROM offers WHERE provider_ref=? ORDER BY id DESC").bind(providerRef).all(),
+        env.DB.prepare(`
+          SELECT booking_id,experience_name,customer_name,customer_email,customer_phone,
+                 customer_language,booking_date,booking_time,guests,status,payment_status,
+                 currency,amount_cents,total_amount_cents,fiiviu_fee_cents,provider_due_cents,
+                 payment_model,meeting_point_name,meeting_address,meeting_city,meeting_country,
+                 meeting_instructions,arrival_minutes_before,partner_ref,created_at,updated_at
+          FROM bookings WHERE provider_ref=?
+          ORDER BY COALESCE(created_at,'') DESC,booking_id DESC
+        `).bind(providerRef).all(),
+        env.DB.prepare(`
+          SELECT id,accepted_at,ip_address,user_agent,contract_version,contract_sha256,created_at
+          FROM vendor_contract_logs WHERE provider_ref=? ORDER BY accepted_at DESC,id DESC
+        `).bind(providerRef).all()
+      ]);
+
+      const bookingRows = bookings.results || [];
+      const bookingValueByCurrency = bookingRows.reduce((totals, row) => {
+        const currency = String(row.currency || "ron").trim().toLowerCase();
+        if (!/^[a-z]{3}$/.test(currency)) return totals;
+        const amount = Number(row.total_amount_cents ?? row.amount_cents ?? 0);
+        totals[currency] = (totals[currency] || 0) + amount;
+        return totals;
+      }, {});
+      return json({
+        provider,
+        experiences: experiences.results || [],
+        bookings: bookingRows,
+        contracts: contracts.results || [],
+        metrics: {
+          experienceCount: (experiences.results || []).length,
+          bookingCount: bookingRows.length,
+          paidBookingCount: bookingRows.filter(row => row.payment_status === "paid").length,
+          bookingValueByCurrency
+        }
+      }, 200, { "Cache-Control": "no-store" });
+    }
+
+    const [providerRows, experienceRows, bookingRows] = await Promise.all([
+      env.DB.prepare("SELECT * FROM providers ORDER BY created_at DESC,id DESC").all(),
+      env.DB.prepare("SELECT provider_ref,COUNT(*) AS total, SUM(CASE WHEN active=1 THEN 1 ELSE 0 END) AS active_count FROM offers GROUP BY provider_ref").all(),
+      env.DB.prepare(`
+        SELECT provider_ref,COUNT(*) AS total,
+               SUM(CASE WHEN payment_status='paid' OR status='confirmed' THEN 1 ELSE 0 END) AS paid_or_confirmed,
+               SUM(CASE WHEN payment_status='paid' THEN 1 ELSE 0 END) AS paid_count,
+               lower(COALESCE(NULLIF(currency,''),'ron')) AS currency,
+               SUM(COALESCE(total_amount_cents,amount_cents,0)) AS booking_value_cents
+        FROM bookings WHERE provider_ref IS NOT NULL AND trim(provider_ref)<>''
+        GROUP BY provider_ref,lower(COALESCE(NULLIF(currency,''),'ron'))
+      `).all()
+    ]);
+    const experienceByProvider = new Map((experienceRows.results || []).map(row => [String(row.provider_ref || ""), row]));
+    const bookingByProvider = new Map();
+    for (const row of bookingRows.results || []) {
+      const ref = String(row.provider_ref || "");
+      if (!bookingByProvider.has(ref)) bookingByProvider.set(ref, { total: 0, paidCount: 0, valueByCurrency: {} });
+      const item = bookingByProvider.get(ref);
+      item.total += Number(row.total || 0);
+      item.paidCount += Number(row.paid_count || 0);
+      const currency = String(row.currency || "ron");
+      item.valueByCurrency[currency] = Number(row.booking_value_cents || 0);
+    }
+    const providers = (providerRows.results || []).map(provider => {
+      const ref = String(provider.provider_ref || "");
+      const experiences = experienceByProvider.get(ref) || {};
+      const bookings = bookingByProvider.get(ref) || { total: 0, paidCount: 0, valueByCurrency: {} };
+      return {
+        ...provider,
+        experience_count: Number(experiences.total || 0),
+        active_experience_count: Number(experiences.active_count || 0),
+        booking_count: bookings.total,
+        paid_booking_count: bookings.paidCount,
+        booking_value_by_currency: bookings.valueByCurrency
+      };
+    });
+    return json({ providers, total: providers.length }, 200, { "Cache-Control": "no-store" });
+  } catch (error) {
+    console.error("FiiViu admin provider directory failed", error);
+    return json({ error: error?.message || "Erlebnisanbieter konnten nicht geladen werden." }, 500);
+  }
+}
+
 async function handleAdminBookings(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
