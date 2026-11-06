@@ -1160,3 +1160,20 @@ test("admin control center health checks are read-only and independent", () => {
   );
   assert.ok(handler.includes("result.system.d1 = true"));
 });
+
+
+test("admin control center keeps daily revenue separated by original currency", () => {
+  const worker = read("worker-entry.js");
+  const admin = read("admin/index.html");
+  const start = worker.indexOf("async function handleAdminControlCenter");
+  const end = worker.indexOf("async function handleAdminResendConfirmation", start);
+  const handler = worker.slice(start, end);
+  assert.ok(handler.includes("amount_cents,currency,created_at"));
+  assert.match(handler, /revenueByCurrency/);
+  assert.match(handler, /String\(b\.currency \|\| "eur"\)\.trim\(\)\.toLowerCase\(\)/);
+  assert.match(handler, /totals\[currency\] = \(totals\[currency\] \|\| 0\) \+ Number\(b\.amount_cents \|\| 0\)/);
+  assert.match(handler, /revenueCents = Number\(result\.today\.revenueByCurrency\.eur \|\| 0\)/);
+  assert.match(admin, /Object\.entries\(revenueByCurrency\)/);
+  assert.match(admin, /currency:currency\.toUpperCase\(\)/);
+  assert.match(admin, /revenueParts\.join\(' \\+ '\)/);
+});
