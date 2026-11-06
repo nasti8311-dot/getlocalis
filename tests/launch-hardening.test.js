@@ -916,17 +916,38 @@ test("personal booking view is backed by a token-bound read endpoint", () => {
 });
 
 
-test("confirmation email routing prefers EmailJS and keeps Resend as fallback", () => {
+test("booking confirmations use branded Resend first and keep EmailJS only as fallback", () => {
   const source = read("worker-entry.js");
   const start = source.indexOf("async function sendConfirmationWithRetry");
   const end = source.indexOf("async function sendResendConfirmation", start);
   const block = source.slice(start, end);
   assert.ok(start >= 0 && end > start);
-  assert.match(block, /EMAILJS_PRIVATE_KEY/);
-  assert.match(block, /sendEmailJsConfirmation\(env, booking\)/);
-  assert.match(block, /RESEND_API_KEY/);
   assert.match(block, /sendResendConfirmation\(env, booking\)/);
-  assert.match(block, /fallback/);
+  assert.match(block, /sendEmailJsConfirmation\(env, booking\)/);
+  assert.match(block, /Resend is the single primary provider/);
+  assert.match(source, /function renderFiiViuBookingEmail/);
+  assert.match(source, /border-bottom:4px solid #d6a64f/);
+});
+
+test("all three paid-booking notification emails include branded HTML and retain plain-text alternatives", () => {
+  const source = read("worker-entry.js");
+  const adminStart = source.indexOf("// Notify FiiViu independently");
+  const adminEnd = source.indexOf("// Notify the organizer independently", adminStart);
+  const admin = source.slice(adminStart, adminEnd);
+  assert.match(admin, /renderFiiViuBookingEmail/);
+  assert.match(admin, /html, text/);
+  const providerStart = source.indexOf("async function sendProviderBookingNotification");
+  const providerEnd = source.indexOf("async function sendCancellationNotifications", providerStart);
+  const provider = source.slice(providerStart, providerEnd);
+  assert.match(provider, /renderFiiViuBookingEmail/);
+  assert.match(provider, /html,text/);
+  const customerStart = source.indexOf("async function sendResendConfirmation");
+  const customerEnd = source.indexOf("async function sendEmailJsConfirmation", customerStart);
+  const customer = source.slice(customerStart, customerEnd);
+  assert.match(customer, /renderFiiViuBookingEmail/);
+  assert.match(customer, /customer-booking/);
+  assert.match(customer, /\.join\("\\n"\)/);
+  assert.match(source, /escapeFiiViuEmail/);
 });
 
 test("provider test booking is session-protected before any booking write", () => {
