@@ -1897,41 +1897,47 @@ export async function finalizePaidBooking(
       await recordBookingSettlement(env, booking);
     }
 
-    // Notify FiiViu independently; a temporary provider/customer mail failure
-    // must never prevent the other recipients from being notified.
+    // Notify FiiViu independently; each recipient is handled separately.
     try {
       const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();
+      const currency = String(booking.currency || "eur").toUpperCase();
+      const amount = (Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
       const subject = "Neue FiiViu-Buchung – " + String(booking.experience_name || "Erlebnis");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");
+      const html = renderFiiViuBookingEmail({
+        eyebrow: "Interne Buchungsbenachrichtigung",
+        title: "Neue Buchung eingegangen",
+        greeting: "Eine neue Buchung wurde erfolgreich bestätigt.",
+        intro: "Bitte prüfe die Buchung bei Bedarf im FiiViu Control Center.",
+        highlight: { label: "Online bezahlt", value: amount },
+        rows: [
+          {label:"Buchungs-ID",value:booking.booking_id},
+          {label:"Erlebnis",value:booking.experience_name},
+          {label:"Veranstalter",value:booking.provider_name},
+          {label:"Datum",value:booking.booking_date},
+          {label:"Uhrzeit",value:booking.booking_time},
+          {label:"Personen",value:booking.guests || 1},
+          {label:"Gast",value:booking.customer_name},
+          {label:"E-Mail",value:booking.customer_email},
+          {label:"Telefon",value:booking.customer_phone}
+        ],
+        footer: "Interne Benachrichtigung für FiiViu. Bitte Kundendaten vertraulich behandeln."
+      });
       const text = [
-        "Neue Buchung bei FiiViu", "",
-        "Buchung: " + (booking.booking_id || ""),
-        "Erlebnis: " + (booking.experience_name || ""),
-        "Veranstalter: " + (booking.provider_name || ""),
-        "Datum: " + (booking.booking_date || ""),
-        "Uhrzeit: " + (booking.booking_time || ""),
-        "Personen: " + (booking.guests || 1),
-        "Umsatz: " + ((Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase()),
-        "", "Gast: " + (booking.customer_name || ""),
-        "E-Mail: " + (booking.customer_email || ""),
+        "Neue Buchung bei FiiViu", "Buchung: " + (booking.booking_id || ""),
+        "Erlebnis: " + (booking.experience_name || ""), "Veranstalter: " + (booking.provider_name || ""),
+        "Datum: " + (booking.booking_date || ""), "Uhrzeit: " + (booking.booking_time || ""),
+        "Personen: " + (booking.guests || 1), "Umsatz: " + amount,
+        "Gast: " + (booking.customer_name || ""), "E-Mail: " + (booking.customer_email || ""),
         "Telefon: " + (booking.customer_phone || "")
       ].join("\n");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-        throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");
-      }
       const result = await sendResendEmailWithRetry(env, {
-        from: "FiiViu <noreply@fiiviu.ro>",
-        to: [recipient],
-        subject,
-        text
+        from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, html, text
       }, "admin-booking");
-      console.info("FiiViu admin booking notification accepted", {
-        bookingId: booking.booking_id,
-        emailId: result.id || ""
-      });
+      console.info("FiiViu admin booking notification accepted", {bookingId:booking.booking_id,emailId:result.id||""});
     } catch (error) {
       console.error("FiiViu admin booking notification failed", {
-        bookingId: booking?.booking_id || "",
-        message: String(error?.message || error).slice(0, 1000)
+        bookingId: booking?.booking_id || "", message: String(error?.message || error).slice(0, 1000)
       });
     }
 
@@ -1998,6 +2004,36 @@ export async function finalizePaidBooking(
   }
 }
 
+
+function escapeFiiViuEmail(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[character]));
+}
+
+function renderFiiViuBookingEmail({ eyebrow, title, greeting, intro, rows = [], highlight, note, actionUrl, actionLabel, footer }) {
+  const safe = escapeFiiViuEmail;
+  const rowHtml = rows.filter(row => row && row.value !== undefined && row.value !== null && String(row.value).trim() !== "")
+    .map(row => '<tr><td style="padding:11px 0;color:#68766f;font-size:13px;border-bottom:1px solid #edf0ec;width:42%;vertical-align:top;">' + safe(row.label) + '</td><td style="padding:11px 0;color:#203b32;font-size:14px;font-weight:600;border-bottom:1px solid #edf0ec;text-align:right;vertical-align:top;">' + safe(row.value) + '</td></tr>').join("");
+  const highlightHtml = highlight ? '<div style="margin:22px 0;padding:18px 20px;background:#f4f7f2;border:1px solid #e5ecdf;border-radius:12px;"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#68766f;margin-bottom:7px;">' + safe(highlight.label) + '</div><div style="font-size:25px;line-height:1.25;font-weight:700;color:#173c35;">' + safe(highlight.value) + '</div>' + (highlight.detail ? '<div style="font-size:13px;line-height:1.5;color:#68766f;margin-top:6px;">' + safe(highlight.detail) + '</div>' : '') + '</div>' : "";
+  const noteHtml = note ? '<div style="margin-top:18px;padding:14px 16px;background:#fbf8f0;border-left:3px solid #d6a64f;border-radius:6px;color:#5e6259;font-size:13px;line-height:1.6;">' + safe(note) + '</div>' : "";
+  const actionHtml = actionUrl && actionLabel ? '<div style="text-align:center;margin:26px 0 8px;"><a href="' + safe(actionUrl) + '" style="display:inline-block;background:#173c35;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 22px;border-radius:8px;">' + safe(actionLabel) + '</a></div>' : "";
+  return '<!doctype html><html><body style="margin:0;padding:0;background:#f3f5f2;font-family:Arial,Helvetica,sans-serif;color:#203b32;">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f3f5f2;padding:28px 12px;"><tr><td align="center">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;">' +
+    '<tr><td style="padding:25px 32px;background:#173c35;border-bottom:4px solid #d6a64f;"><div style="font-size:25px;font-weight:800;letter-spacing:-.5px;color:#ffffff;">FiiViu<span style="color:#e0b65f;">.</span></div><div style="margin-top:5px;color:#d7e2da;font-size:11px;letter-spacing:1.8px;text-transform:uppercase;">Experiențe autentice</div></td></tr>' +
+    '<tr><td style="padding:32px 32px 12px;"><div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#b18435;font-weight:700;margin-bottom:10px;">' + safe(eyebrow || "FiiViu") + '</div>' +
+    '<h1 style="margin:0 0 14px;font-size:26px;line-height:1.25;color:#173c35;">' + safe(title || "") + '</h1>' +
+    (greeting ? '<p style="margin:0 0 10px;font-size:15px;line-height:1.6;color:#34483f;">' + safe(greeting) + '</p>' : '') +
+    (intro ? '<p style="margin:0;font-size:14px;line-height:1.7;color:#68766f;">' + safe(intro) + '</p>' : '') +
+    highlightHtml +
+    (rows.length ? '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:20px;">' + rowHtml + '</table>' : '') +
+    noteHtml + actionHtml +
+    '<p style="margin:26px 0 0;font-size:14px;line-height:1.6;color:#34483f;">Cu drag,<br><strong style="color:#173c35;">Echipa FiiViu</strong></p>' +
+    '</td></tr><tr><td style="padding:20px 32px;background:#f8faf7;border-top:1px solid #edf0ec;"><p style="margin:0;color:#7b877f;font-size:11px;line-height:1.6;">' + safe(footer || "Această notificare a fost trimisă automat de FiiViu.") + '<br><a href="https://fiiviu.ro" style="color:#567568;text-decoration:none;">fiiviu.ro</a></p></td></tr>' +
+    '</table></td></tr></table></body></html>';
+}
+
 async function sendResendEmailWithRetry(env, payload, notificationType) {
   const apiKey = String(env.RESEND_API_KEY || "").trim();
   if (!apiKey) throw new Error("RESEND_API_KEY ist nicht konfiguriert.");
@@ -2032,110 +2068,84 @@ async function sendResendEmailWithRetry(env, payload, notificationType) {
 }
 
 async function sendProviderBookingNotification(env, booking) {
-  if (!env.DB || !booking) return;
-
-  const alreadySent = booking.provider_notification_email_sent_at;
-  if (alreadySent) return;
+  if (!env.DB || !booking || booking.provider_notification_email_sent_at) return;
 
   const provider = await env.DB.prepare(
     "SELECT provider_ref,name,contact_email,active FROM providers WHERE (provider_ref=? OR name=?) AND active=1 LIMIT 1"
-  ).bind(
-    clean(booking.provider_ref) || "",
-    clean(booking.provider_name) || ""
-  ).first();
+  ).bind(clean(booking.provider_ref) || "", clean(booking.provider_name) || "").first();
 
-  const onSiteOffer = booking.offer_id ? await env.DB.prepare("SELECT pay_on_site_cash,pay_on_site_card FROM offers WHERE id=? LIMIT 1").bind(booking.offer_id).first().catch(()=>null) : null;
-  const onSiteMethods = [Number(onSiteOffer?.pay_on_site_cash)===1?"bar":"",Number(onSiteOffer?.pay_on_site_card)===1?"card":""] .filter(Boolean).join(" / ") || "conform ofertă";
+  const onSiteOffer = booking.offer_id ? await env.DB.prepare(
+    "SELECT pay_on_site_cash,pay_on_site_card FROM offers WHERE id=? LIMIT 1"
+  ).bind(booking.offer_id).first().catch(() => null) : null;
+  const onSiteMethods = [
+    Number(onSiteOffer?.pay_on_site_cash) === 1 ? "bar" : "",
+    Number(onSiteOffer?.pay_on_site_card) === 1 ? "card" : ""
+  ].filter(Boolean).join(" / ") || "conform ofertă";
   const recipient = clean(provider?.contact_email);
   if (!recipient) {
-    await env.DB.prepare(
-      "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
-    ).bind(
-      "Keine Veranstalter-E-Mail hinterlegt.",
-      booking.payment_intent_id
-    ).run();
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
+      .bind("Keine Veranstalter-E-Mail hinterlegt.", booking.payment_intent_id).run();
     return;
   }
 
-  const safe = value => String(value ?? "").replace(/[&<>"]/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"
-  }[c]));
   const currency = String(booking.currency || "eur").toUpperCase();
   const amount = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
   const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
   const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + currency;
   const romanianOffer = await getLocalizedEmailOffer(env, booking, "ro");
-  const romanianExperienceName = String(
-    romanianOffer?.title || booking.experience_name || "Experiență FiiViu"
-  ).trim();
-  const romanianMeetingPoint = String(
-    romanianOffer?.meetingPoint || booking.meeting_point_name || ""
-  ).trim();
-  const romanianInstructions = String(
-    romanianOffer?.instructions || booking.meeting_instructions || ""
-  ).trim();
-  const subject = "Neue Buchung erhalten! – " + romanianExperienceName;
+  const experience = String(romanianOffer?.title || booking.experience_name || "Experiență FiiViu").trim();
+  const meetingPoint = String(romanianOffer?.meetingPoint || booking.meeting_point_name || "").trim();
+  const instructions = String(romanianOffer?.instructions || booking.meeting_instructions || "").trim();
+  const directPayment = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
+  const subject = "Neue Buchung erhalten! – " + experience;
+  const html = renderFiiViuBookingEmail({
+    eyebrow: "Notificare pentru organizator",
+    title: "Rezervare nouă",
+    greeting: "Ai primit o rezervare nouă prin FiiViu.",
+    intro: "Te rugăm să verifici detaliile și să te pregătești pentru experiență.",
+    highlight: {label:"Valoarea rezervării",value:amount},
+    rows: [
+      {label:"Experiență",value:experience},
+      {label:"Cod rezervare",value:booking.booking_id},
+      {label:"Data",value:booking.booking_date},
+      {label:"Ora",value:booking.booking_time},
+      {label:"Număr persoane",value:booking.guests || 1},
+      {label:"Client",value:booking.customer_name},
+      {label:"E-mail client",value:booking.customer_email},
+      {label:"Telefon",value:booking.customer_phone},
+      ...(directPayment ? [{label:"Avans online (20%)",value:onlineFee},{label:"De încasat direct (80%)",value:providerDue},{label:"Metode de plată la fața locului",value:onSiteMethods}] : []),
+      {label:"Punct de întâlnire",value:meetingPoint},
+      {label:"Adresă",value:[booking.meeting_address,booking.meeting_city,booking.meeting_country].filter(Boolean).join(", ")}
+    ],
+    note: instructions || (directPayment ? "Restul de 80% se încasează direct de la client, conform condițiilor ofertei." : ""),
+    footer: "Notificare automată de rezervare trimisă de FiiViu."
+  });
   const text = [
-    "Rezervare nouă la FiiViu",
-    "",
-    "Experiență: " + romanianExperienceName,
-    "Rezervare: " + (booking.booking_id || ""),
-    "Data: " + (booking.booking_date || ""),
-    "Ora: " + (booking.booking_time || ""),
-    "Număr de persoane: " + (booking.guests || 1),
-    "Client: " + (booking.customer_name || ""),
-    "E-mail client: " + (booking.customer_email || ""),
-    "Telefon: " + (booking.customer_phone || ""),
+    "Rezervare nouă la FiiViu", "Experiență: " + experience, "Rezervare: " + (booking.booking_id || ""),
+    "Data: " + (booking.booking_date || ""), "Ora: " + (booking.booking_time || ""),
+    "Număr de persoane: " + (booking.guests || 1), "Client: " + (booking.customer_name || ""),
+    "E-mail client: " + (booking.customer_email || ""), "Telefon: " + (booking.customer_phone || ""),
     "Valoarea totală a rezervării: " + amount,
-    ...(String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? ["Avans online (20%) – achitat de client: " + onlineFee, "De încasat direct de la client (80%): " + providerDue, "Metode de plată acceptate la fața locului: " + onSiteMethods] : []),
-    "",
-    "Punct de întâlnire: " + romanianMeetingPoint,
-    "Adresă: " + [booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", "),
-    "",
-    "FiiViu"
-  ].join("\n");
-
-  const html = "<h2>Rezervare nouă la FiiViu</h2>" +
-    "<p><strong>Experiență:</strong> " + safe(romanianExperienceName) + "<br>" +
-    "<strong>Rezervare:</strong> " + safe(booking.booking_id) + "<br>" +
-    "<strong>Data:</strong> " + safe(booking.booking_date) + "<br>" +
-    "<strong>Ora:</strong> " + safe(booking.booking_time) + "<br>" +
-    "<strong>Număr de persoane:</strong> " + safe(booking.guests) + "<br>" +
-    "<strong>Valoarea totală a rezervării:</strong> " + safe(amount) + "<br>" +
-    (String(booking.payment_model || "") === "fiiviu_fee_20_direct_80" ? "<strong>Avans online (20%) – achitat de client:</strong> " + safe(onlineFee) + "<br><strong>De încasat direct de la client (80%):</strong> " + safe(providerDue) + "<br><strong>Metode acceptate la fața locului:</strong> " + safe(onSiteMethods) : "") + "</p>" +
-    "<p><strong>Client:</strong> " + safe(booking.customer_name) + "<br>" +
-    "<strong>E-mail client:</strong> " + safe(booking.customer_email) + "<br>" +
-    "<strong>Telefon:</strong> " + safe(booking.customer_phone) + "</p>" +
-    "<p><strong>Punct de întâlnire:</strong> " + safe(romanianMeetingPoint) + "<br>" +
-    "<strong>Adresă:</strong> " + safe([booking.meeting_address, booking.meeting_city, booking.meeting_country].filter(Boolean).join(", ")) + "</p>" +
-    (romanianInstructions ? "<p><strong>Instrucțiuni:</strong> " + safe(romanianInstructions) + "</p>" : "");
+    ...(directPayment ? ["Avans online (20%): " + onlineFee, "De încasat direct (80%): " + providerDue, "Metode de plată: " + onSiteMethods] : []),
+    "Punct de întâlnire: " + meetingPoint,
+    "Adresă: " + [booking.meeting_address,booking.meeting_city,booking.meeting_country].filter(Boolean).join(", "),
+    instructions
+  ].filter(Boolean).join("\n");
 
   if (!env.RESEND_API_KEY) {
-    await env.DB.prepare(
-      "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
-    ).bind("RESEND_API_KEY ist nicht konfiguriert.", booking.payment_intent_id).run();
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
+      .bind("RESEND_API_KEY ist nicht konfiguriert.", booking.payment_intent_id).run();
     return;
   }
-
   try {
-    await sendResendEmailWithRetry(env, {
-      from: "FiiViu <noreply@fiiviu.ro>",
-      to: [recipient],
-      subject,
-      html,
-      text
-    }, "provider-booking");
+    await sendResendEmailWithRetry(env, {from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text}, "provider-booking");
   } catch (error) {
-    const message = String(error?.message || error).slice(0, 1000);
-    await env.DB.prepare(
-      "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
-    ).bind(message, booking.payment_intent_id).run();
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
+      .bind(String(error?.message || error).slice(0,1000), booking.payment_intent_id).run();
     throw error;
   }
-
-  await env.DB.prepare(
-    "UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL"
-  ).bind(booking.payment_intent_id).run();
+  await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL")
+    .bind(booking.payment_intent_id).run();
 }
 
 async function sendCancellationNotifications(env, booking) {
@@ -2517,51 +2527,20 @@ async function sendCancellationNotifications(env, booking) {
   return results;
 }
 
-async function sendConfirmationWithRetry(
-  env,
-  booking
-) {
-  let lastError;
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      // Customer confirmations use the existing EmailJS template so the
-      // branded FiiViu HTML design is preserved. Resend remains a fallback.
-      if (String(env.EMAILJS_PRIVATE_KEY || "").trim()) {
-        await sendEmailJsConfirmation(env, booking);
-      } else if (String(env.RESEND_API_KEY || "").trim()) {
-        await sendResendConfirmation(env, booking);
-      } else {
-        throw new Error("Kein E-Mail-Versand ist konfiguriert.");
-      }
-      return;
-    } catch (error) {
-      lastError = error;
-
-      // If EmailJS is configured but unavailable, fall back to Resend before
-      // retrying. This keeps confirmations deliverable without losing the
-      // preferred branded template.
-      if (
-        String(env.RESEND_API_KEY || "").trim() &&
-        String(env.EMAILJS_PRIVATE_KEY || "").trim()
-      ) {
-        try {
-          await sendResendConfirmation(env, booking);
-          return;
-        } catch (fallbackError) {
-          lastError = fallbackError;
-        }
-      }
-
-      if (attempt < 2) {
-        await new Promise(resolve =>
-          setTimeout(resolve, 750 * (attempt + 1))
-        );
-      }
-    }
+async function sendConfirmationWithRetry(env, booking) {
+  // Resend is the single primary provider for all three booking notifications.
+  // EmailJS remains a temporary fallback only if Resend is unavailable.
+  try {
+    await sendResendConfirmation(env, booking);
+    return;
+  } catch (resendError) {
+    if (!String(env.EMAILJS_PRIVATE_KEY || "").trim()) throw resendError;
+    console.error("FiiViu customer confirmation Resend attempt failed; using EmailJS fallback", {
+      bookingId: booking?.booking_id || "",
+      message: String(resendError?.message || resendError).slice(0, 500)
+    });
+    await sendEmailJsConfirmation(env, booking);
   }
-
-  throw lastError || new Error("Confirmation email failed");
 }
 
 async function sendResendConfirmation(env, booking) {
@@ -2578,71 +2557,65 @@ async function sendResendConfirmation(env, booking) {
   const total = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
   const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + currency;
   const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + currency;
-  const isDirectPayment = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
+  const directPayment = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
   const bookingId = String(booking.booking_id || "");
   const provider = String(booking.provider_name || "FiiViu");
-  const meetingPoint = String(booking.meeting_point_name || "");
+  const meetingPoint = String(localizedOffer?.meetingPoint || booking.meeting_point_name || "");
   const address = String(booking.meeting_address || "");
   const cancellationHours = String(CANCELLATION_HOURS);
   const appUrl = String(env.PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/$/, "");
   const cancellationUrl = booking.cancellation_token
-    ? appUrl + "/cancel.html?token=" + encodeURIComponent(booking.cancellation_token)
-    : "";
+    ? appUrl + "/cancel.html?token=" + encodeURIComponent(booking.cancellation_token) : "";
+  const subject = language === "de" ? "Buchung bestätigt – " + experience
+    : language === "ro" ? "Rezervare confirmată – " + experience : "Booking confirmed – " + experience;
 
-  const subject = language === "de"
-    ? "Buchung bestätigt – " + experience
-    : language === "ro"
-      ? "Rezervare confirmată – " + experience
-      : "Booking confirmed – " + experience;
+  const copy = language === "de" ? {
+    eyebrow:"Dein FiiViu-Erlebnis",title:"Deine Buchung ist bestätigt",greeting:"Hallo " + String(booking.customer_name || "") + ",",
+    intro:"Vielen Dank für deine Buchung. Wir freuen uns, dass du dabei bist!",
+    date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",online:"Online bezahlt (20%)",due:"Vor Ort an Anbieter (80%)",
+    id:"Buchungsnummer",provider:"Veranstalter",meeting:"Treffpunkt",address:"Adresse",
+    cancel:"Buchung stornieren",policy:"Die Onlinegebühr wird bei einer Stornierung mindestens " + cancellationHours + " Stunden vor Beginn erstattet. Bei einer Stornierung durch den Anbieter wird sie vollständig erstattet.",
+    note:"Die restlichen 80 % bezahlst du direkt beim Erlebnisanbieter vor Ort."
+  } : language === "ro" ? {
+    eyebrow:"Experiența ta FiiViu",title:"Rezervarea ta este confirmată",greeting:"Bună " + String(booking.customer_name || "") + ",",
+    intro:"Îți mulțumim pentru rezervare. Ne bucurăm că vei participa!",
+    date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",online:"Plătit online (20%)",due:"De plătit direct operatorului (80%)",
+    id:"Cod rezervare",provider:"Organizator",meeting:"Punct de întâlnire",address:"Adresă",
+    cancel:"Anulează rezervarea",policy:"Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte. În cazul anulării de către operator, aceasta se rambursează integral.",
+    note:"Restul de 80% se achită direct organizatorului, la fața locului."
+  } : {
+    eyebrow:"Your FiiViu experience",title:"Your booking is confirmed",greeting:"Hello " + String(booking.customer_name || "") + ",",
+    intro:"Thank you for booking with us. We’re looking forward to having you!",
+    date:"Date",time:"Start time",guests:"Guests",total:"Total price",online:"Paid online (20%)",due:"Pay the provider in person (80%)",
+    id:"Booking reference",provider:"Provider",meeting:"Meeting point",address:"Address",
+    cancel:"Cancel booking",policy:"The online fee is refunded if you cancel at least " + cancellationHours + " hours before the start. If the provider cancels, it is refunded in full.",
+    note:"The remaining 80% is paid directly to the experience provider in person."
+  };
 
-  const greeting = language === "de" ? "Hallo" : language === "ro" ? "Bună" : "Hello";
-  const labels = language === "de"
-    ? {confirmed:"Buchung bestätigt",date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",onlineFee:"Online geleistete Anzahlung (20 %)",providerDue:"Vor Ort an Anbieter (80 %)",id:"Buchungs-ID",meeting:"Treffpunkt",address:"Adresse",provider:"Angeboten von",cancel:"Buchung stornieren",policy:"Erstattung der Onlinegebühr bei Stornierung mindestens " + cancellationHours + " Stunden vorher; Anbieter-Stornierung wird vollständig erstattet."}
-    : language === "ro"
-      ? {confirmed:"Rezervare confirmată",date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",onlineFee:"Avans plătit online (20%)",providerDue:"De plătit la operator (80%)",id:"ID rezervare",meeting:"Punct de întâlnire",address:"Adresă",provider:"Oferit de",cancel:"Anulează rezervarea",policy:"Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte; anularea operatorului este rambursată integral."}
-      : {confirmed:"Booking confirmed",date:"Date",time:"Start time",guests:"Guests",total:"Total price",onlineFee:"Deposit paid online (20%)",providerDue:"Due to provider in person (80%)",id:"Booking ID",meeting:"Meeting point",address:"Address",provider:"Provided by",cancel:"Cancel booking",policy:"The online fee is refunded for cancellations at least " + cancellationHours + " hours ahead; provider cancellations are fully refunded."};
-
-  const text = [
-    greeting + " " + String(booking.customer_name || "") + ",",
-    "",
-    labels.confirmed,
-    "",
-    experience,
-    labels.date + ": " + bookingDate,
-    labels.time + ": " + bookingTime,
-    labels.guests + ": " + guests,
-    labels.total + ": " + total,
-    ...(isDirectPayment ? [labels.onlineFee + ": " + onlineFee, labels.providerDue + ": " + providerDue] : []),
-    labels.id + ": " + bookingId,
-    "",
-    labels.provider + ": " + provider,
-    labels.meeting + ": " + meetingPoint,
-    labels.address + ": " + address,
-    "",
-    cancellationUrl ? labels.cancel + ": " + cancellationUrl : "",
-    labels.policy,
-    "",
-    "FiiViu"
-  ].filter(Boolean).join("\\n");
-
-  const html = text.split("\\n").map(line => line ? '<p style="margin:0 0 8px">' + String(line).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch])) + "</p>" : "<br>").join("");
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + env.RESEND_API_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: "FiiViu <noreply@fiiviu.ro>",
-      to: [recipient],
-      subject,
-      html,
-      text
-    })
+  const html = renderFiiViuBookingEmail({
+    eyebrow:copy.eyebrow,title:copy.title,greeting:copy.greeting,intro:copy.intro,
+    highlight:{label:directPayment?copy.online:copy.total,value:directPayment?onlineFee:total,detail:directPayment?copy.due+": "+providerDue:""},
+    rows:[
+      {label:copy.total,value:total},{label:copy.date,value:bookingDate},{label:copy.time,value:bookingTime},
+      {label:copy.guests,value:guests},{label:copy.id,value:bookingId},{label:copy.provider,value:provider},
+      {label:copy.meeting,value:meetingPoint},{label:copy.address,value:address}
+    ],
+    note:(directPayment?copy.note+" ":"")+copy.policy,
+    actionUrl:cancellationUrl,actionLabel:copy.cancel,
+    footer:"FiiViu – experiențe autentice. Această confirmare nu înlocuiește documentele fiscale emise de organizator."
   });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(String(result?.message || result?.error || ("Resend HTTP " + response.status)).slice(0, 1000));
+  const text = [
+    copy.greeting,copy.title,experience,copy.total+": "+total,
+    ...(directPayment?[copy.online+": "+onlineFee,copy.due+": "+providerDue]:[]),
+    copy.date+": "+bookingDate,copy.time+": "+bookingTime,copy.guests+": "+guests,
+    copy.id+": "+bookingId,copy.provider+": "+provider,copy.meeting+": "+meetingPoint,
+    copy.address+": "+address,cancellationUrl?copy.cancel+": "+cancellationUrl:"",
+    directPayment?copy.note:"",copy.policy,"FiiViu"
+  ].filter(Boolean).join("\n");
+
+  await sendResendEmailWithRetry(env,{
+    from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text
+  },"customer-booking");
 }
 
 async function sendEmailJsConfirmation(
