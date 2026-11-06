@@ -1206,3 +1206,26 @@ test("admin booking history uses read-only server-side pagination and filters", 
   assert.match(admin, /bookingPaymentStatus/);
   assert.match(admin, /Buchungen insgesamt/);
 });
+
+test("admin provider directory is authenticated, read-only, and includes provider, experience, booking, and contract details", () => {
+  const source = read("worker-entry.js");
+  const start = source.indexOf("async function handleAdminProviderDirectory");
+  const end = source.indexOf("async function handleAdminBookings", start);
+  assert.ok(start >= 0 && end > start);
+  const handler = source.slice(start, end);
+  assert.match(source, /url\.pathname === "\/api\/admin\/provider-directory"/);
+  assert.match(handler, /isAdminRequest\(request, env\)/);
+  assert.match(handler, /SELECT \* FROM providers/);
+  assert.match(handler, /SELECT \* FROM offers WHERE provider_ref=\?/);
+  assert.match(handler, /FROM bookings WHERE provider_ref=\?/);
+  assert.match(handler, /FROM vendor_contract_logs WHERE provider_ref=\?/);
+  assert.doesNotMatch(handler, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\s+(?:INTO\s+)?(?:TABLE\s+)?/i);
+  for (const path of ["admin.html", "admin/index.html"]) {
+    const html = read(path);
+    assert.match(html, /id="providerDirectorySection"/);
+    assert.match(html, /api\/admin\/provider-directory/);
+    assert.match(html, /Vollständiges Profil und Details öffnen/);
+    assert.match(html, /Buchungshistorie/);
+  }
+});
+
