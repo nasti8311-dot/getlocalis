@@ -322,7 +322,7 @@ export default {
         params.set("metadata[offer_id]",String(data.offerId||""));
         params.set("metadata[customer_name]",String(data.customerName||""));
         params.set("metadata[customer_email]",String(data.customerEmail||""));
-        params.set("metadata[customer_note]",String(data.customerNote||"").slice(0,2000));
+        params.set("metadata[customer_note]",String(data.customerNote||"").slice(0,500));
         params.set("metadata[customer_phone]",String(data.customerPhone||""));
         params.set("metadata[customer_language]",normalizeLanguage(data.customerLanguage));
         params.set("metadata[booking_date]",String(data.bookingDate||""));
