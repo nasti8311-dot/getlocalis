@@ -1256,7 +1256,6 @@ test("paid booking notifications validate internal recipient and retry Resend de
   const adminEnd = worker.indexOf("// Notify the organizer independently", adminStart);
   const admin = worker.slice(adminStart, adminEnd);
   assert.ok(adminStart >= 0 && adminEnd > adminStart);
-  assert.match(admin, /\^\[\^\\s@\]\+@\[\^\\s@\]\+\\\.\[\^\\s@\]\+\$/);
   assert.ok(admin.includes("if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
   assert.match(worker, /async function sendResendEmailWithRetry/);
   assert.match(worker, /attempt < 3/);
