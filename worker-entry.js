@@ -461,8 +461,11 @@ async function handleAdminTestEmail(request, env) {
   if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
-  const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) return json({ error: "ADMIN_BOOKING_EMAIL ist ungültig." }, 500);
+  // The admin design-test always goes to the established FiiViu inbox.
+  // Keep this test recipient independent from ADMIN_BOOKING_EMAIL so an invalid
+  // booking-notification setting cannot block the test. Real booking recipients
+  // and notification behavior are unchanged.
+  const recipient = "info@fiiviu.ro";
   if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY ist nicht konfiguriert." }, 500);
   try {
     const timestamp = new Date().toISOString();
