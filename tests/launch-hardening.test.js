@@ -186,13 +186,13 @@ test("provider self-registration records automatic contract acceptance and store
 
 test("provider registration routes are reachable while the public catalog is gated", () => {
   const secure = read("secure-entry.js");
-  assert.match(secure, /url\.pathname === "\/api\/provider-register"/);
-  assert.match(secure, /"\/anbieter\/register"/);
-  assert.match(secure, /"\/anbieter\/login"/);
-  assert.match(secure, /"\/anbieter\/dashboard"/);
+  assert.match(secure, /url\\.pathname === "\\/api\\/provider-register"/);
+  assert.match(secure, /"\\/anbieter\\/register"/);
+  assert.match(secure, /"\\/anbieter\\/login"/);
+  assert.match(secure, /"\\/anbieter\\/dashboard"/);
   const deploy = read(".github/workflows/deploy-production.yml");
-  assert.match(deploy, /vendor_contract_logs/);
-  assert.match(deploy, /pay_on_site_cash/);
+  assert.doesNotMatch(deploy, /wrangler@4 d1 execute/);
+  assert.doesNotMatch(deploy, /UPDATE (?:experiences|offers)/);
 });
 
 test("server-side files are excluded from Cloudflare Static Assets", () => {
@@ -952,12 +952,13 @@ test("admin provider password provisioning requires the admin bearer key", () =>
 });
 
 
-test("production deploy refuses to upload without Stripe webhook secret", () => {
+test("production deploy preserves existing secret bindings without reading or changing secret values", () => {
   const deploy = read(".github/workflows/deploy-production.yml");
-  assert.match(deploy, /Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload/);
-  assert.match(deploy, /if \(!stripeWebhookSecret\)/);
-  assert.match(deploy, /\{ type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret \}/);
-  assert.doesNotMatch(deploy, /preserving any existing Worker secret binding/);
+  assert.match(deploy, /keep_bindings:\\s*\\["plain_text",\\s*"secret_text"\\]/);
+  assert.doesNotMatch(deploy, /STRIPE_WEBHOOK_SECRET:\\s*\\$\\{\\{/);
+  assert.doesNotMatch(deploy, /ADMIN_PAYOUT_KEY:\\s*\\$\\{\\{/);
+  assert.doesNotMatch(deploy, /type: "secret_text".*text:/);
+  assert.doesNotMatch(deploy, /workers\\/scripts\\/getlocalis\\/secrets/);
 });
 
 test("production smoke runs after a successful production deploy", () => {
@@ -1000,19 +1001,16 @@ test("partner commission enforces the configured hold period", () => {
   assert.doesNotMatch(block, /Math\.floor\(Date\.now\(\)\/1000\)>=eventTimestamp/);
 });
 
-test("production deploy performs only idempotent, explicit schema repair before Worker deployment", () => {
+test("production deploy is non-destructive and deploys without production D1 writes", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  assert.match(workflow, /add_column_if_missing\(\)/);
-  assert.match(workflow, /duplicate column name/);
-  assert.match(workflow, /Repair production D1 schema/);
-  for (const column of ["total_amount_cents","fiiviu_fee_cents","provider_due_cents","payment_model","cancellation_reason","provider_ref"]) {
-    assert.match(workflow, new RegExp('add_column_if_missing "bookings" "' + column + '"'));
-  }
+  assert.doesNotMatch(workflow, /Repair production D1 schema/);
+  assert.doesNotMatch(workflow, /wrangler@4 d1 execute/);
+  assert.doesNotMatch(workflow, /ALTER TABLE/);
+  assert.doesNotMatch(workflow, /UPDATE (?:experiences|offers)/);
   assert.match(workflow, /Upload and deploy Worker with updated static assets/);
   assert.match(workflow, /--request PUT/);
-  assert.match(workflow, /workers\/scripts\/getlocalis"/);
-  assert.match(workflow, /ADMIN_PAYOUT_KEY:\s*\$\{\{\s*secrets\.ADMIN_PAYOUT_KEY\s*\}\}/);
-  assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
+  assert.match(workflow, /workers\\/scripts\\/getlocalis"/);
+  assert.match(workflow, /keep_bindings:\\s*\\["plain_text",\\s*"secret_text"\\]/);
   assert.match(workflow, /Verify production endpoint/);
 });
 
@@ -1066,18 +1064,18 @@ test("production deploy does not depend on GitHub Pages readiness", () => {
   assert.match(workflow, /Verify production endpoint/);
 });
 
-test("production deploy avoids route-write permission dependency", () => {
+test("production deploy avoids route-write permission dependency and retains secret bindings", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  assert.match(workflow, /workers\/scripts\/getlocalis"/);
+  assert.match(workflow, /workers\\/scripts\\/getlocalis"/);
   assert.match(workflow, /--request PUT/);
-  assert.match(workflow, /assets:\s*\{\s*jwt:\s*process\.env\.ASSET_COMPLETION_JWT,\s*config:/);
-  assert.doesNotMatch(workflow, /keep_assets:\s*true/);
-  assert.match(workflow, /keep_bindings:\s*\["plain_text",\s*"secret_text"\]/);
-  assert.match(workflow, /ADMIN_PAYOUT_KEY:\s*\$\{\{\s*secrets\.ADMIN_PAYOUT_KEY\s*\}\}/);
-  assert.match(workflow, /wrangler@4 versions deploy/); // rollback path only
+  assert.match(workflow, /assets:\\s*\\{\\s*jwt:\\s*process\\.env\\.ASSET_COMPLETION_JWT,\\s*config:/);
+  assert.doesNotMatch(workflow, /keep_assets:\\s*true/);
+  assert.match(workflow, /keep_bindings:\\s*\\["plain_text",\\s*"secret_text"\\]/);
+  assert.doesNotMatch(workflow, /ADMIN_PAYOUT_KEY:\\s*\\$\\{\\{/);
+  assert.match(workflow, /wrangler@4 versions deploy/);
   assert.doesNotMatch(workflow, /WORKER_VERSION_ID/);
-  assert.doesNotMatch(workflow, /cloudflare\/wrangler-action@v4/);
-  assert.doesNotMatch(workflow, /command:\s*deploy\b/);
+  assert.doesNotMatch(workflow, /cloudflare\\/wrangler-action@v4/);
+  assert.doesNotMatch(workflow, /command:\\s*deploy\\b/);
 });
 
 test("provider self-cancellation revokes access but preserves audit history", () => {
