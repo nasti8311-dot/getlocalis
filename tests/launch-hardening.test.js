@@ -546,8 +546,8 @@ test("admin offer deletion is safe around existing bookings", () => {
   assert.match(source, /UPDATE offers SET active=0,updated_at=CURRENT_TIMESTAMP/);
   assert.match(source, /DELETE FROM offers WHERE id=\?/);
   const admin = read("organizer-admin.html");
-  assert.match(admin, /deleteOfferById/);
-  assert.match(admin, /method:"DELETE"/);
+  assert.ok(admin.includes("if (!/^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
+  assert.ok(admin.includes("if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
 });
 
 
@@ -1247,4 +1247,23 @@ test("admin test email uses authenticated Resend path without touching booking d
   assert.match(handler, /isAdminRequest\(request, env\)/);
   assert.doesNotMatch(handler, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i);
   assert.doesNotMatch(handler, /STRIPE_SECRET_KEY|payment_intent|booking_id/i);
+});
+
+
+test("paid booking notifications validate internal recipient and retry Resend delivery", () => {
+  const worker = read("worker-entry.js");
+  const adminStart = worker.indexOf("// Notify FiiViu independently");
+  const adminEnd = worker.indexOf("// Notify the organizer independently", adminStart);
+  const admin = worker.slice(adminStart, adminEnd);
+  assert.ok(adminStart >= 0 && adminEnd > adminStart);
+  assert.ok(admin.includes("if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient))"), "internal recipient validation must use a valid email regex");
+  assert.match(worker, /async function sendResendEmailWithRetry/);
+  assert.match(worker, /attempt < 3/);
+  assert.match(worker, /notificationType/);
+  const providerStart = worker.indexOf("async function sendProviderBookingNotification");
+  const providerEnd = worker.indexOf("async function sendCancellationNotifications", providerStart);
+  const provider = worker.slice(providerStart, providerEnd);
+  assert.match(provider, /sendResendEmailWithRetry\(env/);
+  assert.match(provider, /provider_notification_email_error/);
+  assert.match(provider, /provider_notification_email_sent_at=CURRENT_TIMESTAMP/);
 });

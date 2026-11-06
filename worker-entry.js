@@ -1897,7 +1897,45 @@ export async function finalizePaidBooking(
       await recordBookingSettlement(env, booking);
     }
 
-    // Notify FiiViu about every paid booking as well.\n    try {\n      const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();\n      const subject = "Neue FiiViu-Buchung – " + String(booking.experience_name || "Erlebnis");\n      const text = [\n        "Neue Buchung bei FiiViu", "",\n        "Buchung: " + (booking.booking_id || ""),\n        "Erlebnis: " + (booking.experience_name || ""),\n        "Veranstalter: " + (booking.provider_name || ""),\n        "Datum: " + (booking.booking_date || ""),\n        "Uhrzeit: " + (booking.booking_time || ""),\n        "Personen: " + (booking.guests || 1),\n        "Umsatz: " + ((Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase()),\n        "", "Gast: " + (booking.customer_name || ""),\n        "E-Mail: " + (booking.customer_email || ""),\n        "Telefon: " + (booking.customer_phone || "")\n      ].join("\n");\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");\n      if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY ist nicht konfiguriert.");\n      const response = await fetch("https://api.resend.com/emails", {\n        method: "POST",\n        headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },\n        body: JSON.stringify({ from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, text })\n      });\n      if (!response.ok) throw new Error("Admin-Buchungs-Mail konnte nicht versendet werden.");\n    } catch (error) {\n      console.error("FiiViu admin booking notification failed", error);\n    }\n\n    // Notify the organizer independently from the customer confirmation.
+    // Notify FiiViu independently; a temporary provider/customer mail failure
+    // must never prevent the other recipients from being notified.
+    try {
+      const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();
+      const subject = "Neue FiiViu-Buchung – " + String(booking.experience_name || "Erlebnis");
+      const text = [
+        "Neue Buchung bei FiiViu", "",
+        "Buchung: " + (booking.booking_id || ""),
+        "Erlebnis: " + (booking.experience_name || ""),
+        "Veranstalter: " + (booking.provider_name || ""),
+        "Datum: " + (booking.booking_date || ""),
+        "Uhrzeit: " + (booking.booking_time || ""),
+        "Personen: " + (booking.guests || 1),
+        "Umsatz: " + ((Number(booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase()),
+        "", "Gast: " + (booking.customer_name || ""),
+        "E-Mail: " + (booking.customer_email || ""),
+        "Telefon: " + (booking.customer_phone || "")
+      ].join("\n");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+        throw new Error("ADMIN_BOOKING_EMAIL ist ungültig.");
+      }
+      const result = await sendResendEmailWithRetry(env, {
+        from: "FiiViu <noreply@fiiviu.ro>",
+        to: [recipient],
+        subject,
+        text
+      }, "admin-booking");
+      console.info("FiiViu admin booking notification accepted", {
+        bookingId: booking.booking_id,
+        emailId: result.id || ""
+      });
+    } catch (error) {
+      console.error("FiiViu admin booking notification failed", {
+        bookingId: booking?.booking_id || "",
+        message: String(error?.message || error).slice(0, 1000)
+      });
+    }
+
+    // Notify the organizer independently from the customer confirmation.
     // A provider notification failure must never block the booking itself.
     try {
       await sendProviderBookingNotification(env, booking);
@@ -1958,6 +1996,39 @@ export async function finalizePaidBooking(
       throw error;
     }
   }
+}
+
+async function sendResendEmailWithRetry(env, payload, notificationType) {
+  const apiKey = String(env.RESEND_API_KEY || "").trim();
+  if (!apiKey) throw new Error("RESEND_API_KEY ist nicht konfiguriert.");
+
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(String(result?.message || result?.error || ("Resend HTTP " + response.status)).slice(0, 1000));
+      }
+      console.info("FiiViu booking email accepted by Resend", {
+        notificationType,
+        emailId: result.id || "",
+        attempt: attempt + 1
+      });
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 750 * (attempt + 1)));
+    }
+  }
+  throw lastError || new Error("Resend email delivery failed.");
 }
 
 async function sendProviderBookingNotification(env, booking) {
@@ -2046,27 +2117,20 @@ async function sendProviderBookingNotification(env, booking) {
     return;
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + env.RESEND_API_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
+  try {
+    await sendResendEmailWithRetry(env, {
       from: "FiiViu <noreply@fiiviu.ro>",
       to: [recipient],
       subject,
       html,
       text
-    })
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = String(result?.message || result?.error || ("Resend HTTP " + response.status)).slice(0, 1000);
+    }, "provider-booking");
+  } catch (error) {
+    const message = String(error?.message || error).slice(0, 1000);
     await env.DB.prepare(
       "UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?"
     ).bind(message, booking.payment_intent_id).run();
-    throw new Error(message);
+    throw error;
   }
 
   await env.DB.prepare(
