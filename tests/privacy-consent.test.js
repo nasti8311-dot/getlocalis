@@ -35,6 +35,7 @@ test("consent manager is available across booking, partner, provider and legal s
     "index.html",
     "booking.html",
     "booking-verification.html",
+    "cancel.html",
     "anbieter-register.html",
     "partner-werden.html",
     "partner.html",
