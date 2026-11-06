@@ -59,6 +59,29 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 <button id="refreshActivity" class="secondary">Aktivitäten aktualisieren</button>
 </section>
 
+<section><h2>Alle Buchungen</h2>
+<p class="muted">Vollständige Buchungshistorie mit serverseitiger Suche und Filtern. Zeitraum bezieht sich auf den Buchungseingang; ältere Buchungen bleiben erhalten.</p>
+<div class="grid">
+  <div><label for="bookingSearch">Suche</label><input id="bookingSearch" type="search" placeholder="Buchungsnummer, Erlebnis oder Gast"></div>
+  <div><label for="bookingFrom">Von (Buchungseingang)</label><input id="bookingFrom" type="date"></div>
+  <div><label for="bookingTo">Bis (Buchungseingang)</label><input id="bookingTo" type="date"></div>
+  <div><label for="bookingStatus">Buchungsstatus</label><select id="bookingStatus"><option value="">Alle</option><option value="confirmed">Bestätigt</option><option value="pending">Ausstehend</option><option value="cancelled">Storniert</option><option value="canceled">Storniert (alt)</option><option value="refunded">Erstattet</option></select></div>
+  <div><label for="bookingPaymentStatus">Zahlungsstatus</label><select id="bookingPaymentStatus"><option value="">Alle</option><option value="paid">Bezahlt</option><option value="pending">Ausstehend</option><option value="failed">Fehlgeschlagen</option><option value="refunded">Erstattet</option></select></div>
+  <div><label for="bookingPageSize">Einträge pro Seite</label><select id="bookingPageSize"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0">
+  <button id="loadBookings">Suchen / aktualisieren</button>
+  <button id="clearBookingFilters" class="secondary">Filter zurücksetzen</button>
+  <span id="bookingCount" class="muted" aria-live="polite">Noch nicht geladen.</span>
+</div>
+<div id="bookingList" class="history" style="overflow-x:auto">Noch nicht geladen.</div>
+<div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+  <button id="bookingPrevious" class="secondary" disabled>Zurück</button>
+  <span id="bookingPageLabel" class="muted">Seite –</span>
+  <button id="bookingNext" class="secondary" disabled>Weiter</button>
+</div>
+</section>
+
 
 <section><h2>Zentrale Erlebnisverwaltung</h2><p class="hint">Alle Provider-Erlebnisse zentral durchsuchen, bearbeiten und ihren Veröffentlichungsstatus verwalten.</p><div class="grid"><div><label for="experienceSearch">Suche</label><input id="experienceSearch" type="search" placeholder="Titel, Provider oder Kategorie"></div><div><label for="experienceStatusFilter">Status filtern</label><select id="experienceStatusFilter"><option value="all">Alle Status</option><option value="pending">Wartet auf Freigabe</option><option value="published">Veröffentlicht</option><option value="inactive">Deaktiviert</option><option value="rejected">Abgelehnt</option></select></div></div><button id="loadAllExperiences">Alle Erlebnisse laden</button><div id="experienceManagementResult" class="result"></div><div id="experienceManagementList" style="margin-top:14px">Noch nicht geladen.</div></section>
 <section><h2>Neue Erlebnisse – Freigabe</h2><p class="hint">Neue Provider-Angebote bleiben unsichtbar, bis du sie hier freigibst.</p><button id="loadExperienceApprovals" class="secondary">Prüfliste aktualisieren</button><div id="experienceApprovals" style="margin-top:14px">Noch nicht geladen.</div><div id="experienceApprovalResult" class="result"></div></section>
@@ -193,5 +216,68 @@ async function loadPartnerActivity(){
 document.getElementById('refreshActivity').onclick=loadPartnerActivity;
 document.getElementById('reload').onclick=async()=>{await loadPartners();await loadPartnerActivity();};
 document.getElementById('payout').onclick=async()=>{const amount=Number(document.getElementById('amount').value),ref=document.getElementById('payoutPartner').value;const body={partnerRef:ref,amountCents:Math.round(amount*100),payoutDate:document.getElementById('date').value,reference:document.getElementById('reference').value.trim()};if(!ref||!Number.isFinite(amount)||amount<=0||!body.payoutDate){show('payoutResult','Bitte Partner, Betrag und Datum korrekt ausfüllen.');return;}if(selectedStats&&amount>Number(selectedStats.openCommission)+0.001){show('payoutResult','Der Betrag ist höher als die offene Provision.');return;}try{const r=await fetch(WORKER+'/api/admin/partner-payout',{method:'POST',headers:headers(),body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Auszahlung konnte nicht gespeichert werden.');show('payoutResult','Auszahlung gespeichert.\nPartner: '+data.partnerRef+'\nBetrag: '+euro(data.amount)+'\nDatum: '+data.payoutDate+'\nAuszahlung-ID: '+data.payoutId,true);document.getElementById('amount').value='';document.getElementById('reference').value='';await loadPayoutDetails(ref);}catch(e){show('payoutResult',e.message);}};
+let adminBookings=[];
+let adminBookingPage=1;
+let adminBookingTotalPages=1;
+function renderAdminBookings(){
+  const box=document.getElementById('bookingList');
+  if(!adminBookings.length){box.innerHTML='<p class="muted">Keine Buchungen für diese Filter gefunden.</p>';return;}
+  box.innerHTML='<table><thead><tr><th>Buchungseingang</th><th>Erlebnis-Termin</th><th>Erlebnis</th><th>Buchungsnummer</th><th>Gast</th><th>Personen</th><th>Status</th><th>Betrag</th></tr></thead><tbody>'+
+    adminBookings.map(b=>{
+      const created=String(b.created_at||'');
+      const createdLabel=created?new Date(created).toLocaleString('de-DE'):'–';
+      const date=String(b.booking_date||'').slice(0,10);
+      const dateLabel=date?new Date(date+'T12:00:00').toLocaleDateString('de-DE'):'Termin fehlt';
+      const time=String(b.booking_time||'').trim();
+      const status=[b.status,b.payment_status].filter(Boolean).join(' · ')||'–';
+      const guest=[b.customer_name,b.customer_email].filter(Boolean).map(escapeHtml).join('<br>')||'–';
+      const currency=String(b.currency||'RON').toUpperCase();
+      let amount='–';
+      try{amount=(Number(b.amount_cents||0)/100).toLocaleString('de-DE',{style:'currency',currency});}
+      catch(_){amount=(Number(b.amount_cents||0)/100).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(currency);}
+      return '<tr><td>'+escapeHtml(createdLabel)+'</td><td><b>'+escapeHtml(dateLabel)+'</b><br><span class="muted">'+escapeHtml(time||'Uhrzeit fehlt')+'</span></td><td>'+escapeHtml(b.experience_name||'–')+'</td><td><span class="code" style="font-size:13px">'+escapeHtml(b.booking_id||'–')+'</span></td><td>'+guest+'</td><td>'+Number(b.guests||1)+'</td><td>'+escapeHtml(status)+'</td><td>'+escapeHtml(amount)+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+async function loadAdminBookings(resetPage){
+  if(resetPage)adminBookingPage=1;
+  const box=document.getElementById('bookingList');
+  box.textContent='Buchungen werden geladen…';
+  const params=new URLSearchParams({
+    page:String(adminBookingPage),
+    pageSize:document.getElementById('bookingPageSize').value,
+    q:document.getElementById('bookingSearch').value.trim(),
+    from:document.getElementById('bookingFrom').value,
+    to:document.getElementById('bookingTo').value,
+    status:document.getElementById('bookingStatus').value,
+    payment_status:document.getElementById('bookingPaymentStatus').value
+  });
+  try{
+    const r=await fetch(WORKER+'/api/admin/bookings?'+params.toString(),{headers:headers()});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Buchungen konnten nicht geladen werden.');
+    adminBookings=data.bookings||[];
+    adminBookingTotalPages=Number(data.totalPages||1);
+    renderAdminBookings();
+    document.getElementById('bookingCount').textContent=Number(data.total||0).toLocaleString('de-DE')+' Buchungen insgesamt · '+adminBookings.length+' auf dieser Seite';
+    document.getElementById('bookingPageLabel').textContent='Seite '+adminBookingPage+' von '+adminBookingTotalPages;
+    document.getElementById('bookingPrevious').disabled=adminBookingPage<=1;
+    document.getElementById('bookingNext').disabled=adminBookingPage>=adminBookingTotalPages;
+  }catch(e){
+    box.textContent=e.message||'Buchungen konnten nicht geladen werden.';
+    document.getElementById('bookingCount').textContent='Laden fehlgeschlagen';
+    document.getElementById('bookingPrevious').disabled=true;
+    document.getElementById('bookingNext').disabled=true;
+  }
+}
+document.getElementById('loadBookings').addEventListener('click',()=>loadAdminBookings(true));
+document.getElementById('bookingSearch').addEventListener('keydown',e=>{if(e.key==='Enter')loadAdminBookings(true);});
+['bookingFrom','bookingTo','bookingStatus','bookingPaymentStatus','bookingPageSize'].forEach(id=>document.getElementById(id).addEventListener('change',()=>loadAdminBookings(true)));
+document.getElementById('clearBookingFilters').addEventListener('click',()=>{
+  ['bookingSearch','bookingFrom','bookingTo','bookingStatus','bookingPaymentStatus'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('bookingPageSize').value='50';
+  loadAdminBookings(true);
+});
+document.getElementById('bookingPrevious').addEventListener('click',()=>{if(adminBookingPage>1){adminBookingPage--;loadAdminBookings(false);}});
+document.getElementById('bookingNext').addEventListener('click',()=>{if(adminBookingPage<adminBookingTotalPages){adminBookingPage++;loadAdminBookings(false);}});
 /* Deployment refresh: keep current admin asset in sync with production. */
 </script></body></html>
