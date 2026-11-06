@@ -70,6 +70,11 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 <button id="refreshActivity" class="secondary">Aktivitäten aktualisieren</button>
 </section>
 
+<section><h2>Buchungen</h2>
+<p class="muted">Alle zuletzt eingegangenen Buchungen mit dem tatsächlichen Erlebnis-Termin (nicht dem Zahlungszeitpunkt).</p>
+<div class="grid"><div><label for="bookingSearch">Buchung suchen</label><input id="bookingSearch" type="search" placeholder="Buchungsnummer, Erlebnis oder Gast"></div><div style="display:flex;align-items:end;gap:8px"><button id="loadBookings">Buchungen laden</button><span id="bookingCount" class="muted"></span></div></div>
+<div id="bookingList" class="history" style="overflow-x:auto">Noch nicht geladen.</div>
+</section>
 <section><h2>Zentrale Erlebnisverwaltung</h2><p class="hint">Alle Provider-Erlebnisse zentral durchsuchen, bearbeiten und ihren Veröffentlichungsstatus verwalten.</p><div class="grid"><div><label for="experienceSearch">Suche</label><input id="experienceSearch" type="search" placeholder="Titel, Provider oder Kategorie"></div><div><label for="experienceStatusFilter">Status filtern</label><select id="experienceStatusFilter"><option value="all">Alle Status</option><option value="pending">Wartet auf Freigabe</option><option value="published">Veröffentlicht</option><option value="inactive">Deaktiviert</option><option value="rejected">Abgelehnt</option></select></div></div><button id="loadAllExperiences">Alle Erlebnisse laden</button><div id="experienceManagementResult" class="result"></div><div id="experienceManagementList" style="margin-top:14px">Noch nicht geladen.</div></section>
 <section><h2>Neue Erlebnisse – Freigabe</h2><p class="hint">Neue Provider-Angebote bleiben unsichtbar, bis du sie hier freigibst.</p><button id="loadExperienceApprovals" class="secondary">Prüfliste aktualisieren</button><div id="experienceApprovals" style="margin-top:14px">Noch nicht geladen.</div><div id="experienceApprovalResult" class="result"></div></section>
 <section><h2>Kontrollzentrum</h2>
@@ -107,7 +112,7 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 <div id="payoutBalance" class="balance" style="display:none"><div>Vermittelter Umsatz<strong id="payoutRevenue">0,00 €</strong></div><div>Bereits ausgezahlt<strong id="payoutPaid">0,00 €</strong></div><div>Offene Provision<strong id="payoutOpen">0,00 €</strong></div></div>
 <button id="maxPayout" class="secondary" style="display:none">Maximal offenen Betrag einsetzen</button><button id="payout" disabled>Auszahlung speichern</button><div id="payoutResult"></div><div id="payoutHistory" class="history" style="display:none"></div></section>
 <script>
-// Admin UI build 2026-09-30: keep deployed asset version explicit for cache invalidation.
+// Admin UI build 2026-11-06: booking list shows the scheduled experience date and time.
 const WORKER='';const PUBLIC_SITE=window.location.origin;const tokenInput=document.getElementById('token');document.getElementById('date').value=new Date().toISOString().slice(0,10);let partnerData=[];let selectedStats=null;
 function normalizeAdminKey(value){return String(value||'').trim().replace(/^Bearer\s+/i,'').trim();}function headers(){const key=normalizeAdminKey(tokenInput.value);return {'Content-Type':'application/json',...(key?{'Authorization':'Bearer '+key}:{})};}function show(id,text,ok=false){const el=document.getElementById(id);el.className='result '+(ok?'ok':'error');el.textContent=text;}function escapeHtml(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}function escapeJs(s){return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}function euro(v){return Number(v||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});}
 async function loadPartners(){const box=document.getElementById('partners');box.textContent='Lade...';try{const r=await fetch(WORKER+'/api/admin/partners',{headers:headers()});const data=await r.json();if(!r.ok)throw new Error(data.error||'Partner konnten nicht geladen werden.');partnerData=data.partners||[];const sel=document.getElementById('payoutPartner');const old=sel.value;sel.innerHTML='<option value="">Partner auswählen…</option>'+partnerData.map(p=>`<option value="${escapeHtml(p.partner_ref)}" ${Number(p.active)!==1?'disabled':''}>${escapeHtml(p.name)} · ${escapeHtml(p.partner_ref)}${Number(p.active)!==1?' (deaktiviert)':''}</option>`).join('');if(partnerData.some(p=>p.partner_ref===old&&Number(p.active)!==1))sel.value='';else sel.value=old;if(!partnerData.length){box.textContent='Noch keine Partner angelegt.';return;}box.innerHTML=partnerData.map(p=>{const link=PUBLIC_SITE+'/?ref='+encodeURIComponent(p.partner_ref);const qr='https://api.qrserver.com/v1/create-qr-code/?size=500x500&data='+encodeURIComponent(link);const active=Number(p.active)!==0;return `<div class="partner"><div><div class="code">${escapeHtml(p.partner_ref)}</div><h3 style="margin:6px 0">${escapeHtml(p.name)}</h3><div class="meta">${escapeHtml(p.type)}${p.contact_name?' · '+escapeHtml(p.contact_name):''}${p.contact_email?' · '+escapeHtml(p.contact_email):''}</div><div class="status ${active?'active':'inactive'}">${active?'● Aktiv':'● Deaktiviert'}</div><div class="link">${escapeHtml(link)}</div><button onclick="openEdit(${p.id},'${escapeJs(p.name)}','${escapeJs(p.type)}','${escapeJs(p.contact_name||'')}','${escapeJs(p.contact_email||'')}',${active})">Bearbeiten</button><button class="secondary" onclick="openQr('${qr.replace(/'/g,"\\'")}')">QR-Code öffnen</button><button class="secondary" onclick="printQr('${qr.replace(/'/g,"\\'")}','${escapeJs(p.name)}','${escapeJs(p.partner_ref)}')">Druckansicht</button><button class="secondary" onclick="generatePartnerLogin('${escapeJs(p.partner_ref)}','${escapeJs(p.contact_email||'')}')">Partner-Zugang erzeugen</button><div id="access-${p.id}" class="result" style="display:none"></div><div id="edit-${p.id}" class="edit"></div></div><img class="qr" src="${qr}" alt="QR-Code für ${escapeHtml(p.name)}"></div>`;}).join('');}catch(e){box.innerHTML='<div class="result error">'+escapeHtml(e.message)+'</div>';}}
@@ -130,6 +135,38 @@ async function loadExperienceApprovals(){
 }
 document.getElementById('loadExperienceApprovals')?.addEventListener('click',loadExperienceApprovals);
 function ccStatus(id,ok,label){const el=document.getElementById(id);el.textContent=ok?'● OK':'● Problem';el.className='status '+(ok?'active':'inactive');}
+let adminBookings=[];
+function renderAdminBookings(){
+  const q=String(document.getElementById('bookingSearch').value||'').trim().toLowerCase();
+  const rows=adminBookings.filter(b=>[b.booking_id,b.experience_name,b.customer_name,b.customer_email].some(v=>String(v||'').toLowerCase().includes(q)));
+  const box=document.getElementById('bookingList');
+  document.getElementById('bookingCount').textContent=adminBookings.length+' geladen · '+rows.length+' angezeigt';
+  if(!rows.length){box.innerHTML='<p class="muted">Keine passenden Buchungen gefunden.</p>';return;}
+  box.innerHTML='<table><thead><tr><th>Erlebnis-Termin</th><th>Erlebnis</th><th>Buchungsnummer</th><th>Gast</th><th>Personen</th><th>Status</th><th>Betrag</th></tr></thead><tbody>'+
+    rows.map(b=>{
+      const date=String(b.booking_date||'').slice(0,10);
+      const dateLabel=date?new Date(date+'T12:00:00').toLocaleDateString('de-DE'):'Termin fehlt';
+      const time=String(b.booking_time||'').trim();
+      const status=[b.status,b.payment_status].filter(Boolean).join(' · ')||'–';
+      const guest=[b.customer_name,b.customer_email].filter(Boolean).map(escapeHtml).join('<br>')||'–';
+      const amount=(Number(b.amount_cents||0)/100).toLocaleString('de-DE',{style:'currency',currency:String(b.currency||'RON').toUpperCase()});
+      return '<tr><td><b>'+escapeHtml(dateLabel)+'</b><br><span class="muted">'+escapeHtml(time||'Uhrzeit fehlt')+'</span></td><td>'+escapeHtml(b.experience_name||'–')+'</td><td><span class="code" style="font-size:13px">'+escapeHtml(b.booking_id||'–')+'</span></td><td>'+guest+'</td><td>'+Number(b.guests||1)+'</td><td>'+escapeHtml(status)+'</td><td>'+escapeHtml(amount)+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+async function loadAdminBookings(){
+  const box=document.getElementById('bookingList');
+  box.textContent='Buchungen werden geladen…';
+  try{
+    const r=await fetch(WORKER+'/api/admin/bookings',{headers:headers()});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Buchungen konnten nicht geladen werden.');
+    adminBookings=data.bookings||[];
+    renderAdminBookings();
+  }catch(e){box.textContent=e.message||'Buchungen konnten nicht geladen werden.';}
+}
+document.getElementById('loadBookings').addEventListener('click',loadAdminBookings);
+document.getElementById('bookingSearch').addEventListener('input',renderAdminBookings);
+
 async function loadControlCenter(){
   show('ccResult','Lade Kontrollzentrum…',true);
   try{

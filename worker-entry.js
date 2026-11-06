@@ -31,7 +31,8 @@ export default {
         url.pathname === "/api/admin/experience-approvals" ||
         url.pathname === "/api/admin/experiences" ||
         url.pathname === "/api/admin/translate-offers" ||
-        url.pathname === "/api/admin/control-center")
+        url.pathname === "/api/admin/control-center" ||
+        url.pathname === "/api/admin/bookings")
     ) {
       const origin = String(request.headers.get("Origin") || "").trim();
       const allowedOrigins = new Set([
@@ -80,6 +81,9 @@ export default {
     if (url.pathname === "/api/admin/experience-approvals") return handleAdminExperienceApprovals(request, env);
     if (url.pathname === "/api/admin/control-center") {
       return handleAdminControlCenter(request, env);
+    }
+    if (url.pathname === "/api/admin/bookings") {
+      return handleAdminBookings(request, env);
     }
 
     if (url.pathname === "/api/admin/provider-password") {
@@ -443,6 +447,31 @@ async function handleAdminExperienceApprovals(request,env){
     return json({error:"Method Not Allowed"},405);
   }catch(error){console.error("FiiViu admin experience approvals failed",error);return json({error:error?.message||"Freigabeliste konnte nicht geladen werden."},500);}
 }
+async function handleAdminBookings(request, env) {
+  if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (request.method !== "GET") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.DB) return json({ error: "D1 database not configured." }, 500);
+
+  try {
+    await ensureBookingColumns(env);
+    const rows = await env.DB.prepare(`
+      SELECT booking_id,experience_name,booking_date,booking_time,guests,
+             status,payment_status,amount_cents,currency,customer_name,
+             customer_email,created_at
+      FROM bookings
+      ORDER BY COALESCE(booking_date,'') DESC,
+               COALESCE(booking_time,'') DESC,
+               created_at DESC
+      LIMIT 250
+    `).all();
+    return json({ bookings: rows.results || [], count: (rows.results || []).length });
+  } catch (error) {
+    console.error("FiiViu admin bookings failed", error);
+    return json({ error: error?.message || "Bookings could not be loaded." }, 500);
+  }
+}
+
 async function handleAdminControlCenter(request, env) {
   if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
   if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
