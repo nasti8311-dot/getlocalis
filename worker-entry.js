@@ -481,7 +481,7 @@ async function handleAdminControlCenter(request, env) {
   const today = new Date().toISOString().slice(0, 10);
   const result = {
     generatedAt: new Date().toISOString(),
-    today: { bookings: 0, revenueCents: 0, openPayoutsCents: 0, cancellations: 0, failedPayments: 0, failedEmails: 0, newProviders: 0, providersWithProblems: 0 },
+    today: { bookings: 0, revenueCents: 0, revenueByCurrency: {}, openPayoutsCents: 0, cancellations: 0, failedPayments: 0, failedEmails: 0, newProviders: 0, providersWithProblems: 0 },
     system: { stripe: false, email: false, d1: false, worker: true, lastSuccessfulBooking: null, lastWebhook: null, lastPayout: null },
     providerProblems: []
   };
@@ -504,14 +504,24 @@ async function handleAdminControlCenter(request, env) {
     await ensureBookingSettlementsTable(env);
 
     const bookingRows = await env.DB.prepare(
-      "SELECT booking_id,status,payment_status,amount_cents,created_at,updated_at,confirmation_email_sent_at,confirmation_email_error,experience_name,provider_connect_account_id FROM bookings"
+      "SELECT booking_id,status,payment_status,amount_cents,currency,created_at,updated_at,confirmation_email_sent_at,confirmation_email_error,experience_name,provider_connect_account_id FROM bookings"
     ).all();
     const bookings = bookingRows.results || [];
     const todayBookings = bookings.filter(b => String(b.created_at || "").slice(0,10) === today);
     result.today.bookings = todayBookings.length;
-    result.today.revenueCents = todayBookings
+    // Never add minor-unit amounts across different currencies. Keep each
+    // original Stripe payment currency intact for the admin dashboard.
+    result.today.revenueByCurrency = todayBookings
       .filter(b => b.payment_status === "paid" || b.status === "confirmed")
-      .reduce((sum,b) => sum + Number(b.amount_cents || 0), 0);
+      .reduce((totals,b) => {
+        const currency = String(b.currency || "eur").trim().toLowerCase();
+        if (!/^[a-z]{3}$/.test(currency)) return totals;
+        totals[currency] = (totals[currency] || 0) + Number(b.amount_cents || 0);
+        return totals;
+      }, {});
+    // Backwards-compatible single-currency field: it represents EUR only,
+    // never a mixed-currency total.
+    result.today.revenueCents = Number(result.today.revenueByCurrency.eur || 0);
     result.today.cancellations = todayBookings.filter(b => ["cancelled","refunded"].includes(String(b.status))).length;
     result.today.failedPayments = todayBookings.filter(b => b.payment_status === "failed").length;
     result.today.failedEmails = todayBookings.filter(b => Boolean(b.confirmation_email_error) && !b.confirmation_email_sent_at).length;
