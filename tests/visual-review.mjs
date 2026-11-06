@@ -20,6 +20,24 @@ try {
     await page.goto("http://127.0.0.1:4173/index.html", { waitUntil: "domcontentloaded" });
     await page.evaluate(() => document.fonts.ready);
 
+    const consentPanel = page.locator("#fiiviu-consent-root .fc-panel");
+    await consentPanel.waitFor({ state: "visible", timeout: 5000 });
+    await page.locator('#fiiviu-consent-root [data-action="reject"]').click();
+    const rejected = await page.evaluate(() => JSON.parse(localStorage.getItem("fiiviu_consent_v1") || "null"));
+    assert.equal(rejected?.necessary, true, "Necessary storage remains enabled");
+    assert.equal(rejected?.statistics, false, "Reject all must disable statistics");
+    assert.equal(rejected?.marketing, false, "Reject all must disable marketing");
+    await page.locator("#fiiviu-consent-root .fc-manage").waitFor({ state: "visible" });
+    await page.locator("#fiiviu-consent-root .fc-manage").click();
+    await page.locator("#fc-statistics").check();
+    await page.locator('#fiiviu-consent-root [data-action="save"]').click();
+    const configured = await page.evaluate(() => JSON.parse(localStorage.getItem("fiiviu_consent_v1") || "null"));
+    assert.equal(configured?.statistics, true, "Custom statistics choice must be saved");
+    assert.equal(configured?.marketing, false, "Unselected marketing must remain disabled");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator("#fiiviu-consent-root .fc-manage").waitFor({ state: "visible" });
+    assert.equal(await page.locator("#fiiviu-consent-root .fc-panel").count(), 0, "Saved consent must suppress the first-visit banner");
+
     const metrics = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,

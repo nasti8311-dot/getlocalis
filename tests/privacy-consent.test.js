@@ -29,3 +29,36 @@ test("Stripe.js is loaded only after the booking payment flow starts", () => {
   assert.match(home, /await ensureStripeLoaded\(\)/);
   assert.match(home, /script\.src = "https:\/\/js\.stripe\.com\/v3\//);
 });
+
+test("consent manager is available across booking, partner, provider and legal surfaces", () => {
+  for (const path of [
+    "index.html",
+    "booking.html",
+    "booking-verification.html",
+    "cancel.html",
+    "anbieter-register.html",
+    "partner-werden.html",
+    "partner.html",
+    "provider.html",
+    "organizer-admin.html",
+    "legal/impressum.html",
+    "legal/index.html",
+    "legal/politica-cookie.html",
+    "legal/politica-de-confidentialitate.html",
+    "legal/termeni-si-conditii.html",
+    "legal/anulare-si-rambursare.html"
+  ]) {
+    assert.match(read(path), /\/assets\/js\/fiiviu-consent\.js/, "missing consent controls on " + path);
+  }
+});
+
+test("privacy policy contains current multilingual retention and transfer disclosures", () => {
+  const policy = read("legal/politica-de-confidentialitate.html");
+  assert.match(policy, /Letzte Aktualisierung: 6\. November 2026/);
+  assert.match(policy, /Last updated: 6 November 2026/);
+  assert.match(policy, /Ultima actualizare: 6 noiembrie 2026/);
+  assert.match(policy, /Art\. 25 des rumänischen Gesetzes Nr\. 82\/1991/);
+  assert.match(policy, /Article 25 of Romanian Law No\. 82\/1991/);
+  assert.match(policy, /content\.en\.sections=/);
+  assert.match(policy, /content\.ro\.sections=/);
+});
