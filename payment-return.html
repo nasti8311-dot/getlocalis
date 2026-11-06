@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#E7D9C5">
+  <title>Zahlungsstatus – FiiViu</title>
+  <link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
+  <link rel="stylesheet" href="/assets/css/fiiviu-pages.css">
+  <style>
+    body{font-family:Arial,sans-serif;background:#E7D9C5;color:#222;max-width:680px;margin:40px auto;padding:0 18px}
+    main{background:#fff;border:1px solid #ddd;border-radius:18px;padding:28px}
+    .muted{color:#666}.error{color:#b42318}.ok{color:#278a4b;font-weight:700}
+  </style>
+</head>
+<body>
+  <main>
+    <div id="status" role="status" aria-live="polite">Zahlung wird überprüft …</div>
+    <p class="muted">Bitte schließe dieses Fenster nicht, bis der Zahlungsstatus geprüft wurde.</p>
+  </main>
+  <script>
+    (async function () {
+      const status = document.getElementById("status");
+      const params = new URLSearchParams(window.location.search);
+      const paymentIntentId = String(params.get("payment_intent") || "").trim();
+      const clientSecret = String(params.get("payment_intent_client_secret") || "").trim();
+      const redirectStatus = String(params.get("redirect_status") || "").trim();
+
+      // Remove the client secret from the visible URL and subsequent referrers.
+      window.history.replaceState({}, document.title, "/payment-return.html");
+
+      function showError(message) {
+        const heading = document.createElement("h1");
+        heading.className = "error";
+        heading.textContent = "Zahlung noch nicht bestätigt";
+        const detail = document.createElement("p");
+        detail.textContent = message;
+        const help = document.createElement("p");
+        help.className = "muted";
+        help.textContent = "Bitte prüfe deine E-Mail auf eine Buchungsbestätigung. Starte keine weitere Zahlung, bevor du den Zahlungsstatus geprüft hast.";
+        const link = document.createElement("a");
+        link.href = "/";
+        link.textContent = "Zurück zu FiiViu";
+        status.replaceChildren(heading, detail, help, link);
+      }
+
+      if (!/^pi_[A-Za-z0-9]+$/.test(paymentIntentId) ||
+          !paymentIntentId || !clientSecret.includes("_secret_")) {
+        showError("Die Rückmeldung des Zahlungsanbieters ist unvollständig.");
+        return;
+      }
+
+      if (redirectStatus !== "succeeded") {
+        showError("Der Zahlungsanbieter hat die Zahlung nicht als erfolgreich bestätigt. Es wurde keine Buchungsbestätigung durch diese Rückleitung ausgelöst.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/finalize-booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentIntentId, clientSecret }),
+          credentials: "omit",
+          cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true) {
+          showError(data.error || "Die Zahlung wurde zurückgeleitet, aber die Buchung konnte noch nicht bestätigt werden.");
+          return;
+        }
+
+        const heading = document.createElement("h1");
+        heading.className = "ok";
+        heading.textContent = "Zahlung erfolgreich";
+        const detail = document.createElement("p");
+        detail.textContent = "Deine Buchung wurde bestätigt.";
+        const booking = document.createElement("p");
+        const label = document.createElement("strong");
+        label.textContent = "Buchungsnummer: ";
+        booking.append(label, document.createTextNode(String(data.booking_id || "wird per E-Mail mitgeteilt")));
+        const link = document.createElement("a");
+        link.href = "/";
+        link.textContent = "Zurück zu FiiViu";
+        status.replaceChildren(heading, detail, booking, link);
+      } catch (error) {
+        showError("Der Buchungsstatus konnte gerade nicht abgerufen werden. Bitte prüfe deine E-Mail, bevor du eine weitere Zahlung versuchst.");
+      }
+    })();
+  </script>
+</body>
+</html>
