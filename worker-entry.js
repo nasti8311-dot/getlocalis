@@ -322,6 +322,7 @@ export default {
         params.set("metadata[offer_id]",String(data.offerId||""));
         params.set("metadata[customer_name]",String(data.customerName||""));
         params.set("metadata[customer_email]",String(data.customerEmail||""));
+        params.set("metadata[customer_note]",String(data.customerNote||"").slice(0,2000));
         params.set("metadata[customer_phone]",String(data.customerPhone||""));
         params.set("metadata[customer_language]",normalizeLanguage(data.customerLanguage));
         params.set("metadata[booking_date]",String(data.bookingDate||""));
@@ -1792,6 +1793,7 @@ export async function finalizePaidBooking(
           customer_name,
           customer_email,
           customer_phone,
+          customer_note,
           customer_language,
           experience_name,
           offer_id,
@@ -1819,7 +1821,7 @@ export async function finalizePaidBooking(
           cancellation_token,
           created_at,
           updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
         ON CONFLICT(payment_intent_id) DO UPDATE SET
           booking_id=excluded.booking_id,
           status='confirmed',
@@ -1827,6 +1829,7 @@ export async function finalizePaidBooking(
           customer_name=excluded.customer_name,
           customer_email=excluded.customer_email,
           customer_phone=excluded.customer_phone,
+          customer_note=excluded.customer_note,
           customer_language=excluded.customer_language,
           experience_name=excluded.experience_name,
           offer_id=excluded.offer_id,
@@ -1865,6 +1868,7 @@ export async function finalizePaidBooking(
         name || "Customer",
         email,
         clean(metadata.customer_phone),
+        clean(metadata.customer_note),
         language,
         experienceName,
         Number.isInteger(offerId)&&offerId>0?offerId:null,
@@ -2141,6 +2145,7 @@ async function sendProviderBookingNotification(env, booking) {
       {label:"Client",value:booking.customer_name},
       {label:"E-mail client",value:booking.customer_email},
       {label:"Telefon",value:booking.customer_phone},
+      {label:"Nachricht des Kunden",value:booking.customer_note},
       ...(directPayment ? [{label:"Avans online (20%)",value:onlineFee},{label:"De încasat direct (80%)",value:providerDue},{label:"Metode de plată la fața locului",value:onSiteMethods}] : []),
       {label:"Punct de întâlnire",value:meetingPoint},
       {label:"Adresă",value:[booking.meeting_address,booking.meeting_city,booking.meeting_country].filter(Boolean).join(", ")}
@@ -2153,6 +2158,7 @@ async function sendProviderBookingNotification(env, booking) {
     "Data: " + (booking.booking_date || ""), "Ora: " + (booking.booking_time || ""),
     "Număr de persoane: " + (booking.guests || 1), "Client: " + (booking.customer_name || ""),
     "E-mail client: " + (booking.customer_email || ""), "Telefon: " + (booking.customer_phone || ""),
+    booking.customer_note ? "Mesaj de la client: " + booking.customer_note : "",
     "Valoarea totală a rezervării: " + amount,
     ...(directPayment ? ["Avans online (20%): " + onlineFee, "De încasat direct (80%): " + providerDue, "Metode de plată: " + onSiteMethods] : []),
     "Punct de întâlnire: " + meetingPoint,
@@ -2165,15 +2171,21 @@ async function sendProviderBookingNotification(env, booking) {
       .bind("RESEND_API_KEY ist nicht konfiguriert.", booking.payment_intent_id).run();
     return;
   }
+  // Claim delivery atomically before sending. The finalize endpoint and Stripe
+  // webhook can run at the same time; a stale booking object alone allowed both
+  // executions to send the organizer notification.
+  const claim = await env.DB.prepare(
+    "UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL"
+  ).bind(booking.payment_intent_id).run();
+  if (Number(claim?.meta?.changes || 0) !== 1) return;
+
   try {
     await sendResendEmailWithRetry(env, {from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text}, "provider-booking");
   } catch (error) {
-    await env.DB.prepare("UPDATE bookings SET provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=NULL,provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
       .bind(String(error?.message || error).slice(0,1000), booking.payment_intent_id).run();
     throw error;
   }
-  await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL")
-    .bind(booking.payment_intent_id).run();
 }
 
 async function sendCancellationNotifications(env, booking) {
@@ -4151,6 +4163,25 @@ async function ensureBookingColumns(env) {
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
+
+  // Additive runtime compatibility for customer notes and idempotent provider
+  // notification delivery on databases created before these fields existed.
+  const optionalColumns=[
+    ["customer_note","TEXT"],
+    ["provider_notification_email_sent_at","TEXT"],
+    ["provider_notification_email_error","TEXT"]
+  ];
+  for(const [name,type] of optionalColumns){
+    const current=await env.DB.prepare("PRAGMA table_info(bookings)").all();
+    const names=new Set((current.results||[]).map(row=>String(row.name||"")));
+    if(names.has(name))continue;
+    try{
+      await env.DB.prepare("ALTER TABLE bookings ADD COLUMN "+name+" "+type).run();
+    }catch(error){
+      const refreshed=await env.DB.prepare("PRAGMA table_info(bookings)").all();
+      if(!(refreshed.results||[]).some(row=>String(row.name||"")===name))throw error;
+    }
+  }
 }
 
 function normalizeLanguage(value) {
