@@ -1197,7 +1197,10 @@ test("admin booking history uses read-only server-side pagination and filters", 
   assert.match(handler, /date\(created_at\) >= date\(\?\)/);
   assert.doesNotMatch(handler, /INSERT INTO|UPDATE bookings|DELETE FROM|ensureBookingColumns/);
   const admin = read("admin.html");
+  const adminIndex = read("admin/index.html");
   assert.match(admin, /bookingPrevious/);
+  assert.match(adminIndex, /bookingPrevious/);
+  assert.match(adminIndex, /bookingPaymentStatus/);
   assert.match(admin, /bookingNext/);
   assert.match(admin, /bookingFrom/);
   assert.match(admin, /bookingPaymentStatus/);
