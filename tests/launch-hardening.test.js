@@ -1164,7 +1164,8 @@ test("admin control center health checks are read-only and independent", () => {
 
 test("admin control center keeps daily revenue separated by original currency", () => {
   const worker = read("worker-entry.js");
-  const admin = read("admin/index.html");
+  const admin = read("admin.html");
+  const adminIndex = read("admin/index.html");
   const start = worker.indexOf("async function handleAdminControlCenter");
   const end = worker.indexOf("async function handleAdminResendConfirmation", start);
   const handler = worker.slice(start, end);
@@ -1176,4 +1177,5 @@ test("admin control center keeps daily revenue separated by original currency", 
   assert.match(admin, /Object\.entries\(revenueByCurrency\)/);
   assert.match(admin, /currency:currency\.toUpperCase\(\)/);
   assert.match(admin, /revenueParts\.join\(' \+ '\)/);
+  assert.match(adminIndex, /revenueParts\.join\(' \+ '\)/);
 });
