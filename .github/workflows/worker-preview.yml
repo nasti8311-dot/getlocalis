@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -Eiq 'wrangler(@[0-9]+)?[[:space:]]+deploy([[:space:]]|$)' .github/workflows/worker-preview.yml | grep -Eiv -- '--dry-run'; then
+          if grep -En 'wrangler(@[0-9]+)?[[:space:]]+deploy([[:space:]]|$)' .github/workflows/worker-preview.yml | grep -Ev -- '--dry-run'; then
             echo "Unexpected non-dry-run deploy command found."
             exit 1
           fi
