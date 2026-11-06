@@ -28,5 +28,7 @@ jobs:
           ruby -e 'require "yaml"; Dir[".github/workflows/*.yml", ".github/workflows/*.yaml"].each { |file| YAML.load_file(file); puts "validated #{file}" }'
       - name: Run launch hardening regression tests
         run: node --test tests/launch-hardening.test.js
+      - name: Run privacy and consent regression tests
+        run: node --test tests/privacy-consent.test.js
       - name: Validate Wrangler configuration and worker bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run

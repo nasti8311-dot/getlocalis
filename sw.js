@@ -1,4 +1,4 @@
-const CACHE_NAME = "fiiviu-shell-v1";
+const CACHE_NAME = "fiiviu-shell-v2";
 const SHELL = ["/", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
 self.addEventListener("install", event => {

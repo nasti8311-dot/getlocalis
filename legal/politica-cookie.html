@@ -1,3 +1,99 @@
-<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Politica cookie – FiiViu</title><style>body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:900px;margin:0 auto;padding:32px 20px;line-height:1.65;color:#171717;background:#F8F6F1}main{background:#fff;border-radius:24px;padding:32px;box-shadow:0 12px 45px rgba(21,21,21,.08)}h1,h2{line-height:1.2}h2{margin-top:30px}a{color:#c9581d}</style>    <link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
-    <link rel="stylesheet" href="/assets/css/fiiviu-pages.css">
-</head><body><main><p><a href="/">← FiiViu</a></p><h1>Politica privind cookie-urile și tehnologiile similare</h1><p><strong>Actualizată la 26 septembrie 2026</strong></p><p>FiiViu utilizează mecanisme de stocare în browser și tehnologii similare numai în măsura necesară funcționării platformei sau pe baza consimțământului, atunci când acesta este cerut de lege. În prezent, FiiViu nu utilizează localStorage pentru păstrarea codului de partener sau a unui identificator de vizitator.</p><h2>1. Tehnologii strict necesare</h2><p>Pot fi utilizate tehnologii strict necesare pentru securitate, autentificare, funcționarea sesiunii, păstrarea unor preferințe solicitate de utilizator și finalizarea serviciului cerut. Aceste tehnologii nu sunt folosite pentru publicitate comportamentală.</p><h2>2. Atribuirea recomandărilor</h2><p>În prezent, un cod <code>ref</code> transmis prin linkul partenerului este utilizat temporar în memoria paginii pentru atribuirea unei rezervări. Codul nu este salvat în localStorage și nu este creat un identificator persistent de vizitator în browser. Dacă FiiViu va introduce ulterior o stocare neesențială pentru această funcție, aceasta va fi activată numai după obținerea consimțământului prealabil cerut de Legea nr. 506/2004.</p><h2>3. Furnizori terți</h2><p>Platforma poate utiliza Stripe pentru plăți, Cloudflare pentru infrastructură și servicii specializate pentru transmiterea e-mailurilor. Încărcarea unei resurse terțe poate implica transmiterea unor date tehnice către furnizorul respectiv. Resursele opționale de analiză, publicitate sau remarketing nu trebuie activate fără consimțământul necesar.</p><h2>4. Gestionarea consimțământului</h2><p>Atunci când este necesar consimțământul, acesta trebuie solicitat înainte de stocarea sau accesarea informațiilor neesențiale din echipamentul utilizatorului. Retragerea consimțământului trebuie să fie posibilă la fel de ușor ca acordarea lui.</p><h2>5. Contact</h2><p>Întrebări privind cookie-urile: <a href="mailto:info@fiiviu.ro">info@fiiviu.ro</a>.</p></main></body></html>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FiiViu – Cookie-Richtlinie</title>
+<meta name="description" content="Informationen zu Cookies, lokalem Speicher und Einwilligungsverwaltung bei FiiViu.">
+<link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
+<link rel="stylesheet" href="/assets/css/fiiviu-pages.css">
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:950px;margin:0 auto;padding:32px 20px;line-height:1.65;color:#171717;background:#F8F6F1}
+main{background:#fff;border-radius:24px;padding:32px;box-shadow:0 12px 45px rgba(21,21,21,.08)}
+h1,h2{line-height:1.2}h2{margin-top:30px}a{color:#c9581d}
+.lang{display:flex;gap:8px;justify-content:flex-end;margin-bottom:18px}
+.lang button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700}
+.lang button.active{background:#151515;color:#fff}
+.back{display:inline-block;margin-bottom:18px;text-decoration:none;font-weight:700}
+table{width:100%;border-collapse:collapse;margin:14px 0}
+td,th{border:1px solid #e5e5e5;padding:9px;text-align:left;vertical-align:top}
+th{background:#f8f6f1}
+@media(max-width:600px){main{padding:20px}table{font-size:13px}}
+</style>
+</head>
+<body>
+<div class="lang" aria-label="Language">
+<button type="button" data-lang="de" onclick="setLanguage('de')">DE</button>
+<button type="button" data-lang="en" onclick="setLanguage('en')">EN</button>
+<button type="button" data-lang="ro" onclick="setLanguage('ro')">RO</button>
+</div>
+<main id="cookie-content"></main>
+<script>
+const pages = {
+de: {
+title:"Cookie-Richtlinie und ähnliche Technologien",
+back:"← Zurück zu FiiViu",
+updated:"Letzte Aktualisierung: 6. November 2026",
+intro:"Diese Richtlinie erklärt, wie FiiViu Cookies und vergleichbare Technologien auf der öffentlichen Website verwendet. Sie ergänzt die Datenschutzerklärung und beschreibt den aktuellen technischen Stand der Website.",
+sections:[
+["1. Was sind Cookies und ähnliche Technologien?","Cookies sind kleine Dateien, die eine Website im Browser speichern kann. Vergleichbare Technologien sind beispielsweise localStorage oder sessionStorage. Auch das Laden externer Inhalte kann technische Daten wie IP-Adresse, Browserinformationen und den Referrer an den jeweiligen Anbieter übertragen; eine solche Übertragung ist nicht automatisch ein Cookie."],
+["2. Notwendige Speicherung","Der Consent-Manager speichert deine Auswahl im lokalen Browserspeicher unter dem Schlüssel <code>fiiviu_consent_v1</code>. Gespeichert werden die Versionsnummer der Einwilligung, der Zeitpunkt sowie die Auswahl für notwendige, Statistik- und Marketing-Technologien. Die notwendige Kategorie ist immer aktiv; Statistik und Marketing sind standardmäßig ausgeschaltet. Diese Speicherung dient ausschließlich dazu, deine Datenschutzentscheidung zu beachten. Die Auswahl wird nach sechs Monaten erneut abgefragt."],
+["3. Optionale Kategorien","Auf der öffentlichen Startseite sind derzeit keine Statistik- oder Marketing-Tracker eingebunden. Die Auswahl dieser Kategorien wird gespeichert, aktiviert aber ohne einen entsprechend eingebundenen und dokumentierten Dienst keine zusätzliche Nachverfolgung. Es werden keine optionalen Kategorien vorausgewählt."],
+["4. Externe Ressourcen und Drittanbieter","Die Startseite lädt derzeit unter anderem Frontend-Ressourcen über cdn.tailwindcss.com, cdnjs.cloudflare.com, cdn.jsdelivr.net und npmcdn.com sowie Bilddateien von Pexels. Beim Abruf können diese Anbieter technische Verbindungsdaten erhalten, insbesondere IP-Adresse, User-Agent und den durch die Referrer-Policy begrenzten Herkunftshinweis. Diese Ressourcen sind nicht mit einem Statistik- oder Marketing-Cookie gleichzusetzen. Wir prüfen die Möglichkeit, Ressourcen lokal bereitzustellen und externe Abrufe weiter zu reduzieren."],
+["5. Stripe und Zahlung","Stripe.js wird auf der öffentlichen Startseite nicht mehr beim ersten Seitenaufruf geladen. Das Skript wird erst nach dem Start des Buchungs-/Zahlungsvorgangs geladen, wenn du die Zahlung nutzen möchtest. Stripe verarbeitet Zahlungs- und Sicherheitsdaten nach seinen eigenen Datenschutzinformationen. Für die Zahlungsabwicklung notwendige Technologien können erforderlich sein, um den ausdrücklich angeforderten Zahlungsvorgang auszuführen."],
+["6. Partner- und Empfehlungslinks","Ein über den URL-Parameter <code>ref</code> übermittelter Partnercode wird derzeit nur im Arbeitsspeicher der geöffneten Seite gehalten. Der Code wird nicht in localStorage oder sessionStorage gespeichert und erstellt für sich genommen keine dauerhafte Besucher-ID."],
+["7. Einwilligung, Ablehnung und Widerruf","Beim ersten Besuch kannst du alle optionalen Kategorien akzeptieren, alle optionalen Kategorien ablehnen oder deine Auswahl konfigurieren. Keine optionale Kategorie ist vorangekreuzt. Du kannst deine Entscheidung jederzeit über die dauerhaft erreichbare Schaltfläche „Cookie-Einstellungen“ erneut öffnen und ändern. Eine Ablehnung optionaler Kategorien beeinträchtigt die grundlegende Nutzung der Website nicht."],
+["8. Browser-Einstellungen","Du kannst gespeicherte Informationen zusätzlich über die Einstellungen deines Browsers löschen oder das Speichern von Cookies einschränken. Das Löschen des Consent-Eintrags kann dazu führen, dass die Auswahl erneut abgefragt wird."],
+["9. Kontakt","Fragen zu Cookies und ähnlichen Technologien: <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>. Weitere Informationen zur Verarbeitung personenbezogener Daten findest du in der <a href='/legal/politica-de-confidentialitate.html?lang=de'>Datenschutzerklärung</a>."]
+]
+},
+en: {
+title:"Cookie Policy and Similar Technologies",
+back:"← Back to FiiViu",
+updated:"Last updated: 6 November 2026",
+intro:"This policy explains how FiiViu uses cookies and similar technologies on its public website. It supplements the Privacy Policy and describes the website's current technical setup.",
+sections:[
+["1. Cookies and similar technologies","Cookies are small files a website may store in your browser. Similar technologies include localStorage and sessionStorage. Loading third-party content may also transmit technical data such as your IP address, browser information and referrer to that provider; such a transfer is not automatically a cookie."],
+["2. Necessary storage","The consent manager stores your choice in browser local storage under the key <code>fiiviu_consent_v1</code>. It records the consent version, timestamp and choices for necessary, statistics and marketing technologies. The necessary category is always active; statistics and marketing are off by default. This storage is used only to respect your privacy choice. Your choice is requested again after six months."],
+["3. Optional categories","The public homepage currently has no statistics or marketing trackers integrated. Your choices for these categories are stored, but do not activate tracking unless a corresponding, documented service is later integrated. No optional category is preselected."],
+["4. External resources and third parties","The homepage currently loads frontend resources from, among others, cdn.tailwindcss.com, cdnjs.cloudflare.com, cdn.jsdelivr.net and npmcdn.com, and images from Pexels. When requested, these providers may receive technical connection data, particularly IP address, User-Agent and the limited origin information permitted by the Referrer-Policy. These resources are not the same thing as statistics or marketing cookies. We are reviewing options to host resources locally and further reduce third-party requests."],
+["5. Stripe and payments","Stripe.js is no longer loaded on the public homepage at initial page load. The script is loaded only after you start the booking/payment flow and request to use payment. Stripe processes payment and security data under its own privacy information. Technologies necessary for payment may be required to perform the payment transaction you explicitly requested."],
+["6. Partner and referral links","A partner code provided through the <code>ref</code> URL parameter is currently held only in the memory of the open page. It is not stored in localStorage or sessionStorage and does not by itself create a persistent visitor ID."],
+["7. Consent, rejection and withdrawal","On your first visit, you can accept all optional categories, reject all optional categories, or configure your choices. No optional category is preselected. You can reopen and change your choice at any time using the persistent “Cookie settings” control. Rejecting optional categories does not affect basic website functionality."],
+["8. Browser settings","You can also delete stored information or restrict cookies through your browser settings. Deleting the consent entry may cause the website to ask for your choice again."],
+["9. Contact","Questions about cookies and similar technologies: <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>. For more information about personal-data processing, see the <a href='/legal/politica-de-confidentialitate.html?lang=en'>Privacy Policy</a>."]
+]
+},
+ro: {
+title:"Politica privind cookie-urile și tehnologiile similare",
+back:"← Înapoi la FiiViu",
+updated:"Ultima actualizare: 6 noiembrie 2026",
+intro:"Această politică explică modul în care FiiViu utilizează cookie-uri și tehnologii similare pe site-ul public. Completează Politica de confidențialitate și descrie configurația tehnică actuală a site-ului.",
+sections:[
+["1. Cookie-uri și tehnologii similare","Cookie-urile sunt fișiere mici pe care un site le poate stoca în browser. Tehnologiile similare includ localStorage și sessionStorage. Încărcarea conținutului de la terți poate transmite furnizorului date tehnice precum adresa IP, informații despre browser și referer; o asemenea transmitere nu reprezintă automat un cookie."],
+["2. Stocare necesară","Managerul de consimțământ salvează opțiunea ta în stocarea locală a browserului sub cheia <code>fiiviu_consent_v1</code>. Sunt înregistrate versiunea consimțământului, momentul și opțiunile pentru tehnologii necesare, statistice și de marketing. Categoria necesară este întotdeauna activă; statistica și marketingul sunt dezactivate implicit. Această stocare este utilizată numai pentru respectarea opțiunii tale. Opțiunea este solicitată din nou după șase luni."],
+["3. Categorii opționale","În prezent, pagina publică principală nu include instrumente de statistică sau marketing. Opțiunile pentru aceste categorii sunt salvate, dar nu activează urmărirea în lipsa integrării ulterioare a unui serviciu documentat. Nicio categorie opțională nu este selectată în prealabil."],
+["4. Resurse externe și terți","Pagina principală încarcă în prezent resurse frontend de la cdn.tailwindcss.com, cdnjs.cloudflare.com, cdn.jsdelivr.net și npmcdn.com, precum și imagini de la Pexels. La solicitarea acestora, furnizorii pot primi date tehnice de conexiune, în special adresa IP, User-Agent și informațiile limitate despre origine permise de Referrer-Policy. Aceste resurse nu sunt același lucru cu cookie-urile de statistică sau marketing. Analizăm posibilitatea găzduirii locale și reducerea solicitărilor către terți."],
+["5. Stripe și plăți","Stripe.js nu mai este încărcat la prima accesare a paginii publice. Scriptul este încărcat numai după ce începi fluxul de rezervare/plată și soliciți utilizarea plății. Stripe prelucrează datele de plată și securitate conform propriilor informații de confidențialitate. Tehnologiile necesare plății pot fi necesare pentru efectuarea tranzacției solicitate în mod explicit."],
+["6. Linkuri de parteneriat și recomandare","Un cod de partener transmis prin parametrul URL <code>ref</code> este păstrat momentan doar în memoria paginii deschise. Nu este salvat în localStorage sau sessionStorage și nu creează, prin el însuși, un identificator persistent al vizitatorului."],
+["7. Consimțământ, refuz și retragere","La prima vizită poți accepta toate categoriile opționale, le poți refuza pe toate sau îți poți configura opțiunile. Nicio categorie opțională nu este selectată în prealabil. Poți redeschide și modifica opțiunea în orice moment prin controlul permanent „Setări cookie”. Refuzul categoriilor opționale nu afectează funcțiile de bază ale site-ului."],
+["8. Setările browserului","Poți șterge informațiile stocate sau poți restricționa cookie-urile și prin setările browserului. Ștergerea înregistrării consimțământului poate determina solicitarea din nou a opțiunii tale."],
+["9. Contact","Întrebări despre cookie-uri și tehnologii similare: <a href='mailto:info@fiiviu.ro'>info@fiiviu.ro</a>. Pentru mai multe informații despre prelucrarea datelor personale, consultă <a href='/legal/politica-de-confidentialitate.html?lang=ro'>Politica de confidențialitate</a>."]
+]
+}
+};
+function setLanguage(lang) {
+  const page = pages[lang] || pages.de;
+  document.documentElement.lang = lang;
+  document.title = page.title + " – FiiViu";
+  document.getElementById("cookie-content").innerHTML =
+    "<a class='back' href='/?lang=" + encodeURIComponent(lang) + "'>" + page.back + "</a>" +
+    "<h1>" + page.title + "</h1><p><strong>" + page.updated + "</strong></p><p>" + page.intro + "</p>" +
+    page.sections.map(section => "<h2>" + section[0] + "</h2><p>" + section[1] + "</p>").join("");
+  document.querySelectorAll(".lang button").forEach(button => button.classList.toggle("active", button.dataset.lang === lang));
+}
+const requestedLanguage = new URLSearchParams(location.search).get("lang") || "de";
+setLanguage(["de","en","ro"].includes(requestedLanguage) ? requestedLanguage : "de");
+</script>
+<script src="/assets/js/fiiviu-consent.js" defer></script>
+</body>
+</html>
