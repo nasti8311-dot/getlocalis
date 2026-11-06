@@ -300,7 +300,7 @@ async function createMarketplacePaymentIntent(request,env,ctx){
     const dateCandidates = [body.bookingDate, body.selectedDate, body.date, body.selected_date];
     const bookingDate = dateCandidates
       .map(value => normalizeMarketplaceBookingDate(value, body.customerLanguage))
-      .find(value => /^\\d{4}-\\d{2}-\\d{2}$/.test(value)) || "";
+      .find(value => /^\d{4}-\d{2}-\d{2}$/.test(value)) || "";
     const timeCandidates = [body.bookingTime, body.selectedTime, body.time];
     const bookingTime = timeCandidates.map(normalizeMarketplaceBookingTime).find(Boolean) || "";
     if(!bookingDate||!bookingTime){
@@ -365,10 +365,10 @@ async function createMarketplacePaymentIntent(request,env,ctx){
 }
 function normalizeMarketplaceBookingTime(value){
   const raw=String(value||"").trim();
-  const exact=raw.match(/^([01]?\\d|2[0-3]):([0-5]\\d)(?::[0-5]\\d)?$/);
+  const exact=raw.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
   if(exact)return String(Number(exact[1])).padStart(2,"0")+":"+exact[2];
   // Older cached clients may send a localized slot label or a time range.
-  const embedded=raw.match(/(?:^|\\b)([01]?\\d|2[0-3]):([0-5]\\d)(?=\\b|$)/);
+  const embedded=raw.match(/(?:^|\b)([01]?\d|2[0-3]):([0-5]\d)(?=\b|$)/);
   if(embedded)return String(Number(embedded[1])).padStart(2,"0")+":"+embedded[2];
   return "";
 }
