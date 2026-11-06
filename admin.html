@@ -43,6 +43,7 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 </head>
 <body>
 <h1>FiiViu Admin</h1><div class="hint">Partner anlegen, individuelle Links erzeugen und QR-Codes verwalten.</div>
+<nav aria-label="Admin-Bereiche" style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 20px"><a href="#providerDirectorySection" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid #dce4ef;text-decoration:none;font-weight:700">Erlebnisanbieter</a></nav>
 <section><h2>Admin-Zugang</h2><label for="token">Admin-Schlüssel</label><input id="token" type="password" autocomplete="off" placeholder="Cloudflare Admin-Schlüssel"><div class="hint" style="margin-top:8px;margin-bottom:0">Der Schlüssel wird nicht gespeichert.</div></section>
 <section><h2>Partneranfragen</h2><p class="muted">Öffentliche Anfragen über „Partner werden“ prüfen und den Bearbeitungsstatus aktualisieren.</p><button id="loadApplications" class="secondary">Anfragen laden</button><div id="applications" style="margin-top:14px">Noch nicht geladen.</div></section>
 <section><h2>Neuen Partner anlegen</h2><div class="grid"><div><label for="name">Hotel / Apartment</label><input id="name" placeholder="z. B. Hotel Bucharest Central"></div><div><label for="type">Typ</label><select id="type"><option>Hotel</option><option>Apartment</option><option>Hostel</option><option>Sonstiges</option></select></div><div><label for="contactName">Kontaktperson (optional)</label><input id="contactName" placeholder="Name"></div><div><label for="contactEmail">E-Mail (optional)</label><input id="contactEmail" type="email" placeholder="partner@example.com"></div><div><label for="partnerRef">Partner-Code (optional)</label><input id="partnerRef" placeholder="Leer lassen = automatisch"></div></div><button id="create">Partner anlegen</button><div id="createResult"></div></section>
@@ -68,6 +69,26 @@ button.secondary{background:#eef2f8!important;color:#263a56!important;border:1px
 </table>
 </div>
 <button id="refreshActivity" class="secondary">Aktivitäten aktualisieren</button>
+</section>
+
+
+<section id="providerDirectorySection">
+  <h2>Erlebnisanbieter</h2>
+  <p class="hint">Alle registrierten Erlebnisanbieter mit Profil, Erlebnissen, Buchungen und Buchungswerten. Diese Übersicht ist ausschließlich lesend.</p>
+  <div class="balance">
+    <div>Anbieter gesamt<strong id="providerDirectoryTotal">–</strong></div>
+    <div>Aktive Anbieter<strong id="providerDirectoryActive">–</strong></div>
+    <div>Erlebnisse gesamt<strong id="providerDirectoryExperiences">–</strong></div>
+    <div>Buchungen gesamt<strong id="providerDirectoryBookings">–</strong></div>
+  </div>
+  <div class="grid" style="margin-top:18px">
+    <div><label for="providerDirectorySearch">Anbieter suchen</label><input id="providerDirectorySearch" type="search" placeholder="Name, Anbieter-Code, Firma oder E-Mail"></div>
+    <div><label for="providerDirectoryStatus">Status</label><select id="providerDirectoryStatus"><option value="all">Alle Anbieter</option><option value="active">Aktiv</option><option value="inactive">Inaktiv</option></select></div>
+  </div>
+  <button id="loadProviderDirectory" class="secondary">Anbieterübersicht aktualisieren</button>
+  <div id="providerDirectoryMessage" class="muted" style="margin-top:12px" aria-live="polite">Noch nicht geladen.</div>
+  <div id="providerDirectoryList" style="margin-top:12px"></div>
+  <div id="providerDirectoryDetail" style="margin-top:18px"></div>
 </section>
 
 <section><h2>Alle Buchungen</h2>
@@ -305,4 +326,78 @@ document.getElementById('reload').onclick=async()=>{await loadPartners();await l
 document.getElementById('payout').onclick=async()=>{const amount=Number(document.getElementById('amount').value),ref=document.getElementById('payoutPartner').value;const body={partnerRef:ref,amountCents:Math.round(amount*100),payoutDate:document.getElementById('date').value,reference:document.getElementById('reference').value.trim()};if(!ref||!Number.isFinite(amount)||amount<=0||!body.payoutDate){show('payoutResult','Bitte Partner, Betrag und Datum korrekt ausfüllen.');return;}if(selectedStats&&amount>Number(selectedStats.openCommission)+0.001){show('payoutResult','Der Betrag ist höher als die offene Provision.');return;}try{const r=await fetch(WORKER+'/api/admin/partner-payout',{method:'POST',headers:headers(),body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error||'Auszahlung konnte nicht gespeichert werden.');show('payoutResult','Auszahlung gespeichert.\nPartner: '+data.partnerRef+'\nBetrag: '+euro(data.amount)+'\nDatum: '+data.payoutDate+'\nAuszahlung-ID: '+data.payoutId,true);document.getElementById('amount').value='';document.getElementById('reference').value='';await loadPayoutDetails(ref);}catch(e){show('payoutResult',e.message);}};
 /* Deployment refresh: keep current admin asset in sync with production. */
 document.getElementById('resendContract').addEventListener('click',async()=>{const email=document.getElementById('contractEmail').value.trim();const out=document.getElementById('contractResult');const btn=document.getElementById('resendContract');if(!email){out.textContent='Bitte eine E-Mail-Adresse eingeben.';return;}btn.disabled=true;out.textContent='Vertrag wird erneut gesendet …';try{const res=await fetch(WORKER+'/api/admin/resend-provider-contract',{method:'POST',headers:headers(),body:JSON.stringify({email})});const data=await res.json();if(!res.ok)throw new Error(data.error||'Versand fehlgeschlagen.');out.textContent=data.message||'Anfrage erfolgreich. Bitte Postfach prüfen.';}catch(e){out.textContent='Fehler: '+e.message;}finally{btn.disabled=false;}});
+
+// Read-only directory of registered experience providers.
+let providerDirectoryData=[];
+const providerDirectoryCurrency=(values)=>Object.entries(values||{}).map(([currency,cents])=>Number(cents||0).toLocaleString('de-DE',{style:'currency',currency:String(currency||'RON').toUpperCase()})).join(' + ')||'–';
+function renderProviderDirectory(){
+ const box=document.getElementById('providerDirectoryList');
+ const q=String(document.getElementById('providerDirectorySearch').value||'').trim().toLowerCase();
+ const status=document.getElementById('providerDirectoryStatus').value;
+ const rows=providerDirectoryData.filter(p=>{
+  const hay=[p.name,p.provider_ref,p.company_name,p.representative_name,p.contact_email,p.phone,p.contact_phone,p.cui].join(' ').toLowerCase();
+  return (!q||hay.includes(q))&&(status==='all'||(status==='active'?Number(p.active)===1:Number(p.active)!==1));
+ });
+ if(!rows.length){box.innerHTML='<p class="muted">Keine passenden Erlebnisanbieter gefunden.</p>';return;}
+ box.innerHTML=rows.map(p=>{
+  const active=Number(p.active)===1;
+  return '<article style="border:1px solid #e4e9f1;border-radius:14px;padding:16px;margin:12px 0;background:#fbfcfe">'
+   +'<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><b style="font-size:17px">'+escapeHtml(p.name||p.company_name||'Ohne Namen')+'</b><div class="muted">'+escapeHtml(p.provider_ref||'')+' · '+escapeHtml(p.company_name||'')+'</div></div><span class="status '+(active?'active':'inactive')+'">'+(active?'● Aktiv':'● Inaktiv')+'</span></div>'
+   +'<div class="grid" style="margin-top:12px"><div class="muted">Kontakt: '+escapeHtml(p.representative_name||'–')+'<br>E-Mail: '+escapeHtml(p.contact_email||'–')+'<br>Telefon: '+escapeHtml(p.phone||p.contact_phone||'–')+'<br>Firmen-ID / CUI: '+escapeHtml(p.cui||'–')+'</div><div class="muted">Erlebnisse: <b>'+Number(p.experience_count||0)+'</b> ('+Number(p.active_experience_count||0)+' aktiv)<br>Buchungen: <b>'+Number(p.booking_count||0)+'</b> · bezahlt: '+Number(p.paid_booking_count||0)+'<br>Buchungswert: <b>'+escapeHtml(providerDirectoryCurrency(p.booking_value_by_currency))+'</b></div></div>'
+   +'<div class="muted" style="margin-top:8px">Registriert: '+escapeHtml(p.created_at||'–')+'</div>'
+   +'<button class="secondary" data-provider-detail="'+escapeHtml(p.provider_ref||'')+'">Vollständiges Profil und Details öffnen</button></article>';
+ }).join('');
+ box.querySelectorAll('[data-provider-detail]').forEach(button=>button.addEventListener('click',()=>loadProviderDirectoryDetail(button.dataset.providerDetail,button)));
+}
+async function loadProviderDirectory(){
+ const message=document.getElementById('providerDirectoryMessage');
+ const box=document.getElementById('providerDirectoryList');
+ message.textContent='Lade Anbieter, Erlebnisse und Buchungskennzahlen…';
+ box.textContent='';
+ document.getElementById('providerDirectoryDetail').innerHTML='';
+ try{
+  const response=await fetch(WORKER+'/api/admin/provider-directory',{headers:headers()});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Anbieterübersicht konnte nicht geladen werden.');
+  providerDirectoryData=data.providers||[];
+  document.getElementById('providerDirectoryTotal').textContent=providerDirectoryData.length;
+  document.getElementById('providerDirectoryActive').textContent=providerDirectoryData.filter(p=>Number(p.active)===1).length;
+  document.getElementById('providerDirectoryExperiences').textContent=providerDirectoryData.reduce((n,p)=>n+Number(p.experience_count||0),0);
+  document.getElementById('providerDirectoryBookings').textContent=providerDirectoryData.reduce((n,p)=>n+Number(p.booking_count||0),0);
+  renderProviderDirectory();
+  message.textContent=providerDirectoryData.length+' Erlebnisanbieter geladen.';
+ }catch(error){message.textContent=error.message;box.innerHTML='<div class="result error">'+escapeHtml(error.message)+'</div>';}
+}
+function providerFieldLabel(key){
+ const labels={provider_ref:'Anbieter-Code',name:'Name',company_name:'Firma',cui:'CUI / Firmen-ID',representative_name:'Ansprechpartner',contact_email:'E-Mail',phone:'Telefon',contact_phone:'Telefon',connect_account_id:'Connect-Konto (Bestandsfeld)',active:'Aktiv',created_at:'Registriert am',updated_at:'Zuletzt aktualisiert'};
+ return labels[key]||key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
+async function loadProviderDirectoryDetail(ref,button){
+ const box=document.getElementById('providerDirectoryDetail');
+ if(!ref)return;
+ if(button)button.disabled=true;
+ box.innerHTML='<p class="muted">Lade vollständige Anbieterdetails…</p>';
+ try{
+  const response=await fetch(WORKER+'/api/admin/provider-directory?ref='+encodeURIComponent(ref),{headers:headers()});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Anbieterdetails konnten nicht geladen werden.');
+  const p=data.provider||{};
+  const fields=Object.entries(p).filter(([key,value])=>value!==null&&value!==undefined&&value!=='').map(([key,value])=>'<tr><th>'+escapeHtml(providerFieldLabel(key))+'</th><td>'+escapeHtml(key==='active'?(Number(value)===1?'Ja':'Nein'):String(value))+'</td></tr>').join('');
+  const experiences=(data.experiences||[]).map(x=>'<article style="border:1px solid #e4e9f1;border-radius:12px;padding:14px;margin:10px 0"><b>'+escapeHtml(x.title||'Ohne Titel')+'</b><div class="muted">#'+Number(x.id)+' · '+escapeHtml(x.category||'–')+' · '+(Number(x.price_cents||0)/100).toLocaleString('de-DE',{style:'currency',currency:String(x.currency||'RON').toUpperCase()})+' · '+(Number(x.active)===1?'Aktiv':'Inaktiv')+' · Freigabe: '+escapeHtml(x.approval_status||'–')+'</div><p>'+escapeHtml(x.description||'')+'</p><div class="muted">Dauer: '+escapeHtml(x.duration||'–')+' · Treffpunkt: '+escapeHtml([x.meeting_point_name,x.meeting_address,x.meeting_city,x.meeting_country].filter(Boolean).join(', ')||'–')+'</div></article>').join('')||'<p class="muted">Keine Erlebnisse hinterlegt.</p>';
+  const bookings=(data.bookings||[]).map(b=>'<tr><td>'+escapeHtml(b.booking_id||'')+'<br><span class="muted">'+escapeHtml(b.created_at||'')+'</span></td><td>'+escapeHtml(b.experience_name||'–')+'<br>'+escapeHtml(b.booking_date||'')+' '+escapeHtml(b.booking_time||'')+'</td><td>'+escapeHtml(b.customer_name||'–')+'<br>'+escapeHtml(b.customer_email||'–')+'<br>'+escapeHtml(b.customer_phone||'')+'</td><td>'+Number(b.guests||0)+'</td><td>'+((Number(b.total_amount_cents??b.amount_cents??0))/100).toLocaleString('de-DE',{style:'currency',currency:String(b.currency||'RON').toUpperCase()})+'</td><td>'+escapeHtml(b.status||'–')+' / '+escapeHtml(b.payment_status||'–')+'</td></tr>').join('');
+  const contracts=(data.contracts||[]).map(c=>'<tr><td>'+escapeHtml(c.accepted_at||c.created_at||'')+'</td><td>'+escapeHtml(c.contract_version||'')+'</td><td>'+escapeHtml(c.ip_address||'')+'</td><td>'+escapeHtml(c.user_agent||'')+'</td><td><code>'+escapeHtml(c.contract_sha256||'')+'</code></td></tr>').join('');
+  box.innerHTML='<section style="border:2px solid #dce4ef"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h2>'+escapeHtml(p.name||p.company_name||ref)+'</h2><button class="secondary" id="closeProviderDetail">Schließen</button></div><h3>Gespeichertes Anbieterprofil</h3><div style="overflow-x:auto"><table class="history"><tbody>'+fields+'</tbody></table></div>'
+   +'<div class="balance"><div>Erlebnisse<strong>'+Number(data.metrics?.experienceCount||0)+'</strong></div><div>Buchungen<strong>'+Number(data.metrics?.bookingCount||0)+'</strong></div><div>Bezahlte Buchungen<strong>'+Number(data.metrics?.paidBookingCount||0)+'</strong></div><div>Buchungswert<strong>'+escapeHtml(providerDirectoryCurrency(data.metrics?.bookingValueByCurrency))+'</strong></div></div>'
+   +'<div class="history"><h3>Erlebnisse ('+(data.experiences||[]).length+')</h3>'+experiences+'</div>'
+   +'<div class="history"><h3>Buchungshistorie ('+(data.bookings||[]).length+')</h3><div style="overflow-x:auto"><table><thead><tr><th>Buchung</th><th>Erlebnis / Termin</th><th>Gast</th><th>Personen</th><th>Buchungswert</th><th>Status / Zahlung</th></tr></thead><tbody>'+bookings+'</tbody></table></div></div>'
+   +'<div class="history"><h3>Vertragsannahme / Nachweise ('+(data.contracts||[]).length+')</h3><div style="overflow-x:auto"><table><thead><tr><th>Angenommen</th><th>Version</th><th>IP</th><th>User-Agent</th><th>Vertrag-Hash</th></tr></thead><tbody>'+contracts+'</tbody></table></div></div></section>';
+  document.getElementById('closeProviderDetail').addEventListener('click',()=>{box.innerHTML='';});
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(error){box.innerHTML='<div class="result error">'+escapeHtml(error.message)+'</div>';}
+ finally{if(button)button.disabled=false;}
+}
+document.getElementById('loadProviderDirectory')?.addEventListener('click',loadProviderDirectory);
+document.getElementById('providerDirectorySearch')?.addEventListener('input',renderProviderDirectory);
+document.getElementById('providerDirectoryStatus')?.addEventListener('change',renderProviderDirectory);
+
 </script></body></html>
