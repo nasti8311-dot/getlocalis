@@ -251,9 +251,9 @@ function formatAdminBookingDate(value){
   const raw=String(value??"").trim();
   if(!raw)return "Termin fehlt";
   let year,month,day,match;
-  if((match=raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})(?:$|T)/))){
+  if((match=raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/))){
     year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);
-  }else if((match=raw.match(/^(\\d{1,2})[.\\/-](\\d{1,2})[.\\/-](\\d{4})$/))){
+  }else if((match=raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/))){
     const first=Number(match[1]),second=Number(match[2]);
     const english=String(document.documentElement.lang||"").toLowerCase().startsWith("en");
     if(first>12){day=first;month=second;}
