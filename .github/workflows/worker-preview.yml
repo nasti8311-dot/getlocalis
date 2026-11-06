@@ -1,0 +1,55 @@
+name: Worker Preview (safe validation)
+
+on:
+  push:
+    branches:
+      - chore/cloudflare-worker-preview-ci
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-preview-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate without deploying
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+
+      - name: Run launch hardening regression tests
+        run: node --test tests/launch-hardening.test.js
+
+      - name: Validate Wrangler Worker bundle (dry run only)
+        run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-preview-dry-run
+
+      - name: Confirm this workflow cannot deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Eiq 'wrangler(@[0-9]+)?[[:space:]]+deploy([[:space:]]|$)' .github/workflows/worker-preview.yml | grep -Eiv -- '--dry-run'; then
+            echo "Unexpected non-dry-run deploy command found."
+            exit 1
+          fi
+          echo "Validation completed without Cloudflare credentials, remote D1 access, or deployment."
