@@ -33,7 +33,8 @@ export default {
         url.pathname === "/api/admin/translate-offers" ||
         url.pathname === "/api/admin/control-center" ||
         url.pathname === "/api/admin/bookings" ||
-        url.pathname === "/api/admin/provider-directory")
+        url.pathname === "/api/admin/provider-directory" ||
+        url.pathname === "/api/admin/test-email")
     ) {
       const origin = String(request.headers.get("Origin") || "").trim();
       const allowedOrigins = new Set([
@@ -55,6 +56,9 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/api/admin/resend-provider-contract") {
       return handleAdminResendProviderContract(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/test-email") {
+      return handleAdminTestEmail(request, env);
     }
 
     if (url.pathname === "/api/admin/offers") {
@@ -451,6 +455,36 @@ async function handleAdminExperienceApprovals(request,env){
       return json({error:"Unbekannte Aktion."},400);}
     return json({error:"Method Not Allowed"},405);
   }catch(error){console.error("FiiViu admin experience approvals failed",error);return json({error:error?.message||"Freigabeliste konnte nicht geladen werden."},500);}
+}
+
+async function handleAdminTestEmail(request, env) {
+  if (request.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
+  if (!env.ADMIN_PAYOUT_KEY) return json({ error: "Admin key is not configured." }, 500);
+  if (!isAdminRequest(request, env)) return json({ error: "Unauthorized" }, 401);
+  const recipient = String(env.ADMIN_BOOKING_EMAIL || "info@fiiviu.ro").trim();
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) return json({ error: "ADMIN_BOOKING_EMAIL ist ungültig." }, 500);
+  if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY ist nicht konfiguriert." }, 500);
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "FiiViu <noreply@fiiviu.ro>",
+        to: [recipient],
+        subject: "FiiViu – Test der Buchungsbenachrichtigung",
+        text: "Dies ist eine technische Testnachricht aus dem FiiViu-Control-Center.\\n\\nDer Resend-Versandweg für interne Buchungsbenachrichtigungen wurde getestet. Es wurde keine Buchung angelegt oder verändert."
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error("FiiViu admin test email rejected by Resend", response.status, result?.message || result?.name || "unknown error");
+      return json({ error: "Resend hat den Testversand abgelehnt.", resend_status: response.status }, 502);
+    }
+    return json({ success: true, recipient, email_id: String(result?.id || ""), message: "Testmail wurde an Resend übergeben. Zustellung bitte im Resend-E-Mail-Verlauf prüfen." }, 200, { "Cache-Control": "no-store" });
+  } catch (error) {
+    console.error("FiiViu admin test email failed", error);
+    return json({ error: "Der Testversand konnte nicht abgeschlossen werden." }, 502);
+  }
 }
 
 async function handleAdminProviderDirectory(request, env) {
