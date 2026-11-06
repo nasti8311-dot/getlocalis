@@ -191,7 +191,9 @@ test("provider registration routes are reachable while the public catalog is gat
   assert.ok(secure.includes('"/anbieter/login"'));
   assert.ok(secure.includes('"/anbieter/dashboard"'));
   const deploy = read(".github/workflows/deploy-production.yml");
-  assert.ok(!deploy.includes("wrangler@4 d1 execute"));
+  assert.ok(deploy.includes("Verify production D1 schema (read-only)"));
+  assert.ok(deploy.includes("SELECT capacity,duration,availability_rules"));
+  assert.ok(!deploy.includes("ALTER TABLE"));
   assert.ok(!deploy.includes("UPDATE experiences"));
   assert.ok(!deploy.includes("UPDATE offers"));
 });
@@ -1004,9 +1006,12 @@ test("partner commission enforces the configured hold period", () => {
 
 test("production deploy is non-destructive and deploys without production D1 writes", () => {
   const workflow = read(".github/workflows/deploy-production.yml");
-  for (const forbidden of ["Repair production D1 schema", "wrangler@4 d1 execute", "ALTER TABLE", "UPDATE experiences", "UPDATE offers"]) {
+  for (const forbidden of ["Repair production D1 schema", "ALTER TABLE", "CREATE TABLE", "CREATE INDEX", "UPDATE experiences", "UPDATE offers", "INSERT INTO", "DELETE FROM"]) {
     assert.ok(!workflow.includes(forbidden), "unexpected production mutation: " + forbidden);
   }
+  assert.ok(workflow.includes("Verify production D1 schema (read-only)"));
+  assert.ok(workflow.includes("SELECT capacity,duration,availability_rules"));
+  assert.ok(workflow.includes("SELECT offer_id,proof_token,total_amount_cents"));
   assert.ok(workflow.includes("Upload and deploy Worker with updated static assets"));
   assert.ok(workflow.includes("--request PUT"));
   assert.ok(workflow.includes('workers/scripts/getlocalis"'));
