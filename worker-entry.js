@@ -454,18 +454,62 @@ async function handleAdminBookings(request, env) {
   if (!env.DB) return json({ error: "D1 database not configured." }, 500);
 
   try {
-    await ensureBookingColumns(env);
+    // Read-only, server-side filtering and pagination. No schema/data writes here.
+    const url = new URL(request.url);
+    const page = Math.max(1, Math.min(1000000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
+    const pageSize = Math.max(10, Math.min(100, Number.parseInt(url.searchParams.get("pageSize") || "50", 10) || 50));
+    const offset = (page - 1) * pageSize;
+    const search = String(url.searchParams.get("q") || "").trim().slice(0, 160);
+    const from = String(url.searchParams.get("from") || "").trim();
+    const to = String(url.searchParams.get("to") || "").trim();
+    const status = String(url.searchParams.get("status") || "").trim().slice(0, 40);
+    const paymentStatus = String(url.searchParams.get("payment_status") || "").trim().slice(0, 40);
+    const clauses = [];
+    const values = [];
+
+    if (search) {
+      clauses.push("(lower(coalesce(booking_id,'')) LIKE ? OR lower(coalesce(experience_name,'')) LIKE ? OR lower(coalesce(customer_name,'')) LIKE ? OR lower(coalesce(customer_email,'')) LIKE ?)");
+      const term = "%" + search.toLowerCase() + "%";
+      values.push(term, term, term, term);
+    }
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(from)) {
+      clauses.push("date(created_at) >= date(?)");
+      values.push(from);
+    }
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(to)) {
+      clauses.push("date(created_at) <= date(?)");
+      values.push(to);
+    }
+    if (status) {
+      clauses.push("status = ?");
+      values.push(status);
+    }
+    if (paymentStatus) {
+      clauses.push("payment_status = ?");
+      values.push(paymentStatus);
+    }
+
+    const where = clauses.length ? " WHERE " + clauses.join(" AND ") : "";
+    const countRow = await env.DB.prepare("SELECT COUNT(*) AS total FROM bookings" + where).bind(...values).first();
+    const total = Number(countRow?.total || 0);
     const rows = await env.DB.prepare(`
       SELECT booking_id,experience_name,booking_date,booking_time,guests,
              status,payment_status,amount_cents,currency,customer_name,
              customer_email,created_at
-      FROM bookings
-      ORDER BY COALESCE(booking_date,'') DESC,
-               COALESCE(booking_time,'') DESC,
-               created_at DESC
-      LIMIT 250
-    `).all();
-    return json({ bookings: rows.results || [], count: (rows.results || []).length });
+      FROM bookings${where}
+      ORDER BY COALESCE(created_at,'') DESC, booking_id DESC
+      LIMIT ? OFFSET ?
+    `).bind(...values, pageSize, offset).all();
+
+    return json({
+      bookings: rows.results || [],
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      hasPrevious: page > 1,
+      hasNext: offset + (rows.results || []).length < total
+    });
   } catch (error) {
     console.error("FiiViu admin bookings failed", error);
     return json({ error: error?.message || "Bookings could not be loaded." }, 500);
