@@ -1182,3 +1182,27 @@ test("admin control center keeps daily revenue separated by original currency", 
   assert.match(admin, /revenueParts\.join\(' \+ '\)/);
   assert.match(adminIndex, /revenueParts\.join\(' \+ '\)/);
 });
+
+
+test("admin booking history uses read-only server-side pagination and filters", () => {
+  const worker = read("worker-entry.js");
+  const start = worker.indexOf("async function handleAdminBookings");
+  const end = worker.indexOf("async function handleAdminControlCenter", start);
+  const handler = worker.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(handler, /COUNT\(\*\) AS total/);
+  assert.match(handler, /LIMIT \? OFFSET \?/);
+  assert.match(handler, /pageSize = Math\.max\(10, Math\.min\(100/);
+  assert.match(handler, /payment_status = \?/);
+  assert.match(handler, /date\(created_at\) >= date\(\?\)/);
+  assert.doesNotMatch(handler, /INSERT INTO|UPDATE bookings|DELETE FROM|ensureBookingColumns/);
+  const admin = read("admin.html");
+  const adminIndex = read("admin/index.html");
+  assert.match(admin, /bookingPrevious/);
+  assert.match(adminIndex, /bookingPrevious/);
+  assert.match(adminIndex, /bookingPaymentStatus/);
+  assert.match(admin, /bookingNext/);
+  assert.match(admin, /bookingFrom/);
+  assert.match(admin, /bookingPaymentStatus/);
+  assert.match(admin, /Buchungen insgesamt/);
+});
