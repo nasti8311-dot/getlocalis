@@ -36,77 +36,19 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
-      - name: Repair production D1 schema
+      - name: Verify production D1 schema (read-only)
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-
-          add_column_if_missing() {
-            local table="$1"
-            local column="$2"
-            local definition="$3"
-            local output
-            if output="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "ALTER TABLE $table ADD COLUMN $column $definition" 2>&1)"; then
-              echo "Added $table.$column"
-              return 0
-            fi
-            if printf '%s' "$output" | grep -qi "duplicate column name: $column"; then
-              echo "$table.$column already exists."
-              return 0
-            fi
-            printf '%s\\n' "$output"
-            return 1
-          }
-
-          add_column_if_missing "offers" "capacity" "INTEGER"
-          add_column_if_missing "offers" "duration" "TEXT"
-          add_column_if_missing "offers" "availability_rules" "TEXT"
-          add_column_if_missing "offers" "approval_status" "TEXT NOT NULL DEFAULT 'approved'"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_offers_capacity ON offers(capacity)"
-
-          # Provider self-registration fields and accepted-contract evidence.
-          add_column_if_missing "providers" "company_name" "TEXT"
-          add_column_if_missing "providers" "cui" "TEXT"
-          add_column_if_missing "providers" "representative_name" "TEXT"
-          add_column_if_missing "offers" "pay_on_site_cash" "INTEGER NOT NULL DEFAULT 1"
-          add_column_if_missing "offers" "pay_on_site_card" "INTEGER NOT NULL DEFAULT 1"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE UNIQUE INDEX IF NOT EXISTS idx_providers_cui ON providers(cui) WHERE cui IS NOT NULL"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE TABLE IF NOT EXISTS vendor_contract_logs (id TEXT PRIMARY KEY, provider_ref TEXT NOT NULL REFERENCES providers(provider_ref), accepted_at TEXT NOT NULL, ip_address TEXT NOT NULL, user_agent TEXT NOT NULL, contract_version TEXT NOT NULL, contract_sha256 TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_provider_ref ON vendor_contract_logs(provider_ref)"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_vendor_contract_logs_accepted_at ON vendor_contract_logs(accepted_at)"
-
-          add_column_if_missing "bookings" "offer_id" "INTEGER"
-          add_column_if_missing "bookings" "proof_token" "TEXT"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_proof_token ON bookings(proof_token) WHERE proof_token IS NOT NULL"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "CREATE INDEX IF NOT EXISTS idx_bookings_offer_slot ON bookings(offer_id,booking_date,booking_time,status,payment_status)"
-
-          # Backward-compatible fields for the FiiViu 20/80 payment model.
-          # Existing rows keep their old amount_cents semantics and default to legacy_connect.
-          add_column_if_missing "bookings" "total_amount_cents" "INTEGER"
-          add_column_if_missing "bookings" "fiiviu_fee_cents" "INTEGER"
-          add_column_if_missing "bookings" "provider_due_cents" "INTEGER"
-          add_column_if_missing "bookings" "payment_model" "TEXT NOT NULL DEFAULT 'legacy_connect'"
-          add_column_if_missing "bookings" "cancellation_reason" "TEXT"
-          add_column_if_missing "bookings" "provider_ref" "TEXT"
-
-          # These localized experience fields were historically added by request-time schema evolution.
-          # Ensure them before deploying the strict migration-owned schema check.
-          add_column_if_missing "experiences" "title_en" "TEXT"
-          add_column_if_missing "experiences" "title_ro" "TEXT"
-          add_column_if_missing "experiences" "description_en" "TEXT"
-          add_column_if_missing "experiences" "description_ro" "TEXT"
-          add_column_if_missing "experiences" "meeting_point_name_en" "TEXT"
-          add_column_if_missing "experiences" "meeting_point_name_ro" "TEXT"
-          add_column_if_missing "experiences" "meeting_instructions_en" "TEXT"
-          add_column_if_missing "experiences" "meeting_instructions_ro" "TEXT"
-
-          # Retire city sightseeing products from the live catalog and checkout.
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "UPDATE experiences SET status='draft', updated_at=CURRENT_TIMESTAMP WHERE experience_id IN ('old-town-walk','bike-bucharest')"
-          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "UPDATE offers SET active=0, updated_at=CURRENT_TIMESTAMP WHERE lower(title) LIKE '%old town story walk%' OR lower(title) LIKE '%turul cu povești al centrului vechi%' OR lower(title) LIKE '%bucharest bike story%'"
-
-          echo "Production D1 schema repair completed."
+          # SELECT-only preflight: deployment must stop if the existing schema is incomplete.
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT capacity,duration,availability_rules,approval_status,pay_on_site_cash,pay_on_site_card FROM offers LIMIT 0"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT company_name,cui,representative_name FROM providers LIMIT 0"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT offer_id,proof_token,total_amount_cents,fiiviu_fee_cents,provider_due_cents,payment_model,cancellation_reason,provider_ref,currency FROM bookings LIMIT 0"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT title_en,title_ro,description_en,description_ro,meeting_point_name_en,meeting_point_name_ro,meeting_instructions_en,meeting_instructions_ro FROM experiences LIMIT 0"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT id,provider_ref,accepted_at,ip_address,user_agent,contract_version,contract_sha256,created_at FROM vendor_contract_logs LIMIT 0"
+          echo "Production D1 schema preflight passed; no schema or booking data was modified."
 
       - name: Upload changed static assets
         id: assets
@@ -213,23 +155,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          ADMIN_PAYOUT_KEY: ${{ secrets.ADMIN_PAYOUT_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${ASSET_COMPLETION_JWT:-}" ]; then
             echo "Static asset upload did not return a completion token."
             exit 1
           fi
-          if [ -z "${STRIPE_WEBHOOK_SECRET:-}" ]; then
-            echo "Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload."
-            exit 1
-          fi
-          if [ -z "${ADMIN_PAYOUT_KEY:-}" ]; then
-            echo "Required GitHub Actions secret ADMIN_PAYOUT_KEY is missing. Add it in Settings > Secrets and variables > Actions; refusing Worker upload."
-            exit 1
-          fi
-
           # Build output already exists from the dry-run validation step. Use the
           # documented Script Upload API keep_assets option to bypass the broken
           # assets-upload-session endpoint and retain the currently deployed assets.
@@ -244,25 +175,12 @@ jobs:
           node - "$main_module" "$GITHUB_SHA" > /tmp/worker-metadata.json <<'NODE'
           const fs = require("node:fs");
           const [mainModule, sha] = process.argv.slice(2);
-          const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-          const adminPayoutKey = process.env.ADMIN_PAYOUT_KEY;
-          if (!stripeWebhookSecret) {
-            console.error("Required GitHub Actions secret STRIPE_WEBHOOK_SECRET is missing; refusing Worker upload.");
-            process.exit(1);
-          }
-          if (!adminPayoutKey) {
-            console.error("Required GitHub Actions secret ADMIN_PAYOUT_KEY is missing; refusing Worker upload.");
-            process.exit(1);
-          }
           const bindings = [
             { type: "assets", name: "ASSETS" },
             { type: "d1", name: "DB", id: "c445e0ff-8013-4e20-988b-71b019c41db7" },
             { type: "r2_bucket", name: "PROVIDER_IMAGES", bucket_name: "fiiviu-provider-images" },
             { type: "send_email", name: "EMAIL", allowed_sender_addresses: ["noreply@fiiviu.ro"] },
-            { type: "secret_text", name: "STRIPE_WEBHOOK_SECRET", text: stripeWebhookSecret },
-            { type: "secret_text", name: "ADMIN_PAYOUT_KEY", text: adminPayoutKey },
           ];
-          console.log("Required Worker secrets supplied to this version (values are never logged).");
           const metadata = {
             main_module: mainModule,
             compatibility_date: "2026-09-14",
@@ -289,25 +207,8 @@ jobs:
 
           cat "$response_file" | jq .
 
-          secret_check_file=/tmp/admin-payout-secrets.json
-          secret_check_status="$(curl --silent --show-error --max-time 20 -o "$secret_check_file" -w '%{http_code}' \
-            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/getlocalis/secrets")"
-          if [ "$secret_check_status" != "200" ] || ! jq -e '.success == true and any(.result[]?; .name == "ADMIN_PAYOUT_KEY" and .type == "secret_text")' "$secret_check_file" >/dev/null; then
-            echo "Production Worker is missing the ADMIN_PAYOUT_KEY secret binding after deployment."
-            jq -r '.errors[]?.message // empty' "$secret_check_file" || true
-            exit 1
-          fi
-          echo "Verified: production Worker retains the ADMIN_PAYOUT_KEY secret binding."
-
-          # Cloudflare intentionally never returns secret values from this API.
-          # Verify only that the secret binding exists; never pretend this proves
-          # that the browser's entered value matches the stored secret.
-          echo "Secret binding exists. Secret value is write-only; authenticated value comparison is not available through this API."
       - name: Verify production endpoint
         shell: bash
-        env:
-          ADMIN_PAYOUT_KEY: ${{ secrets.ADMIN_PAYOUT_KEY }}
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
@@ -333,15 +234,6 @@ jobs:
                 cat /tmp/admin-slash.headers
                 echo "--- /admin/ body (first 80 lines) ---"
                 sed -n '1,80p' /tmp/admin-slash.html
-                exit 1
-              fi
-              admin_api_status="$(curl --silent --show-error --max-time 20 -o /tmp/admin-api-response -w '%{http_code}' \
-                --header "Authorization: Bearer $ADMIN_PAYOUT_KEY" \
-                https://fiiviu.ro/api/admin/partner-applications)"
-              echo "Authenticated admin API status=$admin_api_status"
-              if [ "$admin_api_status" != "200" ]; then
-                echo "Production admin authentication failed (HTTP $admin_api_status)."
-                cat /tmp/admin-api-response
                 exit 1
               fi
               provider_register_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/provider-register.html -w '%{http_code}' https://fiiviu.ro/anbieter/register)"
