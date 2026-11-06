@@ -1207,6 +1207,13 @@ test("admin booking history uses read-only server-side pagination and filters", 
   assert.match(admin, /Buchungen insgesamt/);
 });
 
+test("admin provider directory formats cent totals as major currency units", () => {
+  for (const path of ["admin.html", "admin/index.html"]) {
+    const html = read(path);
+    assert.match(html, /Number\(cents\|\|0\)\/100\)\.toLocaleString/);
+  }
+});
+
 test("admin provider directory is authenticated, read-only, and includes provider, experience, booking, and contract details", () => {
   const source = read("worker-entry.js");
   const start = source.indexOf("async function handleAdminProviderDirectory");

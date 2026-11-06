@@ -304,7 +304,8 @@ document.getElementById('bookingNext').addEventListener('click',()=>{if(adminBoo
 
 // Read-only directory of registered experience providers.
 let providerDirectoryData=[];
-const providerDirectoryCurrency=(values)=>Object.entries(values||{}).map(([currency,cents])=>Number(cents||0).toLocaleString('de-DE',{style:'currency',currency:String(currency||'RON').toUpperCase()})).join(' + ')||'–';
+// API totals are integer minor units (cents/bani); Intl currency formatting expects major units.
+const providerDirectoryCurrency=(values)=>Object.entries(values||{}).map(([currency,cents])=>(Number(cents||0)/100).toLocaleString('de-DE',{style:'currency',currency:String(currency||'RON').toUpperCase()})).join(' + ')||'–';
 function renderProviderDirectory(){
  const box=document.getElementById('providerDirectoryList');
  const q=String(document.getElementById('providerDirectorySearch').value||'').trim().toLowerCase();
