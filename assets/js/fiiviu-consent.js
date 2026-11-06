@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "fiiviu_consent_v1";
   const CONSENT_VERSION = 1;
+  const CONSENT_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
   const DEFAULTS = Object.freeze({ necessary: true, statistics: false, marketing: false });
   const TEXT = {
     de: {
@@ -69,7 +70,8 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (parsed.version !== CONSENT_VERSION || !parsed.updatedAt) return null;
+      const updatedAt = Date.parse(parsed.updatedAt);
+      if (parsed.version !== CONSENT_VERSION || !Number.isFinite(updatedAt) || Date.now() - updatedAt > CONSENT_MAX_AGE_MS) return null;
       return {
         version: CONSENT_VERSION,
         updatedAt: parsed.updatedAt,
