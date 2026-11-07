@@ -99,7 +99,7 @@ async function handlePublicOffers(request,env){
   try{
     await ensureExperiencesTable(env);
     await ensureOffersTable(env);
-    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.capacity,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.accepts_card_onsite,o.accepts_cash_onsite,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
+    const legacy=await env.DB.prepare("SELECT o.id,o.provider_ref,p.name AS provider_name,o.title,o.title_en,o.title_ro,o.description,o.description_en,o.description_ro,o.price_cents,o.currency,o.capacity,o.available_times,o.meeting_point_name,o.meeting_point_name_en,o.meeting_point_name_ro,o.meeting_address,o.meeting_city,o.meeting_country,o.meeting_instructions,o.meeting_instructions_en,o.meeting_instructions_ro,o.arrival_minutes_before,o.category,o.image_url,o.gallery_urls,o.duration,o.guide_language,o.pay_on_site_card,o.pay_on_site_cash,o.active FROM offers o INNER JOIN providers p ON p.provider_ref=o.provider_ref AND p.active=1 WHERE o.active=1").all();
     const experiences=await env.DB.prepare("SELECT e.id,e.experience_id,e.provider_connect_account_id,e.provider_name,e.title,e.title_en,e.title_ro,e.description,e.description_en,e.description_ro,e.price_cents,e.currency,e.available_times,e.meeting_point_name,e.meeting_point_name_en,e.meeting_point_name_ro,e.meeting_address,e.meeting_city,e.meeting_country,e.meeting_instructions,e.meeting_instructions_en,e.meeting_instructions_ro,e.arrival_minutes_before,e.category,e.image_url,e.gallery_urls,e.status FROM experiences e INNER JOIN providers p ON p.active=1 AND ((e.provider_connect_account_id IS NOT NULL AND e.provider_connect_account_id<>'' AND p.connect_account_id=e.provider_connect_account_id) OR ((e.provider_connect_account_id IS NULL OR e.provider_connect_account_id='') AND lower(p.name)=lower(e.provider_name))) WHERE e.status='published'").all();
     const blockedTourTitle = title => /old[ -]?town story walk|turul cu povești al centrului vechi|bucharest bike story/i.test(String(title||""));
     const legacyOffers=(legacy.results||[]).filter(x=>!blockedTourTitle(x.title)).map(x=>({...x,source:"offer"}));
@@ -156,7 +156,7 @@ async function handlePublicOffers(request,env){
         meeting_address:x.meeting_address||"",meeting_city:x.meeting_city||"",meeting_country:x.meeting_country||"",
         meeting_instructions:x.meeting_instructions||"",meeting_instructions_en:x.meeting_instructions_en||"",meeting_instructions_ro:x.meeting_instructions_ro||"",
         arrival_minutes_before:x.arrival_minutes_before,category:x.category||"explore",image_url:x.image_url||"",
-        gallery_urls:x.gallery_urls||"",accepts_card_onsite:0,accepts_cash_onsite:0,active:1,source:"experience"
+        gallery_urls:x.gallery_urls||"",pay_on_site_card:0,pay_on_site_cash:0,active:1,source:"experience"
       });
     }
     return json({offers:[...legacyOffers,...providerExperiences]});
