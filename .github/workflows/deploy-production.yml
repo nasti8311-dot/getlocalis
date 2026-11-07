@@ -36,6 +36,14 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
+      - name: Apply additive production D1 migrations
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote
+
       - name: Verify production D1 schema (read-only)
         shell: bash
         env:
