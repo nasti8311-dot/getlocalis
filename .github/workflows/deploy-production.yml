@@ -240,7 +240,7 @@ jobs:
                 exit 1
               fi
               provider_register_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/provider-register.html -w '%{http_code}' https://fiiviu.ro/anbieter/register)"
-              if [ "$provider_register_status" != "200" ] || ! grep -q "accept_contract" /tmp/provider-register.html || ! grep -q "contractul de parteneriat" /tmp/provider-register.html; then
+              if [ "$provider_register_status" != "200" ] || ! grep -q "accept_contract" /tmp/provider-register.html || ! grep -q "contractul de parteneriat" /tmp/provider-register.html || ! grep -q "/assets/fiiviu-anbieter-flyer.jpg" /tmp/provider-register.html || ! grep -q "20% avans = comisionul FiiViu" /tmp/provider-register.html; then
                 echo "Provider registration page is unavailable or missing required contract acceptance (HTTP $provider_register_status)."
                 exit 1
               fi
@@ -254,7 +254,13 @@ jobs:
                 echo "Provider terms page is unavailable or missing 20/80 terms (HTTP $provider_terms_status)."
                 exit 1
               fi
-              echo "Provider registration, login, and contract terms pages are reachable."
+              flyer_status="$(curl --silent --show-error --location --max-time 20 -D /tmp/provider-flyer.headers -o /tmp/provider-flyer.jpg -w '%{http_code}' https://fiiviu.ro/assets/fiiviu-anbieter-flyer.jpg)"
+              if [ "$flyer_status" != "200" ] || ! grep -qi 'content-type: image/jpeg' /tmp/provider-flyer.headers || [ ! -s /tmp/provider-flyer.jpg ]; then
+                echo "Provider flyer image is missing or not served as JPEG (HTTP $flyer_status)."
+                cat /tmp/provider-flyer.headers
+                exit 1
+              fi
+              echo "Provider registration, flyer image, login, and contract terms pages are reachable."
               proof_page_status="$(curl --silent --show-error --location --max-time 20 -o /tmp/booking-verification.html -w '%{http_code}' https://fiiviu.ro/booking-verification.html)"
               if [ "$proof_page_status" != "200" ] || ! grep -qi "payment proof\|Zahlungsnachweis" /tmp/booking-verification.html; then
                 echo "Booking deposit verification page is unavailable (HTTP $proof_page_status)."
