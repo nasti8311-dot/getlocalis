@@ -3765,9 +3765,9 @@ function renderDetailTrustInfo(item) {
     if (!container) return;
 
     const labels = {
-        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", duration: "Dauer", card: "Kartenzahlung vor Ort", cash: "Barzahlung vor Ort" },
-        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", duration: "Duration", card: "Card payment on site", cash: "Cash payment on site" },
-        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", duration: "Durată", card: "Plată cu cardul la fața locului", cash: "Plată în numerar la fața locului" }
+        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", duration: "Dauer", payment: "Zahlung vor Ort", cardOnly: "Kartenzahlung möglich", cashOnly: "Barzahlung möglich", cardCash: "Kartenzahlung und Barzahlung möglich" },
+        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", duration: "Duration", payment: "Payment at the venue", cardOnly: "Card accepted", cashOnly: "Cash accepted", cardCash: "Card and cash accepted" },
+        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", duration: "Durată", payment: "Plată la locație", cardOnly: "Se acceptă plata cu cardul", cashOnly: "Se acceptă plata în numerar", cardCash: "Se acceptă plata cu cardul și numerar" }
     };
 
     const l = labels[currentLang] || labels.de;
@@ -3780,8 +3780,12 @@ function renderDetailTrustInfo(item) {
     rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
     rows.push(["fa-rotate-left", l.cancellation, currentLang === "ro" ? "Poți anula cu până la 24 de ore înainte, cu rambursare integrală" : currentLang === "en" ? "Cancel up to 24 hours in advance for a full refund" : "Bis 24 Stunden vorher stornierbar, volle Rückerstattung"]);
     rows.push(["fa-clock", l.duration, duration || "—"]);
-    if (item.acceptsCardOnsite) rows.push(["fa-credit-card", l.card, currentLang === "ro" ? "Disponibil" : currentLang === "en" ? "Available" : "Möglich"]);
-    if (item.acceptsCashOnsite) rows.push(["fa-money-bill-wave", l.cash, currentLang === "ro" ? "Disponibil" : currentLang === "en" ? "Available" : "Möglich"]);
+    if (item.acceptsCardOnsite || item.acceptsCashOnsite) {
+        const paymentText = item.acceptsCardOnsite && item.acceptsCashOnsite
+            ? l.cardCash
+            : item.acceptsCardOnsite ? l.cardOnly : l.cashOnly;
+        rows.push(["fa-wallet", l.payment, paymentText]);
+    }
 
     container.innerHTML = rows.map(function(row) {
         return '<div class="bg-[#F8F6F1] rounded-xl p-3 flex items-start gap-3">' +
