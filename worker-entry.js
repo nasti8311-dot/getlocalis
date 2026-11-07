@@ -2049,8 +2049,11 @@ function escapeFiiViuEmail(value) {
 function renderFiiViuBookingEmail({ eyebrow, title, greeting, intro, rows = [], highlight, note, actionUrl, actionLabel, footer }) {
   const safe = escapeFiiViuEmail;
   const rowHtml = rows.filter(row => row && row.value !== undefined && row.value !== null && String(row.value).trim() !== "")
-    .map(row => '<tr><td style="padding:11px 0;color:#68766f;font-size:13px;border-bottom:1px solid #edf0ec;width:42%;vertical-align:top;">' + safe(row.label) + '</td><td style="padding:11px 0;color:#203b32;font-size:14px;font-weight:600;border-bottom:1px solid #edf0ec;text-align:right;vertical-align:top;">' + safe(row.value) + '</td></tr>').join("");
-  const highlightHtml = highlight ? '<div style="margin:22px 0;padding:18px 20px;background:#f4f7f2;border:1px solid #e5ecdf;border-radius:12px;"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#68766f;margin-bottom:7px;">' + safe(highlight.label) + '</div><div style="font-size:25px;line-height:1.25;font-weight:700;color:#173c35;">' + safe(highlight.value) + '</div>' + (highlight.detail ? '<div style="font-size:13px;line-height:1.5;color:#68766f;margin-top:6px;">' + safe(highlight.detail) + '</div>' : '') + '</div>' : "";
+    .map(row => '<tr><td style="padding:11px 0;color:#68766f;font-size:13px;border-bottom:1px solid #edf0ec;width:42%;vertical-align:top;">' + safe(row.label) + '</td><td style="padding:11px 0;color:#203b32;font-size:14px;font-weight:600;border-bottom:1px solid #edf0ec;text-align:right;vertical-align:top;">' + (row.url ? '<a href="' + safe(row.url) + '" target="_blank" rel="noopener noreferrer" style="color:#176b58;text-decoration:underline;font-weight:700;">' + safe(row.value) + '</a>' : safe(row.value)) + '</td></tr>').join("");
+  const highlightItemsHtml = Array.isArray(highlight?.items) ? highlight.items.map(item =>
+    '<div style="padding:10px 0;border-top:1px solid #dfe8dc;"><div style="font-size:13px;color:#53685e;margin-bottom:3px;">' + safe(item.label) + '</div><div style="font-size:22px;line-height:1.25;font-weight:800;color:#173c35;">' + safe(item.value) + '</div>' + (item.detail ? '<div style="font-size:12px;line-height:1.5;color:#68766f;margin-top:4px;">' + safe(item.detail) + '</div>' : '') + '</div>'
+  ).join("") : "";
+  const highlightHtml = highlight ? '<div style="margin:22px 0;padding:18px 20px;background:#f4f7f2;border:1px solid #dce8d9;border-radius:12px;"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#68766f;margin-bottom:7px;">' + safe(highlight.label) + '</div>' + (Array.isArray(highlight.items) ? highlightItemsHtml : '<div style="font-size:25px;line-height:1.25;font-weight:700;color:#173c35;">' + safe(highlight.value) + '</div>' + (highlight.detail ? '<div style="font-size:13px;line-height:1.5;color:#68766f;margin-top:6px;">' + safe(highlight.detail) + '</div>' : '')) + '</div>' : "";
   const noteHtml = note ? '<div style="margin-top:18px;padding:14px 16px;background:#fbf8f0;border-left:3px solid #d6a64f;border-radius:6px;color:#5e6259;font-size:13px;line-height:1.6;">' + safe(note) + '</div>' : "";
   const actionHtml = actionUrl && actionLabel ? '<div style="text-align:center;margin:26px 0 8px;"><a href="' + safe(actionUrl) + '" style="display:inline-block;background:#173c35;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 22px;border-radius:8px;">' + safe(actionLabel) + '</a></div>' : "";
   return '<!doctype html><html><body style="margin:0;padding:0;background:#f3f5f2;font-family:Arial,Helvetica,sans-serif;color:#203b32;">' +
@@ -2594,6 +2597,34 @@ async function sendConfirmationWithRetry(env, booking) {
   }
 }
 
+async function getCustomerOnSitePaymentMethods(env, booking, language) {
+  const fallback = language === "de"
+    ? "Bitte stimme die Zahlungsmöglichkeit direkt mit dem Anbieter ab."
+    : language === "ro"
+      ? "Te rugăm să verifici direct cu organizatorul modalitățile de plată."
+      : "Please confirm the available payment method directly with the provider.";
+  if (!env.DB || !booking.offer_id) return fallback;
+  try {
+    const offer = await env.DB.prepare(
+      "SELECT pay_on_site_cash,pay_on_site_card FROM offers WHERE id=? LIMIT 1"
+    ).bind(booking.offer_id).first();
+    const methods = [];
+    if (Number(offer?.pay_on_site_cash) === 1) {
+      methods.push(language === "de" ? "Barzahlung" : language === "ro" ? "Numerar" : "Cash");
+    }
+    if (Number(offer?.pay_on_site_card) === 1) {
+      methods.push(language === "de" ? "Kartenzahlung" : language === "ro" ? "Card" : "Card");
+    }
+    return methods.length ? methods.join(" / ") : fallback;
+  } catch (error) {
+    console.error("FiiViu customer email could not load on-site payment methods", {
+      bookingId: booking.booking_id || "",
+      message: String(error?.message || error).slice(0, 300)
+    });
+    return fallback;
+  }
+}
+
 async function sendResendConfirmation(env, booking) {
   const recipient = clean(booking.customer_email);
   if (!recipient) throw new Error("Keine Kunden-E-Mail-Adresse vorhanden.");
@@ -2612,7 +2643,11 @@ async function sendResendConfirmation(env, booking) {
   const bookingId = String(booking.booking_id || "");
   const provider = String(booking.provider_name || "FiiViu");
   const meetingPoint = String(localizedOffer?.meetingPoint || booking.meeting_point_name || "");
-  const address = String(booking.meeting_address || "");
+  const address = [booking.meeting_address, booking.meeting_city, booking.meeting_country]
+    .map(value => String(value || "").trim()).filter(Boolean).join(", ") || meetingPoint;
+  const mapLink = makeMeetingMapLink(booking);
+  const onSitePaymentMethods = directPayment
+    ? await getCustomerOnSitePaymentMethods(env, booking, language) : "";
   const cancellationHours = String(CANCELLATION_HOURS);
   const appUrl = String(env.PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/$/, "");
   const cancellationUrl = booking.cancellation_token
@@ -2623,33 +2658,38 @@ async function sendResendConfirmation(env, booking) {
   const copy = language === "de" ? {
     eyebrow:"Dein FiiViu-Erlebnis",title:"Deine Buchung ist bestätigt",greeting:"Hallo " + String(booking.customer_name || "") + ",",
     intro:"Vielen Dank für deine Buchung. Wir freuen uns, dass du dabei bist!",
-    date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",online:"Online bezahlt (20%)",due:"Vor Ort an Anbieter (80%)",
-    id:"Buchungsnummer",provider:"Veranstalter",meeting:"Treffpunkt",address:"Adresse",
+    date:"Datum",time:"Beginn",guests:"Personen",total:"Gesamtpreis",paymentSummary:"Deine Zahlung im Überblick",online:"Online bezahlt (20%)",due:"Vor Ort an Anbieter (80%)",
+    paymentMethods:"Vor Ort möglich",id:"Buchungsnummer",provider:"Veranstalter",meeting:"Treffpunkt",address:"Adresse · Google Maps",
     cancel:"Buchung stornieren",policy:"Die Onlinegebühr wird bei einer Stornierung mindestens " + cancellationHours + " Stunden vor Beginn erstattet. Bei einer Stornierung durch den Anbieter wird sie vollständig erstattet.",
-    note:"Die restlichen 80 % bezahlst du direkt beim Erlebnisanbieter vor Ort."
+    note:"Die restlichen 80 % bezahlst du direkt beim Erlebnisanbieter vor Ort. Zahlungsmöglichkeiten: " + onSitePaymentMethods + "."
   } : language === "ro" ? {
     eyebrow:"Experiența ta FiiViu",title:"Rezervarea ta este confirmată",greeting:"Bună " + String(booking.customer_name || "") + ",",
     intro:"Îți mulțumim pentru rezervare. Ne bucurăm că vei participa!",
-    date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",online:"Plătit online (20%)",due:"De plătit direct operatorului (80%)",
-    id:"Cod rezervare",provider:"Organizator",meeting:"Punct de întâlnire",address:"Adresă",
+    date:"Data",time:"Ora",guests:"Persoane",total:"Preț total",paymentSummary:"Detaliile plății",online:"Plătit online (20%)",due:"De plătit direct operatorului (80%)",
+    paymentMethods:"Metode de plată la fața locului",id:"Cod rezervare",provider:"Organizator",meeting:"Punct de întâlnire",address:"Adresă · Google Maps",
     cancel:"Anulează rezervarea",policy:"Taxa online se rambursează la anularea cu cel puțin " + cancellationHours + " ore înainte. În cazul anulării de către operator, aceasta se rambursează integral.",
-    note:"Restul de 80% se achită direct organizatorului, la fața locului."
+    note:"Restul de 80% se achită direct organizatorului, la fața locului. Metode disponibile: " + onSitePaymentMethods + "."
   } : {
     eyebrow:"Your FiiViu experience",title:"Your booking is confirmed",greeting:"Hello " + String(booking.customer_name || "") + ",",
     intro:"Thank you for booking with us. We’re looking forward to having you!",
-    date:"Date",time:"Start time",guests:"Guests",total:"Total price",online:"Paid online (20%)",due:"Pay the provider in person (80%)",
-    id:"Booking reference",provider:"Provider",meeting:"Meeting point",address:"Address",
+    date:"Date",time:"Start time",guests:"Guests",total:"Total price",paymentSummary:"Your payment breakdown",online:"Paid online (20%)",due:"Pay the provider in person (80%)",
+    paymentMethods:"Payment methods on site",id:"Booking reference",provider:"Provider",meeting:"Meeting point",address:"Address · Google Maps",
     cancel:"Cancel booking",policy:"The online fee is refunded if you cancel at least " + cancellationHours + " hours before the start. If the provider cancels, it is refunded in full.",
-    note:"The remaining 80% is paid directly to the experience provider in person."
+    note:"The remaining 80% is paid directly to the experience provider in person. Available payment methods: " + onSitePaymentMethods + "."
   };
 
   const html = renderFiiViuBookingEmail({
     eyebrow:copy.eyebrow,title:copy.title,greeting:copy.greeting,intro:copy.intro,
-    highlight:{label:directPayment?copy.online:copy.total,value:directPayment?onlineFee:total,detail:directPayment?copy.due+": "+providerDue:""},
+    highlight:directPayment
+      ? {label:copy.paymentSummary,items:[
+          {label:copy.online,value:onlineFee},
+          {label:copy.due,value:providerDue,detail:copy.paymentMethods+": "+onSitePaymentMethods}
+        ]}
+      : {label:copy.total,value:total},
     rows:[
       {label:copy.total,value:total},{label:copy.date,value:bookingDate},{label:copy.time,value:bookingTime},
       {label:copy.guests,value:guests},{label:copy.id,value:bookingId},{label:copy.provider,value:provider},
-      {label:copy.meeting,value:meetingPoint},{label:copy.address,value:address}
+      {label:copy.meeting,value:meetingPoint},{label:copy.address,value:address,url:mapLink}
     ],
     note:(directPayment?copy.note+" ":"")+copy.policy,
     actionUrl:cancellationUrl,actionLabel:copy.cancel,
@@ -2657,10 +2697,11 @@ async function sendResendConfirmation(env, booking) {
   });
   const text = [
     copy.greeting,copy.title,experience,copy.total+": "+total,
-    ...(directPayment?[copy.online+": "+onlineFee,copy.due+": "+providerDue]:[]),
+    ...(directPayment?[copy.online+": "+onlineFee,copy.due+": "+providerDue,copy.paymentMethods+": "+onSitePaymentMethods]:[]),
     copy.date+": "+bookingDate,copy.time+": "+bookingTime,copy.guests+": "+guests,
     copy.id+": "+bookingId,copy.provider+": "+provider,copy.meeting+": "+meetingPoint,
-    copy.address+": "+address,cancellationUrl?copy.cancel+": "+cancellationUrl:"",
+    copy.address+": "+address,mapLink?"Google Maps: "+mapLink:"",
+    cancellationUrl?copy.cancel+": "+cancellationUrl:"",
     directPayment?copy.note:"",copy.policy,"FiiViu"
   ].filter(Boolean).join("\n");
 
@@ -2735,7 +2776,8 @@ async function sendEmailJsConfirmation(
     localizedOffer?.meetingPoint || booking.meeting_point_name || "";
 
   const address =
-    booking.meeting_address || "";
+    [booking.meeting_address, booking.meeting_city, booking.meeting_country]
+      .map(value => String(value || "").trim()).filter(Boolean).join(", ") || meetingPoint;
 
   const localizedInstructions =
     localizedOffer?.instructions || booking.meeting_instructions || "";
@@ -2753,6 +2795,8 @@ async function sendEmailJsConfirmation(
 
   const mapLink = makeMeetingMapLink(booking);
   const directPaymentModel = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
+  const onSitePaymentMethods = directPaymentModel
+    ? await getCustomerOnSitePaymentMethods(env, booking, language) : "";
   const bookingTotal = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
   const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
   const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
@@ -2776,7 +2820,9 @@ async function sendEmailJsConfirmation(
     provider_due_price: `${(Number(booking.provider_due_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
     mail_online_fee_label: language === "de" ? "Online geleistete Anzahlung (20 %)" : language === "ro" ? "Avans plătit online (20%)" : "Deposit paid online (20%)",
     mail_provider_due_label: language === "de" ? "Vor Ort an Anbieter (80 %)" : language === "ro" ? "De plătit la operator (80%)" : "Due to provider in person (80%)",
-    mail_payment_note: language === "de" ? "Die restlichen 80 % werden direkt vor Ort an den Anbieter bezahlt." : language === "ro" ? "Restul de 80% se plătește direct operatorului, la fața locului." : "The remaining 80% is paid directly to the provider in person.",
+    mail_payment_note: language === "de" ? "Die restlichen 80 % werden direkt vor Ort an den Anbieter bezahlt. Zahlungsmöglichkeiten: " + onSitePaymentMethods + "." : language === "ro" ? "Restul de 80% se plătește direct operatorului, la fața locului. Metode disponibile: " + onSitePaymentMethods + "." : "The remaining 80% is paid directly to the provider in person. Available payment methods: " + onSitePaymentMethods + ".",
+    mail_payment_methods_label: language === "de" ? "Vor Ort möglich" : language === "ro" ? "Metode de plată la fața locului" : "Payment methods on site",
+    mail_payment_methods: onSitePaymentMethods,
     booking_id: booking.booking_id,
     booking_url: booking.booking_access_token
       ? appUrl + "/booking.html?id=" + encodeURIComponent(String(booking.booking_id || "")) + "&token=" + encodeURIComponent(String(booking.booking_access_token))
