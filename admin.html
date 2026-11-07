@@ -221,7 +221,7 @@ function renderAdminBookings(){
       let amount='–';
       try{amount=(Number(b.amount_cents||0)/100).toLocaleString('de-DE',{style:'currency',currency});}
       catch(_){amount=(Number(b.amount_cents||0)/100).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(currency);}
-      const mailStatus=(sent,error)=>sent?'Von Resend angenommen · '+escapeHtml(sent):error==='__SENDING__'?'Versand läuft':error?'Fehler: '+escapeHtml(error):'Noch nicht versendet';
+      const mailStatus=(sent,error)=>sent?'Versand bestätigt · '+escapeHtml(sent):error==='__SENDING__'?'Versand läuft':error?'Fehler: '+escapeHtml(error):'Noch nicht versendet';
       const mail='<small><b>Kunde:</b> '+mailStatus(b.confirmation_email_sent_at,b.confirmation_email_error)+'<br><b>Anbieter:</b> '+mailStatus(b.provider_notification_email_sent_at,b.provider_notification_email_error)+'<br><b>Admin:</b> '+mailStatus(b.admin_notification_email_sent_at,b.admin_notification_email_error)+'</small>';
       return '<tr><td>'+escapeHtml(createdLabel)+'</td><td><b>'+escapeHtml(dateLabel)+'</b><br><span class="muted">'+escapeHtml(time||'Uhrzeit fehlt')+'</span></td><td>'+escapeHtml(b.experience_name||'–')+'</td><td><span class="code" style="font-size:13px">'+escapeHtml(b.booking_id||'–')+'</span></td><td>'+guest+'</td><td>'+Number(b.guests||1)+'</td><td>'+escapeHtml(status)+'</td><td>'+escapeHtml(amount)+'</td><td>'+mail+'</td></tr>';
     }).join('')+'</tbody></table>';
