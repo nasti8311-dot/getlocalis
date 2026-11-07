@@ -38,6 +38,16 @@ export default {
           return json({error:"Te rugăm să introduci numele și o adresă de e-mail validă."},400,corsHeaders);
         if(!Number.isInteger(standCount)||standCount<1||standCount>500||shippingAddress.length<5)
           return json({error:"Te rugăm să indici numărul de suporturi QR (1–500) și o adresă completă de livrare."},400,corsHeaders);
+        if(String(body.privacyNoticeAcknowledged||"")!=="yes")
+          return json({error:"Este necesar să confirmi luarea la cunoștință a politicii de confidențialitate."},400,corsHeaders);
+        if(String(body.affiliateTermsAccepted||"")!=="yes")
+          return json({error:"Este necesar să accepți contractul de parteneriat afiliat."},400,corsHeaders);
+        const affiliateContractVersion="affiliate-v1.0-2026-11-07";
+        const affiliateContractLanguage=["ro","en","de"].includes(String(body.affiliateTermsLanguage||"ro").trim().toLowerCase())
+          ? String(body.affiliateTermsLanguage||"ro").trim().toLowerCase() : "ro";
+        const affiliateAcceptedAt=new Date().toISOString();
+        const affiliateIp=String(request.headers.get("CF-Connecting-IP")||"").slice(0,64);
+        const affiliateUserAgent=String(request.headers.get("User-Agent")||"").slice(0,500);
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS partner_applications (
           id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL,
           company TEXT, partner_type TEXT, message TEXT, stand_count INTEGER NOT NULL DEFAULT 1, shipping_address TEXT,
@@ -50,7 +60,17 @@ export default {
         const recent=await env.DB.prepare("SELECT COUNT(*) AS total FROM partner_applications WHERE email=? AND created_at >= datetime('now','-1 hour')").bind(email).first();
         if(Number(recent?.total||0)>=3) return json({error:"Au fost trimise deja mai multe solicitări de la această adresă de e-mail. Te rugăm să încerci din nou mai târziu."},429,corsHeaders);
         const saved=await env.DB.prepare("INSERT INTO partner_applications (name,email,company,partner_type,message,stand_count,shipping_address) VALUES (?,?,?,?,?,?,?)").bind(name,email,company||null,type||null,message||null,standCount,shippingAddress).run();
-        return json({success:true,id:saved.meta?.last_row_id||null},201,corsHeaders);
+        const applicationId=Number(saved.meta?.last_row_id||0);
+        if(!applicationId)throw new Error("Partner application ID was not returned.");
+        try{
+          await env.DB.prepare(`INSERT INTO affiliate_contract_acceptances
+            (application_id,contract_version,contract_language,accepted_at,ip_address,user_agent,privacy_notice_acknowledged)
+            VALUES (?,?,?,?,?,?,1)`).bind(applicationId,affiliateContractVersion,affiliateContractLanguage,affiliateAcceptedAt,affiliateIp,affiliateUserAgent).run();
+        }catch(acceptanceError){
+          await env.DB.prepare("DELETE FROM partner_applications WHERE id=?").bind(applicationId).run();
+          throw acceptanceError;
+        }
+        return json({success:true,id:applicationId,contractVersion:affiliateContractVersion,contractAcceptedAt:affiliateAcceptedAt},201,corsHeaders);
       } catch(error) { return json({error:"Solicitarea nu a putut fi salvată momentan. Te rugăm să încerci din nou mai târziu."},500,corsHeaders); }
     }
 
@@ -72,7 +92,11 @@ export default {
         if(!columnNames.has("stand_count")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN stand_count INTEGER NOT NULL DEFAULT 1").run();
         if(!columnNames.has("shipping_address")) await env.DB.prepare("ALTER TABLE partner_applications ADD COLUMN shipping_address TEXT").run();
         if(request.method==="GET") {
-          const rows=await env.DB.prepare("SELECT id,name,email,company,partner_type,message,stand_count,shipping_address,status,created_at FROM partner_applications ORDER BY created_at DESC,id DESC LIMIT 200").all();
+          const rows=await env.DB.prepare(`SELECT a.id,a.name,a.email,a.company,a.partner_type,a.message,a.stand_count,a.shipping_address,a.status,a.created_at,
+            c.contract_version AS affiliate_contract_version,c.contract_language AS affiliate_contract_language,c.accepted_at AS affiliate_contract_accepted_at
+            FROM partner_applications a
+            LEFT JOIN affiliate_contract_acceptances c ON c.application_id=a.id
+            ORDER BY a.created_at DESC,a.id DESC LIMIT 200`).all();
           return json({applications:rows.results||[]},200,corsHeaders);
         }
         if(request.method==="PATCH") {
