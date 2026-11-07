@@ -82,7 +82,7 @@ test("affiliate application requires and records explicit agreement acceptance",
   assert.match(worker, /affiliate_contract_accepted_at/);
   assert.match(worker, /affiliateContractBlobSha=/);
   assert.match(migration, /contract_blob_sha TEXT NOT NULL/);
-  assert.match(migrationWorkflow, /--file migrations\\/023_affiliate_contract_acceptance\\.sql/);
+  assert.ok(migrationWorkflow.includes("--file migrations/023_affiliate_contract_acceptance.sql"));
   assert.match(deploy, /FROM affiliate_contract_acceptances LIMIT 0/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS affiliate_contract_acceptances/);
   assert.match(agreement, /5%/);
