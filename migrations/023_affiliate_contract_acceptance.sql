@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS affiliate_contract_acceptances (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   application_id INTEGER NOT NULL,
   contract_version TEXT NOT NULL,
+  contract_blob_sha TEXT NOT NULL,
   contract_language TEXT NOT NULL DEFAULT 'ro',
   accepted_at TEXT NOT NULL,
   ip_address TEXT,
