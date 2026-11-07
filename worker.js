@@ -65,7 +65,8 @@ export default {
         if(!applicationId)throw new Error("Partner application ID was not returned.");
         try{
           await env.DB.prepare(`INSERT INTO affiliate_contract_acceptances
-            undefined`).bind(applicationId,affiliateContractVersion,affiliateContractBlobSha,affiliateContractLanguage,affiliateAcceptedAt,affiliateIp,affiliateUserAgent).run();
+            (application_id,contract_version,contract_blob_sha,contract_language,accepted_at,ip_address,user_agent,privacy_notice_acknowledged)
+            VALUES (?,?,?,?,?,?,?,1)`).bind(applicationId,affiliateContractVersion,affiliateContractBlobSha,affiliateContractLanguage,affiliateAcceptedAt,affiliateIp,affiliateUserAgent).run();
         }catch(acceptanceError){
           await env.DB.prepare("DELETE FROM partner_applications WHERE id=?").bind(applicationId).run();
           throw acceptanceError;
