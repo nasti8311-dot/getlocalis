@@ -414,7 +414,7 @@ async function handleAdminExperiences(request,env){
     if(request.method==="PATCH"){
       const body=await request.json().catch(()=>({})),id=Number(body.id);
       if(!Number.isInteger(id)||id<1)return json({error:"Ungültige Erlebnis-ID."},400);
-      const allowed={title:"TEXT",description:"TEXT",category:"TEXT",price_cents:"INTEGER",currency:"TEXT",active:"INTEGER",approval_status:"TEXT",accepts_card_onsite:"INTEGER",accepts_cash_onsite:"INTEGER"};
+      const allowed={title:"TEXT",description:"TEXT",category:"TEXT",price_cents:"INTEGER",currency:"TEXT",active:"INTEGER",approval_status:"TEXT",pay_on_site_card:"INTEGER",pay_on_site_cash:"INTEGER"};
       const sets=[],values=[];
       for(const [key] of Object.entries(allowed)){
         if(!Object.prototype.hasOwnProperty.call(body,key))continue;
@@ -425,7 +425,7 @@ async function handleAdminExperiences(request,env){
         if(key==="price_cents"){value=Number(value);if(!Number.isSafeInteger(value)||value<0)return json({error:"Ungültiger Preis."},400);}
         if(key==="currency"){value=String(value||"").trim().toUpperCase();if(!["RON","EUR"].includes(value))return json({error:"Währung muss RON oder EUR sein."},400);}
         if(key==="active"){value=Number(value);if(![0,1].includes(value))return json({error:"Ungültiger Aktiv-Status."},400);}
-        if(key==="approval_status"){value=String(value||"");if(!["pending","approved","rejected"].includes(value))return json({error:"Ungültiger Freigabestatus."},400);}if(key==="accepts_card_onsite"||key==="accepts_cash_onsite"){value=Number(value);if(![0,1].includes(value))return json({error:"Ungültige Vor-Ort-Zahlungsoption."},400);}
+        if(key==="approval_status"){value=String(value||"");if(!["pending","approved","rejected"].includes(value))return json({error:"Ungültiger Freigabestatus."},400);}if(key==="pay_on_site_card"||key==="pay_on_site_cash"){value=Number(value);if(![0,1].includes(value))return json({error:"Ungültige Vor-Ort-Zahlungsoption."},400);}
         sets.push(key+"=?");values.push(value);
       }
       if(!sets.length)return json({error:"Keine Änderungen übermittelt."},400);
@@ -3580,7 +3580,7 @@ async function providerRefFromSession(request,env){
 async function ensureOffersTable(env){
   const columns=await env.DB.prepare("PRAGMA table_info(offers)").all();
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
-  const required=["provider_ref","title","description","price_cents","currency","available_times","availability_rules","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration","approval_status"];
+  const required=["provider_ref","title","description","price_cents","currency","available_times","availability_rules","meeting_point_name","meeting_address","meeting_city","meeting_country","meeting_instructions","arrival_minutes_before","title_en","title_ro","description_en","description_ro","meeting_point_name_en","meeting_point_name_ro","meeting_point_name_en","meeting_point_name_ro","meeting_instructions_en","meeting_instructions_ro","image_url","gallery_urls","category","active","duration","approval_status","pay_on_site_cash","pay_on_site_card"];
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Offers schema is incomplete: "+missing.join(", "));
 }
