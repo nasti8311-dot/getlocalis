@@ -69,6 +69,8 @@ test("affiliate application requires and records explicit agreement acceptance",
   const worker = read("worker.js");
   const agreement = read("legal/affiliate-bedingungen.html");
   const migration = read("migrations/023_affiliate_contract_acceptance.sql");
+  const deploy = read(".github/workflows/deploy-production.yml");
+  const migrationWorkflow = read(".github/workflows/apply-booking-email-migration.yml");
   assert.match(application, /name="affiliateTermsAccepted" value="yes"/);
   assert.match(application, /affiliate-bedingungen\.html\?lang=ro/);
   assert.match(worker, /body\.privacyNoticeAcknowledged[^\n]*!==["']yes["']/);
