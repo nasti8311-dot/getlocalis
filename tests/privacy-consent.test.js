@@ -54,9 +54,9 @@ test("consent manager is available across booking, partner, provider and legal s
 
 test("privacy policy contains current multilingual retention and transfer disclosures", () => {
   const policy = read("legal/politica-de-confidentialitate.html");
-  assert.match(policy, /Letzte Aktualisierung: 6\. November 2026/);
-  assert.match(policy, /Last updated: 6 November 2026/);
-  assert.match(policy, /Ultima actualizare: 6 noiembrie 2026/);
+  assert.match(policy, /Letzte Aktualisierung: 7\\. November 2026/);
+  assert.match(policy, /Last updated: 7 November 2026/);
+  assert.match(policy, /Ultima actualizare: 7 noiembrie 2026/);
   assert.match(policy, /Art\. 25 des rumänischen Gesetzes Nr\. 82\/1991/);
   assert.match(policy, /Article 25 of Romanian Law No\. 82\/1991/);
   assert.match(policy, /content\.en\.sections=/);
