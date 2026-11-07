@@ -1254,6 +1254,7 @@ function buildCancellationView(booking) {
 
   return {
     booking_id: booking.booking_id,
+    language: String(booking.customer_language || "de").slice(0, 2).toLowerCase(),
     tour_title: booking.experience_name || "",
     booking_date: booking.booking_date || "",
     booking_time: booking.booking_time || "",
