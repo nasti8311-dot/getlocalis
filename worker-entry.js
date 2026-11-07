@@ -414,7 +414,7 @@ async function handleAdminExperiences(request,env){
     if(request.method==="PATCH"){
       const body=await request.json().catch(()=>({})),id=Number(body.id);
       if(!Number.isInteger(id)||id<1)return json({error:"Ungültige Erlebnis-ID."},400);
-      const allowed={title:"TEXT",description:"TEXT",category:"TEXT",price_cents:"INTEGER",currency:"TEXT",active:"INTEGER",approval_status:"TEXT"};
+      const allowed={title:"TEXT",description:"TEXT",category:"TEXT",price_cents:"INTEGER",currency:"TEXT",active:"INTEGER",approval_status:"TEXT",accepts_card_onsite:"INTEGER",accepts_cash_onsite:"INTEGER"};
       const sets=[],values=[];
       for(const [key] of Object.entries(allowed)){
         if(!Object.prototype.hasOwnProperty.call(body,key))continue;
@@ -425,7 +425,7 @@ async function handleAdminExperiences(request,env){
         if(key==="price_cents"){value=Number(value);if(!Number.isSafeInteger(value)||value<0)return json({error:"Ungültiger Preis."},400);}
         if(key==="currency"){value=String(value||"").trim().toUpperCase();if(!["RON","EUR"].includes(value))return json({error:"Währung muss RON oder EUR sein."},400);}
         if(key==="active"){value=Number(value);if(![0,1].includes(value))return json({error:"Ungültiger Aktiv-Status."},400);}
-        if(key==="approval_status"){value=String(value||"");if(!["pending","approved","rejected"].includes(value))return json({error:"Ungültiger Freigabestatus."},400);}
+        if(key==="approval_status"){value=String(value||"");if(!["pending","approved","rejected"].includes(value))return json({error:"Ungültiger Freigabestatus."},400);}if(key==="accepts_card_onsite"||key==="accepts_cash_onsite"){value=Number(value);if(![0,1].includes(value))return json({error:"Ungültige Vor-Ort-Zahlungsoption."},400);}
         sets.push(key+"=?");values.push(value);
       }
       if(!sets.length)return json({error:"Keine Änderungen übermittelt."},400);
