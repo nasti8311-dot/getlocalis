@@ -43,6 +43,7 @@ export default {
         if(String(body.affiliateTermsAccepted||"")!=="yes")
           return json({error:"Este necesar să accepți contractul de parteneriat afiliat."},400,corsHeaders);
         const affiliateContractVersion="affiliate-v1.0-2026-11-07";
+        const affiliateContractBlobSha="52342f8c28cd5fdb3c6c8cee79370a5c06c4e9ee";
         const affiliateContractLanguage=["ro","en","de"].includes(String(body.affiliateTermsLanguage||"ro").trim().toLowerCase())
           ? String(body.affiliateTermsLanguage||"ro").trim().toLowerCase() : "ro";
         const affiliateAcceptedAt=new Date().toISOString();
@@ -64,8 +65,7 @@ export default {
         if(!applicationId)throw new Error("Partner application ID was not returned.");
         try{
           await env.DB.prepare(`INSERT INTO affiliate_contract_acceptances
-            (application_id,contract_version,contract_language,accepted_at,ip_address,user_agent,privacy_notice_acknowledged)
-            VALUES (?,?,?,?,?,?,1)`).bind(applicationId,affiliateContractVersion,affiliateContractLanguage,affiliateAcceptedAt,affiliateIp,affiliateUserAgent).run();
+            undefined`).bind(applicationId,affiliateContractVersion,affiliateContractBlobSha,affiliateContractLanguage,affiliateAcceptedAt,affiliateIp,affiliateUserAgent).run();
         }catch(acceptanceError){
           await env.DB.prepare("DELETE FROM partner_applications WHERE id=?").bind(applicationId).run();
           throw acceptanceError;
