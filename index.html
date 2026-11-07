@@ -3021,8 +3021,8 @@ function mapPublicOffer(offer) {
         minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
         maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
         capacity: Number.isFinite(Number(offer.capacity)) ? Number(offer.capacity) : null,
-        acceptsCardOnsite: Number(offer.accepts_card_onsite) === 1,
-        acceptsCashOnsite: Number(offer.accepts_cash_onsite) === 1,
+        acceptsCardOnsite: Number(offer.pay_on_site_card) === 1,
+        acceptsCashOnsite: Number(offer.pay_on_site_cash) === 1,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
