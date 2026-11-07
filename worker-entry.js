@@ -3369,7 +3369,7 @@ function buildProviderContractSnapshotV12({companyName,cui,representativeName,em
     "18. Legea aplicabila si datele societatii: Se aplica dreptul roman, cu respectarea normelor imperative ale UE. Datele juridice complete ale FiiViu S.R.L. trebuie completate si verificate pe baza documentelor oficiale ale societatii.",
     "",
     "Consimtamant electronic expres: reprezentantul legal a bifat personal caseta de acceptare in formularul de inregistrare. Acceptarea este inregistrata cu marcaj temporal, adresa IP, User-Agent, versiunea contractului si amprenta SHA-256."
-  ].join("\\n");
+  ].join("\n");
 }
 
 function buildProviderContractPdf(snapshot){
@@ -3395,7 +3395,7 @@ function buildProviderContractPdf(snapshot){
   const pageRefs=pages.map((_,i)=>(5+i*2)+" 0 R").join(" ");
   objects[2]="<< /Type /Pages /Kids ["+pageRefs+"] /Count "+pages.length+" >>";
   objects[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
-  const pdfVersion=String(snapshot||"").match(/(?:Versiunea contractului|Vertragsversion):\\s*(v\\d+\\.\\d+)/i)?.[1]||"v1.2";
+  const pdfVersion=String(snapshot||"").match(/(?:Versiunea contractului|Vertragsversion):\s*(v\d+\.\d+)/i)?.[1]||"v1.2";
   objects[4]="<< /Producer (FiiViu) /Title (Contract de parteneriat FiiViu "+pdfVersion+") >>";
   pages.forEach((lines,i)=>{
     const pageId=5+i*2,streamId=pageId+1;
