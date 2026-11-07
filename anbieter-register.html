@@ -64,7 +64,7 @@ const form=document.getElementById('registerForm'),button=document.getElementByI
 form.addEventListener('submit',async event=>{
  event.preventDefault(); if(!form.reportValidity())return;
  button.disabled=true;button.textContent='Se procesează înregistrarea…';message.className='message';message.style.display='none';
- const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:form.acceptContract.checked};
+ const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:document.getElementById('acceptContract').checked};
  try{
   const response=await fetch('/api/provider-register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
   const data=await response.json().catch(()=>({}));
