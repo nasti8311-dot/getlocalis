@@ -48,7 +48,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e86f2d;outline-offset
 <div class="field wide"><label for="email">Adresă de e-mail profesională *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
 <div class="field wide"><label for="password">Parolă *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimum 12 caractere. Folosește o parolă unică.</small></div>
 </div>
-<div class="check"><input type="checkbox" checked disabled aria-label="Acceptarea contractului se înregistrează la creare cont"><span>Prin crearea contului, confirmi că ești reprezentantul legal al companiei și accepți <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer" class="underline text-orange-700">contractul de parteneriat</a> și condițiile privind comisionul (avans de 20% la rezervarea online). Acest avans de 20% plătit online de client reprezintă comisionul FiiViu. Acceptarea este înregistrată automat la finalizarea înregistrării.</span></div>
+<div class="check"><input id="acceptContract" name="accept_contract" type="checkbox" required aria-label="Accept contractul de parteneriat"><span><label for="acceptContract" class="inline font-normal">Confirm că sunt reprezentantul legal al companiei, am citit și accept <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer" class="underline text-orange-700">contractul de parteneriat</a> (versiunea v1.2) și condițiile privind comisionul. În modelul 20/80, avansul online de 20% plătit de client reprezintă comisionul integral FiiViu; restul de 80% îl încasez direct de la client. Nu există taxe fixe de înregistrare, configurare, listare sau abonament în programul actual.</label></span></div>
 <button id="submitButton" type="submit">Înregistrare și acceptarea contractului</button>
 <div id="message" role="status" aria-live="polite"></div>
 </form>
@@ -64,7 +64,7 @@ const form=document.getElementById('registerForm'),button=document.getElementByI
 form.addEventListener('submit',async event=>{
  event.preventDefault(); if(!form.reportValidity())return;
  button.disabled=true;button.textContent='Se procesează înregistrarea…';message.className='message';message.style.display='none';
- const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:true};
+ const payload={company_name:form.company_name.value.trim(),cui:form.cui.value.trim(),representative_name:form.representative_name.value.trim(),email:form.email.value.trim(),password:form.password.value,accept_contract:document.getElementById('acceptContract').checked};
  try{
   const response=await fetch('/api/provider-register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
   const data=await response.json().catch(()=>({}));

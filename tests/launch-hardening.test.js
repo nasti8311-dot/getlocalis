@@ -165,19 +165,33 @@ test("homepage sends no client-priced amount and preserves the source offer ID",
   assert.match(html, /<html lang="de">/);
 });
 
-test("provider self-registration records automatic contract acceptance and stores evidence", () => {
+test("provider self-registration requires explicit contract acceptance and stores v1.2 evidence", () => {
   const worker = read("worker-entry.js");
   const page = read("anbieter-register.html");
+  const terms = read("legal/anbieter-bedingungen.html");
   const migration = read("migrations/018_provider_self_registration_contracts.sql");
   assert.match(worker, /url\.pathname === "\/api\/provider-register"/);
   assert.match(worker, /body\.accept_contract!==true/);
-  assert.match(worker, /INSERT INTO vendor_contract_logs/);
-  assert.match(worker, /contract_sha256/);
-  assert.match(worker, /attachments:\[\{filename:"FiiViu-Contract-Parteneriat-v1\.1\.pdf",content:pdf\}\]/);
-  assert.match(page, /accept_contract:true/);
-  assert.match(page, /Acceptarea este înregistrată automat la finalizarea înregistrării/);
-  assert.doesNotMatch(page, /name="accept_contract" type="checkbox" required/);
-  assert.match(page, /avans de 20% la rezervarea online/);
+  assert.match(worker, /contractVersion="v1\.2"/);
+  assert.match(worker, /buildProviderContractSnapshotV12/);
+  assert.match(worker, /Denumire completa: ____________________/);
+  assert.match(worker, /Numar Registrul Comertului: ____________________/);
+  assert.match(worker, /Cod TVA \(daca exista\): ____________________/);
+  assert.match(worker, /attachments:\[\{filename:"FiiViu-Contract-Parteneriat-v1\.2\.pdf",content:pdf\}\]/);
+  assert.match(worker, /\["v1\.0","v1\.1","v1\.2"\]/);
+  assert.match(worker, /hashProviderSession\(snapshot\) !== String\(row\.contract_sha256/);
+  assert.match(page, /accept_contract:document\.getElementById\('acceptContract'\)\.checked/);
+  assert.match(page, /id="acceptContract" name="accept_contract" type="checkbox" required/);
+  assert.doesNotMatch(page, /type="checkbox" checked disabled/);
+  assert.match(page, /versiunea v1\.2/);
+  assert.match(terms, /20% din prețul total/);
+  assert.match(terms, /taxe de înregistrare, configurare, listare, lunare sau abonament/);
+  assert.match(terms, /avansul online de 20% este rambursat integral/);
+  assert.match(terms, /suporturi cu cod QR/);
+  assert.match(terms, /Vollständiger Firmenname: ____________________/);
+  assert.match(terms, /Handelsregisternummer: ____________________/);
+  assert.match(terms, /Full legal company name: ____________________/);
+  assert.match(terms, /Denumirea completă a societății: ____________________/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
   assert.match(migration, /pay_on_site_cash/);
