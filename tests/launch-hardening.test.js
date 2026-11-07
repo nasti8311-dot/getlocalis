@@ -174,6 +174,9 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(worker, /body\.accept_contract!==true/);
   assert.match(worker, /contractVersion="v1\.2"/);
   assert.match(worker, /buildProviderContractSnapshotV12/);
+  assert.match(worker, /Denumire completa: ____________________/);
+  assert.match(worker, /Numar Registrul Comertului: ____________________/);
+  assert.match(worker, /Cod TVA \(daca exista\): ____________________/);
   assert.match(worker, /attachments:\[\{filename:"FiiViu-Contract-Parteneriat-v1\.2\.pdf",content:pdf\}\]/);
   assert.match(worker, /\["v1\.0","v1\.1","v1\.2"\]/);
   assert.match(worker, /hashProviderSession\(snapshot\) !== String\(row\.contract_sha256/);
@@ -185,6 +188,10 @@ test("provider self-registration requires explicit contract acceptance and store
   assert.match(terms, /taxe de înregistrare, configurare, listare, lunare sau abonament/);
   assert.match(terms, /avansul online de 20% este rambursat integral/);
   assert.match(terms, /suporturi cu cod QR/);
+  assert.match(terms, /Vollständiger Firmenname: ____________________/);
+  assert.match(terms, /Handelsregisternummer: ____________________/);
+  assert.match(terms, /Full legal company name: ____________________/);
+  assert.match(terms, /Denumirea completă a societății: ____________________/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS vendor_contract_logs/);
   assert.match(migration, /ALTER TABLE providers ADD COLUMN company_name/);
   assert.match(migration, /pay_on_site_cash/);
