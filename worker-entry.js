@@ -2776,7 +2776,8 @@ async function sendEmailJsConfirmation(
     localizedOffer?.meetingPoint || booking.meeting_point_name || "";
 
   const address =
-    booking.meeting_address || "";
+    [booking.meeting_address, booking.meeting_city, booking.meeting_country]
+      .map(value => String(value || "").trim()).filter(Boolean).join(", ") || meetingPoint;
 
   const localizedInstructions =
     localizedOffer?.instructions || booking.meeting_instructions || "";
@@ -2794,6 +2795,8 @@ async function sendEmailJsConfirmation(
 
   const mapLink = makeMeetingMapLink(booking);
   const directPaymentModel = String(booking.payment_model || "") === "fiiviu_fee_20_direct_80";
+  const onSitePaymentMethods = directPaymentModel
+    ? await getCustomerOnSitePaymentMethods(env, booking, language) : "";
   const bookingTotal = (Number(booking.total_amount_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
   const onlineFee = (Number(booking.fiiviu_fee_cents || booking.amount_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
   const providerDue = (Number(booking.provider_due_cents || 0) / 100).toFixed(2) + " " + String(booking.currency || "eur").toUpperCase();
@@ -2817,7 +2820,9 @@ async function sendEmailJsConfirmation(
     provider_due_price: `${(Number(booking.provider_due_cents || 0) / 100).toFixed(2)} ${String(booking.currency || "eur").toUpperCase()}`,
     mail_online_fee_label: language === "de" ? "Online geleistete Anzahlung (20 %)" : language === "ro" ? "Avans plătit online (20%)" : "Deposit paid online (20%)",
     mail_provider_due_label: language === "de" ? "Vor Ort an Anbieter (80 %)" : language === "ro" ? "De plătit la operator (80%)" : "Due to provider in person (80%)",
-    mail_payment_note: language === "de" ? "Die restlichen 80 % werden direkt vor Ort an den Anbieter bezahlt." : language === "ro" ? "Restul de 80% se plătește direct operatorului, la fața locului." : "The remaining 80% is paid directly to the provider in person.",
+    mail_payment_note: language === "de" ? "Die restlichen 80 % werden direkt vor Ort an den Anbieter bezahlt. Zahlungsmöglichkeiten: " + onSitePaymentMethods + "." : language === "ro" ? "Restul de 80% se plătește direct operatorului, la fața locului. Metode disponibile: " + onSitePaymentMethods + "." : "The remaining 80% is paid directly to the provider in person. Available payment methods: " + onSitePaymentMethods + ".",
+    mail_payment_methods_label: language === "de" ? "Vor Ort möglich" : language === "ro" ? "Metode de plată la fața locului" : "Payment methods on site",
+    mail_payment_methods: onSitePaymentMethods,
     booking_id: booking.booking_id,
     booking_url: booking.booking_access_token
       ? appUrl + "/booking.html?id=" + encodeURIComponent(String(booking.booking_id || "")) + "&token=" + encodeURIComponent(String(booking.booking_access_token))
