@@ -68,6 +68,8 @@ test("affiliate application requires and records explicit agreement acceptance",
   const application = read("partner-werden.html");
   const worker = read("worker.js");
   const agreement = read("legal/affiliate-bedingungen.html");
+  const dashboard = read("partner.html");
+  const privacy = read("legal/politica-de-confidentialitate.html");
   const migration = read("migrations/023_affiliate_contract_acceptance.sql");
   const deploy = read(".github/workflows/deploy-production.yml");
   const migrationWorkflow = read(".github/workflows/apply-booking-email-migration.yml");
@@ -89,4 +91,9 @@ test("affiliate application requires and records explicit agreement acceptance",
   assert.match(agreement, /14 days/);
   assert.match(agreement, /No permanent cookie attribution/);
   assert.match(agreement, /Plățile nu sunt efectuate automat/);
+  assert.match(dashboard, /Rezervări plătite cu succes/);
+  assert.match(dashboard, /Plățile sunt procesate manual/);
+  assert.match(privacy, /Browser-User-Agent/);
+  assert.match(privacy, /browser user-agent/);
+  assert.match(privacy, /identificatorul browserului/);
 });
