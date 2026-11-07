@@ -631,7 +631,8 @@ async function handleAdminBookings(request, env) {
   if (!env.DB) return json({ error: "D1 database not configured." }, 500);
 
   try {
-    // Read-only, server-side filtering and pagination. No schema/data writes here.
+    await ensureBookingColumns(env);
+    // Read-only booking/status data; schema helper adds missing email-status columns.
     const url = new URL(request.url);
     const page = Math.max(1, Math.min(1000000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
     const pageSize = Math.max(10, Math.min(100, Number.parseInt(url.searchParams.get("pageSize") || "50", 10) || 50));
@@ -672,7 +673,9 @@ async function handleAdminBookings(request, env) {
     const rows = await env.DB.prepare(`
       SELECT booking_id,experience_name,booking_date,booking_time,guests,
              status,payment_status,amount_cents,currency,customer_name,
-             customer_email,created_at
+             customer_email,created_at,confirmation_email_sent_at,confirmation_email_error,
+             provider_notification_email_sent_at,provider_notification_email_error,
+             admin_notification_email_sent_at,admin_notification_email_error
       FROM bookings${where}
       ORDER BY COALESCE(created_at,'') DESC, booking_id DESC
       LIMIT ? OFFSET ?
@@ -1960,14 +1963,16 @@ export async function finalizePaidBooking(
         "Gast: " + (booking.customer_name || ""), "E-Mail: " + (booking.customer_email || ""),
         "Telefon: " + (booking.customer_phone || "")
       ].join("\n");
-      const result = await sendResendEmailWithRetry(env, {
-        from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, html, text
-      }, "admin-booking");
-      console.info("FiiViu admin booking notification accepted", {bookingId:booking.booking_id,emailId:result.id||""});
+      const adminClaim = await env.DB.prepare("UPDATE bookings SET admin_notification_email_error='__SENDING__',updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND admin_notification_email_sent_at IS NULL AND (admin_notification_email_error IS NULL OR admin_notification_email_error<>'__SENDING__' OR updated_at<datetime('now','-10 minutes'))").bind(booking.payment_intent_id).run();
+      if (Number(adminClaim?.meta?.changes || 0) === 1) {
+        const result = await sendResendEmailWithRetry(env, {from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text}, "admin-booking");
+        await env.DB.prepare("UPDATE bookings SET admin_notification_email_sent_at=CURRENT_TIMESTAMP,admin_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(booking.payment_intent_id).run();
+        console.info("FiiViu admin booking notification accepted", {bookingId:booking.booking_id,emailId:result.id||""});
+      }
     } catch (error) {
-      console.error("FiiViu admin booking notification failed", {
-        bookingId: booking?.booking_id || "", message: String(error?.message || error).slice(0, 1000)
-      });
+      const message=String(error?.message || error).slice(0,1000);
+      await env.DB.prepare("UPDATE bookings SET admin_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(message,booking.payment_intent_id).run().catch(()=>{});
+      console.error("FiiViu admin booking notification failed", {bookingId:booking?.booking_id||"",message});
     }
 
     // Notify the organizer independently from the customer confirmation.
@@ -2181,19 +2186,14 @@ async function sendProviderBookingNotification(env, booking) {
       .bind("RESEND_API_KEY ist nicht konfiguriert.", booking.payment_intent_id).run();
     return;
   }
-  // Claim delivery atomically before sending. The finalize endpoint and Stripe
-  // webhook can run at the same time; a stale booking object alone allowed both
-  // executions to send the organizer notification.
-  const claim = await env.DB.prepare(
-    "UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL"
-  ).bind(booking.payment_intent_id).run();
+  // Reserve the send without falsely marking it as sent. Stale reservations expire after 10 minutes.
+  const claim = await env.DB.prepare("UPDATE bookings SET provider_notification_email_error='__SENDING__',updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND provider_notification_email_sent_at IS NULL AND (provider_notification_email_error IS NULL OR provider_notification_email_error<>'__SENDING__' OR updated_at<datetime('now','-10 minutes'))").bind(booking.payment_intent_id).run();
   if (Number(claim?.meta?.changes || 0) !== 1) return;
-
   try {
     await sendResendEmailWithRetry(env, {from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text}, "provider-booking");
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=CURRENT_TIMESTAMP,provider_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(booking.payment_intent_id).run();
   } catch (error) {
-    await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=NULL,provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?")
-      .bind(String(error?.message || error).slice(0,1000), booking.payment_intent_id).run();
+    await env.DB.prepare("UPDATE bookings SET provider_notification_email_sent_at=NULL,provider_notification_email_error=?,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(String(error?.message || error).slice(0,1000), booking.payment_intent_id).run();
     throw error;
   }
 }
@@ -4173,6 +4173,9 @@ async function ensureBookingColumns(env) {
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
+  for (const [name,type] of [["provider_notification_email_sent_at","TEXT"],["provider_notification_email_error","TEXT"],["admin_notification_email_sent_at","TEXT"],["admin_notification_email_error","TEXT"]]) {
+    if (!existing.has(name)) await env.DB.prepare("ALTER TABLE bookings ADD COLUMN "+name+" "+type).run();
+  }
 }
 
 function normalizeLanguage(value) {
