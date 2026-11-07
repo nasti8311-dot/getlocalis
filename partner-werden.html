@@ -16,9 +16,9 @@
 <div class="mt-8 panel p-6 md:p-10">
 <div class="text-xs font-bold tracking-[.2em] uppercase text-orange-700">Programul de parteneriat FiiViu</div>
 <h1 class="text-3xl md:text-4xl font-black mt-3">Hai să le arătăm împreună călătorilor ce are Bucureștiul mai frumos de oferit.</h1>
-<p class="text-gray-600 mt-4 leading-7">Administrezi un hotel, un apartament, un hostel sau recomanzi călătorilor experiențe speciale în București? Devino partener afiliat FiiViu și primești un comision de 5% pentru fiecare rezervare finalizată prin recomandarea ta.</p>
+<p class="text-gray-600 mt-4 leading-7">Administrezi un hotel, un apartament, un hostel sau recomanzi călătorilor experiențe speciale în București? Devino partener afiliat FiiViu și primești un comision de 5% pentru fiecare rezervare plătită cu succes și atribuită codului tău, după scăderea eventualelor rambursări.</p>
 <div class="grid sm:grid-cols-2 gap-3 my-7">
-<div class="rounded-xl bg-orange-50 p-4"><b>Comision de 5%</b><p class="text-sm text-gray-600 mt-1">Pentru fiecare rezervare finalizată prin linkul tău personal de partener sau prin codul QR.</p></div>
+<div class="rounded-xl bg-orange-50 p-4"><b>Comision de 5%</b><p class="text-sm text-gray-600 mt-1">Pentru fiecare rezervare plătită cu succes și înregistrată cu codul tău la finalizarea comenzii.</p></div>
 <div class="rounded-xl bg-gray-50 p-4"><b>Început simplu</b><p class="text-sm text-gray-600 mt-1">Verificăm solicitarea ta și configurăm personal accesul la contul de partener.</p></div>
 </div>
 <section class="my-8">
@@ -35,6 +35,9 @@
 <label class="block text-sm font-semibold">Spune-ne câteva lucruri despre tine (opțional)<textarea name="message" rows="4" maxlength="2000" class="mt-1 w-full rounded-xl border p-3 font-normal" placeholder="Cum ai dori să recomanzi FiiViu?"></textarea></label>
 <div class="hidden" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
 <label class="flex items-start gap-2 text-sm text-gray-600"><input required type="checkbox" name="privacyNoticeAcknowledged" value="yes" class="mt-1"><span>Confirm că am citit <a class="underline text-orange-700" href="/legal/politica-de-confidentialitate.html?lang=ro" target="_blank" rel="noopener noreferrer">politica de confidențialitate</a> și am luat la cunoștință modul în care datele mele sunt prelucrate pentru analizarea solicitării de parteneriat.</span></label>
+<label class="flex items-start gap-2 text-sm text-gray-700"><input required type="checkbox" name="affiliateTermsAccepted" value="yes" class="mt-1"><span>Confirm că am citit și accept <a class="underline font-semibold text-orange-700" href="/legal/affiliate-bedingungen.html?lang=ro" target="_blank" rel="noopener noreferrer">Contractul de parteneriat afiliat (versiunea 1.0)</a>. Înțeleg că solicitarea mea este analizată separat și că parteneriatul începe numai după confirmarea FiiViu și activarea contului.</span></label>
+<input type="hidden" name="affiliateTermsVersion" value="affiliate-v1.0-2026-11-07">
+<input type="hidden" name="affiliateTermsLanguage" value="ro">
 <button id="send" type="submit" class="w-full rounded-xl bg-black text-white py-4 font-bold hover:bg-orange-700 disabled:opacity-50">Trimite solicitarea de parteneriat</button>
 <div id="result" role="status" class="text-sm" aria-live="polite"></div>
 <p class="text-xs text-gray-500">Trimiterea formularului nu creează automat un cont de partener. Te vom contacta după analizarea solicitării.</p>

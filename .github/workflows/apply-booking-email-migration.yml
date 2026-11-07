@@ -40,3 +40,11 @@ jobs:
               echo "bookings.$column already exists"
             fi
           done
+
+      - name: Create affiliate contract acceptance audit table
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --file migrations/023_affiliate_contract_acceptance.sql

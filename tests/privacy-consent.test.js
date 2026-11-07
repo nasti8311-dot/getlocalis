@@ -54,11 +54,46 @@ test("consent manager is available across booking, partner, provider and legal s
 
 test("privacy policy contains current multilingual retention and transfer disclosures", () => {
   const policy = read("legal/politica-de-confidentialitate.html");
-  assert.match(policy, /Letzte Aktualisierung: 6\. November 2026/);
-  assert.match(policy, /Last updated: 6 November 2026/);
-  assert.match(policy, /Ultima actualizare: 6 noiembrie 2026/);
+  assert.ok(policy.includes("Letzte Aktualisierung: 7. November 2026"));
+  assert.ok(policy.includes("Last updated: 7 November 2026"));
+  assert.ok(policy.includes("Ultima actualizare: 7 noiembrie 2026"));
   assert.match(policy, /Art\. 25 des rumänischen Gesetzes Nr\. 82\/1991/);
   assert.match(policy, /Article 25 of Romanian Law No\. 82\/1991/);
   assert.match(policy, /content\.en\.sections=/);
   assert.match(policy, /content\.ro\.sections=/);
+});
+
+
+test("affiliate application requires and records explicit agreement acceptance", () => {
+  const application = read("partner-werden.html");
+  const worker = read("worker.js");
+  const agreement = read("legal/affiliate-bedingungen.html");
+  const dashboard = read("partner.html");
+  const privacy = read("legal/politica-de-confidentialitate.html");
+  const migration = read("migrations/023_affiliate_contract_acceptance.sql");
+  const deploy = read(".github/workflows/deploy-production.yml");
+  const migrationWorkflow = read(".github/workflows/apply-booking-email-migration.yml");
+  assert.match(application, /name="affiliateTermsAccepted" value="yes"/);
+  assert.match(application, /affiliate-bedingungen\.html\?lang=ro/);
+  assert.match(worker, /body\.privacyNoticeAcknowledged[^\n]*!==["']yes["']/);
+  assert.match(worker, /body\.affiliateTermsAccepted[^\n]*!==["']yes["']/);
+  assert.match(worker, /INSERT INTO affiliate_contract_acceptances/);
+  assert.match(worker, /affiliateContractVersion="affiliate-v1\.0-2026-11-07"/);
+  assert.match(worker, /affiliate_contract_accepted_at/);
+  assert.match(worker, /affiliateContractBlobSha=/);
+  assert.match(migration, /contract_blob_sha TEXT NOT NULL/);
+  assert.ok(migrationWorkflow.includes("--file migrations/023_affiliate_contract_acceptance.sql"));
+  assert.match(deploy, /FROM affiliate_contract_acceptances LIMIT 0/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS affiliate_contract_acceptances/);
+  assert.match(agreement, /5%/);
+  assert.match(agreement, /14 Tage/);
+  assert.match(agreement, /14 zile/);
+  assert.match(agreement, /14 days/);
+  assert.match(agreement, /No permanent cookie attribution/);
+  assert.match(agreement, /Plățile nu sunt efectuate automat/);
+  assert.match(dashboard, /Rezervări plătite cu succes/);
+  assert.match(dashboard, /Plățile sunt procesate manual/);
+  assert.match(privacy, /Browser-User-Agent/);
+  assert.match(privacy, /browser user-agent/);
+  assert.match(privacy, /identificatorul browserului/);
 });
