@@ -3021,6 +3021,8 @@ function mapPublicOffer(offer) {
         minGuests: Number.isFinite(Number(offer.min_guests)) ? Number(offer.min_guests) : null,
         maxGuests: Number.isFinite(Number(offer.max_guests || offer.capacity)) ? Number(offer.max_guests || offer.capacity) : null,
         capacity: Number.isFinite(Number(offer.capacity)) ? Number(offer.capacity) : null,
+        acceptsCardOnsite: Number(offer.accepts_card_onsite) === 1,
+        acceptsCashOnsite: Number(offer.accepts_cash_onsite) === 1,
         highlights: {
             de: [offer.meeting_point_name, offer.meeting_city].filter(Boolean),
             en: [offer.meeting_point_name_en || offer.meeting_point_name, offer.meeting_city].filter(Boolean),
@@ -3763,9 +3765,9 @@ function renderDetailTrustInfo(item) {
     if (!container) return;
 
     const labels = {
-        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", duration: "Dauer" },
-        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", duration: "Duration" },
-        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", duration: "Durată" }
+        de: { provider: "Veranstalter", meeting: "Treffpunkt", cancellation: "Kostenlose Stornierung", duration: "Dauer", card: "Kartenzahlung vor Ort", cash: "Barzahlung vor Ort" },
+        en: { provider: "Provider", meeting: "Meeting point", cancellation: "Free cancellation", duration: "Duration", card: "Card payment on site", cash: "Cash payment on site" },
+        ro: { provider: "Furnizor", meeting: "Loc de întâlnire", cancellation: "Anulare gratuită", duration: "Durată", card: "Plată cu cardul la fața locului", cash: "Plată în numerar la fața locului" }
     };
 
     const l = labels[currentLang] || labels.de;
@@ -3778,6 +3780,8 @@ function renderDetailTrustInfo(item) {
     rows.push(["fa-location-dot", l.meeting, meeting || "—"]);
     rows.push(["fa-rotate-left", l.cancellation, currentLang === "ro" ? "Poți anula cu până la 24 de ore înainte, cu rambursare integrală" : currentLang === "en" ? "Cancel up to 24 hours in advance for a full refund" : "Bis 24 Stunden vorher stornierbar, volle Rückerstattung"]);
     rows.push(["fa-clock", l.duration, duration || "—"]);
+    if (item.acceptsCardOnsite) rows.push(["fa-credit-card", l.card, currentLang === "ro" ? "Disponibil" : currentLang === "en" ? "Available" : "Möglich"]);
+    if (item.acceptsCashOnsite) rows.push(["fa-money-bill-wave", l.cash, currentLang === "ro" ? "Disponibil" : currentLang === "en" ? "Available" : "Möglich"]);
 
     container.innerHTML = rows.map(function(row) {
         return '<div class="bg-[#F8F6F1] rounded-xl p-3 flex items-start gap-3">' +
