@@ -13,7 +13,8 @@ form{margin-top:26px;padding:28px;background:#fff;border:1px solid var(--line);b
 button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:999px;background:#211a16;color:white;font:inherit;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
 .message{display:none;margin-top:16px;padding:13px 15px;border-radius:12px;white-space:pre-wrap;line-height:1.5}.ok{display:block;background:#edf7ef;color:#285633}.error{display:block;background:#fff0ed;color:#8a2f20}
 small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a}footer{margin:20px 0;text-align:center;color:#756b63;font-size:13px}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}form{padding:20px}}
+.provider-flyer{margin:30px 0 24px}.provider-flyer a{display:block}.provider-flyer img{display:block;width:100%;height:auto;border-radius:18px;border:1px solid var(--line);box-shadow:0 14px 40px #241a1612}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}form{padding:20px}.provider-flyer{margin-top:24px}}
 </style>    <link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
     <link rel="stylesheet" href="/assets/css/fiiviu-pages.css">
 </head>
@@ -33,6 +34,11 @@ small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a
 <button id="submitButton" type="submit">Înregistrare și acceptarea contractului</button>
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form>
+<section class="provider-flyer" aria-label="Prezentare pentru furnizorii FiiViu">
+<a href="/assets/fiiviu-anbieter-flyer.jpg" target="_blank" rel="noopener noreferrer">
+<img src="/assets/fiiviu-anbieter-flyer.jpg" alt="Devino furnizor FiiViu – informații despre parteneriat și promovarea experiențelor" loading="lazy" decoding="async">
+</a>
+</section>
 <footer>Ai deja un cont? <a href="/anbieter/login">Autentificare furnizor</a></footer>
 </main>
 <script>
