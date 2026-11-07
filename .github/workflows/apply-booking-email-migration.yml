@@ -1,0 +1,42 @@
+name: Apply booking email status migration
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: booking-email-d1-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Add only missing booking email status columns
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          columns="$(npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --json --command "SELECT name FROM pragma_table_info('bookings')")"
+          for column in provider_notification_email_sent_at provider_notification_email_error admin_notification_email_sent_at admin_notification_email_error; do
+            if ! printf '%s' "$columns" | grep -Eq "\"name\"[[:space:]]*:[[:space:]]*\"$column\""; then
+              echo "Adding bookings.$column"
+              npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "ALTER TABLE bookings ADD COLUMN $column TEXT"
+            else
+              echo "bookings.$column already exists"
+            fi
+          done

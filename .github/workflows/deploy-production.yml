@@ -1,7 +1,9 @@
 name: Deploy production Worker
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Apply booking email status migration"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -36,14 +38,6 @@ jobs:
       - name: Validate Wrangler bundle
         run: npx --yes wrangler@4 deploy --dry-run --outdir=.wrangler-dry-run
 
-      - name: Apply additive production D1 migrations
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 migrations apply fiiviu-payouts --remote
-
       - name: Verify production D1 schema (read-only)
         shell: bash
         env:
@@ -54,6 +48,7 @@ jobs:
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT capacity,duration,availability_rules,approval_status,pay_on_site_cash,pay_on_site_card FROM offers LIMIT 0"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT company_name,cui,representative_name FROM providers LIMIT 0"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT offer_id,proof_token,total_amount_cents,fiiviu_fee_cents,provider_due_cents,payment_model,cancellation_reason,provider_ref,currency FROM bookings LIMIT 0"
+          npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT provider_notification_email_sent_at,provider_notification_email_error,admin_notification_email_sent_at,admin_notification_email_error FROM bookings LIMIT 0"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT title_en,title_ro,description_en,description_ro,meeting_point_name_en,meeting_point_name_ro,meeting_instructions_en,meeting_instructions_ro FROM experiences LIMIT 0"
           npx --yes wrangler@4 d1 execute fiiviu-payouts --remote --command "SELECT id,provider_ref,accepted_at,ip_address,user_agent,contract_version,contract_sha256,created_at FROM vendor_contract_logs LIMIT 0"
           echo "Production D1 schema preflight passed; no schema or booking data was modified."
