@@ -631,8 +631,7 @@ async function handleAdminBookings(request, env) {
   if (!env.DB) return json({ error: "D1 database not configured." }, 500);
 
   try {
-    await ensureBookingColumns(env);
-    // Read-only booking/status data; schema helper adds missing email-status columns.
+    // Read-only booking history and email status.
     const url = new URL(request.url);
     const page = Math.max(1, Math.min(1000000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
     const pageSize = Math.max(10, Math.min(100, Number.parseInt(url.searchParams.get("pageSize") || "50", 10) || 50));
@@ -1965,7 +1964,9 @@ export async function finalizePaidBooking(
       ].join("\n");
       const adminClaim = await env.DB.prepare("UPDATE bookings SET admin_notification_email_error='__SENDING__',updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND admin_notification_email_sent_at IS NULL AND (admin_notification_email_error IS NULL OR admin_notification_email_error<>'__SENDING__' OR updated_at<datetime('now','-10 minutes'))").bind(booking.payment_intent_id).run();
       if (Number(adminClaim?.meta?.changes || 0) === 1) {
-        const result = await sendResendEmailWithRetry(env, {from:"FiiViu <noreply@fiiviu.ro>",to:[recipient],subject,html,text}, "admin-booking");
+        const result = await sendResendEmailWithRetry(env, {
+          from: "FiiViu <noreply@fiiviu.ro>", to: [recipient], subject, html, text
+        }, "admin-booking");
         await env.DB.prepare("UPDATE bookings SET admin_notification_email_sent_at=CURRENT_TIMESTAMP,admin_notification_email_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE payment_intent_id=?").bind(booking.payment_intent_id).run();
         console.info("FiiViu admin booking notification accepted", {bookingId:booking.booking_id,emailId:result.id||""});
       }
@@ -4173,9 +4174,6 @@ async function ensureBookingColumns(env) {
   const existing=new Set((columns.results||[]).map(row=>String(row.name||"")));
   const missing=required.filter(name=>!existing.has(name));
   if(missing.length)throw new Error("Bookings schema is missing required columns: "+missing.join(", "));
-  for (const [name,type] of [["provider_notification_email_sent_at","TEXT"],["provider_notification_email_error","TEXT"],["admin_notification_email_sent_at","TEXT"],["admin_notification_email_error","TEXT"]]) {
-    if (!existing.has(name)) await env.DB.prepare("ALTER TABLE bookings ADD COLUMN "+name+" "+type).run();
-  }
 }
 
 function normalizeLanguage(value) {
