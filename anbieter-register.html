@@ -2,27 +2,45 @@
 <html lang="ro">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>FiiViu – Înregistrare furnizor</title>
+<meta name="robots" content="noindex,nofollow"><meta name="description" content="Devino furnizor FiiViu și promovează-ți experiențele în București."><title>Devino furnizor – FiiViu</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-:root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#211a16;background:#f8f5ef;--orange:#e86f2d;--line:#e3d9cf}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:36px 16px;background:radial-gradient(circle at 5% 0,rgba(232,111,45,.14),transparent 32%),#f8f5ef}
-main{max-width:760px;margin:0 auto}.brand{font-weight:900;letter-spacing:-.04em;font-size:22px}.brand span{color:var(--orange)}h1{font-size:clamp(32px,5vw,48px);letter-spacing:-.05em;line-height:1.02;margin:32px 0 10px}.intro{color:#6e6259;line-height:1.6}
-form{margin-top:26px;padding:28px;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 18px 55px #241a160d}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.field{margin-bottom:16px}.wide{grid-column:1/-1}label{display:block;font-size:13px;font-weight:750;margin-bottom:7px}input{width:100%;padding:13px 14px;border:1px solid #d8cec4;border-radius:12px;font:inherit}input:focus{outline:3px solid #e86f2d22;border-color:var(--orange)}
-.check{display:flex;gap:11px;align-items:flex-start;padding:16px;background:#faf7f2;border-radius:14px;line-height:1.55;font-size:14px}.check input{width:18px;height:18px;flex:0 0 auto;margin-top:2px;accent-color:var(--orange)}.check label{font-weight:500;margin:0}
-button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:999px;background:#211a16;color:white;font:inherit;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
-.message{display:none;margin-top:16px;padding:13px 15px;border-radius:12px;white-space:pre-wrap;line-height:1.5}.ok{display:block;background:#edf7ef;color:#285633}.error{display:block;background:#fff0ed;color:#8a2f20}
-small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a}footer{margin:20px 0;text-align:center;color:#756b63;font-size:13px}
-.provider-flyer{margin:30px 0 24px}.provider-flyer a{display:block}.provider-flyer img{display:block;width:100%;height:auto;border-radius:18px;border:1px solid var(--line);box-shadow:0 14px 40px #241a1612}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}form{padding:20px}.provider-flyer{margin-top:24px}}
+body{background:#f8f6f1;color:#171717}.panel{background:#fff;border:1px solid #eee;border-radius:22px;box-shadow:0 16px 45px #1717170b}
+input:focus,select:focus,textarea:focus{outline:2px solid #e86f2d;outline-offset:1px}
+#registerForm{margin-top:1.5rem}#registerForm .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+#registerForm .field{margin:0}#registerForm .wide{grid-column:1/-1}
+#registerForm label{display:block;color:#39332d;font-size:.9rem;font-weight:650;margin:0}
+#registerForm input{box-sizing:border-box;width:100%;min-height:46px;margin-top:.35rem;padding:.75rem 1rem;border:1px solid #e5e0da;border-radius:12px;background:#fff;font:inherit}
+#registerForm input:focus{outline:2px solid #e86f2d;outline-offset:1px}
+#registerForm .check{display:flex;align-items:flex-start;gap:.65rem;padding:1rem;border-radius:12px;background:#f9f7f4;color:#625b54;font-size:.875rem;line-height:1.55}
+#registerForm .check input{width:18px;min-height:18px;flex:0 0 18px;margin:.2rem 0 0;accent-color:#e86f2d}
+#registerForm button{width:100%;min-height:48px;margin-top:.25rem;border-radius:12px}
+#message{display:none;margin-top:1rem;padding:.85rem 1rem;border-radius:12px;white-space:pre-wrap}
+#message.ok{display:block;background:#edf7ef;color:#285633}#message.error{display:block;background:#fff0ed;color:#8a2f20}
+@media(max-width:600px){#registerForm .grid{grid-template-columns:1fr}#registerForm .wide{grid-column:auto}}
 </style>    <link rel="stylesheet" href="/assets/css/fiiviu-design-system.css">
     <link rel="stylesheet" href="/assets/css/fiiviu-pages.css">
 </head>
-<body><main>
-<div class="brand">Fii<span>Viu</span></div>
-<h1>Înregistrează-te ca furnizor</h1>
-<p class="intro">Creează-ți contul de furnizor FiiViu pentru experiențe în București. După înregistrare, te poți autentifica și îți poți gestiona ofertele și rezervările.</p>
-<form id="registerForm">
+<body class="min-h-screen"><main class="max-w-3xl mx-auto px-5 py-10 md:py-16">
+<a href="/" class="font-bold text-orange-700">← Înapoi la FiiViu</a>
+<div class="mt-8 panel p-6 md:p-10">
+<div class="text-xs font-bold tracking-[.2em] uppercase text-orange-700">Programul de parteneriat FiiViu</div>
+<h1 class="text-3xl md:text-4xl font-black mt-3">Devino furnizor FiiViu și adu-ți experiențele în fața unor clienți noi.</h1>
+<p class="text-gray-600 mt-4 leading-7">Ai un restaurant, un centru spa, o activitate de aventură sau o experiență specială în București? Publică-ți ofertele pe FiiViu, gestionează rezervările din propriul cont și ajungi la turiști și localnici care caută lucruri de făcut.</p>
+<div class="grid sm:grid-cols-2 gap-3 my-7">
+<div class="rounded-xl bg-orange-50 p-4"><b>Fără costuri fixe. Fără risc.</b><p class="text-sm text-gray-600 mt-1">Înscrierea și utilizarea platformei nu implică taxe fixe. Comisionul FiiViu se aplică doar când primești o rezervare reușită.</p></div>
+<div class="rounded-xl bg-gray-50 p-4"><b>20% avans = comisionul FiiViu</b><p class="text-sm text-gray-600 mt-1">Clientul plătește online avansul de 20%, care reprezintă comisionul FiiViu. Restul de 80% îl încasezi direct de la client.</p></div>
+<div class="rounded-xl bg-gray-50 p-4"><b>Cont propriu de furnizor</b><p class="text-sm text-gray-600 mt-1">Adaugi și editezi oferte și vezi toate rezervările într-un singur loc, din panoul tău personal.</p></div>
+<div class="rounded-xl bg-orange-50 p-4"><b>Promovare către clienți</b><p class="text-sm text-gray-600 mt-1">Aducem FiiViu în fața călătorilor prin promovare online și materiale cu cod QR în apartamente Airbnb și alte spații turistice.</p></div>
+</div>
+<div class="border-t border-gray-100 pt-7 mt-8">
+<h2 class="text-2xl font-extrabold">Creează-ți contul de furnizor</h2>
+<p class="text-gray-600 mt-2 mb-6 leading-7">Completează datele companiei. După înregistrare, te poți autentifica și îți poți gestiona ofertele și rezervările.</p>
+<section class="my-8">
+<img src="/assets/fiiviu-anbieter-flyer.jpg?v=provider-design-1" alt="Flyer FiiViu pentru furnizori – beneficii, comision și promovarea experiențelor" class="block w-full h-auto rounded-2xl shadow-sm border border-gray-100" loading="eager" fetchpriority="high" decoding="async">
+<p class="text-xs text-gray-500 text-center mt-2">FiiViu · Parteneriat pentru furnizorii de experiențe din București</p>
+</section>
+<form id="registerForm" class="space-y-4">
 <div class="grid">
 <div class="field wide"><label for="companyName">Denumirea firmei (S.R.L. / PFA) *</label><input id="companyName" name="company_name" autocomplete="organization" required maxlength="180"></div>
 <div class="field"><label for="cui">Cod unic de identificare / CUI *</label><input id="cui" name="cui" required maxlength="24" autocomplete="off" placeholder="de ex. RO12345678"></div>
@@ -30,16 +48,13 @@ small{display:block;color:#756b63;line-height:1.5;margin-top:8px}a{color:#b94e1a
 <div class="field wide"><label for="email">Adresă de e-mail profesională *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
 <div class="field wide"><label for="password">Parolă *</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required><small>Minimum 12 caractere. Folosește o parolă unică.</small></div>
 </div>
-<div class="check"><span aria-hidden="true">✓</span><div>Prin crearea contului, confirmi că ești reprezentantul legal al companiei și accepți <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer">contractul de parteneriat</a> și condițiile privind comisionul (avans de 20% la rezervarea online). Acceptarea este înregistrată automat la finalizarea înregistrării.</div></div>
+<div class="check"><input type="checkbox" checked disabled aria-label="Acceptarea contractului se înregistrează la creare cont"><span>Prin crearea contului, confirmi că ești reprezentantul legal al companiei și accepți <a href="/legal/anbieter-bedingungen.html" target="_blank" rel="noopener noreferrer" class="underline text-orange-700">contractul de parteneriat</a> și condițiile privind comisionul (avans de 20% la rezervarea online). Acest avans de 20% plătit online de client reprezintă comisionul FiiViu. Acceptarea este înregistrată automat la finalizarea înregistrării.</span></div>
 <button id="submitButton" type="submit">Înregistrare și acceptarea contractului</button>
-<div id="message" class="message" role="status" aria-live="polite"></div>
+<div id="message" role="status" aria-live="polite"></div>
 </form>
-<section class="provider-flyer" aria-label="Prezentare pentru furnizorii FiiViu">
-<a href="/assets/fiiviu-anbieter-flyer.jpg" target="_blank" rel="noopener noreferrer">
-<img src="/assets/fiiviu-anbieter-flyer.jpg" alt="Devino furnizor FiiViu – informații despre parteneriat și promovarea experiențelor" loading="lazy" decoding="async">
-</a>
-</section>
+
 <footer>Ai deja un cont? <a href="/anbieter/login">Autentificare furnizor</a></footer>
+</div>
 </main>
 <script>
 const form=document.getElementById('registerForm'),button=document.getElementById('submitButton'),message=document.getElementById('message');
